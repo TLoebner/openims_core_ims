@@ -1,0 +1,163 @@
+<html>
+<head>
+<title>Open IMS Core JavaDiameterPeer: The Open IMS Core JavaDiameterPeer</title>
+</head>
+
+<body>
+<!-- <h1>The Open IMS Core JavaDiameterPeer</h1> -->
+Documentation for Open IMS Core Java Diameter Peer library
+
+<h1>Overview</h1>
+The JavaDiameterPeer, like its counterpart CDiamterPeer, is a smart and an 
+efficient Java implementation of the Diameter Base Protocol (IETF RFC3588). 
+It provides a convenient way to use  Diameter stack in a Java environment and 
+can easily extend network nodes implemented in Java with a Diameter interface. 
+It is used at the HSS (FhoSS) in the Open IMS core network.
+
+<h1>Design and Implementation</h1>
+The following figure depicts the structure of the JavaDiameterPeer.
+<p>
+<div align="center">
+  <img src="img/jdiameterpeer_design.jpg" alt="jdiameterpeer_design.jpg">
+</div>
+
+<p>
+A DiameterPeer represents a Diameter node which implements the Diameter protocol 
+and acts either as a Client or as a Server. The most important component of a 
+DiameterPeer is a PeerManager. The PeerManager manages a set of Peers. Each Peer 
+has a Communicator, which maintains a Diameter connection. The Peer is 
+implemented based on the RFC 3588, section 5 and contains a state machine 
+defined in that part. Peers managed by the PeerManager can be configured by a 
+configuration file. They can also be detected and added to the PeerManager in 
+runtime dynamically.
+
+<p>
+Since a DiameterPeer is listening to certain ports by using a set of Acceptors, 
+the incoming Diameter Capabilities-Exchange-Request messages can be noticed. 
+Upon receiving such a request, a new Peer with a communicator will be created 
+and added to the PeerManager.
+
+<p>
+Outgoing Diameter messages and incoming Diameter messages are handled by the 
+JavaDiameterPeer differently. For an outgoing Diameter request, JavaDiameterPeer 
+sends this message to the PeerManager directly. The PeerManager will find out a 
+suitable Peer for sending it.
+
+<p>
+An incoming Diameter message received by a communicator is pushed in a TaskQueue at 
+first. This TaskQueue is a FIFO blocking queue. As soon as the message is 
+available in the queue, a worker will take it out of the queue and deliver it to 
+a set of event listeners defined by the user.
+
+<p>
+Typically, a Diameter client sends a Diameter message to a Diameter server 
+directly and receives a Diameter answer by adapting an EventListener. A Diameter 
+server, however, defines only an EventListener to process incoming Diameter 
+request.
+
+<p>
+In order to provide a convenient way to handle Diameter request and answer at 
+the client side, a TransactionWorker is defined. A TransactionWorker groups a 
+request with its corresponding answer. By using TransactionWorker, a user needs 
+not to take care of mapping requests with answers. 
+
+<h1>Peer Configuration</h1>
+DiameterPeer.xml provides an example of how a Diameter peer is configured.
+<pre>
+&lt;xml version="1.0" encoding="UTF-8"?&gt;
+&lt;DiameterPeer 
+	FQDN="localhost"
+	Realm="open-ims.org"
+	Vendor_Id="10415"
+	Product_Name="JavaDiameterPeer"
+	AcceptUnknownPeers="1"
+	DropUnknownOnDisconnect="1"
+	Tc="10"
+	Workers="8"
+	QueueLength="32"
+&gt;
+	&lt;Acceptor port="3868" bind="127.0.0.1" /&gt;
+	
+	&lt;Auth id="16777216" vendor="10415"/&gt;
+	&lt;Auth id="16777216" vendor="0" /&gt;
+	&lt;Acct id="16777216" vendor="0" /&gt;
+&lt;/DiameterPeer&gt;
+</pre>
+
+<h1>To do</h1>
+Currently, the JavaDiameterPeer supports only peer connection. 
+The authentication/authorization portion and accounting portion as defined in 
+the Diameter base protocol (IFC 3588 section 8, 9) are still not implemented, 
+since Cx, Sh do not require user session support actually. However, auth and 
+acct session support are needed to realize Ro interface (auth session) and Rf 
+(acct session) interface.
+
+Realm routing (because this is not yet supported, when using you will have to 
+specify each time the FQDN of the destination host. This is usually a 
+configuration parameter other the modules using this one). A Realm routing 
+process specified in the RFC 3588 section 2.7 is still in the development stage.
+
+
+<h1>The Open IMS Core</h1>
+The <b>Home-Page</b> of the Open Source IMS Core project is at 
+<a href="http://www.open-ims.org/">http://www.open-ims.org/</a>
+
+<p>
+The <b>Development</b> is taking place at 
+<a href="http://developer.berlios.de/projects/openimscore/">
+http://developer.berlios.de/projects/openimscore/</a>
+
+<p>
+<div align="center">
+  <img src="img/osims.jpg" alt="osims.jpg">
+</div>
+
+<p>
+<dl>
+  <dt><b>Author:</b></dt>
+  <dd>Dragos Vingarzan vingarzan@fokus.fraunhofer.de</dd><p>
+  
+  <dt><b>Attention:</b></dt>
+  <dd>It has to be noted that this 
+      <font color=red><b> Open Source IMS Core System is not intended to become 
+      or act as a product in a commercial context!</b></font> Its sole purpose 
+      is to provide an IMS core reference implementation for IMS technology 
+      testing and IMS application prototyping for research purposes, typically 
+      performed in IMS test-beds.
+      <p>
+      Users of the Open Source IMS Core System have to be aware that IMS 
+      technology may be subject of patents and license terms, as being specified 
+      within the various IMS-related IETF, ITU-T, ETSI, and 3GPP standards. Thus 
+      all Open IMS Core users have to take notice of this fact and have to agree 
+      to check out carefully before installing, using and extending the Open 
+      Source IMS Core System, if related patents and licenses may become 
+      applicable to the intended usage context.
+  </dd>
+
+  <dt><b>Note:</b></dt>
+  <dd>Copyright (C) 2004-2006 FhG Fokus
+     <p>
+     The Open IMS Core is an open source IMS CSCFs &amp; HSS implementation.
+     <p>
+     Open IMS Core is free software; you can redistribute it and/or modify it 
+     under the terms of the GNU General Public License as published by the Free 
+     Software Foundation; either version 2 of the License, or (at your option) 
+     any later version.
+     <p>
+     For a license to use the Open IMS Core software under conditions other than 
+     those described here, or to purchase support for this software, please 
+     contact Fraunhofer FOKUS by e-mail at the following addresses: 
+     <a href="mailto:info@open-ims.org">info@open-ims.org</a>
+     <p>
+     Open IMS Core is distributed in the hope that it will be useful, but 
+     WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+     or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for 
+     more details.
+     <p>
+     You should have received a copy of the GNU General Public License along 
+     with this program; if not, write to the Free Software Foundation, Inc., 59 
+     Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+  </dd>
+</dl>
+</body>
+</html>

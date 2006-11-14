@@ -1,0 +1,178 @@
+/**
+ * $Id$
+ */
+ 
+/**
+ * \file
+ * This file is just a place-holder for the documentation of the cfg directory.
+ * 
+ * The documentation for this directory can be found here: \ref cfg
+ *
+ * The main-page of the documentation can be found here: \ref main
+ * 
+ */
+ 
+ /**
+ * \dir cfg
+ *
+ * This is the configuration & examples directory. You are probably interested in one of the following:
+ * 
+ */
+ 
+ 
+
+ /**
+  * \file pcscf.sh
+  *
+  *	Proxy-CSCF startup script
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */
+ /**
+  * \file pcscf.cfg
+  *
+  *	Proxy-CSCF Sample configuration file
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */  
+  
+ 
+ 
+ 
+ /* I-CSCF */ 
+  
+ /**
+  * \file icscf.sh
+  *
+  *	Interrogating-CSCF startup script
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */   
+ 
+ /**
+  * \file icscf.cfg
+  *
+  *	Interrogating-CSCF Sample configuration file
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */  
+
+ /**
+  * \file icscf.xml
+  *
+  *	Interrogating-CSCF Sample configuration file for the CDiameterPeer
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */ 
+   
+ /**
+  * \file icscf.sql
+  *
+  *	Interrogating-CSCF Database dump
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */ 
+  
+ /**
+  * \file icscf.thig.sh
+  *
+  *	Interrogating-CSCF startup script
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */  
+  
+ /**
+  * \file icscf.thig.cfg
+  *
+  *	Interrogating-CSCF Sample configuration file, with THIG support
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */  
+
+  
+  /* S-CSCF */
+  
+    
+  /**
+  * \file scscf.sh
+  *
+  *	Serving-CSCF  startup script
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */ 
+  
+/**
+  * \file scscf.cfg
+  *
+  *	Serving-CSCF Sample configuration file
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */  
+
+ /**
+  * \file scscf.xml
+  *
+  *	Serving-CSCF Sample configuration file for the CDiameterPeer
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */ 
+  
+  
+  
+  
+  
+  
+  
+  /* SIP-to-IMS Gw */
+ 
+ /**
+  * \file sip2ims.sh
+  *
+  *	SIP2IMS Gateway startup script
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */
+    
+ /**
+  * \file sip2ims.cfg
+  *
+  *	SIP-to-IMS Gateway Sample configuration file
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */  
+  
+ /**
+  * \file sip2ims.sql
+  *
+  *	SIP-to-IMS Gateway Database dump
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */ 
+  
+  
+  
+  /* others */
+  
+ /**
+  * \file open-ims.dnszone
+  *
+  *	bind zone file for open-ims.test
+  *
+  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+  * 
+  */
+    

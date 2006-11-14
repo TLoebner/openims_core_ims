@@ -1,0 +1,88 @@
+<project name="JavaDiameterPeer Project" default="compile" basedir=".">
+	<description>
+		JavaDiameterPeer Project - Build file for Compilation of the JavaDiameterPeer
+	</description>	
+	
+	<!--  directories -->
+	<property name="src" location="src" />
+	<property name="build" location="classes" />
+	<property name="docs" location="docs" />
+	
+	<!-- compilation control functions -->
+	<property name="compile.debug" value="true" />
+	<property name="compile.deprecation" value="true" />
+	<property name="compile.optimize" value="true" />
+	
+	<!-- classpath and libraries used by project -->
+	<path id="compile.classpath">
+		<pathelement location="." />
+		<pathelement location="classes" />
+		<pathelement location="lib" />
+		<fileset dir="lib">
+			<include name="*.jar" />
+		</fileset>
+	</path>	
+	
+	<target name="init">
+		<tstamp/>
+		<mkdir dir="${build}" />
+	</target>
+	
+	<target name="compile" depends="init">
+		<javac 
+			srcdir="${src}" 
+			destdir="${build}"
+			debug="${compile.debug}"
+			deprecation="${compile.deprecation}"
+			optimize="${compile.optimize}">
+			
+			<classpath refid="compile.classpath" />			
+		</javac>	
+		
+	</target>	
+
+		
+	<target name="jar" depends="compile">
+		<!--<mkdir dir="${build}/jar" />-->
+		<jar destfile="${build}/jdp.jar" basedir="${build}" includes="de/**" />		
+	</target>
+	
+	<target name="jdoc" depends="compile">
+		<mkdir dir="${docs}" />
+		<mkdir dir="${docs}/api" />
+		<copy todir="${docs}/api/img">
+		    <fileset dir="doxygen/img" />
+		</copy>
+	  	<javadoc 
+	  		sourcepath="${src}"
+	  		destdir="${docs}/api"
+	  		doctitle="The Open IMS Core JavaDiameterPeer"
+	  		nodeprecated="true" 
+	  		nodeprecatedlist="true" 
+	  		overview="${src}/overview.html" 
+	  		packagenames="de.fhg.fokus.diameter.DiameterPeer.data,
+	  					  de.fhg.fokus.diameter.DiameterPeer.transaction,
+	  					  de.fhg.fokus.diameter.DiameterPeer,
+	  					  de.fhg.fokus.diameter.DiameterPeer.peer,
+	  					  de.fhg.fokus.diameter.DiameterPeer.transport" 	  		
+	  		>
+	  		
+	  	    <packageset dir="src" defaultexcludes="yes">
+	  	      <include name="de/**"/>
+	  	      
+	  	    </packageset>	  		
+	  	
+	  		<classpath refid="compile.classpath" />
+	  	</javadoc>
+		
+		
+	</target>
+	
+	<target name="clean">
+		<delete dir="${build}/**" />
+	  	<delete dir="${docs}/api" />
+	  	<delete dir="${docs}" />
+	</target>
+	
+</project>
+

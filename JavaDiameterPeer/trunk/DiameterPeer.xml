@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiameterPeer 
+	FQDN="localhost"
+	Realm="open-ims.test"
+	Vendor_Id="10415"
+	Product_Name="JavaDiameterPeer"
+	AcceptUnknownPeers="1"
+	DropUnknownOnDisconnect="1"
+	Tc="10"
+	Workers="8"
+	QueueLength="32"
+>
+<!--	<Peer FQDN="icscf.open-ims.test." Realm="open-ims.test" port="3868"/> -->
+<!--	<Peer FQDN="localhost" Realm="open-ims.test" port="3868"/> -->
+
+	<Acceptor port="3868" bind="127.0.0.1" />
+	
+	<Auth id="16777216" vendor="10415"/>
+	<Auth id="16777216" vendor="0" />
+	<Acct id="16777216" vendor="0" />
+
+<!-- experimental implementation of realm routing table
+	<Routing>
+		<Realm name="my.open-ims.test">
+			<Server FQDN="blackjack" metric="2"/>
+			<Server FQDN="test1" metric="3"/>
+			<Server FQDN="test2" metric="5"/>
+		</Realm>
+		<Realm name="test1.open-ims.test">
+			<Server FQDN="test3" metric="7"/>
+			<Server FQDN="test4" metric="11"/>
+		</Realm>
+		<Realm name="test2.open-ims.test">
+			<Server FQDN="test5" metric="13"/>
+		</Realm>
+	</Routing>	
+-->
+</DiameterPeer>

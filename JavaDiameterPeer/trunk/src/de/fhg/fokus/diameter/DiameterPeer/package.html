@@ -1,0 +1,17 @@
+<body>
+A DiameterPeer represents a Diameter node defined in the Diameter base protocol.
+
+<p>
+<ul>
+<li>A DiameterPeer listens to incoming messages with a set of Acceptors. 
+Created connections with other peers are maintained by a set of Communicators, 
+which are again managed by a PeerManager.
+
+<li>A DiameterPeer sends messages to its peers by using of Communicators.
+Incoming messages received by Communicators are put in a task queue at first.
+
+<li>A set of DiameterWorkers take these messages out of the task queue and call 
+listener for further process.   
+</ul>
+
+</body>
