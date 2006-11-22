@@ -46,7 +46,7 @@
  /**
  * \file
  *
- * I/S-CSCF Module - Main SIP Operations 
+ * P/I/S-CSCF Module - Main SIP Operations 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
@@ -75,9 +75,9 @@ extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 
 
 /**
  * Adds a header to the message as the first one in the message
- * \param msg - the message to add a header to
- * \param content - the str containing the new header
- * \return 1 on succes, 0 on failure
+ * @param msg - the message to add a header to
+ * @param content - the str containing the new header
+ * @returns 1 on succes, 0 on failure
  */
 int cscf_add_header_first(struct sip_msg *msg, str *hdr)
 {
@@ -101,9 +101,9 @@ int cscf_add_header_first(struct sip_msg *msg, str *hdr)
 
 /**
  * Adds a header to the message
- * \param msg - the message to add a header to
- * \param content - the str containing the new header
- * \return 1 on succes, 0 on failure
+ * @param msg - the message to add a header to
+ * @param content - the str containing the new header
+ * @returns 1 on succes, 0 on failure
  */
 int cscf_add_header(struct sip_msg *msg, str *hdr,int type)
 {
@@ -124,11 +124,12 @@ int cscf_add_header(struct sip_msg *msg, str *hdr,int type)
 	}	
  	return 1;
 }
+
 /**
  * Adds a header to the reply message
- * \param msg - the message to add a header to its reply
- * \param content - the str containing the new header
- * \return 1 on succes, 0 on failure
+ * @param msg - the request to add a header to its reply
+ * @param content - the str containing the new header
+ * @returns 1 on succes, 0 on failure
  */
 int cscf_add_header_rpl(struct sip_msg *msg, str *hdr)
 {
@@ -145,9 +146,9 @@ int cscf_add_header_rpl(struct sip_msg *msg, str *hdr)
 
 /**
  * Delete the given header from the given message
- * \param msg - the message to delete the header from
- * \param hdr - the header to delete. !!! Must be contained in the msg->headers
- * \return 1 on success, 0 on failure
+ * @param msg - the message to delete the header from
+ * @param hdr - the header to delete. !!! Must be contained in the msg->headers
+ * @returns 1 on success, 0 on failure
  */
 int cscf_delete_header(struct sip_msg *msg, struct hdr_field *hdr)
 {
@@ -163,10 +164,10 @@ int cscf_delete_header(struct sip_msg *msg, struct hdr_field *hdr)
 /**
  * Returns the Private Identity extracted from the Authorization header.
  * If none found there takes the SIP URI in To without the "sip:" prefix
- * TODO - remove the fallback case to the To header
- * \param msg - the SIP message
- * \param realm - the realm to match in an Authorization header
- * \return the str containing the private id, no mem dup
+ * \todo - remove the fallback case to the To header
+ * @param msg - the SIP message
+ * @param realm - the realm to match in an Authorization header
+ * @returns the str containing the private id, no mem dup
  */
 str cscf_get_private_identity(struct sip_msg *msg, str realm)
 {
@@ -212,8 +213,8 @@ done:
 
 /**
  * Returns the Public Identity extracted from the To header
- * \param msg - the SIP message
- * \return the str containing the private id, no mem dup
+ * @param msg - the SIP message
+ * @returns the str containing the private id, no mem dup
  */
 str cscf_get_public_identity(struct sip_msg *msg)
 {
@@ -244,8 +245,8 @@ str cscf_get_public_identity(struct sip_msg *msg)
 /**
  * Returns the expires value from the Expires header in the message.
  * It searches into the Expires header and if not found returns -1
- * \param msg - the SIP message, if available
- * \return the value of the expire or -1 if not found
+ * @param msg - the SIP message, if available
+ * @returns the value of the expire or -1 if not found
  */
 int cscf_get_expires_hdr(struct sip_msg *msg)
 {
@@ -271,12 +272,13 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
 	}
 	return -1;
 }
+
 /**
  * Returns the expires value from the message.
  * First it searches into the Expires header and if not found it also looks 
  * into the expires parameter in the contact header
- * \param msg - the SIP message
- * \return the value of the expire or the default 3600 if none found
+ * @param msg - the SIP message
+ * @returns the value of the expire or the default 3600 if none found
  */
 int cscf_get_expires(struct sip_msg *msg)
 {
@@ -324,8 +326,8 @@ int cscf_get_expires(struct sip_msg *msg)
 
 /**
  * Get the Public Identity from the Request URI of the message
- * \param msg - the SIP message
- * \return the public identity
+ * @param msg - the SIP message
+ * @returns the public identity
  */
 str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 {
@@ -355,8 +357,9 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 
 /**
  * Retrieves the SIP request that generated a diameter transaction
- * \param t - the diameter transaction
- * \return the SIP request
+ * @param hash - the tm hash value for this request
+ * @param label - the tm label value for this request
+ * @returns the SIP request
  */
 struct sip_msg *cscf_get_request(unsigned int hash,unsigned int label)
 {
@@ -371,13 +374,13 @@ struct sip_msg *cscf_get_request(unsigned int hash,unsigned int label)
 
 static str s_ip={"integrity-protected",19};
 /**
- * Returns if the SIP message should be integrity protected.
- * The integrity-protected field in the in the Authorization header
- * TODO - optimize it by including the integrity protected parameter in the
+ * Returns if the SIP message is integrity protected.
+ * Looks for the integrity-protected field in the in the Authorization header.
+ * \todo - optimize it by including the integrity protected parameter in the
  * digest parsed structures - will change the core though...
- * \param msg - the SIP message
- * \param realm - the realm
- * \return 1 if integrity protected is set to yes, 0 if it is not set to yes or is
+ * @param msg - the SIP message
+ * @param realm - the realm to match in the authorization
+ * @returns 1 if integrity protected is set to yes, 0 if it is not set to yes or is
  * missing
  */
 int cscf_get_integrity_protected(struct sip_msg *msg,str realm)
@@ -419,12 +422,12 @@ int cscf_get_integrity_protected(struct sip_msg *msg,str realm)
 
 
 /**
- * Returns the transaction identifiers.
+ * Returns the tm transaction identifiers for a message.
  * If no transaction, then creates one
- * \param msg - the SIP message
- * \param hash - where to write the hash
- * \param label - where to write the label
- * \return 1 on success and creation of a new transaction, 0 if transaction existed,
+ * @param msg - the SIP message
+ * @param hash - where to write the hash
+ * @param label - where to write the label
+ * @returns 1 on success and creation of a new transaction, 0 if transaction existed,
  * -1 if failure
  */
 int cscf_get_transaction(struct sip_msg *msg, unsigned int *hash,unsigned int *label)
@@ -450,7 +453,11 @@ int cscf_get_transaction(struct sip_msg *msg, unsigned int *hash,unsigned int *l
 }
 
 /**
- * Transactional response - tries to create a transaction if none found
+ * Transactional SIP response - tries to create a transaction if none found.
+ * @param msg - message to reply to
+ * @param code - the Status-code for the response
+ * @param text - the Reason-Phrase for the response
+ * @returns the tmb.t_repy() result
  */
 int cscf_reply_transactional(struct sip_msg *msg, int code, char *text)
 {
@@ -462,11 +469,12 @@ int cscf_reply_transactional(struct sip_msg *msg, int code, char *text)
 	}
 	return tmb.t_reply(msg,code,text);
 }
+
 /**
  * Looks for the auts parameter in the Authorization header and returns its value.
- * \param msg - the SIP message
- * \param realm - realm to match the right Authorization header
- * \return 1 the auts
+ * @param msg - the SIP message
+ * @param realm - realm to match the right Authorization header
+ * @returns the auts value or an empty string if not found
  */
 str cscf_get_auts(struct sip_msg *msg, str realm)
 {
@@ -509,9 +517,9 @@ str cscf_get_auts(struct sip_msg *msg, str realm)
 
 /**
  * Looks for the nonce parameter in the Authorization header and returns its value.
- * \param msg - the SIP message
- * \param realm - realm to match the right Authorization header
- * \return the nonce
+ * @param msg - the SIP message
+ * @param realm - realm to match the right Authorization header
+ * @returns the nonce or an empty string if none found
  */
 str cscf_get_nonce(struct sip_msg *msg, str realm)
 {
@@ -548,9 +556,9 @@ str cscf_get_nonce(struct sip_msg *msg, str realm)
 
 /**
  * Looks for the algorithm parameter in the Authorization header and returns its value.
- * \param msg - the SIP message
- * \param realm - realm to match the right Authorization header
- * \return the nonce
+ * @param msg - the SIP message
+ * @param realm - realm to match the right Authorization header
+ * @returns the algorithm or an empty string if not found
  */
 str cscf_get_algorithm(struct sip_msg *msg, str realm)
 {
@@ -586,9 +594,9 @@ str cscf_get_algorithm(struct sip_msg *msg, str realm)
 
 /**
  * Looks for the uri parameter in the Authorization header and returns its value.
- * \param msg - the SIP message
- * \param realm - realm to match the right Authorization header
- * \return the nonce
+ * @param msg - the SIP message
+ * @param realm - realm to match the right Authorization header
+ * @returns the uri in the digest
  */
 str cscf_get_digest_uri(struct sip_msg *msg, str realm)
 {
@@ -621,11 +629,14 @@ str cscf_get_digest_uri(struct sip_msg *msg, str realm)
 	}
 	return uri;	
 }
+
 /**
  * Looks for the nonce and response parameters in the Authorization header and returns them
- * \param msg - the SIP message
- * \param realm - realm to match the right Authorization header
- * \return the nonce
+ * @param msg - the SIP message
+ * @param realm - realm to match the right Authorization header
+ * @param nonce - param to fill with the nonce found
+ * @param response - param to fill with the response
+ * @returns 1 if found, 0 if not
  */
 int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *response)
 {
@@ -664,10 +675,9 @@ int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *respo
 str ua_dummy={"Unknown UA",10};
 str ua_nomsg={"No Message",10};
 /**
- * Looks for the UserAgent header and extracts its content
- * \param msg - the sip message
- * \return the user agent string, or ua_dummy if not found, or ua_nomsg if msg was
- * NULL
+ * Looks for the User-Agent header and extracts its content.
+ * @param msg - the sip message
+ * @returns the user agent string, or ua_dummy if not found, or ua_nomsg if msg was NULL
  */
 str cscf_get_user_agent(struct sip_msg *msg)
 {
@@ -685,9 +695,9 @@ str cscf_get_user_agent(struct sip_msg *msg)
 }
 
 /**
- * Parses all the contact headers
- * \param msg - the SIP message
- * \return the first contact_body
+ * Parses all the contact headers.
+ * @param msg - the SIP message
+ * @returns the first contact_body
  */
 contact_body_t *cscf_parse_contacts(struct sip_msg *msg)
 {
@@ -718,8 +728,8 @@ contact_body_t *cscf_parse_contacts(struct sip_msg *msg)
 
 /**
  * Retrieve a list of concatenated contents of Path headers found in the message
- * \param msg - the SIP message containing the Path headers
- * \return pkg mem allocated str with the headers values separated by ','
+ * @param msg - the SIP message containing the Path headers
+ * @returns pkg mem allocated str with the headers values separated by ','
  */
 str cscf_get_path(struct sip_msg *msg)
 {
@@ -761,9 +771,9 @@ str cscf_get_path(struct sip_msg *msg)
 }
 
 /**
- * Looks for the Event header and extracts its content
- * \param msg - the sip message
- * \return the event value
+ * Looks for the Event header and extracts its content.
+ * @param msg - the sip message
+ * @returns the string event value or an empty string if none found
  */
 str cscf_get_event(struct sip_msg *msg)
 {
@@ -780,8 +790,8 @@ str cscf_get_event(struct sip_msg *msg)
 
 /**
  * Looks for the P-Asserted-Identity header and extracts its content
- * \param msg - the sip message
- * \return the event value
+ * @param msg - the sip message
+ * @returns the asserted identity
  */
 str cscf_get_asserted_identity(struct sip_msg *msg)
 {
@@ -815,8 +825,8 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 
 /**
  * Looks for the Contact header and extracts its content
- * \param msg - the sip message
- * \return the event value
+ * @param msg - the sip message
+ * @returns the first contact in the message
  */
 str cscf_get_contact(struct sip_msg *msg)
 {
@@ -853,8 +863,9 @@ str cscf_get_contact(struct sip_msg *msg)
 
 /**
  * Looks for the First Route header
- * \param msg - the sip message
- * \return the event value
+ * @param msg - the sip message
+ * @param hr - param to return the ptr to the found header
+ * @returns the first route string
  */
 str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr)
 {
@@ -888,9 +899,9 @@ static str route_hdr_e={"\r\n",2};
 /**
  * Looks if the first entry in the first Route points is equal to the given value and
  * deletes the old header. If there are more entries inserts a new header at top with those values.
- * \param msg - the SIP message
- * \param value - the value to look for
- * \return 1 if removed, else 0
+ * @param msg - the SIP message
+ * @param value - the value to look for
+ * @returns 1 if removed, else 0
  */
 int cscf_remove_first_route(struct sip_msg *msg,str value)
 {
@@ -936,8 +947,8 @@ int cscf_remove_first_route(struct sip_msg *msg,str value)
 
 /**
  * Returns if the uri is of myself
- * \param uri as string
- * \return 1 on success 0 on fail
+ * @param uri as string
+ * @returns 1 on success 0 on fail
  */
 inline int cscf_is_myself(str uri)
 {
@@ -955,11 +966,13 @@ inline int cscf_is_myself(str uri)
 	
 	return ret;
 }
+
 /**
  * Looks if the first entry in the first Route points to myself and if positive, it removes it
  * deletes the old header. If there are more entries inserts a new header at top with those values.
- * \param msg - the SIP message
- * \return 1 if removed, else 0
+ * @param msg - the SIP message
+ * @param h - ptr to return the found hdr_field 
+ * @returns 1 if removed, else 0
  */
 int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h)
 {
@@ -1004,9 +1017,9 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h)
 
 static str s_record_route={"Record-route",12};
 /**
- * Returns all the record routes concatenated.
- * \param msg sip message
- * \return concatenated routes as String
+ * Returns all the record routes, concatenated.
+ * @param msg sip message
+ * @returns concatenated routes as String
  */
 str cscf_get_record_routes(struct sip_msg *msg)
 {
@@ -1038,11 +1051,12 @@ str cscf_get_record_routes(struct sip_msg *msg)
 	}	
 	return route;
 }
+
 /**
- * Returns the next record route
- * \param msg as sip_msg (pointer)
- * \param start as header_field (pointer) 
- * \return header field on success 0 on fail 
+ * Returns the next record route header
+ * @param msg - the SIP message
+ * @param start - The header to start searching from or NULL if from first header 
+ * @returns header field on success or NULL on error 
  */
 struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_field *start)
 {
@@ -1077,8 +1091,8 @@ struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_fiel
 
 /** 
  * Delivers the Realm from request URI
- * \param msg sip message 
- * \return realm as String on success 0 on fail
+ * @param msg sip message 
+ * @returns realm as String on success 0 on fail
  */
 str cscf_get_realm_from_ruri(struct sip_msg *msg)
 {
@@ -1096,8 +1110,8 @@ str cscf_get_realm_from_ruri(struct sip_msg *msg)
 
 /**
  * Gets identity from the request URI 
- * \param msg sip message 
- * \return Address of the request as String on success 0 on fail
+ * @param msg sip message 
+ * @returns Address of the request as String on success 0 on fail
  */
 str cscf_get_identity_from_ruri(struct sip_msg *msg)
 {
@@ -1128,8 +1142,9 @@ str cscf_get_identity_from_ruri(struct sip_msg *msg)
 
 /**
  * Looks for the Call-ID header
- * \param msg - the sip message
- * \return the callid value
+ * @param msg - the sip message
+ * @param hr - ptr to return the found hdr_field 
+ * @returns the callid value
  */
 str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr)
 {
@@ -1154,8 +1169,9 @@ str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr)
 
 /**
  * Looks for the Call-ID header
- * \param msg - the sip message
- * \return the callid value
+ * @param msg - the sip message
+ * @param hr - ptr to return the found hdr_field 
+ * @returns the callid value
  */
 int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr)
 {
@@ -1191,7 +1207,9 @@ int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr)
 }
 
 /** 
- * Returns the corresponding request for a reply, using tm transactions
+ * Returns the corresponding request for a reply, using tm transactions.
+ * @param reply - the reply to find request for
+ * @returns the transactional request
  */
 struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 {
@@ -1207,9 +1225,10 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 
 static str s_called_party_id={"P-Called-Party-ID",17};
 /**
- * Looks for the P-Preferred-Identity header and extracts its content
- * \param msg - the sip message
- * \return the event value
+ * Looks for the P-Preferred-Identity header and extracts its content.
+ * @param msg - the sip message
+ * @param hr - ptr to return the found hdr_field 
+ * @returns the P-Called_Party-ID
  */
 str cscf_get_called_party_id(struct sip_msg *msg,struct hdr_field **hr)
 {
@@ -1247,9 +1266,10 @@ static str s_subscription_state={"Subscription-State",18};
 static str s_active={"active",6};
 static str s_terminated={"terminated",10};
 static str s_expires={"expires=",8};
- /* Looks for the Subscription-State header and extracts its content
- * \param msg - the sip message
- * \return expiration if active, -1 if not found, -2 if terminated
+/**
+ * Looks for the Subscription-State header and extracts its content
+ * @param msg - the sip message
+ * @returns expiration if active, -1 if not found, -2 if terminated
  */
 int cscf_get_subscription_state(struct sip_msg *msg)
 {
@@ -1301,11 +1321,12 @@ int cscf_get_subscription_state(struct sip_msg *msg)
 }
 
 /**
- * Search & Replace strings in a sip message
- * \param msg sip message(pointer) 
- * \param orig the string to be replaced
- * \param repl string to insert
- * \return 1 on success 0 on fail
+ * Replace a string in a message with another one.
+ * \note the orig string MUST be allocated in the limits of msg->buf.
+ * @param msg - the SIP message to modify 
+ * @param orig - the string to be replaced
+ * @param repl - string to replace with
+ * @returns 1 on success 0 on fail (the original string was not in the original SIP message)
  */ 
 int cscf_replace_string(struct sip_msg *msg, str orig,str repl)
 {
@@ -1333,12 +1354,11 @@ int cscf_replace_string(struct sip_msg *msg, str orig,str repl)
 }
 
 /**
- * Delivers the contents of the header fields of a sip message
- * \param msg sip message(pointer - see struct sip_msg) 
- * \param header_name 
- * \return  the paths of the headers
+ * Get the content of a certain header.
+ * @param msg - the SIP message 
+ * @param header_name - the name of the SIP header to return the value for.
+ * @returns the list of values in all corresponding headers, pkg_malloced
  */ 
-
 str cscf_get_headers_content(struct sip_msg * msg , str header_name)
 {	
 	str path={0,0};
@@ -1379,11 +1399,10 @@ str cscf_get_headers_content(struct sip_msg * msg , str header_name)
 }
 
 /**
- * Method for parsing the header from the message 
- * for a specific header 
- * \param msg sip message(pointer)
- * \param header_name string value for the specific header
- * \return header on success NULL  on fail
+ * Returns the first header structure for a given header name. 
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @returns the hdr_field on success or NULL if not found  
  */
 struct hdr_field* cscf_get_header(struct sip_msg * msg , str header_name)
 {		
@@ -1403,11 +1422,11 @@ struct hdr_field* cscf_get_header(struct sip_msg * msg , str header_name)
 }
 
 /**
- * Delivers the next header on the sip message
- * \param msg pointer to the sip message structure
- * \param header_name  
- * \param last_header 
- * \return header field on success NULL on fail
+ * Returns the next header structure for a given header name.
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @param last_header - last header to ignore in the search, or NULL if to start from the first one
+ * @returns the hdr_field on success or NULL if not found  
  */
 struct hdr_field* cscf_get_next_header(struct sip_msg * msg ,
 						 str header_name,struct hdr_field* last_header)
@@ -1428,11 +1447,11 @@ struct hdr_field* cscf_get_next_header(struct sip_msg * msg ,
 }
 
 /**
- * Gets the next header type
- * \param msg sip message (pointer)
- * \param hdr_types_t type
- * \param hdr_field last header used (pointer)
- * \returns header field, see also data structure hdr_field  and NULL on fail
+ * Returns the next header structure for a given hdr_types_t type.
+ * @param msg - the SIP message to look into
+ * @param type - the type of the header to look for
+ * @param last_header - last header to ignore in the search, or NULL if to start from the first one
+ * @returns the hdr_field on success or NULL if not found  
  */
 struct hdr_field* cscf_get_next_header_type(struct sip_msg * msg ,
 						 hdr_types_t type, struct hdr_field* last_header)
@@ -1456,8 +1475,8 @@ str cscf_p_visited_network_id={"P-Visited-Network-ID",20};
 
 /**
  * Return the P-Visited-Network-ID header
- * \param msg - the SIP message
- * \return the str with the header's body
+ * @param msg - the SIP message
+ * @returns the str with the header's body
  */
 str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h)
 {
@@ -1490,8 +1509,9 @@ done:
 
 /**
  * Looks for the Authorization header and returns its body.
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the authorization body string
  */
 str cscf_get_authorization(struct sip_msg *msg,struct hdr_field **h)
 {
@@ -1518,8 +1538,9 @@ str cscf_get_authorization(struct sip_msg *msg,struct hdr_field **h)
 
 /**
  * Looks for the WWW-Authenticate header and returns its body.
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the www-authenticate body
  */
 str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h)
 {
@@ -1551,8 +1572,9 @@ str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h)
 
 /**
  * Looks for the Security-Client header header and returns its body.
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-client body
  */
 str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h)
 {
@@ -1584,8 +1606,9 @@ str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h)
 
 /**
  * Looks for the Security-Verify header header and returns its body.
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-verify body
  */
 str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h)
 {
@@ -1616,9 +1639,10 @@ str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h)
 }
 
 /**
- * Deletes the given header
- * \param msg - the SIP message
- * \return 1 on success, 0 on error
+ * Deletes the given header.
+ * @param msg - the SIP message
+ * @param h - the header to delete
+ * @returns 1 on success, 0 on error
  */
 int cscf_del_header(struct sip_msg *msg,struct hdr_field *h)
 {
@@ -1636,8 +1660,9 @@ int cscf_del_header(struct sip_msg *msg,struct hdr_field *h)
 
 /**
  * Looks for the First Via header and returns its body.
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the first via_body
  */
 struct via_body* cscf_get_first_via(struct sip_msg *msg,struct hdr_field **h)
 {
@@ -1658,8 +1683,8 @@ struct via_body* cscf_get_first_via(struct sip_msg *msg,struct hdr_field **h)
 
 /**
  * Looks for the Last Via header and returns it.
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @returns the last via body body
  */
 struct via_body* cscf_get_last_via(struct sip_msg *msg)
 {
@@ -1697,8 +1722,10 @@ struct via_body* cscf_get_last_via(struct sip_msg *msg)
 /**
  * Looks for the UE Via in First Via header and returns its body, or returns last via if
  * first is sip2ims gateway 
- * \param msg - the SIP message
- * \return the authorization body
+ * @param msg - the SIP message
+ * @param pcscf_sip2ims_via_host - host of the sip2ims gateway
+ * @param pcscf_sip2ims_via_port - port of the sip2ims gateway
+ * @returns the via of the UE
  */
 struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port)
 {
@@ -1718,8 +1745,8 @@ struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,
 static str realm_p={"realm=\"",7};
 /**
  * Looks for the realm parameter in the Authorization header and returns its value.
- * \param msg - the SIP message
- * \return the realm
+ * @param msg - the SIP message
+ * @returns the realm
  */
 str cscf_get_realm(struct sip_msg *msg)
 {
@@ -1758,8 +1785,12 @@ str cscf_get_realm(struct sip_msg *msg)
 
 /**
  * Returns the content of the P-Associated-URI header
- * public_id is pkg_alloced and should be later freed
- * inside values are not duplicated
+ * Public_id is pkg_alloced and should be later freed.
+ * Inside values are not duplicated.
+ * @param msg - the SIP message to look into
+ * @param public_id - array to be allocated and filled with the result
+ * @param public_id_cnt - the size of the public_id array
+ * @returns 1 on success or 0 on error
  */
 int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt)
 {
@@ -1816,7 +1847,9 @@ int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id
 
 /**
  * Returns the first entry of the P-Associated-URI header.
- * inside value is not duplicated
+ * @param msg - the SIP message to look into
+ * @param public_id - the public identity to be filled with the result
+ * @returns 1 on success or 0 on failure
  */
 int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id)
 {
@@ -1858,8 +1891,9 @@ int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id)
 static str s_preferred_id={"P-Preferred-Identity",20};
 /**
  * Looks for the P-Preferred-Identity header and extracts its content
- * \param msg - the sip message
- * \return the event value
+ * @param msg - the SIP message to look into
+ * @param hr - the header ptr to be filled with the result
+ * @returns the preferred identity string or an empty string if none found
  */
 str cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **hr)
 {
@@ -1894,9 +1928,10 @@ str cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **hr)
 
 
 /**
- * Returns the next record route
- * \param msg - the sip message
- * \return the event value
+ * Returns the next route.
+ * @param msg - the sip message
+ * @param start - where to start look for, ignoring itself
+ * @returns the the next route header or NULL if no more found
  */
 struct hdr_field* cscf_get_next_route(struct sip_msg *msg,struct hdr_field *start)
 {
@@ -1929,9 +1964,9 @@ struct hdr_field* cscf_get_next_route(struct sip_msg *msg,struct hdr_field *star
 
 
 /**
- * Looks for the Content-Type header and extracts its content
- * \param msg - the sip message
- * \return the content-type string, or {0,0} if not found
+ * Looks for the Content-Type header and extracts its content.
+ * @param msg - the sip message
+ * @returns the content-type string, or an empty string if not found
  */
 str cscf_get_content_type(struct sip_msg *msg)
 {
@@ -1944,8 +1979,8 @@ str cscf_get_content_type(struct sip_msg *msg)
 
 /**
  * Looks for the Content-length header and extracts its content
- * \param msg - the sip message
- * \return the content-type string, or {0,0} if not found
+ * @param msg - the sip message
+ * @returns the content length or 0 if not found
  */
 int cscf_get_content_len(struct sip_msg *msg)
 {
@@ -1961,9 +1996,9 @@ int cscf_get_content_len(struct sip_msg *msg)
  * Returns the content of the Service-Route header.
  * data vector is pkg_alloced and should be later freed
  * inside values are not duplicated
- * \param msg - the SIP message
- * \param size - size of the returned vector, updated
- * \return - the str vector of uris
+ * @param msg - the SIP message
+ * @param size - size of the returned vector, filled with the result
+ * @returns - the str vector of uris
  */
 str* cscf_get_service_route(struct sip_msg *msg,int *size)
 {
@@ -2021,14 +2056,14 @@ str* cscf_get_service_route(struct sip_msg *msg,int *size)
 
 
 /**
- * Delivers the originating contact of the message
- * \param msg sip message
- * \param host as string
- * \param port as Integer(pointer)
- * \param transport Protokoll Layer
- * \param 
- * \param
- * \return 1 on success
+ * Returns the originating contact.
+ * @param msg - the SIP message to look into
+ * @param host - the host string to be filled with the result
+ * @param port - the port number to be filled with the result 
+ * @param transport - the transport type to be filled with the result
+ * @param pcscf_sip2ims_via_host - host string for the sip2ims gateway to skip in via
+ * @param pcscf_sip2ims_via_port - port number for the sip2ims gateway to skip in via
+ * @returns 1 on success
  */
 int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port)
 {
@@ -2045,12 +2080,13 @@ int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 
 
 /**
- * Delivers the terminating contact of the message
- * \param msg sip message
- * \param host as string
- * \param port as integer
- * \param transport Protokoll layer
- * \return 1 on success 0 on fail
+ * Returns the terminating contact.
+ * @param msg sip message
+ * @param msg - the SIP message to look into
+ * @param host - the host string to be filled with the result
+ * @param port - the port number to be filled with the result 
+ * @param transport - the transport type to be filled with the result
+ * @returns 1 on success
  */
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport)
 {

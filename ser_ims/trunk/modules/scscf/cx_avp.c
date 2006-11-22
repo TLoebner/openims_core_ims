@@ -64,18 +64,16 @@
 extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp funcs 		*/
 
 /**
- * Main method for adding diverse entities as AVP.
- * Many methods below with adding functions are the wrapper of
- * this functionality.
- * \param m  Diameter Response
- * \param d String 
- * \param len 
- * \param avp_code AVP Code
- * \param flags for the avp code
- * \param vendorid
- * \param data_do
- * \param func 
- * \return
+ * Create and add an AVP to a Diameter message.
+ * @param m - Diameter message to add to 
+ * @param d - the payload data
+ * @param len - length of the payload data
+ * @param avp_code - the code of the AVP
+ * @param flags - flags for the AVP
+ * @param vendorid - the value of the vendor id or 0 if none
+ * @param data_do - what to do with the data when done
+ * @param func - the name of the calling function, for debugging purposes
+ * @returns 1 on success or 0 on failure
  */
 static inline int Cx_add_avp(AAAMessage *m,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
@@ -96,16 +94,16 @@ static inline int Cx_add_avp(AAAMessage *m,char *d,int len,int avp_code,
 }
 
 /**
- * Adds an Attribute Value Pair to the list
- * \param m  Diameter Response
- * \param d String 
- * \param len 
- * \param avp_code AVP Code
- * \param flags for the avp code
- * \param vendorid
- * \param data_do
- * \param func 
- * \return
+ * Create and add an AVP to a list of AVPs.
+ * @param list - the AVP list to add to 
+ * @param d - the payload data
+ * @param len - length of the payload data
+ * @param avp_code - the code of the AVP
+ * @param flags - flags for the AVP
+ * @param vendorid - the value of the vendor id or 0 if none
+ * @param data_do - what to do with the data when done
+ * @param func - the name of the calling function, for debugging purposes
+ * @returns 1 on success or 0 on failure
  */
 static inline int Cx_add_avp_list(AAA_AVP_LIST *list,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
@@ -133,12 +131,12 @@ static inline int Cx_add_avp_list(AAA_AVP_LIST *list,char *d,int len,int avp_cod
 }
 
 /**
- * Gets Information of AVP field given in avp_code
- * \param msg Diameter Response
- * \param avp_code query field of Information
- * \param vendor_id
- * \param func 
- * \return data as String on success, 0 on fail
+ * Returns the value of a certain AVP from a Diameter message.
+ * @param m - Diameter message to look into
+ * @param avp_code - the code to search for
+ * @param vendorid - the value of the vendor id to look for or 0 if none
+ * @param func - the name of the calling function, for debugging purposes
+ * @returns the str with the payload on success or an empty string on failure
  */
 static inline str Cx_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
 							const char *func)
@@ -159,10 +157,10 @@ static inline str Cx_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
 
 
 /**
- * Creates an AVP with User Name
- * \param msg  Diameter Response
- * \param data String 
- * \return 1 on success 0 on fail
+ * Creates and adds a User-Name AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_user_name(AAAMessage *msg,str data)
 {
@@ -176,10 +174,10 @@ inline int Cx_add_user_name(AAAMessage *msg,str data)
 }
 
 /**
- * Creates an AVP with public Identity
- * \param msg  Diameter Response
- * \param data String 
- * \return 1 on success 0 on fail
+ * Creates and adds a Public Identity AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_public_identity(AAAMessage *msg,str data)
 {
@@ -193,10 +191,10 @@ inline int Cx_add_public_identity(AAAMessage *msg,str data)
 }
 
 /**
- * Creates an AVP with Network ID (visited)
- * \param msg  Diameter Response
- * \param data String 
- * \return 1 on success 0 on fail
+ * Creates and adds a Visited-Network-ID AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_visited_network_id(AAAMessage *msg,str data)
 {
@@ -210,10 +208,10 @@ inline int Cx_add_visited_network_id(AAAMessage *msg,str data)
 }
 
 /**
- * Creates an AVP with authorization type
- * \param msg  Diameter Response
- * \param data 
- * \return 1 on success 0 on fail
+ * Creates and adds a Authorization-Type AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_authorization_type(AAAMessage *msg,unsigned int data)
 {
@@ -230,10 +228,10 @@ inline int Cx_add_authorization_type(AAAMessage *msg,unsigned int data)
 
 
 /**
- * Adds a server name
- * \param msg  Diameter Response
- * \param data 
- * \return Cx_add_avp
+ * Creates and adds a Server-Name AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_server_name(AAAMessage *msg,str data)
 {
@@ -247,10 +245,10 @@ inline int Cx_add_server_name(AAAMessage *msg,str data)
 }
 
 /**
- * Adding sip numbers of authorized entities
- * \param msg  Diameter Response
- * \param data sip number
- * \return 1 on success 0 on fail
+ * Creates and adds a SIP-Number-Auth-Items AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
 {
@@ -268,11 +266,11 @@ inline int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
 
 
 /**
- * Adds sip authorization data 
- * \param msg  Diameter Response
- * \param auth_scheme Authentication Scheme 
- * \paramauth Authorization
- * \return 1 on success 0 on fail
+ * Creates and adds a SIP-Auth-Data-Item AVP.
+ * @param msg - the Diameter message to add to.
+ * @param auth_scheme - the value for the authorization scheme AVP
+ * @param auth - the value for the authorization AVP
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str auth)
 {
@@ -313,10 +311,10 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 }
 
 /**
- * Adds an Assignment type.
- * \param msg  Diameter Response
- * \param data
- * \return 1 on success 0 on fail
+ * Creates and adds a Server-Assignment-Type AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_server_assignment_type(AAAMessage *msg,unsigned int data)
 {
@@ -332,10 +330,10 @@ inline int Cx_add_server_assignment_type(AAAMessage *msg,unsigned int data)
 }
 
 /**
- * Adds an Attribute Value Pair for availibility of userdaata
- * \param msg  Diameter Response
- * \param data
- * \return 1 on success 0 on fail
+ * Creates and adds Userdata-Available AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_userdata_available(AAAMessage *msg,unsigned int data)
 {
@@ -351,10 +349,10 @@ inline int Cx_add_userdata_available(AAAMessage *msg,unsigned int data)
 }
 
 /**
- * Adds an Attribute Value Pair with result code
- * \param msg  Diameter Response
- * \param data 
- * \return 1 on success 0 on fai
+ * Creates and adds a Result-Code AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_result_code(AAAMessage *msg,unsigned int data)
 {
@@ -370,10 +368,10 @@ inline int Cx_add_result_code(AAAMessage *msg,unsigned int data)
 }
 
 /**
- * Experimental Result Codes
- * \param msg  Diameter Response
- * \param data 
- * \return 1 on success 0 on fail
+ * Creates and adds a Experimental-Result-Code AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_experimental_result_code(AAAMessage *msg,unsigned int data)
 {
@@ -415,12 +413,12 @@ inline int Cx_add_experimental_result_code(AAAMessage *msg,unsigned int data)
 }
 
 /**
- * Adds Specific application_id
- * \param msg  Diameter Response
- * \param vendor_id
- * \param auth_id Authorization Application ID
- * \param acct_id Accounting Application ID
- * \return 
+ * Creates and adds a Vendor-Specifig-Application-ID AVP.
+ * @param msg - the Diameter message to add to.
+ * @param vendor_id - the value of the vendor_id,
+ * @param auth_id - the authorization application id
+ * @param acct_id - the accounting application id
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,
 	unsigned int auth_id,unsigned int acct_id)
@@ -476,10 +474,10 @@ inline int Cx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,
 
 
 /**
- * Adds an AVP with session state of Authorization
- * \param msg Diameter Response
- * \param data 
- * \return 1 on success 0 on fail
+ * Creates and adds a Auth-Session-State AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_auth_session_state(AAAMessage *msg,unsigned int data)
 {
@@ -495,10 +493,10 @@ inline int Cx_add_auth_session_state(AAAMessage *msg,unsigned int data)
 }
 
 /**
- * Adds an Attribute Value Pair of user destionation realm
- * \param msg  Diameter Response
- * \param data String 
- * \return 1 on success 0 on fail
+ * Creates and adds a Destination-Realm AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
  */
 inline int Cx_add_destination_realm(AAAMessage *msg,str data)
 {
@@ -513,9 +511,9 @@ inline int Cx_add_destination_realm(AAAMessage *msg,str data)
 
 
 /**
- * Gets the session id for that call
- * \param msg  Diameter Response
- * \return Session_Id on success 0 on fail
+ * Returns the Session-Id AVP of a Diameter message.
+ * @param msg - the Diameter message
+ * @returns AVP payload on success or an empty string on error
  */
 inline str Cx_get_session_id(AAAMessage *msg)
 {
@@ -527,10 +525,9 @@ inline str Cx_get_session_id(AAAMessage *msg)
 
 
 /**
- * get the User Name from the Response
- * \param msg  Diameter Response(pointer)
- * \return str as User_Name
- * \return user_name on success 0 on fail
+ * Returns the User-Name AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_user_name(AAAMessage *msg)
 {
@@ -541,9 +538,9 @@ inline str Cx_get_user_name(AAAMessage *msg)
 }
 
 /**
- * Get IMS Public Identity
- * \param msg  Diameter Response
- * \return identity on success 0 on fail
+ * Returns the Public-Identity AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_public_identity(AAAMessage *msg)
 {
@@ -554,16 +551,16 @@ inline str Cx_get_public_identity(AAAMessage *msg)
 }
 
 /**
- * Finds out the next public Identity from response
- * \param msg  Diameter Response
- * \param pos  position 
- * \param avp_code AVP Code
- * \param vendor_id
- * \param func function
- * \return Attribute-Value-Pair
+ * Finds out the next Public-Identity AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @param pos - position to resume search or NULL if to start from the first AVP 
+ * @param avp_code - the code of the AVP to look for
+ * @param vendor_id - the vendor id of the AVP to look for
+ * @param func - the name of the calling function for debugging purposes
+ * @returns the AVP payload on success or an empty string on error
  */
-inline AAA_AVP* Cx_get_next_public_identity(AAAMessage *msg,AAA_AVP* pos,int avp_code,int vendor_id,const char *func){		
-{
+inline AAA_AVP* Cx_get_next_public_identity(AAAMessage *msg,AAA_AVP* pos,int avp_code,int vendor_id,const char *func)
+{		
 	AAA_AVP *avp;
 	
 	avp = cdpb.AAAFindMatchingAVP(msg,pos,avp_code,vendor_id,0);
@@ -574,14 +571,11 @@ inline AAA_AVP* Cx_get_next_public_identity(AAAMessage *msg,AAA_AVP* pos,int avp
 	else 
 		return avp;
 }
-	
-	
-}
 
 /**
- * Get the Identifier of a visited network
- * \param msg  Diameter Response
- * \return the network ID on success 0 on fail
+ * Returns the Visited-Network-ID AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_visited_network_id(AAAMessage *msg)
 {
@@ -592,10 +586,9 @@ inline str Cx_get_visited_network_id(AAAMessage *msg)
 }
 
 /**
- * Getter for Authorization Type of IMS User
- * \param msg Diameter Response
- * \param d Authorization Type
- * \return 1 on success 0 on fail
+ * Returns the Authorization-Type AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline int Cx_get_authorization_type(AAAMessage *msg, int *data)
 {
@@ -610,10 +603,9 @@ inline int Cx_get_authorization_type(AAAMessage *msg, int *data)
 }
 
 /**
- * Adds an Attribute Value Pair to the list
- * \param msg  Diameter Response
- * \param data Assignment Type
- * \return 1 on success 0 on fail
+ * Returns the Server-Assignment-Type AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline int Cx_get_server_assignment_type(AAAMessage *msg, int *data)
 {
@@ -628,10 +620,9 @@ inline int Cx_get_server_assignment_type(AAAMessage *msg, int *data)
 }
 
 /**
- * Checks out if the userdata is availible
- * \param msg  Diameter Response
- * \param data Availibility
- * \return 1 on success 0 on fail
+ * Returns the User-Data-Available AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline int Cx_get_userdata_available(AAAMessage *msg, int *data)
 {
@@ -647,10 +638,9 @@ inline int Cx_get_userdata_available(AAAMessage *msg, int *data)
 
 
 /**
- * Gets the result code
- * \param msg  Diameter Response
- * \param data integer pointer
- * \return 1 on success 0 on fail
+ * Returns the Result-Code AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline int Cx_get_result_code(AAAMessage *msg, int *data)
 {
@@ -665,10 +655,9 @@ inline int Cx_get_result_code(AAAMessage *msg, int *data)
 }
 
 /**
- * Get experimental results
- * \param msg  Diameter Response
- * \param data pointer to int
- * \return 1 on success 0 on fail
+ * Returns the Experimental-Result-Code AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline int Cx_get_experimental_result_code(AAAMessage *msg, int *data)
 {
@@ -696,9 +685,9 @@ inline int Cx_get_experimental_result_code(AAAMessage *msg, int *data)
 }
 
 /**
- * Get the IMS Server Name
- * \param msg Diameter Response
- * \return IMS Server Name on successs 0 on fail
+ * Returns the Server-Name AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_server_name(AAAMessage *msg)
 {	
@@ -710,13 +699,13 @@ inline str Cx_get_server_name(AAAMessage *msg)
 
 
 /**
- * Gets IMS Server Mandatory/Optional Capabilities
- * \param msg  Diameter Response
- * \param int m Memory in bytes needed for mandatory caps.
- * \param int m_cnt mandatory cap. counter
- * \param int o Memory in bytes needed for opt.caps.
- * \param int o_cnt optional cap. counter
- * \return 1 on success 0 on fail
+ * Returns the Capabilities from the grouped AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @param m - array to be filled with the retrieved mandatory capabilities
+ * @param m_cnt - size of the array above to be filled
+ * @param o - array to be filled with the retrieved optional capabilities
+ * @param o_cnt - size of the array above to be filled
+ * @returns 1 on success 0 on fail
  */
 inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt)
 {
@@ -756,10 +745,9 @@ inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o
 }
 
 /**
- * Get sip numbers of authorized entities
- * \param msg  Diameter Response
- * \param data 
- * \return 1 on success 0 on fail.
+ * Returns the SIP-Number-Auth-Items AVP from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the number or 0 on error
  */
 inline int Cx_get_sip_number_auth_items(AAAMessage *msg, int *data)
 {
@@ -773,12 +761,13 @@ inline int Cx_get_sip_number_auth_items(AAAMessage *msg, int *data)
 	return 1;
 }
 
+
 /**
- * Gets a matching Authentication Scheme from the AVP list
- * \param msg  Diameter Response
- * \param auth_scheme as  Authentication Scheme - String 
- * \param authorization as String
- * \return 1 on success 0 on fail
+ * Returns the Auth-Data-Item from a Diameter Request message.
+ * @param msg - the Diameter message
+ * @param auth_scheme - the string to fill with the authorization scheme
+ * @param authorization - the string to fill with the authorization
+ * @returns the AVP payload on success or an empty string on error
  */
 inline int Cx_get_auth_data_item_request(AAAMessage *msg,
 		 str *auth_scheme, str *authorization)
@@ -812,16 +801,16 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
 }
 
 /**
- * Get Authentication Data Item
- * \param msg  Diameter Response
- * \param auth_data Authentication Data(double pointer)
- * \param item_number 
- * \param auth_scheme
- * \param authenticate 
- * \param authorization
- * \param ck
- * \param ik
- * \return 1 on success 0 on fail
+ * Returns the Auth-Data-Item from a Diameter answer message.
+ * @param msg - the Diameter message
+ * @param auth_date - the string to fill with the authorization data
+ * @param item_number - the int to fill with the item number
+ * @param auth_scheme - the string to fill with the authentication scheme data
+ * @param authenticate - the string to fill with the authenticate data
+ * @param authorization - the string to fill with the authorization data
+ * @param ck - the string to fill with the cipher key
+ * @param ik - the string to fill with the integrity key
+ * @returns the AVP payload on success or an empty string on error
  */
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
@@ -876,9 +865,9 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 
 
 /**
- * Delivers the destination of the host from the response
- * \param msg  Diameter Response
- * \return location on success 0 on fail
+ * Returns the Destination-Host from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_destination_host(AAAMessage *msg)
 {	
@@ -889,9 +878,9 @@ inline str Cx_get_destination_host(AAAMessage *msg)
 }
 
 /**
- * Delivers the user data from HSS Response
- * \param msg  Diameter Response
- * \return the user data on success 0 on fail
+ * Returns the User-Data from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_user_data(AAAMessage *msg)
 {	
@@ -902,9 +891,9 @@ inline str Cx_get_user_data(AAAMessage *msg)
 }
 
 /**
- * Chops out the Information for charging purposes
- * \param msg  Diameter Response
- * \return charging_info on success 0 on fail
+ * Returns the Charging-Information from a Diameter message.
+ * @param msg - the Diameter message
+ * @returns the AVP payload on success or an empty string on error
  */
 inline str Cx_get_charging_info(AAAMessage *msg)
 {	
