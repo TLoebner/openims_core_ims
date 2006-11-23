@@ -46,22 +46,22 @@ See http://forrest.apache.org/docs/linking.html for more info
     <index label="Welcome" />
   </about>
   <docs label="Documentation" href="docs/index.html" description="Welcome to OpenIMSCore">
-    <index label="Index" href="docs/index.html" description="Documentation for Open IMS Core"/>
+    <index label="Index" href="" description="Documentation for Open IMS Core"/>
   </docs>    
-  <mail label="Mailing-Lists" href="mail/index.html" description="Welcome to OpenIMSCore">
-	<subscribe label="Subscribe">
+  <mail label="Mailing-Lists" href="mail/index.html" >
+	<subscribe label="Subscribe"  href="">
 	    <users label="Users" href="http://lists.berlios.de/mailman/listinfo/openimscore-users" description="General Usage Discussions"/>
 	    <cscf label="CSCF" href="http://lists.berlios.de/mailman/listinfo/openimscore-cscf" description="Call Session Control Functions Discussions"/>
 	    <hss label="HSS" href="http://lists.berlios.de/mailman/listinfo/openimscore-hss" description="Home Subscriber Server"/>
 	</subscribe>
-	<archives label="Archives">
+	<archives label="Archives"  href="">
 	    <users label="Users" href="http://lists.berlios.de/pipermail/openimscore-users" description="General Usage Discussions"/>
 	    <cscf label="CSCF" href="http://lists.berlios.de/pipermail/openimscore-cscf" description="Call Session Control Functions Discussions"/>
 	    <hss label="HSS" href="http://lists.berlios.de/pipermail/openimscore-hss" description="Home Subscriber Server"/>
 	</archives>
   </mail>    
-  <sources label="Source Code">
-    <index label="Index" href="sources/index.html" description="Where to get the source-code from"/>
+  <sources label="Source Code" href="sources/index.html" >
+    <index label="Index" description="Where to get the source-code from"/>
   </sources>    
   <files>
     <hello_print href="hello.pdf"/>
