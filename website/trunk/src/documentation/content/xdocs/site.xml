@@ -42,27 +42,34 @@ See http://forrest.apache.org/docs/linking.html for more info
 <site label="OpenIMSCore" href="" xmlns="http://apache.org/forrest/linkmap/1.0"
   tab="">
 
-  <about label="Home" href="index.html" description="Welcome to OpenIMSCore">
-    <index label="Welcome" />
+  <about label="Home" href="/index.html" description="Welcome to OpenIMSCore">
+    <index label="Welcome"  href="/index.html"/>
   </about>
-  <docs label="Documentation" href="docs/index.html" description="Welcome to OpenIMSCore">
-    <index label="Index" href="" description="Documentation for Open IMS Core"/>
-  </docs>    
-  <mail label="Mailing-Lists" href="mail/index.html" >
-	<subscribe label="Subscribe"  href="">
+  <mail label="Mailing-Lists" href="/mail/index.html" >
+	<subscribe label="Subscribe"  href="/mail/index.html">
 	    <users label="Users" href="http://lists.berlios.de/mailman/listinfo/openimscore-users" description="General Usage Discussions"/>
 	    <cscf label="CSCF" href="http://lists.berlios.de/mailman/listinfo/openimscore-cscf" description="Call Session Control Functions Discussions"/>
 	    <hss label="HSS" href="http://lists.berlios.de/mailman/listinfo/openimscore-hss" description="Home Subscriber Server"/>
 	</subscribe>
-	<archives label="Archives"  href="">
+	<archives label="Archives"  href="/mail/index.html">
 	    <users label="Users" href="http://lists.berlios.de/pipermail/openimscore-users" description="General Usage Discussions"/>
 	    <cscf label="CSCF" href="http://lists.berlios.de/pipermail/openimscore-cscf" description="Call Session Control Functions Discussions"/>
 	    <hss label="HSS" href="http://lists.berlios.de/pipermail/openimscore-hss" description="Home Subscriber Server"/>
 	</archives>
   </mail>    
-  <sources label="Source Code" href="sources/index.html" >
-    <index label="Index" description="Where to get the source-code from"/>
+  <sources label="Source Code" href="/sources/index.html">
+    <svn label="SVN" description="Where to get the source-code from" href="/sources/index.html"/>
+    <snapshots label="Snapshots" description="Daily snapshots of the source code" href="/sources/snapshots.html"/>    
   </sources>    
+  <docs label="Documentation" href="/docs/index.html" description="Welcome to OpenIMSCore">
+    <index label="Index" href="/docs/index.html" description="Documentation for Open IMS Core"/>
+  </docs>      
+  <development label="Development" href="http://developer.berlios.de/projects/openimscore/">
+  	<bugs label="Report a bug" description="Report all bugs here" href="http://developer.berlios.de/bugs/?group_id=7589"/>
+  	<feature label="Request a feature" description="Ask for new features here" href="http://developer.berlios.de/feature/?group_id=7589"/>
+  </development>
+  
+  
   <files>
     <hello_print href="hello.pdf"/>
     <test1 href="test1.html"/>

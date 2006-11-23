@@ -32,16 +32,24 @@
    Tabs can be embedded to a depth of two. The second level of tabs will only 
     be displayed when their parent tab is selected.    
   -->
-
   <tab id="home" label="Home" dir="" indexfile="index.html"/>
-  <tab id="docs" label="Documentation" dir="docs">
-   <tab id="ser_ims" label="CSCFs and SIP-to-IMS Gw (ser_ims)"/>
-   <tab id="FHoSS" label="Home Subscriber Server (FHoSS)"/>
-   <tab id="jdp" label="Java Diameter Peer"/>
-   <tab id="cdp" label="C Diameter Peer"/>   
-  </tab>
   <tab id="mail" label="Mailing Lists" dir="mail" type="visible" />
-  <tab id="sources" label="Sources" dir="sources" type="visible" />
+  <tab id="sources" label="Sources" dir="sources" type="visible" indexfile="index.html">
+  	<tab id="svn" label="Subversion Repository" href="sources/index.html"/>
+  	<tab id="snapshots" label="Daily revision snapshots" href="sources/snapshots.html"/>
+  </tab>
+  <tab id="docs" label="Documentation" dir="docs">
+   <tab id="ser_ims" label="CSCFs and SIP-to-IMS Gw (ser_ims)" href="/docs/ser_ims/html/index.html"/>
+   <tab id="FHoSS" label="Home Subscriber Server (FHoSS)" href="/docs/FHoSS/html/index.html"/>
+   <tab id="jdp" label="Java Diameter Peer" href="/docs/JavaDiameterPeer/html/index.html"/>
+   <tab id="cdp" label="C Diameter Peer" href="/docs/CDiameterPeer/html/index.html"/>   
+  </tab>
+  <tab id="development" label="Development" href="http://developer.berlios.de/projects/openimscore/">
+  	<tab id="bugs" label="Report a bug"
+  		href="http://developer.berlios.de/bugs/?group_id=7589" />
+  	<tab id="features" label="Request a feature"
+  		href="http://developer.berlios.de/feature/?group_id=7589" />
+  </tab>
   <!-- Add new tabs here, eg:
   <tab label="How-Tos" dir="community/howto/"/>
   <tab label="XML Site" dir="xml-site/"/>

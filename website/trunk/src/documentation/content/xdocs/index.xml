@@ -24,6 +24,11 @@
     <section id="welcome">
       <title>Welcome to Open IMS Core's Homepage</title>
       <p>So you have found us! Good!</p>      
+      <p>If you are here, you could also be interested in one of the following pages: </p>
+      	<ul>
+      		<li><a href="http://www.fokus.fraunhofer.de/bereichsseiten/testbeds/ims_playground/playground/playground.php?lang=en">The Open IMS @ FOKUS  Playground</a></li>
+      		<li><a href="http://www.fokus.fraunhofer.de/ims/OSIMS.php?lang=en">A short overview of the Open IMS Core Components</a></li>
+      	</ul>
     </section>
 
     <section id="disclaimer">

@@ -18,20 +18,20 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
   <header> 
-    <title>Source Code</title> 
+    <title>Source Code over SVN</title> 
   </header> 
   <body> 
   	<section id="overview">
   		<title>Overview</title>
   		<p>
-  		The Source Code is made available through SVN. 
+  		The Source Code is made available through SVN. If you just want to get one snapshot, go <a href="snapshots.html">here</a>.
   		</p>
   	</section>
     <section id="browse">
       <title>Browsing the Source Code</title>
 	 <p>
-	 Browsing the SVN tree gives you a great view into the current status of this project's code.
-	 You may also view the complete histories of any file in the repository.
+		 Browsing the SVN tree gives you a great view into the current status of this project's code.
+		 You may also view the complete histories of any file in the repository.
 	 </p>
 	 <ul>
       	<li><a href="http://svn.berlios.de/svnroot/repos/openimscore">Browse with HTTP</a></li>
@@ -64,10 +64,10 @@
 		Subproject from BerliOS Developer SVN repository can be checked out through anonymous (svnserve) SVN with the following instruction set.	
 		</p>	 
 		 <ul>
-			<li><code>svn checkout svn://svn.berlios.de/openimscore/ser_ims/trunk</code></li>
-		 	<li><code>svn checkout svn://svn.berlios.de/openimscore/FHoSS/trunk</code></li>
-		 	<li><code>svn checkout svn://svn.berlios.de/openimscore/JavaDiameterPeer/trunk</code></li>
-		 	<li><code>svn checkout svn://svn.berlios.de/openimscore/CDiameterPeer/trunk</code></li>
+			<li><source>svn checkout svn://svn.berlios.de/openimscore/ser_ims/trunk"</source></li>
+		 	<li><source>svn checkout svn://svn.berlios.de/openimscore/FHoSS/trunk</source></li>
+		 	<li><source>svn checkout svn://svn.berlios.de/openimscore/JavaDiameterPeer/trunk</source></li>
+		 	<li><source>svn checkout svn://svn.berlios.de/openimscore/CDiameterPeer/trunk</source></li>
 		 </ul>
     </section>
 	<section id="svnhttp">
@@ -76,10 +76,10 @@
 		Subproject from BerliOS Developer SVN repository can be checked out through anonymous HTTP with the following instruction set.
 		</p>	 
 		 <ul>
-			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</code></li>
-			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</code></li>
-			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</code></li>
-			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</code></li>
+			<li><source>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</source></li>
+			<li><source>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</source></li>
+			<li><source>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</source></li>
+			<li><source>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</source></li>
 		 </ul>
     </section>
 	<section id="svnssh">
@@ -90,10 +90,10 @@
 		Substitute developername with the proper value. Enter your site password when prompted.
 		</p>	 
 		 <ul>
-			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</code></li>
-			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</code></li>
-			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</code></li>
-			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</code></li>
+			<li><source>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</source></li>
+			<li><source>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</source></li>
+			<li><source>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</source></li>
+			<li><source>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</source></li>
 		 </ul>
     </section>
 	<section id="svnhttps">
@@ -103,10 +103,10 @@
 		Substitute developername with the proper value. Enter your site password when prompted.
 		</p>	 
 		 <ul>
-			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</code></li>
-			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</code></li>
-			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</code></li>
-			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</code></li>
+			<li><source>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</source></li>
+			<li><source>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</source></li>
+			<li><source>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</source></li>
+			<li><source>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</source></li>
 		 </ul>
     </section>
     

@@ -84,8 +84,8 @@ which will be used to configure the chosen Forrest skin.
 
   <!-- optional host logo (e.g. sourceforge logo)
        default skin: renders it at the bottom-left corner -->
-  <host-url>http://developer.berlios.de/projects/openimscore/</host-url>
-  <host-logo>images/berliOS_small_logo.png</host-logo>
+<!--  <host-url>http://developer.berlios.de/projects/openimscore/</host-url>
+  <host-logo>images/berliOS_small_logo.png</host-logo> -->
 
   <!-- relative url of a favicon file, normally favicon.ico -->
   <favicon-url></favicon-url>
@@ -125,7 +125,7 @@ which will be used to configure the chosen Forrest skin.
   @location ("page","menu","page,menu", "none")
    Where to show the TOC.
   -->
-  <toc max-depth="2" min-sections="0" location="page"></toc>
+  <toc max-depth="2" min-sections="0" location="page,menu"></toc>
 
   <!-- Heading types can be clean|underlined|boxed  -->
   <headings type="boxed"/>

@@ -23,10 +23,20 @@
   <body> 
   	<section id="overview">
   		<title>Overview</title>
-  		<p>
-  		The documentation pages are generated using <a href="http://www.stack.nl/~dimitri/doxygen/">Doxygen</a>. You can generate the pages
-  		yourself. For your convenience we are generating it every night and we are making it available at the links below.
-  		</p>
+  		<section id="quick">
+  			<title> Quick Helps </title>
+  				<ul>
+  					<li><a href="faq.html">Frequently Asked Questions</a></li>
+  					<li><a href="install.html">Installation Guide</a></li>
+  				</ul>
+  		</section>
+  		<section id="depth">
+  			<title>In depth documentation</title>
+	  		<p>
+  				The documentation pages are generated using <a href="http://www.stack.nl/~dimitri/doxygen/">Doxygen</a>. You can generate the pages
+		  		yourself. For your convenience we are generating it every night and we are making it available at the links below.
+  			</p>
+  		</section>
   	</section>
     <section id="html_docs">
       <title>Online Documentation in browsable HTML format</title>
@@ -38,7 +48,7 @@
       </ul>
     </section>
     <section id="pdf_docs">
-      <title>Download</title>
+      <title>Download as one PDF file for offline usage</title>
       <ul>
       	<li>Call Session Control Functions - TODO</li>
       	<li>Home Subscriber Server - TODO</li>
