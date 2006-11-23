@@ -64,7 +64,7 @@
 		Subproject from BerliOS Developer SVN repository can be checked out through anonymous (svnserve) SVN with the following instruction set.	
 		</p>	 
 		 <ul>
-			<li><source>svn checkout svn://svn.berlios.de/openimscore/ser_ims/trunk"</source></li>
+			<li><source>svn checkout svn://svn.berlios.de/openimscore/ser_ims/trunk</source></li>
 		 	<li><source>svn checkout svn://svn.berlios.de/openimscore/FHoSS/trunk</source></li>
 		 	<li><source>svn checkout svn://svn.berlios.de/openimscore/JavaDiameterPeer/trunk</source></li>
 		 	<li><source>svn checkout svn://svn.berlios.de/openimscore/CDiameterPeer/trunk</source></li>

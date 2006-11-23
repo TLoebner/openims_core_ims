@@ -36,10 +36,10 @@
       	cd /opt/OpenIMSCore
 
       	mkdir FHoSS 
-      	svn checkout https://vingarzn@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS
+      	svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS
 
       	mkdir ser_ims 
-      	svn checkout https://vingarzn@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk ser_ims
+      	svn checkout http://svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk ser_ims
 
       	cd FHoSS 
       	ant gen compile deploy 
