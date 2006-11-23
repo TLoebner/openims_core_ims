@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+  <header> 
+    <title>Mailing Lists</title> 
+  </header> 
+  <body> 
+  	<section id="overview">
+  		<title>Overview</title>
+  		<p>
+  		To help you work with the components, we have created several mailing lists. The archives are public and we hope you 
+  		will browse them before posting a request.
+  		</p>
+  	</section>
+    <section id="users">
+      <title>General Discussion on Open IMS Core</title>
+      <ul>
+      	<li><a href="http://lists.berlios.de/pipermail/openimscore-users/">Archives</a></li>
+      	<li><a href="http://lists.berlios.de/mailman/listinfo/openimscore-users">Subscribe</a></li>
+      </ul>
+    </section>
+    <section id="CSCF">
+      <title>Call Session Control Functions and SIP-to-IMS Gateway Development</title>
+      <ul>
+      	<li><a href="http://lists.berlios.de/pipermail/openimscore-cscf/">Archives</a></li>
+      	<li><a href="http://lists.berlios.de/mailman/listinfo/openimscore-cscf">Subscribe</a></li>
+      </ul>
+    </section>
+    <section id="HSS">
+      <title>Home Subscriber Server Development</title>
+      <ul>
+      	<li><a href="http://lists.berlios.de/pipermail/openimscore-hss/">Archives</a></li>
+      	<li><a href="http://lists.berlios.de/mailman/listinfo/openimscore-hss">Subscribe</a></li>
+      </ul>
+    </section>
+  </body>
+</document>

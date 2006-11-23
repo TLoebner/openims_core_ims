@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+  <header> 
+    <title>Source Code</title> 
+  </header> 
+  <body> 
+  	<section id="overview">
+  		<title>Overview</title>
+  		<p>
+  		The Source Code is made available through SVN. 
+  		</p>
+  	</section>
+    <section id="browse">
+      <title>Browsing the Source Code</title>
+	 <p>
+	 Browsing the SVN tree gives you a great view into the current status of this project's code.
+	 You may also view the complete histories of any file in the repository.
+	 </p>
+	 <ul>
+      	<li><a href="http://svn.berlios.de/svnroot/repos/openimscore">Browse with HTTP</a></li>
+      	<li><a href="http://svn.berlios.de/viewcvs/openimscore">ViewCVS</a></li>
+      	<li><a href="http://svn.berlios.de/wsvn/openimscore">WebSVN</a></li>
+      </ul>
+    </section>
+    <section id="svn">
+      <title>Getting the Source Code with Subversion</title>
+		<p>
+		For futher information about usage of Subversion see the
+		 <a href="/docman/display_doc.php?docid=394&amp;group_id=2">Subversion (SVN) HowTo</a> 
+		 of <a href="/docman/?group_id=2">Site Docs</a>.
+		</p>
+		<section id="svnstructure">
+		 <title>SVN Structure </title>
+		 <p>
+		 	The project is split into several sub-projects, each dealing with a specific component:
+		 </p>
+			 <ul>
+		      	<li><strong>ser_ims</strong> for the CSCFs and SIP-to-IMS Gateway</li>
+		      	<li><strong>FHoSS</strong> for the HSS</li>
+		      	<li><strong>JavaDiameterPeer</strong> for the Java Diameter Peer</li>
+		      	<li><strong>CDiameterPeer</strong> for the C Diameter Peer</li>
+		    </ul>		 	
+	</section>
+	<section id="svnserve">
+		<title>Anonymous SVN Access via SVN</title>
+		<p>
+		Subproject from BerliOS Developer SVN repository can be checked out through anonymous (svnserve) SVN with the following instruction set.	
+		</p>	 
+		 <ul>
+			<li><code>svn checkout svn://svn.berlios.de/openimscore/ser_ims/trunk</code></li>
+		 	<li><code>svn checkout svn://svn.berlios.de/openimscore/FHoSS/trunk</code></li>
+		 	<li><code>svn checkout svn://svn.berlios.de/openimscore/JavaDiameterPeer/trunk</code></li>
+		 	<li><code>svn checkout svn://svn.berlios.de/openimscore/CDiameterPeer/trunk</code></li>
+		 </ul>
+    </section>
+	<section id="svnhttp">
+		<title>Anonymous SVN Access via HTTP</title>
+		<p>
+		Subproject from BerliOS Developer SVN repository can be checked out through anonymous HTTP with the following instruction set.
+		</p>	 
+		 <ul>
+			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</code></li>
+			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</code></li>
+			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</code></li>
+			<li><code>svn checkout http://svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</code></li>
+		 </ul>
+    </section>
+	<section id="svnssh">
+		<title>Developer SVN Access via SSH</title>
+		<p>
+		Only project developers can access the SVN tree via this method. 
+		SSH2 must be installed on your client machine. 
+		Substitute developername with the proper value. Enter your site password when prompted.
+		</p>	 
+		 <ul>
+			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</code></li>
+			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</code></li>
+			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</code></li>
+			<li><code>svn checkout svn+ssh://developername@svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</code></li>
+		 </ul>
+    </section>
+	<section id="svnhttps">
+		<title>Developer SVN Access via HTTPS</title>
+		<p>
+		Only project developers can access the SVN tree via this method. 
+		Substitute developername with the proper value. Enter your site password when prompted.
+		</p>	 
+		 <ul>
+			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk</code></li>
+			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk</code></li>
+			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/JavaDiameterPeer/trunk</code></li>
+			<li><code>svn checkout https://developername@svn.berlios.de/svnroot/repos/openimscore/CDiameterPeer/trunk</code></li>
+		 </ul>
+    </section>
+    
+    <section id="svnsearch">
+		<title>Search the SVN Repository</title>
+		<p>
+	<!-- begin koders integration -->
+<!--	<script type="text/javascript">
+		koders_search_format = "vertical";
+		koders_search_rid = "K147BPYWF69RGWWAYRMYFL4QAF";
+		koders_search_pname = "openimscore";
+		koders_search_width = "300";
+		koders_search_source = "berlios.de";
+	</script>
+	<script type="text/javascript" src="http://koders.com/Special/Tools/searchbox.js">
+	</script>
+-->	
+	<!-- end koders integration -->
+	</p>
+    </section>
+    </section>
+  </body>
+</document>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation or its licensors,
+  as applicable.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document> 
+  <header> 
+    <title>Welcome to Open IMS Core</title> 
+  </header> 
+  <body> 
+    <section id="welcome">
+      <title>Welcome to Open IMS Core's Homepage</title>
+      <p>So you have found us! Good!</p>      
+    </section>
+
+    <section id="disclaimer">
+      <title>Mandatory disclaimer, before any usage</title>
+      <p>
+		It has to be noted that this  <strong>  Open Source IMS Core 
+		System is not intended to become or act as a product in a commercial context!  </strong>
+		Its sole purpose is to provide an IMS core reference implementation for
+		IMS technology testing and IMS application prototyping for research
+		purposes, typically performed in IMS test-beds.
+	  </p>
+	  <p>
+		Users of the Open Source IMS Core System have to be aware that IMS
+		technology may be subject of patents and licence terms, as being
+		specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+		standards. Thus all Open IMS Core users have to take notice of this
+		fact and have to agree to check out carefully before installing, using
+		and extending the Open Source IMS Core System, if related patents and
+		licences may become applicable to the intended usage context.
+	  </p>
+    </section>
+
+    <section id="license">
+		<title>General Public License v2</title>
+		<p>
+			Copyright (C) 2004-2006 FhG Fokus
+		</p>
+		<p>
+			The Open IMS Core is an open source IMS CSCFs &amp; HSS implementation.
+		</p>
+		<p>
+			Open IMS Core is free software; you can redistribute it and/or modify
+			it under the terms of the GNU General Public License as published by
+			the Free Software Foundation; either version 2 of the License, or (at
+			your option) any later version.
+		</p>
+		<p>
+			For a license to use the Open IMS Core software under conditions other
+			than those described here, or to purchase support for this software,
+			please contact Fraunhofer FOKUS by e-mail at the following addresses: 
+			<a href="mailto:info@open-ims.org">info@open-ims.org</a>
+		</p>
+		<p>
+			Open IMS Core is distributed in the hope that it will be useful, but
+			WITHOUT ANY WARRANTY; without even the implied warranty of
+			MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+			General Public License for more details.
+		</p>
+		<p>
+			You should have received a copy of the GNU General Public License along
+			with this program; if not, write to the Free Software Foundation, Inc.,
+			59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+		</p> 
+    </section>
+  </body>
+</document>
