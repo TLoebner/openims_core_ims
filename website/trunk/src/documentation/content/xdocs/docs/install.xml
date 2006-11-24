@@ -24,12 +24,16 @@
     <section id="Overview">
       <title>Overview</title>
       <p>
-      	For now only some simple indications are provided.
-		TODO - add more explanations here.
+		This page is supposed to help you jump-start the Open IMS Core. In the SVN distribution, the whole things is pre-configured
+		and pre-provisioned with a set of minimal data that should be enough for a simple Alice-calls-Bob trial.
 	  </p>	  
     </section>
     <section id="installscript">
-      <title>Installation Script</title>
+      <title>Quick Install</title>
+      <p>
+      	If you already went once through the installation procedure, this section will help refresh your memory on what steps are
+      	you supposed to follow. If this is your first time, skip over for now and start with Step 1.
+      </p>
       <source>
       	<![CDATA[
       	mkdir /opt/OpenIMSCore 
@@ -64,5 +68,272 @@
       </source>
     </section>
     
+    <section id="step1">
+      <title>Step 1: Prerequisites</title>
+      <ul>
+      	<li>Hardware requirements
+      		<ul>
+      			<li>A current Linux desktop class machine should be enough</li>
+      			<li>If you want to get ultimate performance:
+      				<ul>
+      					<li>Add several Gigabytes of RAM</li>
+      					<li>Have as many CPUs/Cores as</li>
+      					<li>Gigabit Ethernet would help</li>
+      				</ul>
+      			</li>
+      		</ul>      		
+      	</li>
+      	<li>Network access
+      		<ul>
+      			<li>A current Linux desktop class machine should be enough</li>
+      			<li>Inter-domain NAT is not something we are interested in, so a public IP address would be great</li>
+      			<li>Controllable DNS server if you don’t want to have one on your Linux box</li>
+      		</ul>      		
+      	</li>
+      	<li>Software requirements
+      		<ul>
+      			<li>~100 MBytes of disk space to be on the safe side</li>
+				<li>GCC3/4, JDK1.5, ant</li>
+				<li>MySQL installed and started (or other DBMS if you can deal with it)</li>
+				<li>libxml2, libmysql – both with development</li>
+				<li>Linux kernel 2.6 and ipsec-tools (setkey) if you want to use IPSec SAs</li>
+				<li>bind installed and running (or other name server if you can deal with it)</li>
+				<li>Browser on the box or that can connect to the box (for user provisioning)</li>
+				<li>Note: we consider that you have all this installed, configured and running.</li>
+				<li>Note: we assume for now that you want to install the whole thing on just 1 box. </li>
+      		</ul>      		
+      	</li>
+      </ul>
+	</section>   
+    <section id="step2">
+      <title>Step 2: Get the Source Code</title>
+      <ul>
+      	<li>Where? - Fresh code at <a href="http://svn.berlios.de/svnroot/repos/openimscore">http://svn.berlios.de/svnroot/repos/openimscore</a>
+      	 (you will need to have Subversion installed).
+      		On <a href="../sources/index.html">this page</a> you can find a lot more information about the sources.</li>
+      	<li>What? 
+      		<ul>
+      			<li>The CSCFs: ser_ims/trunk</li>
+      			<li>The HSS: FHoSS/trunk</li>
+      		</ul>
+      	</li>
+      	<li>How? - The source code is pre-configured to work from a standard file path:
+      		<ul>
+      			<li>Create /opt/OpenIMSCore and go there
+      				<source>mkdir /opt/OpenIMSCore
+cd /opt/OpenIMSCore</source>
+      				</li>
+      			<li>Create a new directory ser_ims and checkout the CSCFs there:
+      				<source>mkdir ser_ims
+svn checkout http://svn.berlios.de/svnroot/repos/openimscore/ser_ims/trunk ser_ims</source>
+				</li>
+      			<li>Create a new directory FHoSS and checkout the HSS there:
+      				<source>mkdir FHoSS
+svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS</source>
+				</li>
+				<li>If you would prefer another path, be prepared to edit the configuration files!</li>
+			</ul>
+		</li>      	
+      </ul>
+	</section>    
+    <section id="step3">
+      <title>Step 3: Compile</title>
+      <ul>
+      	<li>ser_ims
+      		<ul>
+      			<li>Do "make all" in ser_ims
+      				<source>cd ser_ims
+make all
+cd..</source>
+				</li>
+      			<li>If something breaks, you probably don’t have all the prerequisites.</li>
+      		</ul>
+      	</li>
+      	<li>FHoSS
+      		<ul>
+      			<li>Make sure that your JDK version is >= 1.5!!!</li>
+      			<li>Do "ant gen compile deploy" in FHoSS
+      				<source>cd FHoSS
+ant gen
+ant compile
+and deploy
+cd..</source>
+				</li>
+      		</ul>
+      	</li>
+		<li>While you wait for the compilation to finish, you can go ahead and perform Step 4.</li>
+	  </ul>
+	</section>
+    <section id="step4">
+      <title>Step 4: Configure the Environment</title>
+      <ul>
+      	<li>Notes:
+      		<ul>
+      			<li>All the installation examples configured to work only on the local loopback 
+      			and the default domain configured as “open-ims.test”. </li>
+				<li>The MySQL access rights are set only for local access</li>
+				<li>We recommend that you try it first like this and then do your changes:
+					<ul>
+						<li>Replace 127.0.0.1 where required with your IP address</li>
+						<li>Replace the home domain (open-ims.test) with your own one</li>
+						<li>Change the database passwords</li>
+					</ul>
+				</li>
+			</ul>
+		</li>
+		<li>DNS
+			<ul>
+				<li>A sample DNS zone file can be found in ser_ims/cfg/open-ims.dnszone</li>
+				<li>Copy it to your bind configuration directory</li>
+				<li>Edit named.conf and insert the file there (Would be great to also add reverse DNS entries)</li>
+				<li>Restart the name server</li>
+				<li>Test that the names are resolvable (don’t forget about /etc/resolv.conf pointing to your new DNS server!)</li>
+			</ul>
+		</li>
+		<li>MySQL
+			<ul>
+				<li>Run the SQL dumps (mysql –u root –p –h localhost &lt; dump.sql):
+					<source>mysql –u root –p –h localhost &lt; ser_ims/cfg/icscf.sql
+mysql –u root –p –h localhost &lt; ser_ims/cfg/sip2ims.sql
+
+mysql –u root –p –h localhost &lt; FHoSS/scripts/hssdb.sql
+mysql –u root –p –h localhost &lt; FHoSS/scripts/demodata.sql
+</source>
+				</li>				
+				<li>Check if the databases are in there and accessible</li>
+			</ul>
+		</li>
+      </ul>
+    </section>
+    <section id="step5">
+      <title>Step 5: Configure the IMS Core</title>
+      <ul>
+      	<li>By now you should have MySQL and DNS working</li>
+		<li>CSCFs
+			<ul>
+				<li>Copy the following files to /opt/OpenIMSCore or another location comfortable for you:
+pcscf.cfg, pcscf.sh, icscf.cfg, icscf.xml, icscf.sh, scscf.cfg, scscf.xml, scscf.sh, sip2ims.cfg, sip2ims.sh
+					<source>
+cp ser_ims/cfg/*.cfg . 
+cp ser_ims/cfg/*.xml . 
+cp ser_ims/cfg/*.sh .				
+					</source>
+				</li>
+			</ul>
+		</li>
+		<li>FHoSS
+			<ul>
+<!--			<li>Copy the following files to /opt/OpenIMSCore or another location comfortable for you: FHoSS.sh	-->
+				<li>Take a look at the configuration files in FHoSS/deploy/ (available after Step 3 completes)</li>
+			</ul>
+		</li>
+		<li>Edit these files to your own preferences (don’t forget to update the DNS zone file accordingly and restart the name server)</li>
+      </ul>
+    </section>
+    <section id="step6">
+      <title>Step 6: Start the components</title>
+      <ul>
+      	<li>CSCFs
+      		<ul>
+      			<li>Start pcscf.sh, icscf.sh, scscf.sh and sip2ims.sh</li>
+      			<li>All these should run in parallel.</li>
+      			<li>We love debugging, so by default they would stay in foreground.</li>
+      			<li>By default you should see periodically log messages with the content of the registrar and with the opened diameter links</li>
+      		</ul>
+      	</li>
+      	<li>FHoSS
+      		<ul>
+      			<li>Start FHoSS/deploy/startup.sh</li>
+      			<li>Check the web interface on <a href="http://localhost:8080/">http://localhost:8080/</a></li>
+      			<li>Check if the Diameter Peers are connecting to each other. You can see this in the console of FHoSS or in that of I/S-CSCF</li>
+      		</ul>
+      	</li>
+      </ul>
+    </section>
+    <section id="step7">
+      <title>Step 7: Configure Subscribers</title>
+      <ul>
+      	<li>FHoSS
+      		<ul>
+      			<li>By default, FHoSS comes provisioned with a couple of sample users:
+      				<ul>
+      					<li>alice@open-ims.test</li>
+      					<li>bob@open-ims.test</li>
+      				</ul>
+      			</li>
+      			<li>Use these or insert new ones.
+      				<ul>
+      					<li>Create a Subscription</li>
+      					<li>Create a Private Identity</li>
+      					<li>Create a Public Identity</li>
+      					<li>Link them</li>
+      				</ul>
+      			</li>
+			</ul>
+		</li>
+      	<li>SIP-to-IMS Gateway
+      		<ul>
+      			<li>By default, the SIP-to-IMS Gateway comes provisioned with the same couple of sample users:
+      				<ul>
+      					<li>alice@open-ims.test</li>
+      					<li>bob@open-ims.test</li>
+      				</ul>
+      			</li>
+      			<li>Use these or insert new ones in the sip2ims.credentials mysql table - use serweb for example to manipulate that.
+					Make sure that for new users here, you also provision the same information in the HSS:
+					<ul>
+						<li>same password</li>
+						<li>public identity equal to the private identity plus the "sip:" in front</li>
+					</ul>      			
+      			</li>
+			</ul>
+		</li>
+		<li>IMS User Endpoint Configuration
+			<ul>
+				<li>Provision with your own UE data or use one of the default users</li>
+				<li>Alice:
+					<ul>
+						<li>Private Identity: alice@open-ims.test</li>
+						<li>Secret Key: alice</li>
+						<li>OP: 0x00…0</li>
+						<li>AMF: 0x00..0</li>
+						<li>Anonimity Key: disabled</li>
+						<li>Public Identity: sip:alice@open-ims.test</li>
+						<li>Realm: open-ims.test</li>
+						<li>Strict Outbound Proxy: sip:pcscf.open-ims.test:4060</li>
+					</ul>
+				</li>
+				<li>Bob: similar</li>
+			</ul>
+		</li>
+		<li>SIP User Endpoint Configuration
+			<ul>
+				<li>Alice:
+						<ul>
+						<li>User part of the SIP URI: alice</li>
+						<li>Host part of the SIP URI/Domain/realm: open-ims.test</li>
+						<li>Password: alice</li>
+						<li>Strict Outbound Proxy: sip:sip2ims.open-ims.test:3060</li>
+						<li>!!! Make sure that your SIP client does REGISTER sip:open-ims.test and not REGISTER sip:sip2ims.open-ims.test:3060</li>
+					</ul>
+				</li>
+				<li>Bob: similar</li>
+			</ul>
+		</li>
+      </ul>
+    </section>
+    <section id="step8">
+      <title>Step 8: Test!</title>
+      <ul>
+      	<li>This is the last step. You should have all installed and configured by now</li>
+		<li>Registration uses all components and as such, it is a good test if all is up &amp; running</li>
+		<li>Use Wireshark to see what’s going on:
+			<ul>
+				<li>Monitor ports 4060, 5060 and 6060 for SIP traffic</li>
+				<li>Monitor ports 3868, 3869 and 3870 for Diameter traffic</li>
+			</ul>
+		</li>
+	  </ul>
+	</section>
   </body>
 </document>

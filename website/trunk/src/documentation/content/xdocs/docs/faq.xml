@@ -21,11 +21,66 @@
     <title>Frequently Asked Questions</title> 
   </header> 
   <body> 
+    <section id="General">
+      <title>General Questions</title>
+    </section>
+    <section id="SVN">
+      <title>Subversion</title>
+      <ul>
+      	<li><strong>I tried the SVN URLs on berliOS but I gen an error.</strong><br/>
+      		berliOS uses a template for indicating the SVN URLs. As we have more than 1 sub-project, please use the links indicated 
+      		<a href="sources/index.html">here</a>.
+      	</li>
+      	<li><strong>I want to commit something, but I don't have right access.</strong><br/>
+      		In order to keep a high quality for the code, only a limited number of maintainers have modification permissions. Each is 
+      		responsible	for checking if new patches work properly and for the administration of the sub-projects. Please post your 
+      		patches to the mailing-lists and they will be checked and applied. If you are an active contributor and you demonstrate
+      		that your patches can be trusted, we will add you as a project maintainer.
+      	</li>
+      	<li><strong>OK, but what if I want to make a big change and would require a branch?</strong><br/>
+      		Then you will get this access sooner. You will just have to convince one of the maintainers that your branch makes sense.
+      	</li>
+      	<li><strong>Can I contribute with another IMS component that I am working on?</strong><br/>
+      		You are most welcomed. Just let us know and we will import it in the SVN.
+      	</li>
+      </ul>
+    </section>
     <section id="CSCFs">
       <title>Call Session Control Functions</title>
-      <p>
-		TODO
-	  </p>
+      <ul>
+      	<li><strong>I get an error that "setkey" is not found when starting the P-CSCF. How do I fix it?</strong><br/>
+      		Install the ipsec-tools. "setkey" is included there and it is used to set-up the IPSec Security Associations. Also, don't
+      		forget to check if you IPSec AH and ESP compiled in your kernel.
+      	</li>
+      	<li><strong>How do I enable the RTP Proxy?</strong><br/>
+      		Download and install RTPProxy. You can get it from <a href="http://www.iptel.org/downloads">http://www.iptel.org/downloads</a>.
+      		Then start it with the following commandline:
+      		<source>rtpproxy -l 1.2.3.4 -s udp:127.0.0.1:34999 -f</source>
+      		Edit the pcscf.cfg and enable the RTPProxy:
+      		<source>modparam("pcscf","rtpproxy_enable", 1)</source>      		
+      	</li>
+      </ul>
+    </section>
+    <section id="HSS">
+      <title>Home Subscriber Server</title>
+    </section>
+    <section id="ue">
+      <title>User Endpoints</title>
+      <ul>
+      	<li><strong>Is there a free IMS Client?</strong><br/>
+      		Unfortunately we don't know of any. Our OpenIC is available only commercially 
+      	(Contact: <a href="mailto:info@open-ims.org?subject=OpenIC%20request">info@open-ims.org</a>).</li>
+      	<li><strong>Then how can one test the core?</strong><br/>
+      		We are sharing also the SIP-to-IMS Gateway and you could use a SIP client. Or use 
+      	<a href="http://sipp.sourceforge.net/">SIPp</a>, which has support even for AKA and media</li>
+      	<li><strong>I am using SIP client X and it does not work. What could be wrong?</strong><br/>
+      		We know that for example 
+      		<a href="http://www.gnomemeeting.org/">Ekiga</a> does not comply with the Digest authentication RFC and is unusable. Some
+      		other clients might have problems. Please let us know if you encounter such a case so that we could either solve the issue
+      		or post it here. Before you do that, please check that you have configured in correctly as indicated 
+      		<a href="/docs/install.html#step7">here</a>.
+      	</li>      	
+      </ul>
     </section>
   </body>
 </document>

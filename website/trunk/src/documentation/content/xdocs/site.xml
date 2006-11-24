@@ -63,6 +63,8 @@ See http://forrest.apache.org/docs/linking.html for more info
   </sources>    
   <docs label="Documentation" href="/docs/index.html" description="Welcome to OpenIMSCore">
     <index label="Index" href="/docs/index.html" description="Documentation for Open IMS Core"/>
+    <faq label="FAQ" href="/docs/faq.html" description="Frequently Asked Questions"/>
+    <installguide label="Installation-Guide" href="/docs/install.html" description="Quick Installation Guide"/>
   </docs>      
   <development label="Development" href="http://developer.berlios.de/projects/openimscore/">
   	<bugs label="Report a bug" description="Report all bugs here" href="http://developer.berlios.de/bugs/?group_id=7589"/>
