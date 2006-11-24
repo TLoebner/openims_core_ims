@@ -41,10 +41,10 @@
     <section id="html_docs">
       <title>Online Documentation in browsable HTML format</title>
       <ul>
-      	<li>Call Session Control Functions - TODO</li>
-      	<li>Home Subscriber Server - TODO</li>
-      	<li>Java Diameter Peer - TODO</li>
-      	<li>C Diameter Peer - TODO</li>
+      	<li><a href="/docs/ser_ims/index.html">Call Session Control Functions</a></li>
+      	<li><a href="/docs/FHoSS/index.html">Home Subscriber Server</a></li>
+      	<li><a href="/docs/JavaDiameterPeer/index.html">Java Diameter Peer</a></li>
+      	<li><a href="/docs/ser_ims/CDP.html">C Diameter Peer</a></li>
       </ul>
     </section>
     <section id="pdf_docs">

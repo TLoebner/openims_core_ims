@@ -23,7 +23,18 @@
   <body> 
   	<section id="overview">
   		<title>Overview</title>
-  		<p>TODO</p>
+  		<p>For your convenience, you can download the componets compressed in one file each. Each night the latest
+  		revision is added. The revisions are not pulled on each iteration, but just one per day.</p>
+  		<p>Pay attention though, that <strong>these are not releases!</strong> As such, please only post bugs and
+  		issues regarding the last revision.</p>
     </section>
+  	<section id="snaphots">
+  		<title>Get Daily Snapshots</title>
+  		<p>The daily revision snapshots can be found here: 
+  			<a href="http://www.openimscore.org/snapshots/">http://www.openimscore.org/snapshots/</a>
+  		</p>
+  			
+    </section>
+    
   </body>
 </document>
