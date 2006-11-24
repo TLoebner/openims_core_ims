@@ -71,6 +71,10 @@ See http://forrest.apache.org/docs/linking.html for more info
   	<feature label="Request a feature" description="Ask for new features here" href="http://developer.berlios.de/feature/?group_id=7589"/>
   </development>
   
+  <wiki label="Wiki" href="http://openfacts.berlios.de/index-en.phtml?title=Open_IMS_Core">
+  	<index label="Index" href="http://openfacts.berlios.de/index-en.phtml?title=Open_IMS_Core" description="Wiki"/>  	
+  </wiki>
+ 
   
   <files>
     <hello_print href="hello.pdf"/>
