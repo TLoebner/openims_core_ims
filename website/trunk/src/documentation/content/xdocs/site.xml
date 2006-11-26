@@ -44,6 +44,7 @@ See http://forrest.apache.org/docs/linking.html for more info
 
   <about label="Home" href="/index.html" description="Welcome to OpenIMSCore">
     <index label="Welcome"  href="/index.html"/>
+    <index label="IMS Open Source Landscape"  href="/opensource.html"/>
   </about>
   <mail label="Mailing-Lists" href="/mail/index.html" >
 	<subscribe label="Subscribe"  href="/mail/index.html">

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation or its licensors,
+  as applicable.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document> 
+  <header> 
+    <title>IMS Open Source Landscape</title> 
+  </header> 
+  <body> 
+    <section id="why">
+      <title>Why this page</title>
+      <p>One of the hot-topics on our mailing-lists is the availability of other IMS components as Open Source. As IMS
+      has quite a lot of distinct nodes, the purpose of this page is to be a one-stop directory for all Open Source efforts
+      in this direction</p>
+      <p>If you can help keep this list up-to-date, please contact me at vingarzan -at- fokus dot fraunhofer dot de.</p>
+    </section>
+	<section id="ue">
+		<title>IMS User Endpoints</title>
+		<ul>
+			<li>None so far</li>
+		</ul>
+	</section>
+	<section id="cscf">
+		<title> Call Session Control Functions</title>
+		<ul>
+			<li>The Open IMS Core - P/I/S-CSCFs based on SER - <a href="http://www.openimscore.org/">http://www.openimscore.org/</a></li>
+			<li>The CAMPARI Project - <a href="http://www.ftw.at/ftw/research/projects/ProjekteFolder/N3">http://www.ftw.at/ftw/research/projects/ProjekteFolder/N3</a></li>
+		</ul>
+	</section>
+	<section id="hss">
+		<title>Home Subscriber Servers</title>
+		<ul>
+			<li>The Open IMS Core - Fraunhofer HSS (FHoSS) - <a href="http://www.openimscore.org/">http://www.openimscore.org/</a></li>
+		</ul>
+	</section>
+	
+	<section id="sd">
+		<title>Service Delivery Platforms</title>
+		<ul>
+			<li>Mobicents - The Open Source SLEE and SIP Server - <a href="http://www.mobicents.org">http://www.mobicents.org</a></li>
+		</ul>
+	</section>
+		
+	<section id="as">
+		<title>Application Servers</title>
+		<ul>
+			<li>TODO</li>
+		</ul>
+	</section>
+
+	<section id="media">
+		<title>Media Servers</title>
+		<ul>
+			<li>TODO</li>
+		</ul>
+	</section>
+	<section id="others">
+		<title>Other Components</title>
+		<ul>
+			<li>The OpenIMSCore SIP-to-IMS Gateway - <a href="http://www.openimscore.org/">http://www.openimscore.org/</a></li>
+		</ul>
+	</section>
+	
+  </body>
+</document>
