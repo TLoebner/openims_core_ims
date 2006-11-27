@@ -722,7 +722,24 @@ public class StateMachine {
 		cea.endToEndID = cer.endToEndID;
 		cea.origin_host.setData(p.diameterPeer.FQDN);
 		cea.origin_realm.setData(p.diameterPeer.Realm);
-		cea.host_ip_address.setData(p.R_comm.socket.getLocalAddress().getAddress());
+		byte addr[] ,laddr[] = p.R_comm.socket.getLocalAddress().getAddress();
+		switch (laddr.length) {
+			case 16:
+				addr = new byte[18];			
+				addr[0]=(byte)0;
+				addr[1]=(byte)2;
+				System.arraycopy(laddr,0,addr,2,laddr.length);
+				break;			
+			default:
+			case 4:
+				addr = new byte[6];
+				
+				addr[0]=(byte)0;
+				addr[1]=(byte)1;
+				System.arraycopy(laddr,0,addr,2,laddr.length);
+				break;			
+		}
+		cea.host_ip_address.setData(addr);
 		cea.vendor_id.setData(p.diameterPeer.Vendor_Id);
 		cea.product_name.setData(p.diameterPeer.Product_Name);
 		Snd_CE_add_applications(cea,p);
