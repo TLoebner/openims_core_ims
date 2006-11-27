@@ -50,7 +50,7 @@
       <ul>
       	<li><strong>I get an error that "setkey" is not found when starting the P-CSCF. How do I fix it?</strong><br/>
       		Install the ipsec-tools. "setkey" is included there and it is used to set-up the IPSec Security Associations. Also, don't
-      		forget to check if you IPSec AH and ESP compiled in your kernel.
+      		forget to check if you have IPSec AH and ESP compiled in your kernel.
       	</li>
       	<li><strong>How do I enable the RTP Proxy?</strong><br/>
       		Download and install RTPProxy. You can get it from <a href="http://www.iptel.org/downloads">http://www.iptel.org/downloads</a>.
@@ -63,6 +63,23 @@
     </section>
     <section id="HSS">
       <title>Home Subscriber Server</title>
+    </section>
+    <section id="sip2ims">
+      <title>SIP-to-IMS Gateway</title>
+      <ul>
+      	<li><strong>How do I provision a new user?</strong><br/>
+      		Use serweb or another tool to create a user in the credentials table. Alternatively, you can manually add a similar
+      		entry to those of Alice/Bob. HA1 is irrelevant and can be left blank. HA1b can be computed using e.g.:
+      		<source>ser_ims/scripts/gen_ha1 user realm password</source>
+      		Don't forget: The username must be the same as the private AND the public identity of the user as SIP UEs do not usually
+      		make a distinction between them.
+      	</li>
+      	<li><strong>It doesn't work with another Proxy-CSCF. Why?</strong><br/>
+      		The P-CSCF assumes that it is the first hop for any UE originated requests. Unfortunately now the SIP-to-IMS Gateway
+      		works in proxy mode and our P-CSCF is hacked to recognize this case. There are plans to move to a full B2BUA mode, but
+      		this will take some time.
+      	</li>
+      </ul>
     </section>
     <section id="ue">
       <title>User Endpoints</title>

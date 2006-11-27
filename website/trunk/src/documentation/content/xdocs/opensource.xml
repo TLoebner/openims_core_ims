@@ -22,11 +22,12 @@
   </header> 
   <body> 
     <section id="why">
-      <title>Why this page</title>
+      <title>Why this page?</title>
       <p>One of the hot-topics on our mailing-lists is the availability of other IMS components as Open Source. As IMS
       has quite a lot of distinct nodes, the purpose of this page is to be a one-stop directory for all Open Source efforts
       in this direction</p>
-      <p>If you can help keep this list up-to-date, please contact me at vingarzan -at- fokus dot fraunhofer dot de.</p>
+      <p>If you can help keep this list up-to-date, please contact us at 
+      <a href="mailto:dev@open-ims.org?subject=IMS%20Open%20Source%20Landscape">dev@open-ims.org</a></p>
     </section>
 	<section id="ue">
 		<title>IMS User Endpoints</title>
