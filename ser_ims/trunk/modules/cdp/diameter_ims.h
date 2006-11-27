@@ -189,7 +189,11 @@ enum {
 	AVP_IMS_Subs_Req_Type								= 705,
 	AVP_IMS_Requested_Domain							= 706,
 	AVP_IMS_Current_Location							= 707,
-	AVP_IMS_Identity_Set								= 708
+	AVP_IMS_Identity_Set								= 708,
+	AVP_IMS_Expiry_Time									= 709,
+	AVP_IMS_Send_Data_Indication						= 710,
+	AVP_IMS_DSAI_Tag									= 711
+	
 /** 800 to 899 reserved for TS29.299											*/
 };
 
@@ -233,7 +237,10 @@ enum {
 	AVP_IMS_Data_Reference_Location_Information			= 14,
 	AVP_IMS_Data_Reference_User_State					= 15,
 	AVP_IMS_Data_Reference_Charging_Information			= 16,
-	AVP_IMS_Data_Reference_MSISDN						= 17	
+	AVP_IMS_Data_Reference_MSISDN						= 17,	
+	AVP_IMS_Data_Reference_PSI_Activation				= 18,	
+	AVP_IMS_Data_Reference_DSAI							= 19,	
+	AVP_IMS_Data_Reference_Aliases_Repository_Data		= 20	
 };
 
 /** Subs-Req-Type AVP */
@@ -258,7 +265,8 @@ enum {
 enum {
 	AVP_IMS_Identity_Set_All_Identities					= 0,
 	AVP_IMS_Identity_Set_Registered_Identities			= 1,
-	AVP_IMS_Identity_Set_Implicit_Identities			= 2	
+	AVP_IMS_Identity_Set_Implicit_Identities			= 2,	
+	AVP_IMS_Identity_Set_Alias_Identities				= 3	
 };
 
 /** Deregistration-Reason AVP */
