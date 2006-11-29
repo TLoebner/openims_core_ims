@@ -398,15 +398,18 @@ int r_is_registered(str host,int port,int transport)
  * @param preferred - the P-Preferred-Identity header value
  * @returns 1 if registered, {0,0} if not or error
  */
-str r_assert_identity(str host,int port,int transport,str preferred)
+name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t preferred)
 {
 	r_contact *c;
 	r_public *p;
-	str id={0,0};
+	name_addr_t id;
+	str x={0,0};
 	if (port==0) port=5060;
 
+	memset(&id,0,sizeof(name_addr_t));
+	
 	LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Asserting preferred id <%.*s>\n",
-		preferred.len,preferred.s);
+		preferred.uri.len,preferred.uri.s);
 //	print_r(L_INFO);
 	c = get_r_contact(host,port,transport);
 
@@ -426,29 +429,30 @@ str r_assert_identity(str host,int port,int transport,str preferred)
 		r_unlock(c->hash);
 		return id;	
 	}
-	if (!preferred.len){
+	id.name = preferred.name;	
+	if (!preferred.uri.len){
 		p = c->head;
 		while(p&&!p->is_default)
 			p = p->next;
 		if (p) {
 			LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: to <%.*s>\n",p->aor.len,p->aor.s);
-			STR_PKG_DUP(id,p->aor,"r_assert_identity");
+			id.uri=p->aor;
 			r_unlock(c->hash);
 			return id;
 		} else {
 			LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: to <%.*s>\n",c->head->aor.len,c->head->aor.s);
-			STR_PKG_DUP(id,c->head->aor,"r_assert_identity");
+			id.uri=c->head->aor;
 			r_unlock(c->hash);
 			return id;	
 		}
 	}else{
 		p = c->head;
 		while(p){
-			if (p->aor.len==preferred.len &&
-				strncasecmp(p->aor.s,preferred.s,preferred.len)==0)
+			if (p->aor.len==preferred.uri.len &&
+				strncasecmp(p->aor.s,preferred.uri.s,preferred.uri.len)==0)
 			{
 				LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: to <%.*s>\n",p->aor.len,p->aor.s);
-				STR_PKG_DUP(id,c->head->aor,"r_assert_identity");
+				id.uri = preferred.uri;
 				r_unlock(c->hash);
 				return id;					
 			}

@@ -68,6 +68,6 @@ int r_is_integrity_protected(str host,int port,int transport);
 
 int r_is_registered(str host,int port,int transport);
 
-str r_assert_identity(str host, int port,int transport,str preferred);
+name_addr_t r_assert_identity(str host, int port,int transport,name_addr_t preferred);
 
 #endif //P_CSCF_REGISTRAR_H_

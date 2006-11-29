@@ -133,41 +133,55 @@ static inline void isc_strip_uri(str *uri)
 }
 
 
+str s_asserted_identity={"P-Asserted-Identity",19};
 /**
- * Looks for the P-Asserted-Identity header and extracts its content.
- * @param msg - the SIP message
- * @returns the event value
+ * Looks for the P-Asserted-Identity header and extracts its content
+ * @param msg - the sip message
+ * @returns the asserted identity
  */
 str cscf_get_asserted_identity(struct sip_msg *msg)
 {
-	str id={0,0};
+	name_addr_t id;
 	struct hdr_field *h;
-	
-	if (!msg) return id;
+	rr_t *r;
+	memset(&id,0,sizeof(name_addr_t));
+	if (!msg) return id.uri;
 	if (parse_headers(msg, HDR_EOH_F, 0)<0) {
-		return id;
+		return id.uri;
 	}
 	h = msg->headers;
 	while(h)
 	{
-		if (h->name.len == 19  &&
-			strncasecmp(h->name.s,"P-Asserted-Identity",19)==0)
+		if (h->name.len == s_asserted_identity.len  &&
+			strncasecmp(h->name.s,s_asserted_identity.s,s_asserted_identity.len)==0)
 		{
-			id = h->body;
-			while(id.len && (id.s[0]==' ' || id.s[0]=='\t' || id.s[0]=='<')){
-				id.s = id.s+1;
-				id.len --;
+			if (parse_rr(h)<0){
+				//This might be an old client
+				LOG(L_CRIT,"WARN:"M_NAME":cscf_get_asserted_identity: P-Asserted-Identity header must contain a Nameaddr!!! Fix the client!\n");
+				id.name.s = h->body.s;
+				id.name.len = 0;
+				id.len = h->body.len;
+				id.uri = h->body;
+				while(id.uri.len && (id.uri.s[0]==' ' || id.uri.s[0]=='\t' || id.uri.s[0]=='<')){
+					id.uri.s = id.uri.s+1;
+					id.uri.len --;
+				}
+				while(id.uri.len && (id.uri.s[id.uri.len-1]==' ' || id.uri.s[id.uri.len-1]=='\t' || id.uri.s[id.uri.len-1]=='>')){
+					id.uri.len--;
+				}
+				return id.uri;	
 			}
-			while(id.len && (id.s[id.len-1]==' ' || id.s[id.len-1]=='\t' || id.s[id.len-1]=='>')){
-				id.len--;
-			}	
-			return id;
+			r = (rr_t*) h->parsed;
+			id = r->nameaddr; 
+			free_rr((rr_t**)(&h->parsed));
+			h->parsed=0;
+			LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
+			return id.uri;
 		}
 		h = h->next;
 	}
-	return id;
+	return id.uri;
 }
-
 /**
  *	Get the public identity from P-Asserted-Identity, or From if asserted not found.
  * @param msg - the SIP message

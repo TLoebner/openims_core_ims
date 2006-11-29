@@ -582,7 +582,8 @@ int P_is_registered(struct sip_msg *msg,char *str1,char *str2)
 }
 
 
-static str p_asserted_identity_s={"P-Asserted-Identity: <",22};
+static str p_asserted_identity_s={"P-Asserted-Identity: ",21};
+static str p_asserted_identity_m={"<",1};
 static str p_asserted_identity_e={">\r\n",3};
 /**
  * Asserts the P-Preferred-Identity if registered and inserts the P-Asserted-Identity.
@@ -596,8 +597,8 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	int ret=CSCF_RETURN_FALSE;
 	struct via_body *vb;
 	struct hdr_field *h=0;
-	str preferred={0,0},asserted={0,0},x={0,0};
-
+	name_addr_t preferred,asserted;
+	str x={0,0};
 
 	LOG(L_INFO,"INF:"M_NAME":P_assert_identity: Asserting Identity\n");
 //	print_r(L_INFO);
@@ -606,35 +607,37 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	
 	preferred = cscf_get_preferred_identity(msg,&h);
 	
-	LOG(L_INFO,"DBG:"M_NAME":P_assert_identity: Looking for <%d://%.*s:%d> Pref: <%.*s>\n",
+	LOG(L_INFO,"DBG:"M_NAME":P_assert_identity: Looking for <%d://%.*s:%d> Pref: %.*s\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port,
-		preferred.len,preferred.s);
+		preferred.len,preferred.name.s);
 
 	asserted = r_assert_identity(vb->host,vb->port,vb->proto,preferred);
-	if (!asserted.len){
+	if (!asserted.uri.len){
 		ret = CSCF_RETURN_FALSE;	
 	}else{
 		cscf_del_header(msg,h);
-		x.len = p_asserted_identity_s.len+asserted.len+p_asserted_identity_e.len;
+		x.len = p_asserted_identity_s.len+asserted.name.len+p_asserted_identity_m.len + 
+			asserted.uri.len+p_asserted_identity_e.len;
 		x.s = pkg_malloc(x.len);
 		if (!x.s){
 			LOG(L_ERR, "ERR"M_NAME":P_assert_identity: Error allocating %d bytes\n",
 				require_hdr.len);
 			x.len=0;
-			pkg_free(asserted.s);
 			goto error;		
 		}
 		x.len=0;
 		STR_APPEND(x,p_asserted_identity_s);
-		STR_APPEND(x,asserted);
+		STR_APPEND(x,asserted.name);
+		STR_APPEND(x,p_asserted_identity_m);
+		STR_APPEND(x,asserted.uri);
 		STR_APPEND(x,p_asserted_identity_e);
-		pkg_free(asserted.s);
 		
 		if (cscf_add_header(msg,&x,HDR_OTHER_T))
 			ret = CSCF_RETURN_TRUE;
 		else
 			ret = CSCF_RETURN_FALSE;	
 	}
+	
 	
 	return ret;
 error:

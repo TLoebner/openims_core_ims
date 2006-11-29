@@ -144,7 +144,7 @@ str cscf_get_realm(struct sip_msg *msg);
 int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt);
 int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id);
 
-str cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h);
+name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_called_party_id(struct sip_msg *msg,struct hdr_field **hr);
 
 struct hdr_field* cscf_get_next_route(struct sip_msg *msg,struct hdr_field *start);
