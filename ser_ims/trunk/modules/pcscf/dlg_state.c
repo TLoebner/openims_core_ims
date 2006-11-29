@@ -959,7 +959,12 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	//LOG(L_ERR,"%.*s",x.len,x.s);
 	d_unlock(d->hash);
 	if (cscf_add_header_first(msg,&x)) {
-		return CSCF_RETURN_TRUE;
+		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
+			return CSCF_RETURN_TRUE;
+		else {
+			LOG(L_ERR,"ERR:"M_NAME":P_enforce_dialog_routes: new Route headers added, but failed to drop old ones.\n");
+			return CSCF_RETURN_ERROR;
+		}
 	}
 	else {
 		if (x.s) pkg_free(x.s);

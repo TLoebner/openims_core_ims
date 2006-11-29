@@ -928,7 +928,6 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	struct via_body *vb;
 	r_contact *c;
 	str x;
-	struct hdr_field *h;
 		
 	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
 	
