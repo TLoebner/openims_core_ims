@@ -146,6 +146,8 @@ typedef str             AAASessionId;		/**< Session Identifier				*/
 typedef unsigned int    AAAMsgIdentifier;	/**< Message Identifier				*/
 typedef unsigned char   AAAMsgFlag;			/**< Message flag					*/
 
+#define Flag_Request 	0x80
+#define Flag_Proxyable  0x40
 
 #define Code_CE 	257
 #define Code_DW 	280

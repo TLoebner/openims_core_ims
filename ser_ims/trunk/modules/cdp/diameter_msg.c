@@ -329,7 +329,7 @@ AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 	msg = AAANewMessage(command_code,app_id,sessId,0);
 	msg->hopbyhopId = next_hopbyhop();
 	msg->endtoendId = next_endtoend();
-		
+	msg->flags |= flags;	
 	return msg;
 }
 

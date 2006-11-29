@@ -403,7 +403,6 @@ name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t prefer
 	r_contact *c;
 	r_public *p;
 	name_addr_t id;
-	str x={0,0};
 	if (port==0) port=5060;
 
 	memset(&id,0,sizeof(name_addr_t));

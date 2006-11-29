@@ -165,7 +165,7 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 	sessId = cdpb.AAACreateSession();
 	trans=cdpb.AAACreateTransaction(IMS_Cx,IMS_MAR);
 
-	mar = cdpb.AAACreateRequest(IMS_Cx,IMS_MAR,0,&sessId);
+	mar = cdpb.AAACreateRequest(IMS_Cx,IMS_MAR,Flag_Proxyable,&sessId);
 	if (!mar) goto error;
 
 	if (!Cx_add_destination_realm(mar,realm)) goto error;
@@ -229,7 +229,7 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 	sessId = cdpb.AAACreateSession();
 	trans=cdpb.AAACreateTransaction(IMS_Cx,IMS_SAR);
 
-	sar = cdpb.AAACreateRequest(IMS_Cx,IMS_SAR,0,&sessId);
+	sar = cdpb.AAACreateRequest(IMS_Cx,IMS_SAR,Flag_Proxyable,&sessId);
 	if (!sar) goto error;
 
 	if (!Cx_add_destination_realm(sar,realm)) goto error;
