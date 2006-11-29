@@ -188,7 +188,7 @@ int I_NDS_strip_headers(struct sip_msg *msg, char* str1, char* str2)
 		for (i=0;untrusted_headers[i].len;i++)
 			if (hdr->name.len == untrusted_headers[i].len &&
 				strncasecmp(hdr->name.s,untrusted_headers[i].s,hdr->name.len)==0){				
-				if (!cscf_delete_header(msg,hdr)) return 0;
+				if (!cscf_del_header(msg,hdr)) return 0;
 				cnt++;
 			}
 	LOG(L_DBG,"DBG:"M_NAME":I_NDS_strip_headers: Deleted %d headers\n",cnt);			

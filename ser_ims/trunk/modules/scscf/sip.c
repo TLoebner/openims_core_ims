@@ -143,24 +143,6 @@ int cscf_add_header_rpl(struct sip_msg *msg, str *hdr)
 
 
 
-
-/**
- * Delete the given header from the given message
- * @param msg - the message to delete the header from
- * @param hdr - the header to delete. !!! Must be contained in the msg->headers
- * @returns 1 on success, 0 on failure
- */
-int cscf_delete_header(struct sip_msg *msg, struct hdr_field *hdr)
-{
-	if (!del_lump(msg, hdr->name.s - msg->buf, hdr->len, 0)) {
-		LOG(L_ERR, "ERR:"M_NAME":cscf_delete_header: Can't remove header <%.*s>\n",
-			hdr->name.len,hdr->name.s);
-		return 0;
-	}  
-	return 1;
-}
-
-
 /**
  * Returns the Private Identity extracted from the Authorization header.
  * If none found there takes the SIP URI in To without the "sip:" prefix
@@ -915,7 +897,7 @@ int cscf_remove_first_route(struct sip_msg *msg,str value)
 	if ((route.len == value.len || (route.len>value.len && route.s[value.len]==';')) &&
 		strncasecmp(route.s,value.s,value.len)==0)
 	{
-		cscf_delete_header(msg,h);
+		cscf_del_header(msg,h);
 		route = h->body;
 		i=0;
 		while(i<route.len && route.s[i]!=',')
@@ -986,7 +968,7 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h)
 		route.len,route.s);
 	if (cscf_is_myself(route))
 	{
-		cscf_delete_header(msg,*h);
+		cscf_del_header(msg,*h);
 		route = (*h)->body;
 		i=0;
 		while(i<route.len && route.s[i]!=',')
@@ -1655,6 +1637,26 @@ int cscf_del_header(struct sip_msg *msg,struct hdr_field *h)
 		LOG(L_ERR,"ERR:"M_NAME":cscf_del_header: Error adding del lump\n");
 		return 0;		
 	}		
+	return 1;	
+}
+
+/**
+ * Deletes all the headers of a given type.
+ * @param msg - the SIP message
+ * @param h - the header to delete
+ * @returns 1 on success, 0 on error
+ */
+int cscf_del_all_headers(struct sip_msg *msg,int hdr_type)
+{
+	struct hdr_field *h;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_del_all_headers: Error parsing until last header\n");
+		return 0;
+	}	
+	for(h = msg->headers;h;h=h->next)
+		if (h->type == hdr_type)
+			if (!cscf_del_header(msg,h)) return 0;
+			
 	return 1;	
 }
 

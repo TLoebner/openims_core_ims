@@ -928,6 +928,7 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	struct via_body *vb;
 	r_contact *c;
 	str x;
+	struct hdr_field *h;
 		
 	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
 	
@@ -974,7 +975,12 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	//LOG(L_ERR,"%.*s",x.len,x.s);
 	r_unlock(c->hash);
 	if (cscf_add_header_first(msg,&x)) {
-		return CSCF_RETURN_TRUE;
+		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
+			return CSCF_RETURN_TRUE;
+		else {
+			LOG(L_ERR,"ERR:"M_NAME":P_enforce_service_route: new Route headers added, but failed to drop old ones.\n");
+			return CSCF_RETURN_ERROR;
+		}
 	}
 	else {
 		if (x.s) pkg_free(x.s);

@@ -64,7 +64,6 @@ int cscf_add_header_first(struct sip_msg *msg, str *hdr);
 int cscf_add_header(struct sip_msg *msg, str *hdr,int type);
 int cscf_add_header_rpl(struct sip_msg *msg, str *hdr);
 int cscf_add_contact(struct sip_msg *msg,str uri,int expires);
-int cscf_delete_header(struct sip_msg *msg, struct hdr_field *hdr);
 
 str cscf_get_private_identity(struct sip_msg *msg, str realm);
 str cscf_get_public_identity(struct sip_msg *msg);
@@ -134,6 +133,7 @@ str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h);
 
 
 int cscf_del_header(struct sip_msg *msg,struct hdr_field *h);
+int cscf_del_all_headers(struct sip_msg *msg,int hdr_type);
 
 struct via_body* cscf_get_first_via(struct sip_msg *msg, struct hdr_field **h);
 struct via_body* cscf_get_last_via(struct sip_msg *msg);
