@@ -289,7 +289,7 @@ r_public* add_r_public(r_contact *c,str aor,int is_default)
 	p->next=0;
 	p->prev=c->tail;
 	if (c->tail) c->tail->next = p;
-	else c->tail = p;
+	c->tail = p;
 	if (!c->head) c->head=p;
 	
 	return p;
@@ -544,7 +544,6 @@ r_contact* update_r_contact(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,str **service_route,int *service_route_cnt, r_nat_dest **pinhole)
 {
 	r_contact *c;
-	r_public *p,*pn;
 	int i;
 	
 	
@@ -557,11 +556,8 @@ r_contact* update_r_contact(str host,int port,int transport,
 	}else{
 		/* first drop the old temporary public ids */
 		if (c->reg_state==DEREGISTERED && reg_state && *reg_state==REGISTERED){
-			p = c->head;
-			while(p){
-				pn = p->next;
-				del_r_public(c,p);
-				p = pn;
+			while(c->head){
+				del_r_public(c,c->head);
 			}
 		}
 
