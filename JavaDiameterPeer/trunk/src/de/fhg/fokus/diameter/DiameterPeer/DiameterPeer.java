@@ -395,21 +395,41 @@ public class DiameterPeer {
 			this.transactionWorker = new TransactionWorker(this,timeout,checkInterval);
 	}
 	
+	
+	
 	/**
-	 * Creates a new Diameter request. 
+	 * Creates a new Diameter request with proxiable bit set. 
 	 * 
 	 * @param command_code		Command code of the request.
 	 * @param application_id	Application id in the message header. 
 	 * @return Created Diameter request.
 	 */
-	public DiameterMessage newRequest(int command_code,int application_id)
+	public DiameterMessage newRequest(int command_code, int application_id)
 	{
-		DiameterMessage msg = new DiameterMessage(command_code,true,application_id);
+		return newRequest(command_code, true, application_id);
+	}
+	
+	
+	
+	/**
+	 * Creates a new Diameter request. 
+	 * 
+	 * @param command_code		Command code of the request.
+	 * @param Proxiable			Proxiable is set if true. 
+	 * @param application_id	Application id in the message header. 
+	 * @return Created Diameter request.
+	 */
+	public DiameterMessage newRequest(int command_code, boolean Proxiable, 
+			int application_id)
+	{
+		DiameterMessage msg = new DiameterMessage(command_code, 
+												  true, 
+												  Proxiable, 
+												  application_id, 
+												  this.getNextHopByHopId(), 
+												  this.getNextEndToEndId());
 		AVP avp;
 		
-		msg.endToEndID = this.getNextEndToEndId();
-		msg.hopByHopID = this.getNextHopByHopId();
-
 		avp = new AVP(AVP.Origin_Host,true,0);
 		avp.setData(this.FQDN);
 		msg.addAVP(avp);
@@ -417,11 +437,11 @@ public class DiameterPeer {
 		avp = new AVP(AVP.Origin_Realm,true,0);
 		avp.setData(this.Realm);
 		msg.addAVP(avp);
-		
-		
-		
+
 		return msg;
 	}
+	
+	
 	
 	/**
 	 * Creates a new Diameter answer.
