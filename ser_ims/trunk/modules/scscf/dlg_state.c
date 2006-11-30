@@ -650,7 +650,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}else{
 		/* Reply */
 		response = msg->first_line.u.reply.statuscode;
-		LOG(L_ERR,"DBG:"M_NAME":S_update_dialog(%s): <%d> \n",str1,response);
+		LOG(L_DBG,"DBG:"M_NAME":S_update_dialog(%s): <%d> \n",str1,response);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq==0 || h==0) return CSCF_RETURN_FALSE;
 		if (d->first_cseq==cseq && d->method_str.len == ((struct cseq_body *)h->parsed)->method.len &&

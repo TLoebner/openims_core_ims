@@ -626,7 +626,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	if (msg->first_line.type==SIP_REQUEST){
 		/* Request */
-		LOG(L_ERR,"DBG:"M_NAME":P_update_dialog(%s): Method <%.*s> \n",str1,
+		LOG(L_DBG,"DBG:"M_NAME":P_update_dialog(%s): Method <%.*s> \n",str1,
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq>d->last_cseq) d->last_cseq = cseq;
@@ -634,7 +634,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}else{
 		/* Reply */
 		response = msg->first_line.u.reply.statuscode;
-		LOG(L_ERR,"DBG:"M_NAME":P_update_dialog(%s): <%d> \n",str1,response);
+		LOG(L_DBG,"DBG:"M_NAME":P_update_dialog(%s): <%d> \n",str1,response);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq==0 || h==0) return CSCF_RETURN_FALSE;
 		if (d->first_cseq==cseq && d->method_str.len == ((struct cseq_body *)h->parsed)->method.len &&
@@ -821,7 +821,7 @@ int P_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_INFO,"DBG:"M_NAME":P_follows_dialog_routes(%s): Call-ID <%.*s> %d://%.*s:%d\n",
+	LOG(L_DBG,"DBG:"M_NAME":P_follows_dialog_routes(%s): Call-ID <%.*s> %d://%.*s:%d\n",
 		str1,call_id.len,call_id.s,
 		transport,host.len,host.s,port);
 
@@ -845,14 +845,14 @@ int P_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 	}
 	r = (rr_t*) hdr->parsed;	
 	for(i=0;i<d->routes_cnt;i++){
-		LOG(L_ERR,"DBG:"M_NAME":P_follows_dialog_routes:  must <%.*s>\n",
+		LOG(L_DBG,"DBG:"M_NAME":P_follows_dialog_routes:  must <%.*s>\n",
 			d->routes[i].len,d->routes[i].s);		
 		if (!r) {
 			hdr = cscf_get_next_route(msg,hdr);
 			if (!hdr) goto nok;
 			r = (rr_t*) hdr->parsed;	
 		}
-		LOG(L_ERR,"DBG:"M_NAME":P_follows_dialog_routes: src %.*s\n",
+		LOG(L_DBG,"DBG:"M_NAME":P_follows_dialog_routes: src %.*s\n",
 			r->nameaddr.uri.len,r->nameaddr.uri.s);		
 		if (r->nameaddr.uri.len==d->routes[i].len &&
 				strncasecmp(r->nameaddr.uri.s,
@@ -860,14 +860,14 @@ int P_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 		{
 			LOG(L_DBG,"DBG:"M_NAME":P_follows_dialog_routes: src match\n");		
 		} else {
-			LOG(L_ERR,"DBG:"M_NAME":P_follows_dialog_routes: found <%.*s>\n",
+			LOG(L_DBG,"DBG:"M_NAME":P_follows_dialog_routes: found <%.*s>\n",
 				r->nameaddr.uri.len,r->nameaddr.uri.s);					
 			goto nok;
 		}
 		r = r->next;
 	}
 	if (r) {
-		LOG(L_ERR,"DBG:"M_NAME":P_follows_dialog_routes: still has some extra Routes\n");		
+		LOG(L_DBG,"DBG:"M_NAME":P_follows_dialog_routes: still has some extra Routes\n");		
 		goto nok;
 	}
 	else 
