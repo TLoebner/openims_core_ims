@@ -70,7 +70,7 @@ print $ROOT_LOCAL,"\n" ;
     if(-e $ROOT_LOCAL) {
     rmdir($ROOT_LOCAL) ;
 
-    } else{
+    } else {
 	mkdir($ROOT_LOCAL,0775) or die "Cannot make dir $!" ;
 	chdir($ROOT_LOCAL) ;
 #	$scp_client->scp($ROOT_LOCAL,"$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$SNAPSHOT") ; 
@@ -92,7 +92,7 @@ print $ROOT_LOCAL,"\n" ;
 		} else {
 
 		my @files ;
-#	        my @newone ;
+	        my @final_array;
 		    my $ret_value = system("ssh -l $LOGINNAME $SVNSERVER -C ls -lh $ROOT_REMOTE$SNAPSHOT$element* >lsremote_$element.txt") ;
 		    
 		    open(FH,"lsremote_$element.txt") or die "cannot open lsremote_$element.txt" ;
@@ -105,8 +105,9 @@ print $ROOT_LOCAL,"\n" ;
 			if( $revnumber_actual > $revnumber_found || !defined($revnumber_found) )
 			{
 			    find(sub{push @files,$File::Find::name},"$ROOT_LOCAL$element") ;
-			    
-				foreach my $kinky (@files) { $kinky =~ s/$ROOT_LOCAL(.*)/$1/g ; }
+			    @final_array = map { s/$ROOT_LOCAL(.*)/$1/g ; $_ } @files ;
+
+#				foreach my $kinky(@final_array) { print "$kinky\n" ; } 
 			    
 				if($revnumber_actual < 10 ){ $revnumber_actual = "000".$revnumber_actual ; }
 				if($revnumber_actual >= 10 && $revnumber_actual < 100) { $revnumber_actual = "00".$revnumber_actual ;}
@@ -114,23 +115,22 @@ print $ROOT_LOCAL,"\n" ;
 
 			    my $tarfile = "$element"."$year"."$month".$day.".r$revnumber_actual" ;
 
-			    Archive::Tar->create_archive("$tarfile",0,@files) ;
+			    Archive::Tar->create_archive("$tarfile",0,@final_array) ;
 			    gzip "$tarfile" => "$tarfile.tgz" or die "gunzip failed with $!" ;
 			    unlink("$tarfile") ; 
 				
-			    $scp_client->scp("$tarfile.tgz", "$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$SNAPSHOT") ; 
+			#    $scp_client->scp("$tarfile.tgz", "$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$SNAPSHOT") ; 
 
 			    $whereami = &Cwd::cwd() ;
 			    $doxdir = $whereami."/".$element.$DOXCONST ;
 			    chdir($doxdir) ;
 
 			    system("doxygen doxygen.config 2>> $ROOT_LOCAL.errors") ;
-			    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$DOCS$element") ;
-			    system("ssh -l jsbach $SVNSERVER \'cd $ROOT_REMOTE$DOCS && chmod -R 775 $element\'") ;
+			 #   $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$DOCS$element") ;
+			   # system("ssh -l jsbach $SVNSERVER \'cd $ROOT_REMOTE$DOCS && chmod -R 775 $element\'") ;
 			}
 		}
 	    chdir($ROOT_LOCAL) ;
 	    $doxdir = '' ;
 	    }
-
     }
