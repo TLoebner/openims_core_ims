@@ -25,7 +25,7 @@ my @DIRECTORIES = ( "CDiameterPeer","FHoSS","JavaDiameterPeer","ser_ims" ) ;
 #my @DIRECTORIES = ( "JavaDiameterPeer") ;
 my $SVNSERVER = "shell.berlios.de" ;
 my $LOGINNAME = "jsbach" ;
-my $ROOT_LOCAL = '' ;
+my $ROOT_LOCAL = '/tmp/' ;
 my $ROOT_REMOTE = "/home/groups/openimscore/htdocs/" ;
 my $URI = "http://svn.berlios.de/svnroot/repos/openimscore/" ;
 my $SNAPSHOT = "snapshots/" ;
@@ -66,7 +66,7 @@ my ($year,$month,$day) = Parse_Date(`/bin/date`) ;
 if($day =~ m/^(\d)$/) { $day = '0'.$day ;} 
 
 my $rellocalname = "/snapshot".$year.$month.$day."/" ;
-$ROOT_LOCAL = &Cwd::cwd().$rellocalname  ;
+$ROOT_LOCAL .= $rellocalname  ;
 print $ROOT_LOCAL,"\n" ;
 
     if(-e $ROOT_LOCAL) {
@@ -101,8 +101,8 @@ print $ROOT_LOCAL,"\n" ;
 		    @temp = <FH> ;
 		    close(FH) ;
 
-			    my $line = pop(@temp) ;
-			    if($line =~ m/.*r0*(\d+)\.tgz/){$revnumber_found = $1; print "FOUND REVISION NUMBER:$revnumber_found\n" ;} 
+			my $line = pop(@temp) ;
+			if($line =~ m/.*r0*(\d+)\.tgz/){$revnumber_found = $1; print "FOUND REVISION NUMBER:$revnumber_found\n" ;} 
 
 			if( $revnumber_actual > $revnumber_found || !defined($revnumber_found) )
 			{
@@ -128,8 +128,9 @@ print $ROOT_LOCAL,"\n" ;
 			    chdir($doxdir) ;
 
 			    system("doxygen doxygen.config 2>> $ROOT_LOCAL.errors") ;
+		
 			    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$DOCS$element") ;
-			    system("ssh -l jsbach $SVNSERVER \'cd $ROOT_REMOTE$DOCS && chmod -R 775 $element\'") ;
+			    system("ssh -l jsbach $SVNSERVER \'chmod -R 775 $ROOT_REMOTE$DOCS$element\'") ;
 			}
 		}
 	    chdir($ROOT_LOCAL) ;
