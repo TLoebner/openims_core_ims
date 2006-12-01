@@ -63,6 +63,8 @@ my $scp_client= new Net::SCP ;
 #my $svn_agent = SVN::Agent->load({ 
 my ($year,$month,$day) = Parse_Date(`/bin/date`) ;
 
+if($day =~ m/^(\d)$/) { $day = '0'.$day ;} 
+
 my $rellocalname = "/snapshot".$year.$month.$day."/" ;
 $ROOT_LOCAL = &Cwd::cwd().$rellocalname  ;
 print $ROOT_LOCAL,"\n" ;
