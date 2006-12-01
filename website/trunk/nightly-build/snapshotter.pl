@@ -119,15 +119,15 @@ print $ROOT_LOCAL,"\n" ;
 			    gzip "$tarfile" => "$tarfile.tgz" or die "gunzip failed with $!" ;
 			    unlink("$tarfile") ; 
 				
-			#    $scp_client->scp("$tarfile.tgz", "$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$SNAPSHOT") ; 
+			    $scp_client->scp("$tarfile.tgz", "$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$SNAPSHOT") ; 
 
 			    $whereami = &Cwd::cwd() ;
 			    $doxdir = $whereami."/".$element.$DOXCONST ;
 			    chdir($doxdir) ;
 
 			    system("doxygen doxygen.config 2>> $ROOT_LOCAL.errors") ;
-			 #   $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$DOCS$element") ;
-			   # system("ssh -l jsbach $SVNSERVER \'cd $ROOT_REMOTE$DOCS && chmod -R 775 $element\'") ;
+			    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$DOCS$element") ;
+			    system("ssh -l jsbach $SVNSERVER \'cd $ROOT_REMOTE$DOCS && chmod -R 775 $element\'") ;
 			}
 		}
 	    chdir($ROOT_LOCAL) ;
