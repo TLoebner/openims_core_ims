@@ -333,6 +333,9 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	uri = cscf_get_digest_uri(msg,realm);
 	
 	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce);
+	if (!av)
+	    av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce);
+	
 	if (!av) {
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: no matching auth vector found - maybe timer expired\n");		
 		return ret;
@@ -362,7 +365,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	}else {
 		/* fix to accept old AKA auth */
 		if (response16.len==av->authorization.len && strncasecmp(response16.s,av->authorization.s,response16.len)==0){
-			LOG(L_CRIT,"INFO:"M_NAME":S_is_authorized: Accepted client with non-MD5 AKAv1. Fix the client!!!\n");
+			LOG(L_INFO,"INFO:"M_NAME":S_is_authorized: Accepted client with non-MD5 AKAv1. Fix the client!!!\n");
 			av->status = AUTH_VECTOR_USELESS;
 			ret = CSCF_RETURN_TRUE;
 			return ret;
@@ -1152,8 +1155,8 @@ void reg_await_timer(unsigned int ticks, void* param)
 				LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: .. AV %4d - %d Exp %3d  %p\n",
 					av->item_number,av->status,av->expires,av);
 				av_next = av->next;
-				if (av->status == AUTH_VECTOR_USELESS || 
-					(av->status == AUTH_VECTOR_SENT && av->expires<ticks))
+				if ((av->status == AUTH_VECTOR_USELESS || 
+					av->status == AUTH_VECTOR_SENT) && av->expires<ticks)
 				{
 					LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: ... dropping av %d - %d\n",						
 						av->item_number,av->status);

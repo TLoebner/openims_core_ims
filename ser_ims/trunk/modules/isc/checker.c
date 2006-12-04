@@ -445,7 +445,7 @@ isc_match* isc_checker_find(str uri,int direction,int skip,struct sip_msg *msg)
 					}
 				}
 				if (isc_check_filter_criteria(fc,msg,direction,registration_type)){
-					LOG(L_CRIT,"INFO:"M_NAME":isc_checker_find: MATCH -> %.*s (%.*s) handling %d \n",
+					LOG(L_INFO,"INFO:"M_NAME":isc_checker_find: MATCH -> %.*s (%.*s) handling %d \n",
 						fc->application_server.server_name.len,
 						fc->application_server.server_name.s,
 						fc->application_server.service_info.len,

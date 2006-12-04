@@ -1480,7 +1480,7 @@ int S_mobile_originating(struct sip_msg *msg,char *str1,char *str2)
 	str r={0,0};
 
 	r = cscf_get_first_route(msg,0);
-	LOG(L_ERR,"DBG:"M_NAME":S_mobile_originating: <%.*s>\n",r.len,r.s);	
+	LOG(L_DBG,"DBG:"M_NAME":S_mobile_originating: <%.*s>\n",r.len,r.s);	
 	
 	if (!r.len) return CSCF_RETURN_FALSE;
 		

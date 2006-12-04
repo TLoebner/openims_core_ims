@@ -136,7 +136,7 @@ int isc_mark_set(struct sip_msg *msg, isc_match *match, isc_mark *mark)
 	route.len = strlen(chr_mark);
 	if (match) as = match->server_name;
 	isc_mark_write_route(msg,&as,&route);
-	LOG(L_ERR,"INFO:"M_NAME":isc_mark_set: NEW mark <%s>\n",chr_mark);	
+	LOG(L_INFO,"INFO:"M_NAME":isc_mark_set: NEW mark <%s>\n",chr_mark);	
 	
 	return 1;
 }
@@ -190,7 +190,7 @@ int isc_mark_get_from_msg(struct sip_msg *msg,isc_mark *mark)
 	struct hdr_field *hdr;
 	rr_t *rr;
 	str x;
-	LOG(L_ERR,"INFO:"M_NAME":isc_mark_get_from_msg: Trying to get the mark from the message \n");
+	LOG(L_INFO,"INFO:"M_NAME":isc_mark_get_from_msg: Trying to get the mark from the message \n");
 	
 	memset(mark,0,sizeof(isc_mark));
 	
@@ -211,7 +211,7 @@ int isc_mark_get_from_msg(struct sip_msg *msg,isc_mark *mark)
 					strncasecmp(x.s,ISC_MARK_USERNAME,ISC_MARK_USERNAME_LEN)==0 &&
 					strncasecmp(x.s+ISC_MARK_USERNAME_LEN+1,isc_my_uri.s,isc_my_uri.len)==0)
 				{
-					LOG(L_ERR,"INFO:"M_NAME":isc_mark_get_from_msg: Found <%.*s>\n",x.len,x.s);						
+					LOG(L_INFO,"INFO:"M_NAME":isc_mark_get_from_msg: Found <%.*s>\n",x.len,x.s);						
 					isc_mark_get(x,mark);
 					return 1;
 				}					
