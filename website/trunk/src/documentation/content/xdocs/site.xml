@@ -48,9 +48,9 @@ See http://forrest.apache.org/docs/linking.html for more info
   </about>
   <mail label="Mailing-Lists" href="/mail/index.html" >
 	<subscribe label="Subscribe"  href="/mail/index.html">
-	    <users label="Users" href="http://lists.berlios.de/mailman/listinfo/openimscore-users" description="General Usage Discussions"/>
-	    <cscf label="CSCF" href="http://lists.berlios.de/mailman/listinfo/openimscore-cscf" description="Call Session Control Functions Discussions"/>
-	    <hss label="HSS" href="http://lists.berlios.de/mailman/listinfo/openimscore-hss" description="Home Subscriber Server"/>
+	    <users label="Users" href="https://lists.berlios.de/mailman/listinfo/openimscore-users" description="General Usage Discussions"/>
+	    <cscf label="CSCF" href="https://lists.berlios.de/mailman/listinfo/openimscore-cscf" description="Call Session Control Functions Discussions"/>
+	    <hss label="HSS" href="https://lists.berlios.de/mailman/listinfo/openimscore-hss" description="Home Subscriber Server"/>
 	</subscribe>
 	<archives label="Archives"  href="/mail/index.html">
 	    <users label="Users" href="http://lists.berlios.de/pipermail/openimscore-users" description="General Usage Discussions"/>
