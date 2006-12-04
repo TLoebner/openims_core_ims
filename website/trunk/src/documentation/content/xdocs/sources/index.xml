@@ -43,8 +43,8 @@
       <title>Getting the Source Code with Subversion</title>
 		<p>
 		For futher information about usage of Subversion see the
-		 <a href="/docman/display_doc.php?docid=394&amp;group_id=2">Subversion (SVN) HowTo</a> 
-		 of <a href="/docman/?group_id=2">Site Docs</a>.
+		 <a href="http://developer.berlios.de/docman/display_doc.php?docid=394&amp;group_id=2">Subversion (SVN) HowTo</a> 
+		 of <a href="http://developer.berlios.de/docman/?group_id=2">Site Docs</a>.
 		</p>
 		<section id="svnstructure">
 		 <title>SVN Structure </title>
