@@ -814,7 +814,7 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 			id = r->nameaddr; 
 			free_rr((rr_t**)(&h->parsed));
 			h->parsed=0;
-			LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
+			//LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
 			return id.uri;
 		}
 		h = h->next;

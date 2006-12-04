@@ -280,7 +280,7 @@ int isc_appserver_forward(struct sip_msg *msg,char *str1,char *str2 )
 			while(rr){
 				if (rr->nameaddr.uri.len >= ISC_MARK_USERNAME_LEN &&
 					strncasecmp(rr->nameaddr.uri.s,ISC_MARK_USERNAME,ISC_MARK_USERNAME_LEN)==0)	{
-						LOG(L_ERR,"DEBUG:"M_NAME":isc_appserver_forward: Found S-CSCF marking <%.*s> \n",rr->nameaddr.uri.len,rr->nameaddr.uri.s);
+						LOG(L_INFO,"DEBUG:"M_NAME":isc_appserver_forward: Found S-CSCF marking <%.*s> \n",rr->nameaddr.uri.len,rr->nameaddr.uri.s);
 						/* delete the header */					
 						if (!del_lump(msg, hdr->name.s - msg->buf, hdr->len, 0)) {
 							LOG(L_ERR, "ERROR:"M_NAME":isc_appserver_forward: Can't remove Route HF\n");
@@ -334,7 +334,7 @@ static inline enum dialog_direction get_dialog_direction(char *direction)
 		case '1':
 			return DLG_MOBILE_TERMINATING;
 		default:
-			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
+			LOG(L_ERR,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
 			return DLG_MOBILE_UNKNOWN;
 	}
 }
@@ -357,7 +357,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 	
 	enum dialog_direction dir = get_dialog_direction(str1);
 	
-	LOG(L_ERR,"INFO:"M_NAME":ISC_match_filter(%s): Checking triggers\n",str1);
+	LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Checking triggers\n",str1);
 	
 	if (dir==DLG_MOBILE_UNKNOWN) 
 		return ISC_RETURN_BREAK;
@@ -367,11 +367,11 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 	/* starting or resuming? */
 	memset(&old_mark,0,sizeof(isc_mark));
 	if (isc_mark_get_from_msg(msg,&old_mark)){		
-		LOG(L_CRIT,"INFO:"M_NAME":ISC_match_filter(%s): Message returned s=%d;h=%d;d=%d\n",
+		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Message returned s=%d;h=%d;d=%d\n",
 			str1,old_mark.skip,old_mark.handling,old_mark.direction);
 	}
 	else {
-		LOG(L_CRIT,"INFO:"M_NAME":ISC_match_filter(%s): Starting triggering\n",str1);				
+		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Starting triggering\n",str1);				
 	}
 
 	/* originating leg */
@@ -381,7 +381,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			k = isc_is_registered(&s);
 			if (k==NOT_REGISTERED) return ISC_MSG_NOT_FORWARDED;
 			
-			LOG(L_ERR,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
+			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
 				s.len,s.s,k);
 			m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
 			if (m){
@@ -406,7 +406,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			} else {
 				new_mark.direction = IFC_TERMINATING_UNREGISTERED;
 			}
-			LOG(L_ERR,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
+			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
 				s.len,s.s,k);
 			m = isc_checker_find(s,new_mark.direction,old_mark.skip,msg);
 			if (m){
@@ -447,7 +447,7 @@ int ISC_from_AS(struct sip_msg *msg,char *str1,char *str2)
 		
 	/* starting or resuming? */
 	if (isc_mark_get_from_msg(msg,&old_mark)){		
-		LOG(L_CRIT,"INFO:"M_NAME":ISC_from_AS(%s): Message returned s=%d;h=%d;d=%d\n",
+		LOG(L_INFO,"INFO:"M_NAME":ISC_from_AS(%s): Message returned s=%d;h=%d;d=%d\n",
 			str1,old_mark.skip,old_mark.handling,old_mark.direction);
 		if (old_mark.direction==IFC_ORIGINATING_SESSION && dir!=DLG_MOBILE_ORIGINATING)
 			ret = ISC_RETURN_FALSE;
@@ -491,7 +491,7 @@ int ISC_is_session_continued(struct sip_msg *msg,char *str1,char *str2)
 		
 	/* starting or resuming? */
 	if (isc_mark_get_from_lump(req,&old_mark)){		
-		LOG(L_CRIT,"INFO:"M_NAME":ISC_is_session_continued(): Message returned handling [%d] \n",old_mark.handling);
+		LOG(L_INFO,"INFO:"M_NAME":ISC_is_session_continued(): Message returned handling [%d] \n",old_mark.handling);
 		if (old_mark.handling == IFC_SESSION_CONTINUED) 
 			ret = ISC_RETURN_TRUE;
 		else 

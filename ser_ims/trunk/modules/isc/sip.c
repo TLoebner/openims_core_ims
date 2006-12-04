@@ -175,7 +175,7 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 			id = r->nameaddr; 
 			free_rr((rr_t**)(&h->parsed));
 			h->parsed=0;
-			LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
+			//LOG(L_RIT,"%.*s",id.uri.len,id.uri.s);
 			return id.uri;
 		}
 		h = h->next;
@@ -305,7 +305,7 @@ int isc_get_expires(struct sip_msg *msg)
 {	
 	if (msg->expires) {
 		if (parse_expires(msg->expires) < 0) {
- 			LOG(L_ERR, "INFO:ifc:ifc_get_expires:Error while parsing Expires header\n");
+ 			LOG(L_INFO, "INFO:ifc:ifc_get_expires:Error while parsing Expires header\n");
 		    return -1;
  		}
 		 return ((exp_body_t*) msg->expires->parsed)->val;

@@ -147,7 +147,7 @@ void isc_failure(struct cell *t,int type,struct tmcb_params *ps)
 		LOG( L_INFO,"INFO:"M_NAME":ifc:isc_failure reached but already treated... so skipped.\n");
 		return;
 	}
-	LOG(L_CRIT,"INFO:"M_NAME":isc_failure: reached with s=%d;h=%d;d=%d\n",
+	LOG(L_INFO,"INFO:"M_NAME":isc_failure: reached with s=%d;h=%d;d=%d\n",
 		mark->skip,mark->handling,mark->direction);	
 
 	/* non 408 */
@@ -170,7 +170,7 @@ void isc_failure(struct cell *t,int type,struct tmcb_params *ps)
 		isc_mark_free(mark);
 		isc_tmb.t_reply(ps->req,IFC_AS_UNAVAILABLE_STATUS_CODE,
 			"AS Contacting Failed - iFC terminated dialog");
-		LOG(L_ERR,"INFO:"M_NAME":isc_failure: Responding with %d "
+		LOG(L_INFO,"INFO:"M_NAME":isc_failure: Responding with %d "
 			"to URI: %.*s\n",IFC_AS_UNAVAILABLE_STATUS_CODE,
 			ps->req->first_line.u.request.uri.len,
 			ps->req->first_line.u.request.uri.s);

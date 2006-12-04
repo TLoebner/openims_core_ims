@@ -502,7 +502,7 @@ int S_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 //	LOG(L_CRIT,"%d - %d\n",dir,dirmsg);
 	if (dir!=dirmsg) return CSCF_RETURN_FALSE;				
 			
-	print_s_dialogs(L_ERR);
+//	print_s_dialogs(L_ERR);
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len){
 		
@@ -577,7 +577,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	d_unlock(d->hash);
 	
-	print_s_dialogs(L_INFO);
+//	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
 }
@@ -642,7 +642,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	if (msg->first_line.type==SIP_REQUEST){
 		/* Request */
-		LOG(L_ERR,"DBG:"M_NAME":S_update_dialog(%s): Method <%.*s> \n",str1,
+		LOG(L_DBG,"DBG:"M_NAME":S_update_dialog(%s): Method <%.*s> \n",str1,
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq>d->last_cseq) d->last_cseq = cseq;
@@ -713,7 +713,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	
 	d_unlock(d->hash);
 	
-	print_s_dialogs(L_INFO);
+//	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
 }
@@ -769,7 +769,7 @@ int S_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 		
 	d_unlock(hash);
 	
-	print_s_dialogs(L_INFO);
+//	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
 }
@@ -801,7 +801,7 @@ int S_drop_all_dialogs(str aor)
 			}
 		d_unlock(i);
 	}
-	print_s_dialogs(L_INFO);	
+	//print_s_dialogs(L_INFO);	
 	return cnt;
 }
 
@@ -959,7 +959,7 @@ void dialog_timer(unsigned int ticks, void* param)
 			}
 		d_unlock(i);
 	}
-	print_s_dialogs(L_INFO);
+//	print_s_dialogs(L_INFO);
 }
 
 
