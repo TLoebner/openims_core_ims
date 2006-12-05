@@ -63,6 +63,31 @@
     </section>
     <section id="HSS">
       <title>Home Subscriber Server</title>
+      <ul>
+      	<li><strong>Can I compile FHoSS without connectivity to Internet?</strong><br/>
+			The usual problem that occurs when the additional resources are generated, through ant gen, without a current Intenet connection is: <source> Error reading import file 
+			'http://www.w3.org/2001/xml.xsd': java.net.NoRouteToHostException: No route to host.</source> This occurs because the source generator
+			tries to import the specified file from the remote address.
+			The solution is:
+			<ol>
+				<li> Download the xml.xsd from here: <a href ="http://www.w3.org/2001/xml.xsd"> xml.xsd </a> and copy it on your machine, for example in <strong>xsd/</strong> folder of FHoSS </li>
+				<li> Edit the file xsd/ZhDataType.xsd and change the path 
+					 "http://www.w3.org/2001/xml.xsd" to your local path; for example "file:///opt/OpenIMSCore/FHoSS/xsd/xml.xsd" 
+					 E.g. Original file:
+					<source>
+					  &#060;xs:import namespace="http://www.w3.org/XML/1998/namespace"
+				       schemaLocation="http://www.w3.org/2001/xml.xsd"/&#062;
+					</source>
+					Modified file:
+					<source>
+					  &#060;xs:import namespace="http://www.w3.org/XML/1998/namespace"
+				       schemaLocation="file:///opt/OpenIMSCore/FHoSS/xsd/xml.xsd"/&#062;
+					</source>
+				</li>
+				 <li> Run again ant gen and now it will work. </li> 
+			</ol>
+      	</li>
+      </ul>      
     </section>
     <section id="sip2ims">
       <title>SIP-to-IMS Gateway</title>
