@@ -152,7 +152,7 @@ int P_subscribe(struct sip_msg *rpl, char* str1, char* str2)
 	max_expires = expires_hdr;
 	while(c){
 		r = expires_hdr;
-		if (!c || str2int(&(c->expires->body), (unsigned int*)&r) < 0) {
+		if (str2int(&(c->expires->body), (unsigned int*)&r) < 0) {
 			r = 0;
 		}
 		if (r>max_expires) max_expires = r;

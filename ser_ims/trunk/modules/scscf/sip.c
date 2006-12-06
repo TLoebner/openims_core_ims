@@ -243,7 +243,7 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
 	}
 	
 	if (msg->expires){
-		parse_expires(msg->expires);
+		if (!msg->expires->parsed) parse_expires(msg->expires);
 		if (msg->expires->parsed) {
 			exp = (exp_body_t*) msg->expires->parsed;
 			if (exp->valid) {
