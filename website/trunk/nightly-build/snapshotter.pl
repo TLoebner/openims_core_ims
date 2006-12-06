@@ -26,7 +26,8 @@ my @DIRECTORIES = ( "CDiameterPeer","FHoSS","JavaDiameterPeer","ser_ims" ) ;
 my $SVNSERVER = "shell.berlios.de" ;
 my $LOGINNAME = "jsbach" ;
 my $ROOT_LOCAL = '/tmp/' ;
-my $ROOT_REMOTE = "/home/groups/openimscore/htdocs/" ;
+my $ROOT_REMOTE = "/home/groups/ftp/pub/openimscore/" ;
+my $ROOT_REMOTE_DOCS = "/home/groups/openimscore/htdocs/" ;
 my $URI = "http://svn.berlios.de/svnroot/repos/openimscore/" ;
 my $SNAPSHOT = "snapshots/" ;
 my $DOCS = "docs/" ;
@@ -65,12 +66,12 @@ my ($year,$month,$day) = Parse_Date(`/bin/date`) ;
 
 if($day =~ m/^(\d)$/) { $day = '0'.$day ;} 
 
-my $rellocalname = "/snapshot".$year.$month.$day."/" ;
+my $rellocalname = "snapshot".$year.$month.$day."/" ;
 $ROOT_LOCAL .= $rellocalname  ;
 print $ROOT_LOCAL,"\n" ;
 
     if(-e $ROOT_LOCAL) {
-    rmdir($ROOT_LOCAL) ;
+    unlink($ROOT_LOCAL) ;
 
     } else {
 	mkdir($ROOT_LOCAL,0775) or die "Cannot make dir $!" ;
@@ -85,9 +86,14 @@ print $ROOT_LOCAL,"\n" ;
 	    {
 
 	    $rvalue = system("svn export $URI$element 2>$element\\exportErrors.txt 1>$element\\export.txt " ) ;
+	    my $move = "mv $element"."/trunk/* $element/" ;
+	    system($move) ;
+	    system("rm -rf trunk/") ;
+
 	    open(FH,"$element"."export.txt") or die "cannot open export $element\\export.txt, $!";
 	    @temp = <FH> ;   
 	    close(FH) ;
+
 		while( my $line = pop(@temp)){if($line =~ m/.*revision\s(\d+)/){ $revnumber_actual = $1;}} 
 		if($rvalue)
 		{
@@ -106,7 +112,9 @@ print $ROOT_LOCAL,"\n" ;
 
 			if( $revnumber_actual > $revnumber_found || !defined($revnumber_found) )
 			{
-			    find(sub{push @files,$File::Find::name},"$ROOT_LOCAL$element") ;
+			   
+
+			    find(sub{push @files,$File::Find::name}, "$ROOT_LOCAL$element") ;
 			    @final_array = map { s/$ROOT_LOCAL(.*)/$1/g ; $_ } @files ;
 
 #				foreach my $kinky(@final_array) { print "$kinky\n" ; } 
@@ -122,18 +130,20 @@ print $ROOT_LOCAL,"\n" ;
 			    unlink("$tarfile") ; 
 				
 			    $scp_client->scp("$tarfile.tgz", "$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$SNAPSHOT") ; 
+			    system("ssh -l jsbach $SVNSERVER \'chmod -R 664 $ROOT_REMOTE$SNAPSHOT$element\'") ;
 
 			    $whereami = &Cwd::cwd() ;
-			    $doxdir = $whereami."/".$element.$DOXCONST ;
+			    $doxdir = $whereami."/".$DOXCONST ;
 			    chdir($doxdir) ;
 
 			    system("doxygen doxygen.config 2>> $ROOT_LOCAL.errors") ;
 		
-			    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE$DOCS$element") ;
-			    system("ssh -l jsbach $SVNSERVER \'chmod -R 775 $ROOT_REMOTE$DOCS$element\'") ;
+		#	    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE_DOCS$DOCS$element") ;
+		#	    system("ssh -l jsbach $SVNSERVER \'chmod -R 664 $ROOT_REMOTE_DOCS$DOCS$element\'") ;
 			}
 		}
 	    chdir($ROOT_LOCAL) ;
+#	    system("rm -rf $ROOT_LOCAL"."trunk/") ;
 	    $doxdir = '' ;
 	    }
     }
