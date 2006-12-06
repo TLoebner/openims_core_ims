@@ -414,6 +414,7 @@ isc_match* isc_checker_find(str uri,int direction,int skip,struct sip_msg *msg)
 		next = cnt + p->s->service_profiles[si].filter_criteria_cnt;
 		if (cnt<=skip && skip<next){
 			sj = skip-cnt;
+			cnt += sj;
 			break;
 		}
 		cnt = next;
