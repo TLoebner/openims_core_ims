@@ -286,10 +286,10 @@ inline int isc_mark_write_route(struct sip_msg *msg,str *as,str *iscmark)
 	first = msg->headers;	
 	if (as && as->len) {
 		route.s = pkg_malloc(21+as->len+iscmark->len);
-		sprintf(route.s,"Route: <%.*s;lr>, <%.*s;lr>\n",as->len,as->s,iscmark->len,iscmark->s);
+		sprintf(route.s,"Route: <%.*s;lr>, <%.*s>\n",as->len,as->s,iscmark->len,iscmark->s);
 	}else{
 		route.s = pkg_malloc(18+iscmark->len);
-		sprintf(route.s,"Route: <%.*s;lr>\n",iscmark->len,iscmark->s);
+		sprintf(route.s,"Route: <%.*s>\n",iscmark->len,iscmark->s);
 	}
 	
 	route.len =strlen(route.s);
