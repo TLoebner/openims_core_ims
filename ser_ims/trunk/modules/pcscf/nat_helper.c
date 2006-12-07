@@ -417,8 +417,8 @@ int nat_uac_test(struct sip_msg * msg) {
 	if((pcscf_nat_detection_type & NAT_UAC_TEST_RCVD) && received_test(msg))
 		return 1;
 	
-	if((pcscf_nat_detection_type & NAT_UAC_TEST_C_1918) && contact_1918(msg))
-		return 1;
+//	if((pcscf_nat_detection_type & NAT_UAC_TEST_C_1918) && contact_1918(msg))
+		//return 1;
 	
 //	if((pcscf_nat_detection_type & NAT_UAC_TEST_S_1918) && sdp_1918(msg))
 //		return 1;

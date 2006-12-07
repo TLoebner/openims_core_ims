@@ -224,7 +224,7 @@ str cscf_get_public_identity(struct sip_msg *msg)
 }
 
 
-
+	
 /**
  * Returns the expires value from the Expires header in the message.
  * It searches into the Expires header and if not found returns -1
@@ -241,9 +241,10 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_expires_hdr: Error parsing until header EXPIRES: \n");
 		return -1;
 	}
-	
-	if (msg->expires){
-		if (!msg->expires->parsed) parse_expires(msg->expires);
+	if (msg->expires){		
+		if (!msg->expires->parsed) {
+			parse_expires(msg->expires);
+		}
 		if (msg->expires->parsed) {
 			exp = (exp_body_t*) msg->expires->parsed;
 			if (exp->valid) {
@@ -253,6 +254,7 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
 			}
 		}
 	}
+	
 	return -1;
 }
 
@@ -265,28 +267,12 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
  */
 int cscf_get_expires(struct sip_msg *msg)
 {
-	exp_body_t *exp;
 	int expires = 3600,i;
 	contact_t *c;
 	param_t *param;
 	contact_body_t *cbody; 
 	/*first search in Expires header */
-	if (parse_headers(msg,HDR_EXPIRES_F,0)!=0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_expires: Error parsing until header EXPIRES: \n");
-		//don'r return, look for contact
-	}
-	
-	if (msg->expires){
-		parse_expires(msg->expires);
-		if (msg->expires->parsed) {
-			exp = (exp_body_t*) msg->expires->parsed;
-			if (exp->valid) {
-				expires = exp->val;
-				LOG(L_DBG,"DBG:"M_NAME":cscf_get_expires: <%d> \n",expires);
-				return expires;
-			}
-		}
-	}
+	expires = cscf_get_expires_hdr(msg);
 	cscf_parse_contacts(msg);
 	if (msg->contact && msg->contact->parsed) {
 		cbody = (contact_body_t *) msg->contact->parsed;
@@ -703,7 +689,6 @@ contact_body_t *cscf_parse_contacts(struct sip_msg *msg)
 			}					
 			ptr = ptr->next;
 		}
-
 	}
 	if (!msg->contact) return 0;
 	return msg->contact->parsed;
@@ -845,7 +830,8 @@ str cscf_get_contact(struct sip_msg *msg)
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_contact: Contact header not found.\n");
 		return id;
 	}
-	if (parse_contact(h)<0){
+	if (h->parsed==0 &&
+		parse_contact(h)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_contact: Error parsing contacts.\n");
 		return id;
 	}
