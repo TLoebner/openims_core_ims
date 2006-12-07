@@ -278,8 +278,9 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	}
 	
 	expires_hdr = cscf_get_expires_hdr(rpl);
-	if (expires_hdr<0) 
-		expires_hdr = cscf_get_expires_hdr(req);
+	/** Removed because this would parse the hdr, but then it will fail to free the hdr->parsed */
+//	if (expires_hdr<0) 
+//		expires_hdr = cscf_get_expires_hdr(req);
 	
 	if (parse_headers(rpl, HDR_EOH_F, 0) <0) {
 		LOG(L_ERR,"ERR:"M_NAME":r_save_location: error parsing headers\n");
