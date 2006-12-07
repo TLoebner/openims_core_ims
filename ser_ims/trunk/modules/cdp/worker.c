@@ -123,16 +123,16 @@ void worker_init()
 	tasks->lock = lock_alloc();
 	tasks->lock = lock_init(tasks->lock);
 	
-	tasks->empty = semget(IPC_PRIVATE,1,0);
+	tasks->empty = semget(IPC_PRIVATE,1,0666 | IPC_CREAT );
 	if (tasks->empty==-1){
 		LOG(L_ERR,"ERROR:worker_init(): Error creating semaphore for empty queue > %s\n",strerror(errno));
 	}else
-		semctl(tasks->empty, 0, SETVAL, 1);
-	tasks->full = semget(IPC_PRIVATE,1,0);
+		semctl(tasks->empty, 0, SETVAL, 0666 | IPC_CREAT );
+	tasks->full = semget(IPC_PRIVATE,1, 0666 | IPC_CREAT );
 	if (tasks->full==-1){
 		LOG(L_ERR,"ERROR:worker_init(): Error creating semaphore for full queue > %s\n",strerror(errno));
 	}else
-		semctl(tasks->full, 0, SETVAL, 1);
+		semctl(tasks->full, 0, SETVAL, 0666 | IPC_CREAT);
 	
 	tasks->start = 0;
 	tasks->end = 0;
