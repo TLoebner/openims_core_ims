@@ -1195,7 +1195,7 @@ int S_term_registered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
 	struct sip_uri puri;
-	str uri;	
+	str uri={0,0};	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_term_registered: Looking if registered\n");
 //	print_r(L_INFO);
@@ -1238,9 +1238,10 @@ int S_term_registered(struct sip_msg *msg,char *str1,char *str2)
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
-	
+	if (uri.s) pkg_free(uri.s);
 	return ret;
 error:
+	if (uri.s) pkg_free(uri.s);
 	ret=CSCF_RETURN_ERROR;
 	return ret;	
 }
@@ -1256,7 +1257,7 @@ int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
 	struct sip_uri puri;
-	str uri;	
+	str uri={0,0};	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_term_unregistered: Looking if registered\n");
 //	print_r(L_INFO);
@@ -1299,9 +1300,10 @@ int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2)
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
-	
+	if (uri.s) pkg_free(uri.s);	
 	return ret;
 error:
+	if (uri.s) pkg_free(uri.s);
 	ret=CSCF_RETURN_ERROR;
 	return ret;	
 }
@@ -1317,7 +1319,7 @@ int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
 	struct sip_uri puri;
-	str uri;	
+	str uri={0,0};	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking if registered\n");
 //	print_r(L_INFO);
@@ -1360,9 +1362,10 @@ int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
-	
+	if (uri.s) pkg_free(uri.s);	
 	return ret;
 error:
+	if (uri.s) pkg_free(uri.s);
 	ret=CSCF_RETURN_ERROR;
 	return ret;	
 }
