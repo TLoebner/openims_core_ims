@@ -335,5 +335,61 @@ cp ser_ims/cfg/*.sh .
 		</li>
 	  </ul>
 	</section>
+    <section id="annexa">
+      <title>Annex A - DNS HOWTO</title>
+      <p>
+		A lot of users seem to have difficulties when setting up a DNS server. Although it is not our
+		purpose to teach you this, here is a summary of this process. But be aware that this does not means that we
+		are offering any further support for it and you don't have to read the DNS manual. If you think that 
+		/etc/hosts would be enough, you are wrong as it can not help you with special DNS queries like NAPTR and SRV.		
+	  </p>
+	  <p><strong>So how do you get a DNS server up and running?</strong>
+	  </p>
+		  <ul>
+		  	<li>Get the bind (or often called named) package installed on your distribution</li>
+		  	<li>Make sure you are root</li>
+		  	<li>Locate named.conf (could be in /etc or /etc/bind or /etc/named)</li>
+		  	<li>Edit that file according to your needs. Here are some things that you need in there:
+		  		<source>options {
+	...
+	forward first;
+	forwarders {
+	    {THE_IP_ADDRESS_OF_YOUR_UPSTREAM_DNS_SERVER}  ;
+	};
+	...
+};
+...
+
+zone "open-ims.test" IN {
+	type master;
+	file "pri/open-ims.dnszone";
+	notify no;
+};
+...</source>
+				On some distributions this file includes other files so be sure to dig through those also.
+				THE_IP_ADDRESS_OF_YOUR_UPSTREAM_DNS_SERVER can be found in /etc/resolv.conf. 
+			</li>
+			<li>Now copy the file /opt/OpenIMSCore/ser_ims/cfg/open-ims.dnszone to where you configure it above 
+			(pri/open-ims.dnszone)
+			<source>cp /opt/OpenIMSCore/ser_ims/cfg/open-ims.dnszone /var/bind/pri/open-ims.test.zone
+chown -R named:named /var/bind/pri/open-ims.test.zone</source>
+			</li>
+			<li>Then start or re-start the DNS server (remember that these configuration files are not monitored 
+			for changes so you will have to send a SIGHUP or do a restart to reload them).
+				<source>/etc/init.d/named restart</source>
+			</li>
+			<li>You should now test if it works. In the response look if you got the correct answer.
+				<source>dig @127.0.0.1 pcscf.open-ims.test</source>
+			</li>
+			<li>To actually use it, you would need to configure it as a DNS server for your machine. Here is
+			how your /etc/resolv.conf file should look like:
+			<source># cat /etc/resolv.conf
+nameserver 127.0.0.1
+search open-ims.test
+domain open-ims.test</source>
+			</li>
+			<li>Remember that utilities like the DHCP-Client overwrite this file be default!</li>
+		</ul>
+    </section>
   </body>
 </document>
