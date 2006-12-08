@@ -27,7 +27,7 @@
     <section id="SVN">
       <title>Subversion</title>
       <ul>
-      	<li><strong>I tried the SVN URLs on berliOS but I gen an error.</strong><br/>
+      	<li><strong>I tried the SVN URLs on berliOS but I get an error.</strong><br/>
       		berliOS uses a template for indicating the SVN URLs. As we have more than 1 sub-project, please use the links indicated 
       		<a href="sources/index.html">here</a>.
       	</li>
@@ -54,10 +54,15 @@
       	</li>
       	<li><strong>How do I enable the RTP Proxy?</strong><br/>
       		Download and install RTPProxy. You can get it from <a href="http://www.iptel.org/downloads">http://www.iptel.org/downloads</a>.
-      		Then start it with the following commandline:
+      		Then start it with the following command line:
       		<source>rtpproxy -l 1.2.3.4 -s udp:127.0.0.1:34999 -f</source>
       		Edit the pcscf.cfg and enable the RTPProxy:
       		<source>modparam("pcscf","rtpproxy_enable", 1)</source>      		
+      	</li>
+      	<li><strong>Do I really need a DNS server? Won't "/etc/hosts" work?</strong><br/>
+      		You really need a DNS server. For example the P-CSCF will do a NAPTR/SRV query to find the I-CSCF and only a 
+      		true DNS server will be able to solve this. If you need help with that, please read 
+      		<a href="/docs/install.html#annexa">this</a>.
       	</li>
       </ul>
     </section>
@@ -96,7 +101,7 @@
       		Use serweb or another tool to create a user in the credentials table. Alternatively, you can manually add a similar
       		entry to those of Alice/Bob. HA1 is irrelevant and can be left blank. HA1b can be computed using e.g.:
       		<source>ser_ims/scripts/gen_ha1 user realm password</source>
-      		Don't forget: The username must be the same as the private AND the public identity of the user as SIP UEs do not usually
+      		Don't forget: The username must be the same as the private AND the public identity of the user, as SIP UEs do not usually
       		make a distinction between them.
       	</li>
       	<li><strong>It doesn't work with another Proxy-CSCF. Why?</strong><br/>
