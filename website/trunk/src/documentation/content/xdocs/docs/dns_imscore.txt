@@ -1,0 +1,46 @@
+
+
+
+
+This FAQ is a living document which became necessary after
+having answered lots of questions on DNS at OpenIMSCore mailing
+lists. The aim of this document is to help the IMS-Software User 
+with the settings.  Unfortunately our target is not to teach the 
+DNS-Mechanism.  So take that into account please as you read this
+white paper. You can contact for more Information dragos.vingarzan 
+_at_fokus_fraunhofer_de or  umut.emin _at_fokus_fraunhofer_de.
+
+
+General Questions:
+- What is DNS Server, is it something to eat?
+- Do I need a DNS Server for OpenIMSCore ?
+- What if i use a Windows? Is there any software for that?
+- Does OpenIMSCore maintain some sample configuration files?
+- I want to know more about Domain Name Service , where do i go
+from here?
+
+Configuration:
+- I found the DNS-Zone file in the latest OpenIMSCore snaphot. 
+Do I have to manipulate them?
+- What do i need to configure? Where do i find them?
+- I am still having problems with understanding, is there
+any examples that i could have a look at?
+
+Problems:
+- Problem 1 
+- Problem 2
+- Problem 3
+- Problem 4
+
+
+Acknowledgements:
+ - How is this FAQ generated
+ - What formats are availible?
+
+
+Contributors
+
+
+
+
+
