@@ -372,7 +372,7 @@ zone "open-ims.test" IN {
 			<li>Now copy the file /opt/OpenIMSCore/ser_ims/cfg/open-ims.dnszone to where you configure it above 
 			(pri/open-ims.dnszone)
 			<source>cp /opt/OpenIMSCore/ser_ims/cfg/open-ims.dnszone /var/bind/pri/
-chown -R named:named /var/bind/pri/open-ims.test.zone</source>
+chown -R named:named /var/bind/pri/open-ims.dnszone</source>
 			</li>
 			<li>Then start or re-start the DNS server (remember that these configuration files are not monitored 
 			for changes so you will have to send a SIGHUP or do a restart to reload them).
