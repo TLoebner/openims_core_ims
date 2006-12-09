@@ -635,7 +635,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 //		d = get_s_dialog_dir(call_id,aor);		
 //	}
 	if (!d){
-		LOG(L_CRIT,"ERR:"M_NAME":S_update_dialog: dialog does not exists!\n");	
+		LOG(L_INFO,"INFO:"M_NAME":S_update_dialog: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 
