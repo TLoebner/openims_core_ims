@@ -673,7 +673,7 @@ int P_assert_called_identity(struct sip_msg *rpl,char *str1,char *str2)
 	if (!called.len){
 		ret = CSCF_RETURN_FALSE;	
 	}else{
-		x.len = p_asserted_identity_s.len+called.len+p_asserted_identity_e.len;
+		x.len = p_asserted_identity_s.len+p_asserted_identity_m.len+called.len+p_asserted_identity_e.len;
 		x.s = pkg_malloc(x.len);
 		if (!x.s){
 			LOG(L_ERR, "ERR"M_NAME":P_assert_called_identity: Error allocating %d bytes\n",
@@ -683,6 +683,7 @@ int P_assert_called_identity(struct sip_msg *rpl,char *str1,char *str2)
 		}
 		x.len=0;
 		STR_APPEND(x,p_asserted_identity_s);
+		STR_APPEND(x,p_asserted_identity_m);
 		STR_APPEND(x,called);
 		STR_APPEND(x,p_asserted_identity_e);
 		
