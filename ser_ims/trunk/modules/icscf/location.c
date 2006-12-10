@@ -103,7 +103,7 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 	}
 	lia = Cx_LIR(msg,public_identity,realm);
 	if (!lia){
-		LOG(L_ERR,"ERR:"M_NAME":I_LIR: Error creating/sending UAR\n");
+		LOG(L_ERR,"ERR:"M_NAME":I_LIR: Error creating/sending LIR\n");
 		cscf_reply_transactional(msg,480,MSG_480_DIAMETER_ERROR);
 		result=CSCF_RETURN_BREAK;
 		goto done;		
