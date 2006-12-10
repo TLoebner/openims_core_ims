@@ -746,7 +746,7 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 		d = get_p_dialog(call_id,host,port,transport);		
 	}
 	if (!d){
-		LOG(L_ERR,"ERR:"M_NAME":P_drop_dialog: dialog does not exists!\n");	
+		LOG(L_INFO,"INFO:"M_NAME":P_drop_dialog: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
 

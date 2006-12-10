@@ -1630,7 +1630,7 @@ int reply_received( struct sip_msg  *p_msg )
 		backup_domain_from = set_avp_list(AVP_TRACK_FROM | AVP_CLASS_DOMAIN, &t->domain_avps_from );
 		backup_domain_to = set_avp_list(AVP_TRACK_TO | AVP_CLASS_DOMAIN, &t->domain_avps_to );
 		if (run_actions(onreply_rt.rlist[t->on_reply], p_msg)<0)
-			LOG(L_ERR, "ERROR: on_reply processing failed\n");
+			LOG(L_INFO, "ERROR: on_reply processing failed\n");
 		/* transfer current message context back to t */
 		if (t->uas.request) t->uas.request->flags=p_msg->flags;
 		/* restore original avp list */
