@@ -138,8 +138,8 @@ print $ROOT_LOCAL,"\n" ;
 
 			    system("doxygen doxygen.config 2>> $ROOT_LOCAL.errors") ;
 		
-		#	    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE_DOCS$DOCS$element") ;
-		#	    system("ssh -l jsbach $SVNSERVER \'chmod -R 664 $ROOT_REMOTE_DOCS$DOCS$element\'") ;
+			    $scp_client->scp($doxdir."html","$LOGINNAME\@$SVNSERVER:$ROOT_REMOTE_DOCS$DOCS$element") ;
+			    system("ssh -l jsbach $SVNSERVER \'chmod -R 775 $ROOT_REMOTE_DOCS$DOCS$element\'") ;
 			}
 		}
 	    chdir($ROOT_LOCAL) ;
