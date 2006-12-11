@@ -31,7 +31,7 @@ my $ROOT_REMOTE_DOCS = "/home/groups/openimscore/htdocs/" ;
 my $URI = "http://svn.berlios.de/svnroot/repos/openimscore/" ;
 my $SNAPSHOT = "snapshots/" ;
 my $DOCS = "docs/" ;
-my $DOXCONST = "/trunk/doxygen/" ;
+my $DOXCONST = "/doxygen/" ;
 my $UPLOAD = 0 ;
 my ($whereami,$doxdir) ;
 my $revnumber_actual  ;
@@ -133,7 +133,7 @@ print $ROOT_LOCAL,"\n" ;
 			    system("ssh -l jsbach $SVNSERVER \'chmod -R 664 $ROOT_REMOTE$SNAPSHOT$element\'") ;
 
 			    $whereami = &Cwd::cwd() ;
-			    $doxdir = $whereami."/".$DOXCONST ;
+			    $doxdir = $whereami."/".$element.$DOXCONST ;
 			    chdir($doxdir) ;
 
 			    system("doxygen doxygen.config 2>> $ROOT_LOCAL.errors") ;
