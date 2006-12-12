@@ -647,8 +647,12 @@ void Snd_DWR(peer *p)
 void Snd_DWA(peer *p,AAAMessage *dwr,int result_code,int sock)
 {
 	AAAMessage *dwa;
+	char x[4];	
 
 	dwa = AAANewMessage(Code_DW,0,0,dwr);	
+
+	set_4bytes(x,result_code);
+	AAACreateAndAddAVPToMessage(dwa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
 	
 	peer_send_msg(p,dwa);
 	AAAFreeMessage(&dwr);
