@@ -364,7 +364,8 @@ AAAReturnCode  AAAFreeAVPList(AAA_AVP_LIST avpList)
 		/*free the avp*/
 		AAAFreeAVP(&avp_t);
 	}
-
+	avpList.head = 0;
+	avpList.tail = 0;
 	return AAA_ERR_SUCCESS;
 }
 
