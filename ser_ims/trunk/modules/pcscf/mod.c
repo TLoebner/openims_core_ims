@@ -330,6 +330,11 @@ static param_export_t pcscf_params[]={
 	{"subscribe_retries",		INT_PARAM,		&pcscf_subscribe_retries},
 	
 	{"sip2ims_via", 			STR_PARAM, 		&pcscf_sip2ims_via},
+
+	{"icid_value_prefix",		STR_PARAM,		&pcscf_icid_value_prefix},
+	{"icid_gen_addr",			STR_PARAM,		&pcscf_icid_gen_addr},
+	{"orig_ioi",				STR_PARAM,		&pcscf_orig_ioi},
+	{"term_ioi",				STR_PARAM,		&pcscf_term_ioi},
 	
 	{0,0,0} 
 };
