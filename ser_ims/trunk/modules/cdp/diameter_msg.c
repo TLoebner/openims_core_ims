@@ -352,20 +352,20 @@ AAAMessage *AAACreateResponse(AAAMessage *request)
  * @param avpList - list to be freed
  * @returns AAA_ERR_SUCCESS 
  */
-AAAReturnCode  AAAFreeAVPList(AAA_AVP_LIST avpList)
+AAAReturnCode  AAAFreeAVPList(AAA_AVP_LIST *avpList)
 {
 	AAA_AVP *avp_t;
 	AAA_AVP *avp;
 	/* free the avp list */
-	avp = avpList.head;
+	avp = avpList->head;
 	while (avp) {
 		avp_t = avp;
 		avp = avp->next;
 		/*free the avp*/
 		AAAFreeAVP(&avp_t);
 	}
-	avpList.head = 0;
-	avpList.tail = 0;
+	avpList->head = 0;
+	avpList->tail = 0;
 	return AAA_ERR_SUCCESS;
 }
 
@@ -382,7 +382,7 @@ AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 		goto done;
 
 	/* free the avp list */
-	AAAFreeAVPList((*msg)->avpList);
+	AAAFreeAVPList(&((*msg)->avpList));
 
 	/* free the buffer (if any) */
 	if ( (*msg)->buf.s )

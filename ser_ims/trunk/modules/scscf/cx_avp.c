@@ -299,7 +299,7 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 	if (!list.head) return 1;
 	group = cdpb.AAAGroupAVPS(list);
 	
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 	
 	return 
 	Cx_add_avp(msg,group.s,group.len,
@@ -401,7 +401,7 @@ inline int Cx_add_experimental_result_code(AAAMessage *msg,unsigned int data)
 	
 	group = cdpb.AAAGroupAVPS(list);
 	
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 	
 	return 
 	Cx_add_avp(msg,group.s,group.len,
@@ -461,7 +461,7 @@ inline int Cx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,
 	
 	group = cdpb.AAAGroupAVPS(list);
 	
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 	
 	return 
 	Cx_add_avp(msg,group.s,group.len,
@@ -674,12 +674,12 @@ inline int Cx_get_experimental_result_code(AAAMessage *msg, int *data)
 	
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Experimental_Result_Code,0,0);
 	if (!avp||!avp->data.s) {
-		cdpb.AAAFreeAVPList(list);
+		cdpb.AAAFreeAVPList(&list);
 		return 0;
 	}
 
 	*data = get_4bytes(avp->data.s);
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 
 	return 1;
 }
@@ -740,7 +740,7 @@ inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o
 			(*o)[(*o_cnt)++]=get_4bytes(avp->data.s);
 		avp = avp->next;
 	}
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 	return 1;
 }
 
@@ -786,7 +786,7 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authentication_Scheme,
 		IMS_vendor_id,0);
 	if (!avp||!avp->data.s) {
-		cdpb.AAAFreeAVPList(list);
+		cdpb.AAAFreeAVPList(&list);
 		return 0;
 	}
 	*auth_scheme = avp->data;
@@ -796,7 +796,7 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
 	if (avp) *authorization = avp->data;
 	else {authorization->s=0;authorization->len=0;}		
 
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 	return 1;
 }
 
@@ -859,7 +859,7 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	if (!avp||!avp->data.s) {ik->s=0;ik->len=0;}
 	else *ik = avp->data;
 
-	cdpb.AAAFreeAVPList(list);
+	cdpb.AAAFreeAVPList(&list);
 	return 1;
 }
 

@@ -113,7 +113,7 @@ AAAMessage *AAANewMessage(
 		AAAMessage *request);
 
 AAAReturnCode AAAFreeAVPList(
-		AAA_AVP_LIST avpList);
+		AAA_AVP_LIST *avpList);
 
 AAAReturnCode AAAFreeMessage(
 		AAAMessage **message);

@@ -110,7 +110,7 @@ typedef AAA_AVP* (*AAAGetNextAVP_f)(AAA_AVP *avp);
 typedef AAAReturnCode (*AAAFreeAVP_f)(
 										AAA_AVP **avp);
 		
-typedef AAAReturnCode  (*AAAFreeAVPList_f)(AAA_AVP_LIST avpList);
+typedef AAAReturnCode  (*AAAFreeAVPList_f)(AAA_AVP_LIST *avpList);
 
 typedef str (*AAAGroupAVPS_f)(AAA_AVP_LIST avps);
 
