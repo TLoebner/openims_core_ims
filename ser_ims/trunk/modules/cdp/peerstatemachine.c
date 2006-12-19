@@ -501,7 +501,7 @@ static inline void Snd_CE_add_applications(AAAMessage *msg,peer *p)
 			AAAAddAVPToAVPList(&list,avp2);
 		
 			group = AAAGroupAVPS(list);	
-			AAAFreeAVPList(list);
+			AAAFreeAVPList(&list);
 			
 			AAACreateAndAddAVPToMessage(msg,
 				AVP_Vendor_Specific_Application_Id,
@@ -776,7 +776,7 @@ int Process_CER(peer *p,AAAMessage *cer)
 							config->applications[i].type==DP_ACCOUNTING) common_app++;	
 					
 				}
-				AAAFreeAVPList(group);
+				AAAFreeAVPList(&group);
 				break;
 				
 		}
