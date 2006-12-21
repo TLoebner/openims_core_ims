@@ -417,6 +417,7 @@ static int mod_init(void)
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
 	callback_singleton=shm_malloc(sizeof(int));
+	*callback_singleton=0;
 		
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	/* fix the parameters */
