@@ -485,8 +485,6 @@ static int mod_init(void)
 	if (register_timer(dialog_timer,s_dialogs,60)<0) goto error;
 
 
-	//TODO - only for S-CSCF - I-CSCF does not respond to request
-//	AAAAddRequestHandler(&CxRequestHandler,0);
 	/* don't register response callback as we always set callback per transactions 
 	 *  and we're not interested in other responses */
 	/*AAAAddResponseHandler(&CxAnswerHandler,0);*/
@@ -496,6 +494,8 @@ static int mod_init(void)
 error:
 	return -1;
 }
+
+extern gen_lock_t* process_lock;		/* lock on the process table */
 
 /**
  * Initializes the module in child.
@@ -514,10 +514,12 @@ static int mod_child_init(int rank)
 //		scscf_db_scscf_table,
 //		scscf_db_capabilities_table);
 	/* init the diameter callback - must be done just once */
+	lock_get(process_lock);
 	if((*callback_singleton)==0){
-		cdpb.AAAAddRequestHandler(CxRequestHandler,NULL);
 		*callback_singleton=1;
+		cdpb.AAAAddRequestHandler(CxRequestHandler,NULL);
 	}
+	lock_release(process_lock);
 	/* Init the user data parser */
 	if (!parser_init(scscf_user_data_dtd,scscf_user_data_xsd)) return -1;
 		

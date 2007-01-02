@@ -195,6 +195,13 @@ int diameter_peer_init(char *cfg_filename)
 	}
 	handlers_lock = lock_init(handlers_lock);
 
+	handlers = shm_malloc(sizeof(handler_list));
+	if (!handlers){
+		LOG_NO_MEM("shm",sizeof(handler_list));
+		goto error;
+	}
+	handlers->head=0;
+	handlers->tail=0;
 
 	/* init the pid list */
 	pid_list = shm_malloc(sizeof(pid_list_head_t));
@@ -331,7 +338,7 @@ extern int memlog;
 void diameter_peer_destroy()
 {
 	int pid,status;
-	handler_list *h;
+	handler *h;
 	
 	lock_get(shutdownx_lock);
 	if (*shutdownx) {
@@ -395,10 +402,10 @@ void diameter_peer_destroy()
 	lock_dealloc((void*)shutdownx_lock);
 	
 	lock_get(handlers_lock);
-	while(handlers){
-		h = handlers->next;
-		shm_free(handlers);
-		handlers = h;
+	while(handlers->head){
+		h = handlers->head->next;
+		shm_free(handlers->head);
+		handlers->head = h;
 	}
 	lock_destroy(handlers_lock);
 	lock_dealloc((void*)handlers_lock);

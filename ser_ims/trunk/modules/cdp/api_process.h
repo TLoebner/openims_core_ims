@@ -69,16 +69,21 @@ enum handler_types {
 /**
  * Diameter message received handler list element.
  */ 
-typedef struct handler_list_t{
+typedef struct handler_t{
 	enum handler_types type;					/**< type of the handler */
 	union {
 		AAARequestHandler_f *requestHandler;	/**< request callback function */
 		AAAResponseHandler_f *responseHandler;  /**< response callback function */
 	} handler;									/**< union for handler callback function */
 	void *param;								/**< transparent parameter to pass to callback */
-	struct handler_list_t *next;				/**< next handler in the list */
-} handler_list;
+	struct handler_t *next;				/**< next handler in the list */
+	struct handler_t *prev;				/**< prev handler in the list */
+} handler;
 		
+typedef struct handler_list_t{
+	handler *head;				/**< first handler in the list */
+	handler *tail;				/**< last handler in the list */
+} handler_list;
 		
 int api_callback(peer *p,AAAMessage *msg,void* ptr);
 
