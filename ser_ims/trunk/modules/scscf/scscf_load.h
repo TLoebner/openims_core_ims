@@ -71,6 +71,8 @@ struct scscf_binds {
 	r_public from the S-CSCF registrar. The registrar slot is locked and you have to
 	unlock it with r_unlock(p->hash) when done */
 	r_unlock_f		r_unlock;		/**< the r_unlock() function to unlock a registrar slot */
+	
+	get_r_public_expires_f get_r_public_expires;	/**< returns the expires value */	
 };
 
 /** function to load the scscf module bindings */

@@ -67,6 +67,7 @@
 #include "checker.h"
 #include "mark.h"
 #include "isc.h"
+#include "third_party_reg.h"
 
 MODULE_VERSION
 
@@ -77,6 +78,7 @@ static int isc_exit( void );
 int isc_appserver_forward(struct sip_msg *msg,char *str1,char *str2 );
 
 int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2);
+int ISC_match_filter_reg(struct sip_msg *msg,char *str1,char *str2);
 int ISC_from_AS(struct sip_msg *msg,char *str1,char *str2);
 int ISC_is_session_continued(struct sip_msg *msg,char *str1,char *str2);
 
@@ -84,9 +86,12 @@ int ISC_is_session_continued(struct sip_msg *msg,char *str1,char *str2);
  *	Parameters
  */
 
-char *isc_my_uri_c = "scscf.open-ims.test:6060";				/**< Uri of myself to loop the message 		*/
+char *isc_my_uri_c = "scscf.open-ims.test:6060";				/**< Uri of myself to loop the message*/
 str isc_my_uri={0,0};				/**< Uri of myself to loop the message in str	*/
 str isc_my_uri_sip={0,0};			/**< Uri of myself to loop the message in str with leading "sip:" */
+
+int isc_expires_grace=120;			/**< expires value to add to the expires in the 3rd party register
+										 to prevent expiration in AS */
 
 /**
  *  Global vars
@@ -102,15 +107,17 @@ struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSCF funcs
  * <p>
  * - ISC_match_filter() - check if a message matches any IFC and forward to AS if it does.
  * 	Params (char *direction) "orig"/"term" 
+ * - ISC_match_filter_reg() - check if a message matches any IFC for REGISTER and do 3rd party registration
  * - ISC_from_AS() - Finds if the message returns from the AS.
  * - ISC_is_session_continued() - Finds if the failed fwd should be continued or session should be broken 
  */
 static cmd_export_t isc_cmds[] = {
-	{"isc_appserver_forward", isc_appserver_forward, 2, 0, REQUEST_ROUTE},	
+	{"isc_appserver_forward", 	isc_appserver_forward, 		2, 0, REQUEST_ROUTE},	
 	
-	{"ISC_match_filter", ISC_match_filter, 1, 0, REQUEST_ROUTE},
-	{"ISC_from_AS", ISC_from_AS, 1, 0, REQUEST_ROUTE},
-	{"ISC_is_session_continued", ISC_is_session_continued, 0, 0, FAILURE_ROUTE},
+	{"ISC_match_filter", 		ISC_match_filter, 			1, 0, REQUEST_ROUTE},
+	{"ISC_match_filter_reg", 	ISC_match_filter_reg, 		0, 0, REQUEST_ROUTE},
+	{"ISC_from_AS", 			ISC_from_AS, 				1, 0, REQUEST_ROUTE},
+	{"ISC_is_session_continued",ISC_is_session_continued, 	0, 0, FAILURE_ROUTE},
 	
 	{ 0, 0, 0, 0, 0 }
 };
@@ -119,9 +126,15 @@ static cmd_export_t isc_cmds[] = {
 /**
  * Exported parameters.
  * - my_uri - URI pointing to myself. Default value in #isc_my_uri_c.
+ * <p>
+ * -expires_grace - expires value to add to the expires in the 3rd part register 
+ * 	to prevent expiration in AS 
  */
 static param_export_t isc_params[] = {
 	{"my_uri",  		STR_PARAM, & isc_my_uri_c},		/**< SIP Uri of myself for getting the messages back */
+
+	{"expires_grace",	INT_PARAM, & isc_expires_grace},/**< expires value to add to the expires in the 3rd party register
+										 to prevent expiration in AS */
 	{ 0, 0, 0 }
 };
 
@@ -339,6 +352,7 @@ static inline enum dialog_direction get_dialog_direction(char *direction)
 	}
 }
 
+
 /**
  * Checks if there is a match.
  * Inserts route headers and set the dst_uri
@@ -422,6 +436,56 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 		return ret;
 	}					
 		
+	return ret;
+}
+
+/**
+ * Checks if there is a match on REGISTER.
+ * Inserts route headers and set the dst_uri
+ * @param msg - the message to check
+ * @param str1 - the direction of the request orig/term
+ * @param str2 - not used
+ * @returns #ISC_RETURN_TRUE if found, #ISC_RETURN_FALSE if not
+ */
+int ISC_match_filter_reg(struct sip_msg *msg,char *str1,char *str2)
+{
+	int k;
+	isc_match *m;
+	str s={0,0};
+	int ret = ISC_RETURN_FALSE;
+	isc_mark old_mark;
+	
+	enum dialog_direction dir = DLG_MOBILE_ORIGINATING;
+	
+	LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): Checking triggers\n");
+	
+	if (!isc_is_register(msg)) return ISC_RETURN_FALSE;
+		
+	/* starting or resuming? */
+	memset(&old_mark,0,sizeof(isc_mark));
+	LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): Starting triggering\n");				
+
+	/* originating leg */
+
+	if (dir==DLG_MOBILE_ORIGINATING){
+		k = isc_get_originating_user(msg,&s);
+		if (k){
+			k = isc_is_registered(&s);
+			
+			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): Orig User <%.*s> [%d]\n",s.len,s.s,k);
+			m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
+			while (m){ 
+				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): REGISTER match found in filter criteria\n");
+				ret = isc_third_party_reg(msg,m,&old_mark);
+				old_mark.skip = m->index+1;
+				isc_free_match(m);
+				m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
+			}
+
+			if(ret == ISC_RETURN_FALSE)
+				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): No REGISTER match found in filter criteria\n");
+		}
+	}
 	return ret;
 }
 

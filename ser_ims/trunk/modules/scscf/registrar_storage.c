@@ -610,6 +610,26 @@ r_public* get_r_public(str aor)
 }
 
 /**
+ * Searches for a r_public record and returns its expiration value.
+ * @param aor - the address of record to look for
+ * @returns - the expiration of the r_public if found or -999 if not found
+ */
+int get_r_public_expires(str aor)
+{
+	int max_expires=-999;
+	r_contact *c;
+	r_public *p=get_r_public(aor);
+	if (!p) return -999;
+	r_act_time();
+	for(c=p->head;c;c=c->next)
+		if (c->expires-time_now>max_expires){
+			max_expires = c->expires - time_now;
+		}
+	r_unlock(p->hash);
+	return max_expires;
+}
+
+/**
  * Searches for a r_public record and returns it.
  * \note Does NOT Aquire the lock on the hash_slot
  * \note Must be called with a lock on the hash
