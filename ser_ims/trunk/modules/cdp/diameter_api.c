@@ -107,18 +107,21 @@ extern gen_lock_t *handlers_lock;	/**< lock for list of handlers */
  */
 int AAAAddRequestHandler(AAARequestHandler_f *f,void *param)
 {
-	handler_list *h = shm_malloc(sizeof(handler_list));
+	handler *h = shm_malloc(sizeof(handler));
 	if (!h) {
 		LOG(L_ERR,"ERR:AAAAddRequestHandler: error allocating %d bytes in shm\n",
-			sizeof(handler_list));
+			sizeof(handler));
 		return 0;
 	}
 	h->type = REQUEST_HANDLER;
 	h->handler.requestHandler = f;
 	h->param = param;
+	h->next = 0;
 	lock_get(handlers_lock);
-	h->next = handlers;
-	handlers = h;
+	h->prev = handlers->tail;
+	if (handlers->tail) handlers->tail->next = h;
+	handlers->tail = h;
+	if (!handlers->head) handlers->head = h;
 	lock_release(handlers_lock);
 	return 1;
 }
@@ -131,18 +134,21 @@ int AAAAddRequestHandler(AAARequestHandler_f *f,void *param)
  */
 int AAAAddResponseHandler(AAAResponseHandler_f *f,void *param)
 {
-	handler_list *h = shm_malloc(sizeof(handler_list));
+	handler *h = shm_malloc(sizeof(handler));
 	if (!h) {
 		LOG(L_ERR,"ERR:AAAAddResponseHandler: error allocating %d bytes in shm\n",
-			sizeof(handler_list));
+			sizeof(handler));
 		return 0;
 	}
 	h->type = RESPONSE_HANDLER;
 	h->handler.responseHandler = f;
 	h->param = param;
+	h->next = 0;
 	lock_get(handlers_lock);
-	h->next = handlers;
-	handlers = h;
+	h->prev = handlers->tail;
+	if (handlers->tail) handlers->tail->next = h;
+	handlers->tail = h;
+	if (!handlers->head) handlers->head = h;
 	lock_release(handlers_lock);
 	return 1;
 }
