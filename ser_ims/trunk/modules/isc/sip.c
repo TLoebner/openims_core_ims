@@ -95,6 +95,11 @@ int str2icmp(str x, str y) {
 }
 
 
+static str bye_s={"BYE",3};
+static str ack_s={"ACK",3};
+static str prack_s={"PRACK",5};
+static str update_s={"UPDATE",6};
+static str notify_s={"NOTIFY",6};
 /**
  * Check if the message is an initial request for a dialog. 
  *		- BYE, PRACK, UPDATE, NOTIFY belong to an already existing dialog
@@ -104,12 +109,26 @@ int str2icmp(str x, str y) {
 int isc_is_initial_request(struct sip_msg *msg)
 {
 	if (msg->first_line.type != SIP_REQUEST ) return 0;
-	if (strncasecmp(msg->first_line.u.request.method.s,"BYE",3)==0) return 0;
-	if (strncasecmp(msg->first_line.u.request.method.s,"ACK",3)==0) return 0;
-	if (strncasecmp(msg->first_line.u.request.method.s,"PRACK",5)==0) return 0;		
-	if (strncasecmp(msg->first_line.u.request.method.s,"UPDATE",6)==0) return 0;		
-	if (strncasecmp(msg->first_line.u.request.method.s,"NOTIFY",6)==0) return 0;					
+	if (strncasecmp(msg->first_line.u.request.method.s,bye_s.s,bye_s.len)==0) return 0;
+	if (strncasecmp(msg->first_line.u.request.method.s,ack_s.s,ack_s.len)==0) return 0;
+	if (strncasecmp(msg->first_line.u.request.method.s,prack_s.s,prack_s.len)==0) return 0;
+	if (strncasecmp(msg->first_line.u.request.method.s,update_s.s,update_s.len)==0) return 0;
+	if (strncasecmp(msg->first_line.u.request.method.s,notify_s.s,notify_s.len)==0) return 0;
 	return 1;
+}
+
+
+static str register_s={"REGISTER",8};
+/**
+ * Check if the message is a REGISTER request 
+ * @param msg - the message to check
+ * @returns 1 if initial, 0 if not
+ */
+int isc_is_register(struct sip_msg *msg)
+{
+	if (msg->first_line.type != SIP_REQUEST ) return 0;
+	if (strncasecmp(msg->first_line.u.request.method.s,register_s.s,register_s.len)==0) return 1;			
+	return 0;
 }
 
 
@@ -361,4 +380,250 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 		return 0;
 	}
 	return t->uas.request;
+}
+
+/**
+ * Returns the expires value from the Expires header in the message.
+ * It searches into the Expires header and if not found returns -1
+ * @param msg - the SIP message, if available
+ * @returns the value of the expire or -1 if not found
+ */
+int cscf_get_expires_hdr(struct sip_msg *msg) {
+	exp_body_t *exp;
+	int expires;
+	if (!msg) return -1;
+	/*first search in Expires header */         
+	if (parse_headers(msg,HDR_EXPIRES_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_expires_hdr: Error parsing until header EXPIRES: \n");
+		return -1;
+	}
+	if (msg->expires){
+		if (!msg->expires->parsed) {
+		        parse_expires(msg->expires);
+		}
+		if (msg->expires->parsed) {
+		        exp = (exp_body_t*) msg->expires->parsed;
+		        if (exp->valid) {
+		                expires = exp->val;
+		                LOG(L_DBG,"DBG:"M_NAME":cscf_get_expires_hdr: <%d> \n",expires);
+		                return expires;
+		        }
+		}
+	}
+	
+	return -1;
+}
+
+/**
+ * Parses all the contact headers.
+ * @param msg - the SIP message
+ * @returns the first contact_body
+ */
+contact_body_t *cscf_parse_contacts(struct sip_msg *msg)
+{
+	struct hdr_field* ptr;
+	if (!msg) return 0;
+	
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_parse_contacts: Error parsing headers \n");
+		return 0;
+	}
+	if (msg->contact) {
+		ptr = msg->contact;
+		while(ptr) {
+			if (ptr->type == HDR_CONTACT_T) {
+				if (msg->contact->parsed==0){					
+					if (parse_contact(ptr)<0){
+						LOG(L_ERR,"ERR:"M_NAME":cscf_parse_contacts: error parsing contacts [%.*s]\n",
+							ptr->body.len,ptr->body.s); 
+					}
+				}
+			}
+			ptr = ptr->next;
+		}
+	}
+	if (!msg->contact) return 0;
+	return msg->contact->parsed;
+}
+
+/**
+ * Returns the first entry of the P-Associated-URI header.
+ * @param msg - the SIP message to look into
+ * @param public_id - the public identity to be filled with the result
+ * @returns 1 on success or 0 on failure
+ */
+int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id)
+{
+	struct hdr_field *h;
+	rr_t *r;
+	public_id->s=0;public_id->len=0;
+	
+	if (!msg) return 0;
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_p_associated_uri: error parsing headers\n");
+		return 0;
+	}
+	h = msg->headers;
+	while(h){
+		if (h->name.len==16 && strncasecmp(h->name.s,"P-Associated-URI",16)==0)
+			break;
+		h = h->next;
+	}
+	if (!h){
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_p_associated_uri: Header P-Associated-URI not found\n");
+		return 0;
+	}
+	if (parse_rr(h)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_p_associated_uri: Error parsing as Route header\n");
+		return 0;
+	}
+	r = (rr_t*)h->parsed;
+	h->type = HDR_ROUTE_T;
+	
+	if (r) {
+		*public_id=r->nameaddr.uri;
+		return 1;
+	}
+	else
+		return 0;
+}
+
+/**
+ * Returns the Public Identity extracted from the To header
+ * @param msg - the SIP message
+ * @returns the str containing the private id, no mem dup
+ */
+str cscf_get_public_identity(struct sip_msg *msg)
+{
+	str pu={0,0};
+	struct to_body *to;
+	
+	if (parse_headers(msg,HDR_TO_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity: Error parsing until header To: \n");
+		return pu;
+	}
+	
+	if ( get_to(msg) == NULL ) {
+		to = (struct to_body*) pkg_malloc(sizeof(struct to_body));
+		parse_to( msg->to->body.s, msg->to->body.s + msg->to->body.len, to );
+		msg->to->parsed = to;
+	}
+		else to=(struct to_body *) msg->to->parsed;
+	
+	pu = to->uri;
+	
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity: <%.*s> \n",
+		pu.len,pu.s);
+	return pu;
+}
+
+str cscf_p_access_network_info={"P-Access-Network-Info",21};
+
+/**
+ * Return the P-Access-Network-Info header
+ * @param msg - the SIP message
+ * @returns the str with the header's body
+ */
+
+str cscf_get_access_network_info(struct sip_msg *msg, struct hdr_field **h)
+{
+	str ani={0,0};
+	struct hdr_field *hdr;
+	
+	*h=0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_access_network_info: Error parsing until header EOH: \n");
+		return ani;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len==cscf_p_access_network_info.len &&
+			strncasecmp(hdr->name.s,cscf_p_access_network_info.s,hdr->name.len)==0)
+		{
+			*h = hdr;
+			ani = hdr->body;
+			goto done;
+		}                 
+		hdr = hdr->next;
+	}
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_access_network_info: P-Access-Network-Info header not found \n");
+	
+done:
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_access_network_info: <%.*s> \n",
+		ani.len,ani.s);
+	return ani;
+}
+
+str cscf_p_visited_network_id={"P-Visited-Network-ID",20};
+
+/**
+ * Return the P-Visited-Network-ID header
+ * @param msg - the SIP message
+ * @returns the str with the header's body
+ */
+
+str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h)
+{
+	str vnid={0,0};
+	struct hdr_field *hdr;
+	
+	*h=0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity: Error parsing until header EOH: \n");
+		return vnid;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len==cscf_p_visited_network_id.len &&
+			strncasecmp(hdr->name.s,cscf_p_visited_network_id.s,hdr->name.len)==0)
+		{
+			*h = hdr;
+			vnid = hdr->body;
+			goto done;
+		}
+		hdr = hdr->next;
+	}
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_visited_network_id: P-Visited-Network-ID header not found \n");
+
+done:
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_visited_network_id: <%.*s> \n",
+		vnid.len,vnid.s);
+	return vnid;
+}
+
+str cscf_p_charging_vector={"P-Charging-Vector",17};
+
+/**
+ * Return the P-Charging-Vector header
+ * @param msg - the SIP message
+ * @returns the str with the header's body
+ */
+
+str cscf_get_charging_vector(struct sip_msg *msg, struct hdr_field **h)
+{
+	str cv={0,0};
+	struct hdr_field *hdr;
+	
+	*h=0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_charging_vector: Error parsing until header EOH: \n");
+		return cv;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len==cscf_p_charging_vector.len &&
+			strncasecmp(hdr->name.s,cscf_p_charging_vector.s,hdr->name.len)==0)
+		{
+			*h = hdr;
+			cv = hdr->body;
+			goto done;
+		}
+		hdr = hdr->next;
+	}
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_charging_vector: P-Charging-Vector header not found \n");
+
+done:
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_charging_vector: <%.*s> \n",
+		cv.len,cv.s);
+	return cv;
 }

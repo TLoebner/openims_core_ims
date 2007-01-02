@@ -59,6 +59,7 @@
 
 #define LOAD_ERROR "ERROR: scscf_bind: S-CSCF module function "
 
+
 /**
  * Load the bindings to the S-CSCF module.
  * @param scscfb - binding to load into
@@ -74,6 +75,11 @@ int load_scscf( struct scscf_binds *scscfb)
 	if (!( scscfb->r_unlock=(r_unlock_f) 
 		find_export("r_unlock", NO_SCRIPT, 0)) ) {
 		LOG(L_ERR, LOAD_ERROR "'r_unlock' not found\n");
+		return -1;
+	}
+	if (!( scscfb->get_r_public_expires=(get_r_public_expires_f) 
+		find_export("get_r_public_expires", NO_SCRIPT, 0)) ) {
+		LOG(L_ERR, LOAD_ERROR "'get_r_public_expires' not found\n");
 		return -1;
 	}
 	return 1;

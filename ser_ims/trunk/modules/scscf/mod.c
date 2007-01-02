@@ -168,6 +168,7 @@ int * callback_singleton;				/**< Cx callback singleton 						*/
 static cmd_export_t scscf_cmds[]={
 	{"load_scscf",					(cmd_function)load_scscf, 	NO_SCRIPT, 0, 0},
 	{"get_r_public",				(cmd_function)get_r_public, NO_SCRIPT, 0, 0},
+	{"get_r_public_expires",		(cmd_function)get_r_public_expires, NO_SCRIPT, 0, 0},
 	{"r_unlock",					(cmd_function)r_unlock, 	NO_SCRIPT, 0, 0},
 	
 	{"S_is_integrity_protected",	S_is_integrity_protected,	1,0,REQUEST_ROUTE},

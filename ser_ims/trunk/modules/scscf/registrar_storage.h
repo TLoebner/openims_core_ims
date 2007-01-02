@@ -128,6 +128,8 @@ typedef struct _r_public {
 typedef r_public* (*get_r_public_f)(str aor);
 /** function to unlock a registrar slot */
 typedef void (*r_unlock_f)(int hash);
+/** function to get the expiration of a public identity in a registrar */
+typedef int (*get_r_public_expires_f)(str aor);
 
 
 void r_act_time();
@@ -160,6 +162,7 @@ void free_r_contact(r_contact *c);
 
 r_public* new_r_public(str aor, enum Reg_States reg_state, ims_subscription *s);
 r_public* get_r_public(str aor);
+int get_r_public_expires(str aor);
 r_public* get_r_public_nolock(str aor);
 r_public* add_r_public(str aor,enum Reg_States reg_state,ims_subscription *s);
 r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **s);
