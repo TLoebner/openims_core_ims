@@ -200,6 +200,21 @@ failure_route[ISC_Orig_failure]
 /** User unregistered (not registered but with services for unregistered state) */
 #define IMS_USER_UNREGISTERED -1
 
+#define STR_SHM_DUP(dest,src,txt)\
+{\
+        (dest).s = shm_malloc((src).len);\
+        if (!(dest).s){\
+                LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+        }else{\
+                (dest).len = (src).len;\
+                memcpy((dest).s,(src).s,(src).len);\
+        }\
+}
+
+#define STR_APPEND(dst,src)\
+        {memcpy((dst).s+(dst).len,(src).s,(src).len);\
+        (dst).len = (dst).len + (src).len;}
+
 /** Direction of the dialog */
 enum dialog_direction {
 	DLG_MOBILE_ORIGINATING=0,	/** Originating */

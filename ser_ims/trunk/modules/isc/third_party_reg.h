@@ -1,5 +1,5 @@
-/**
- * $Id$
+/*
+ * $Id: third_party_reg.h 2 2006-11-14 22:37:20Z klaboe $
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -46,56 +46,42 @@
 /**
  * \file
  * 
- * IMS Service Control - SIP Operations
+ * Serving-CSCF - Third party register towards AS
  * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Erling Klaeboe klaboe -at- colibria dot com
  * 
  */
-#ifndef _ISC_SIP_H
-#define _ISC_SIP_H
+ 
+#ifndef _ISC_THIRD_PARTY_REG_H_
+#define _ISC_THIRD_PARTY_REG_H_
 
-#include "../../data_lump_rpl.h"
-//#include "../../fifo_server.h"
-#include "../../parser/contact/parse_contact.h"
-#include "../../parser/parse_uri.h"
-#include "../../parser/parse_from.h"
-#include "../../parser/parse_content.h"
-#include "../../parser/parse_disposition.h"
-#include "../../db/db.h"
+#include "checker.h"
+#include "mark.h"
+
+#include "../../sr_module.h"
+#include "../../locking.h"
 #include "../tm/tm_load.h"
 
-int str2cmp(str x,str y);
 
-int str2icmp(str x,str y);
+/** reg event notification structure */
+typedef struct _r_third_party_reg {	
+	str req_uri;            /* AS sip uri:  	*/
+	str from;               /* SCSCF uri            */
+	str to;                 /* Public user id       */
+	str pani;		/* Access network info 	*/
+	str cv;			/* Charging vector 	*/
+} r_third_party_registration;
 
-int isc_is_initial_request(struct sip_msg *msg);
-int isc_is_register(struct sip_msg *msg);
-	
-int isc_get_originating_user( struct sip_msg * msg, str *uri );
+int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark);
 
-int isc_is_registered(str *uri);
+int r_third_party_reg(str req_uri, str to, int duration);
 
-inline int isc_get_terminating_type(str *uri);
+r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from, str pani, str cv);
 
-int isc_get_terminating_user( struct sip_msg * msg, str *uri );
-	
-int isc_get_expires(struct sip_msg *msg);
+int r_send_third_party_reg(r_third_party_registration *r,int duration);
 
-int cscf_get_transaction(struct sip_msg *msg, unsigned int *hash,unsigned int *label);
+void r_third_party_reg_response(struct cell *t,int type,struct tmcb_params *ps);
 
-struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply);
+void free_r_registration(r_third_party_registration *r);
 
-// from scscf
-int cscf_get_expires_hdr(struct sip_msg *msg);
-contact_body_t *cscf_parse_contacts(struct sip_msg *msg);
-str cscf_get_public_identity(struct sip_msg *msg);
-
-// from pcscf
-int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id);
-str cscf_get_access_network_info(struct sip_msg *msg, struct hdr_field **h);
-str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h);
-str cscf_get_charging_vector(struct sip_msg *msg, struct hdr_field **h);
-
-#endif
-
-
+#endif //_ISC_THIRD_PARTY_REG_H_
