@@ -89,6 +89,8 @@ typedef struct _r_subscriber {
 	int expires;				/**< Time of expiration		 			*/
 	dlg_t *dialog;				/**< tm dialog to send notify out		*/
 	
+	int version;				/**< Last version sent to this subs.	*/
+	
 	struct _r_subscriber *next;/**< the next subscriber in the list		*/
 	struct _r_subscriber *prev;/**< the previous subscriber in the list	*/
 } r_subscriber;

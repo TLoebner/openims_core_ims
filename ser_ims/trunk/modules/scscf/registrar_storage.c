@@ -234,7 +234,7 @@ r_subscriber* new_r_subscriber(str subscriber,int event,int expires,dlg_t *dialo
 	s->expires = expires;
 
 	s->dialog = dialog;
-				
+					
 	return s;
 error:
 	if (s){
