@@ -691,10 +691,15 @@ str r_get_reginfo_partial( void *pv,void *pc,int event_type,long *subsExpires)
 	
 	if (p){
 		expires = c->expires-time_now;
-		if (p->reg_state==REGISTERED)
-			sprintf(pad.s,registration_s.s,p->aor.len,p->aor.s,p,r_active.len,r_active.s);
-		else 
+		if (p->head == c && p->tail == c && 
+			(event_type==IMS_REGISTRAR_CONTACT_EXPIRED ||
+			 event_type==IMS_REGISTRAR_CONTACT_DEACTIVATED||
+			 event_type==IMS_REGISTRAR_CONTACT_UNREGISTERED||
+			 event_type==IMS_REGISTRAR_CONTACT_REJECTED)
+		   )
 			sprintf(pad.s,registration_s.s,p->aor.len,p->aor.s,p,r_terminated.len,r_terminated.s);
+		else 
+			sprintf(pad.s,registration_s.s,p->aor.len,p->aor.s,p,r_active.len,r_active.s);
 		pad.len = strlen(pad.s);
 		STR_APPEND(buf,pad);
 		if (c){
