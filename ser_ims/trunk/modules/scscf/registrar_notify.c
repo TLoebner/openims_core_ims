@@ -501,7 +501,7 @@ static void r_create_notifications(void *pv,void *cv,void *ps,str content,long e
 			STR_PKG_DUP(subscription_state,subs_terminated,"pkg subs state");
 		}
 		n = new_r_notification(req_uri,uri,subscription_state,event,
-			content_type,content,s->dialog);						
+			content_type,content,s->dialog,s->version++);						
 		if (req_uri.s) pkg_free(req_uri.s);
 		if (subscription_state.s) pkg_free(subscription_state.s);	
 		if (n) add_r_notification(n);		
@@ -554,7 +554,7 @@ static str xml_start={"<?xml version=\"1.0\"?>\n",22};
 
 static str r_full={"full",4};
 static str r_partial={"partial",7};
-static str r_reginfo_s={"<reginfo xmlns=\"urn:ietf:params:xml:ns:reginfo\" version=\"0\" state=\"%.*s\">\n",74};
+static str r_reginfo_s={"<reginfo xmlns=\"urn:ietf:params:xml:ns:reginfo\" version=\"%s\" state=\"%.*s\">\n",74};
 static str r_reginfo_e={"</reginfo>\n",11};
 
 //static str r_init={"init",4};
@@ -604,7 +604,7 @@ str r_get_reginfo_full(void *pv,int event_type,long *subsExpires)
 	*subsExpires = r_update_subscription_status(p);
 	
 	STR_APPEND(buf,xml_start);
-	sprintf(pad.s,r_reginfo_s.s,r_full.len,r_full.s);
+	sprintf(pad.s,r_reginfo_s.s,"%d",r_full.len,r_full.s);
 	pad.len = strlen(pad.s);
 	STR_APPEND(buf,pad);
 	
@@ -647,10 +647,11 @@ str r_get_reginfo_full(void *pv,int event_type,long *subsExpires)
 	STR_APPEND(buf,r_reginfo_e);
 
 	
-	x.s = pkg_malloc(buf.len);
+	x.s = pkg_malloc(buf.len+1);
 	if (x.s){
 		x.len = buf.len;
 		memcpy(x.s,buf.s,buf.len);
+		x.s[x.len]=0;
 	}
 	return x;
 }
@@ -683,7 +684,7 @@ str r_get_reginfo_partial( void *pv,void *pc,int event_type,long *subsExpires)
 	*subsExpires = r_update_subscription_status(p);
 	
 	STR_APPEND(buf,xml_start);
-	sprintf(pad.s,r_reginfo_s.s,r_partial.len,r_partial.s);
+	sprintf(pad.s,r_reginfo_s.s,"%d",r_partial.len,r_partial.s);
 	pad.len = strlen(pad.s);
 	STR_APPEND(buf,pad);
 	
@@ -754,10 +755,11 @@ str r_get_reginfo_partial( void *pv,void *pc,int event_type,long *subsExpires)
 	STR_APPEND(buf,r_reginfo_e);
 
 	
-	x.s = pkg_malloc(buf.len);
+	x.s = pkg_malloc(buf.len+1);
 	if (x.s){
 		x.len = buf.len;
 		memcpy(x.s,buf.s,buf.len);
+		x.s[x.len]=0;		
 	}
 	return x;
 }
@@ -924,9 +926,11 @@ void notification_timer(unsigned int ticks, void* param)
  * @returns the r_notification or NULL on error
  */
 r_notification* new_r_notification(str req_uri,str uri,str subscription_state,str event,
-					str content_type,str content,dlg_t *dialog)
+					str content_type,str content,dlg_t *dialog,int version)
 {
 	r_notification *n=0;
+	str buf;	
+	char bufc[MAX_REGINFO_SIZE];
 	
 	n = shm_malloc(sizeof(r_notification));
 	if (!n){
@@ -951,7 +955,10 @@ r_notification* new_r_notification(str req_uri,str uri,str subscription_state,st
 	STR_SHM_DUP(n->content_type,content_type,"new_r_notification");
 	if (!n->content_type.s) goto error;
 
-	STR_SHM_DUP(n->content,content,"new_r_notification");
+	sprintf(bufc,content.s,version);
+	buf.s = bufc;
+	buf.len = strlen(bufc);
+	STR_SHM_DUP(n->content,buf,"new_r_notification");
 	if (!n->content.s) goto error;
 	
 	n->dialog = dialog;

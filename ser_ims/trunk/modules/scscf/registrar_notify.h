@@ -122,7 +122,7 @@ void send_notification(r_notification *n);
 void notification_timer(unsigned int ticks, void* param);
 
 r_notification* new_r_notification(str req_uri,str uri,str subscription_state,str event,
-					str content_type,str content,dlg_t *dialog);
+					str content_type,str content,dlg_t *dialog,int version);
 void add_r_notification(r_notification *n);
 void free_r_notification(r_notification *n);
 
