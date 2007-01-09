@@ -484,6 +484,7 @@ int fix_parameters()
 			while(j<pcscf_sip2ims_via_host.len)
 				pcscf_sip2ims_via_port = pcscf_sip2ims_via_port*10 + pcscf_sip2ims_via_host.s[j++]-'0';
 			pcscf_sip2ims_via_host.len = i;
+			if (pcscf_sip2ims_via_port == 0) pcscf_sip2ims_via_port=5060;
 			break;
 		}
 	
