@@ -1740,6 +1740,7 @@ struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,
 	vb = cscf_get_first_via(msg,0);
 	if (!vb) return 0;
 	
+	if (vb->port == 0) vb->port=5060;
 	if (vb->port == pcscf_sip2ims_via_port &&
 		vb->host.len == pcscf_sip2ims_via_host.len &&
 		strncasecmp(vb->host.s,pcscf_sip2ims_via_host.s,pcscf_sip2ims_via_host.len)==0){
