@@ -233,11 +233,11 @@ str AKA(int version,str nonce64, str k_s)
 //	}
 
 	/* Format data for output in the SIP message */
-	for(i=0;i<RESLEN;i++){
-		response[2*i]=hexa[(res[i]&0xF0)>>4];
-		response[2*i+1]=hexa[res[i]&0x0F];
-	}
-	response[RESHEXLEN-1]=0;
+///	for(i=0;i<RESLEN;i++){
+//		response[2*i]=hexa[(res[i]&0xF0)>>4];
+//		response[2*i+1]=hexa[res[i]&0x0F];
+//	}
+//	response[RESHEXLEN-1]=0;
 				
 //	/*for(i=0;i<AUTSLEN;i++){
 //		auts[2*i]=hexa[(auts_bin[i]&0xF0)>>4];
@@ -256,35 +256,29 @@ done:
 	switch (version){
 		case 1:
 			/* AKA v1 */
-			rsp.s = pkg_malloc(RESHEXLEN);
+			rsp.s = pkg_malloc(RESLEN);
 			if (!rsp.s){
 				LOG(L_ERR,"ERR:"M_NAME":AKA: Error allocating %d bytes\n",
-					RESHEXLEN);
+					RESLEN);
 				return rsp;
 			}
-			rsp.len=RESHEXLEN-1;
-			memcpy(rsp.s,response,rsp.len);
+			rsp.len=RESLEN;
+			memcpy(rsp.s,res,RESLEN);
 		    return rsp;
 		case 2:
 			/* AKA v2 */
-			rsp.s = pkg_malloc(RESHEXLEN+IKLEN*2+CKLEN*2);
+			rsp.len=RESLEN+IKLEN+CKLEN;
+			rsp.s = pkg_malloc(rsp.len);
 			if (!rsp.s){
 				LOG(L_ERR,"ERR:"M_NAME":AKA: Error allocating %d bytes\n",
-					RESHEXLEN+IKLEN*2+CKLEN*2);
+					rsp.len);
+				rsp.len=0;
 				return rsp;
-			}
-			rsp.s[RESHEXLEN+IKLEN*2+CKLEN*2-1] = 0;
-			rsp.len=(RESHEXLEN+IKLEN*2+CKLEN*2)-1;
-			memcpy(rsp.s,response,rsp.len);
-			for(i=0;i<IKLEN;i++){
-				rsp.s[RESLEN*2+2*i]=hexa[(ik[i]&0xF0)>>4];
-				rsp.s[RESLEN*2+2*i+1]=hexa[ik[i]&0x0F];
-			}
-			for(i=0;i<CKLEN;i++){
-				rsp.s[RESLEN*2+IKLEN*2+2*i]=hexa[(ck[i]&0xF0)>>4];
-				rsp.s[RESLEN*2+IKLEN*2+2*i+1]=hexa[ck[i]&0x0F];
-			}
+			}			
 			
+			memcpy(rsp.s,res,RESLEN);
+			memcpy(rsp.s+RESLEN,ik,IKLEN);
+			memcpy(rsp.s+RESLEN+IKLEN,ck,CKLEN);			
 		    return rsp;
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":AKA: version %d not supported.\n",version);
