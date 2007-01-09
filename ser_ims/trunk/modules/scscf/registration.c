@@ -351,8 +351,8 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		calc_response(ha1,&(av->authenticate),
 			&empty_s,&empty_s,&empty_s,0,
 			&msg->first_line.u.request.method,&uri,hbody,expected);
-		LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s, but we have %.*s and expect %.*s ha1 %.*s\n",
-			response16.len,response16.s,av->authorization.len,av->authorization.s,32,expected,32,ha1);		
+		LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s and we  expect %.*s ha1 %.*s\n",
+			response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);		
 	}else{
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: algorithm %.*s is not handled.\n",
 			av->algorithm.len,av->algorithm.s);
@@ -374,7 +374,9 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		av->status = AUTH_VECTOR_USELESS;/* first mistake, you're out! */
 		LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: UE said: %.*s, but we have %.*s and expect %.*s\n",
 			response16.len,response16.s,av->authorization.len,av->authorization.s,32,expected);		
-	}			
+	}		
+	
+		
 
 	return ret;	
 error:
@@ -790,14 +792,23 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 			goto done;
 		}
 		x->authenticate.len = bin_to_base64(authenticate.s,authenticate.len,x->authenticate.s);
-		x->authorization.len = authorization.len*2;
+		
+//		Old version - converting to base16 the XRES
+//		x->authorization.len = authorization.len*2;
+//		x->authorization.s = shm_malloc(x->authorization.len);
+//		if (!x->authorization.s){
+//			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+//			goto done;
+//		}
+//		x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);
 
+		x->authorization.len = authorization.len;
 		x->authorization.s = shm_malloc(x->authorization.len);
 		if (!x->authorization.s){
 			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
 			goto done;
 		}
-		x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);
+		memcpy(x->authorization.s,authorization.s,authorization.len);
 	}
 	else if (algorithm.len == md5.len && strncasecmp(algorithm.s,md5.s,md5.len)==0){
 		/* MD5 and all else */
