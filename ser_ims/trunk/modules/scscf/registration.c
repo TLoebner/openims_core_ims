@@ -363,14 +363,6 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		av->status = AUTH_VECTOR_USELESS;
 		ret = CSCF_RETURN_TRUE;		
 	}else {
-		/* fix to accept old AKA auth */
-		if (response16.len==av->authorization.len && strncasecmp(response16.s,av->authorization.s,response16.len)==0){
-			LOG(L_INFO,"INFO:"M_NAME":S_is_authorized: Accepted client with non-MD5 AKAv1. Fix the client!!!\n");
-			av->status = AUTH_VECTOR_USELESS;
-			ret = CSCF_RETURN_TRUE;
-			return ret;
-		}		
-		/* fix to accept old AKA auth */
 		av->status = AUTH_VECTOR_USELESS;/* first mistake, you're out! */
 		LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: UE said: %.*s, but we have %.*s and expect %.*s\n",
 			response16.len,response16.s,av->authorization.len,av->authorization.s,32,expected);		
