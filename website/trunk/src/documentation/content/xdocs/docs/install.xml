@@ -151,6 +151,13 @@ cd..</source>
       	</li>
       	<li>FHoSS
       		<ul>
+			<li>Check out your JAVA_HOME variable. See if it is properly set:
+			<source> # echo $JAVA_HOME </source> </li>
+			
+			<li>Unless you don't get a /opt/sun-jdk-1.5 do a:
+			<source> # export JAVA_HOME="/path/to/your/javadistro/dir/" </source> </li>
+
+			<li>Note: From Distro to distro this Variable could change. Be aware of what you are doing. </li>
       			<li>Make sure that your JDK version is >= 1.5!!!</li>
       			<li>Do "ant gen compile deploy" in FHoSS
       				<source>cd FHoSS
