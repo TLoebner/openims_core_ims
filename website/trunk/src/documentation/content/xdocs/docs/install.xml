@@ -146,19 +146,21 @@ svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS</
 make all
 cd..</source>
 				</li>
-      			<li>If something breaks, you probably don’t have all the prerequisites.</li>
+      			<li>If something breaks, you probably don't have all the prerequisites.</li>
       		</ul>
       	</li>
       	<li>FHoSS
       		<ul>
-			<li>Check out your JAVA_HOME variable. See if it is properly set:
-			<source> # echo $JAVA_HOME </source> </li>
-			
-			<li>Unless you don't get a /opt/sun-jdk-1.5 do a:
-			<source> # export JAVA_HOME="/path/to/your/javadistro/dir/" </source> </li>
-
-			<li>Note: From Distro to distro this Variable could change. Be aware of what you are doing. </li>
-      			<li>Make sure that your JDK version is >= 1.5!!!</li>
+			<li>If you don't have a JDK >=1.5, get one before proceeding</li>
+      			<li>Make sure, that the JDK version that you are using is >= 1.5!!! 
+			<source># java -version
+java version "1.5.0_07"
+Java(TM) 2 Runtime Environment, Standard Edition (build 1.5.0_07-b03)
+Java HotSpot(TM) Client VM (build 1.5.0_07-b03, mixed mode)
+			</source>
+			It is often the case that users have just installed a 1.5 JDK but they are
+			    still using their old JDK installation! If you see lots of errors, recheck
+			    this before posting a bug report!</li>
       			<li>Do "ant gen compile deploy" in FHoSS
       				<source>cd FHoSS
 ant gen
