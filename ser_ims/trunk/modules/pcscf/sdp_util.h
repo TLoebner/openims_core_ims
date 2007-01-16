@@ -5,6 +5,10 @@
 #include "../../ut.h"
 
 
+#ifndef AF_LOCAL
+#define AF_LOCAL AF_UNIX
+#endif
+
 /* #define RPORT 8000  */
 /* Supported version of the RTP proxy command protocol */
 #define	SUP_CPROTOVER	20040107

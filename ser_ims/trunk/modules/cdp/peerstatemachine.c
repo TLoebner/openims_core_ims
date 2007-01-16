@@ -520,7 +520,7 @@ void I_Snd_CER(peer *p)
 {
 	AAAMessage *cer=0;
 //	AAA_AVP *avp;
-	u_int32_t ip;
+	unsigned long ip;
 	struct sockaddr_in addr;
 	int addrlen;
 	char x[6];
@@ -799,7 +799,7 @@ int Process_CER(peer *p,AAAMessage *cer)
 void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 {
 	AAAMessage *cea;
-	u_int32_t ip;
+	unsigned int ip;
 	struct sockaddr_in addr;
 	int addrlen;
 	char x[6];
