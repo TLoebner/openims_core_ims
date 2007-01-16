@@ -197,7 +197,7 @@ cd..</source>
 mysql –u root –p –h localhost &lt; ser_ims/cfg/sip2ims.sql
 
 mysql –u root –p –h localhost &lt; FHoSS/scripts/hssdb.sql
-mysql –u root –p –h localhost &lt; FHoSS/scripts/demodata.sql
+mysql –u root –p –h localhost &lt; FHoSS/scripts/userdata.sql
 </source>
 				</li>				
 				<li>Check if the databases are in there and accessible</li>
