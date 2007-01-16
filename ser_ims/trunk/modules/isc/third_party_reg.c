@@ -84,7 +84,7 @@ extern struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSC
 int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 {
 	r_third_party_registration *r;
-	int expires_hdr=0;
+	int expires_hdr=0,expires=0;
 	str req_uri ={0,0};
 	str to ={0,0};
 	str pani ={0,0};
@@ -112,9 +112,13 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 //	}
 
 	/* Get Expires from registrar */
-	expires_hdr = isc_scscfb.get_r_public_expires(to);
-	if (expires_hdr==-999){
-		expires_hdr = cscf_get_expires_hdr(msg);
+	expires_hdr = cscf_get_expires_hdr(msg);
+	if (expires_hdr==0) expires = 0;
+	else {
+		expires = isc_scscfb.get_r_public_expires(to);
+		if (expires==-999){
+			expires = expires_hdr;
+		}
 	}	
 
 	/* Get P-Access-Network-Info header */
@@ -125,23 +129,19 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	/* Todo: implement also according to TS 24.229, chap 5.4.1.7 */
 	cv =   cscf_get_charging_vector(msg, &hdr);
 
-        if (req_uri.s){
-
+	if (req_uri.s){
 		r = new_r_third_party_reg(req_uri, to, isc_my_uri_sip, pani, cv);
-
-                if (!r){
-  			LOG(L_ERR,"ERR:"M_NAME":isc_third_party_reg: Error creating new third party registration\n");
-                        return ISC_RETURN_FALSE;
-                }
-
-		r_send_third_party_reg(r,expires_hdr+isc_expires_grace);
-
+		if (!r){
+			LOG(L_ERR,"ERR:"M_NAME":isc_third_party_reg: Error creating new third party registration\n");
+			return ISC_RETURN_FALSE;
+		}
+		if (expires<=0) r_send_third_party_reg(r,0);
+		else r_send_third_party_reg(r,expires+isc_expires_grace);
 		free_r_registration(r);
-
-                return ISC_RETURN_TRUE;
-        }else{
-                return ISC_RETURN_FALSE;
-        }	
+		return ISC_RETURN_TRUE;
+	}else{
+		return ISC_RETURN_FALSE;
+	}	
 }
 
 

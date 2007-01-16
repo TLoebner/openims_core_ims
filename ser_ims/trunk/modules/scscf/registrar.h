@@ -65,6 +65,8 @@
 #define IMS_USER_REGISTERED 1
 /** User unregistered (not registered but with services for unregistered state) */
 #define IMS_USER_UNREGISTERED -1
+/** User de-registered */
+#define IMS_USER_DEREGISTERED -2
 
 void registrar_timer(unsigned int ticks, void* param);
 
@@ -83,19 +85,19 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml);
 int S_lookup(struct sip_msg *msg,char *str1,char *str2);
 
 
-int S_is_registered_id(str public_identity);
-
-int S_is_not_registered_id(str public_identity);
+int r_is_registered_id(str public_identity);
+int r_is_not_registered_id(str public_identity);
+int r_is_unregistered_id(str public_identity);
 
 int S_term_registered(struct sip_msg *msg,char *str1,char *str2);
-
+int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2);
 int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2);
 
-int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2);
 
+int S_orig_registered(struct sip_msg *msg,char *str1,char *str2);
 int S_orig_not_registered(struct sip_msg *msg,char *str1,char *str2);
+int S_orig_unregistered(struct sip_msg *msg,char *str1,char *str2);
 
-int S_is_not_registered(struct sip_msg *msg,char *str1,char *str2);
 
 
 int S_mobile_originating(struct sip_msg *msg,char *str1,char *str2);

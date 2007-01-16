@@ -263,7 +263,7 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 			return ret;
 		}
 		//TODO 
-		if (S_is_registered_id(public_identity)) 
+		if (r_is_registered_id(public_identity)) 
 			assignment_type = AVP_IMS_SAR_RE_REGISTRATION;
 		else
 			assignment_type = AVP_IMS_SAR_REGISTRATION;
@@ -856,7 +856,7 @@ int S_update_contacts(struct sip_msg *msg,char *str1,char *str2)
 			return CSCF_RETURN_BREAK;
 		}
 		//TODO 
-		if (S_is_registered_id(public_identity)) 
+		if (r_is_registered_id(public_identity)) 
 			assignment_type = AVP_IMS_SAR_RE_REGISTRATION;
 		else
 			assignment_type = AVP_IMS_SAR_REGISTRATION;
@@ -1089,7 +1089,7 @@ error:
  * @param public_identity - the public identity
  * @returns 1 if registered, 0 if not or error
  */
-int S_is_registered_id(str public_identity)
+int r_is_registered_id(str public_identity)
 {
 	int ret=0;
 	r_public *p;
@@ -1122,11 +1122,35 @@ int S_is_registered_id(str public_identity)
 }
 
 /**
+ * Finds if the user is not registered at this S-CSCF
+ * @param public_identity - the SIP message
+ * @returns 1 if registered, 0 if not or error
+ */
+int r_is_not_registered_id(str public_identity)
+{
+	int ret=0;
+	r_public *p;
+
+	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered_id: Looking if NOT registered\n");
+//	print_r(L_INFO);
+	/* First check the parameters */
+	
+	p = get_r_public(public_identity);
+	if (!p) return 1;
+	if (p->reg_state==IMS_USER_NOT_REGISTERED){
+		r_unlock(p->hash);
+		return 1;
+	}
+	r_unlock(p->hash);
+	return ret;
+}
+
+/**
  * Finds if the user is unregistered at this S-CSCF
  * @param public_identity - the SIP message
  * @returns 1 if registered, 0 if not or error
  */
-int S_is_unregistered_id(str public_identity)
+int r_is_unregistered_id(str public_identity)
 {
 	int ret=0;
 	r_public *p;
@@ -1157,31 +1181,6 @@ int S_is_unregistered_id(str public_identity)
 	r_unlock(p->hash);
 	return ret;
 }
-
-/**
- * Finds if the user is not registered at this S-CSCF
- * @param public_identity - the SIP message
- * @returns 1 if registered, 0 if not or error
- */
-int S_is_not_registered_id(str public_identity)
-{
-	int ret=0;
-	r_public *p;
-
-	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered_id: Looking if NOT registered\n");
-//	print_r(L_INFO);
-	/* First check the parameters */
-	
-	p = get_r_public(public_identity);
-	if (!p) return 1;
-	if (p->reg_state==IMS_USER_NOT_REGISTERED){
-		r_unlock(p->hash);
-		return 1;
-	}
-	r_unlock(p->hash);
-	return ret;
-}
-
 
 
 /**
@@ -1233,12 +1232,75 @@ int S_term_registered(struct sip_msg *msg,char *str1,char *str2)
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_term_registered: Looking for <%.*s>\n",uri.len,uri.s);
 	
-	if (S_is_registered_id(uri)) 
+	if (r_is_registered_id(uri)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
 	if (uri.s) pkg_free(uri.s);
+	return ret;
+error:
+	if (uri.s) pkg_free(uri.s);
+	ret=CSCF_RETURN_ERROR;
+	return ret;	
+}
+
+
+/**
+ * Finds if the terminating user (in the RequestURI) is not registered at this S-CSCF
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if not registered, else #CSCF_RETURN_FALSE or #CSCF_RETURN_ERROR on error
+ */
+int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
+{
+	int ret=CSCF_RETURN_FALSE;
+	struct sip_uri puri;
+	str uri={0,0};	
+
+	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking if registered\n");
+//	print_r(L_INFO);
+	/* First check the parameters */
+	if (msg->first_line.type!=SIP_REQUEST)
+	{
+		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: This message is not a request\n");
+		goto error;
+	}		
+
+	
+	if (msg->new_uri.s) uri = msg->new_uri;
+	else uri = msg->first_line.u.request.uri;
+	
+	if (parse_uri(uri.s, uri.len, &puri) < 0) {
+		LOG(L_INFO,"INF:"M_NAME":S_term_not_registered: Error parsing uri <%.*s>\n",
+			uri.len,uri.s);
+		goto error;
+	}
+	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
+	uri.s = pkg_malloc(uri.len);
+	if (!uri.s){
+		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: Error allocating %d bytes\n",uri.len);
+		return CSCF_RETURN_ERROR;
+	}
+	uri.len=0;
+	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
+	uri.len+=lookup_sip.len;
+	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
+	uri.len+=puri.user.len;
+	uri.s[uri.len++]='@';
+	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
+	uri.len+=puri.host.len;
+	
+	
+	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking for <%.*s>\n",uri.len,uri.s);
+	
+	if (r_is_not_registered_id(uri)) 
+		ret = CSCF_RETURN_TRUE;
+	else 
+		ret = CSCF_RETURN_FALSE;
+			
+	if (uri.s) pkg_free(uri.s);	
 	return ret;
 error:
 	if (uri.s) pkg_free(uri.s);
@@ -1295,7 +1357,7 @@ int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2)
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_term_unregistered: Looking for <%.*s>\n",uri.len,uri.s);
 	
-	if (S_is_unregistered_id(uri)) 
+	if (r_is_unregistered_id(uri)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;
@@ -1308,67 +1370,6 @@ error:
 	return ret;	
 }
 
-/**
- * Finds if the terminating user (in the RequestURI) is not registered at this S-CSCF
- * @param msg - the SIP message
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if not registered, else #CSCF_RETURN_FALSE or #CSCF_RETURN_ERROR on error
- */
-int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
-{
-	int ret=CSCF_RETURN_FALSE;
-	struct sip_uri puri;
-	str uri={0,0};	
-
-	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking if registered\n");
-//	print_r(L_INFO);
-	/* First check the parameters */
-	if (msg->first_line.type!=SIP_REQUEST)
-	{
-		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: This message is not a request\n");
-		goto error;
-	}		
-
-	
-	if (msg->new_uri.s) uri = msg->new_uri;
-	else uri = msg->first_line.u.request.uri;
-	
-	if (parse_uri(uri.s, uri.len, &puri) < 0) {
-		LOG(L_INFO,"INF:"M_NAME":S_term_not_registered: Error parsing uri <%.*s>\n",
-			uri.len,uri.s);
-		goto error;
-	}
-	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
-	uri.s = pkg_malloc(uri.len);
-	if (!uri.s){
-		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: Error allocating %d bytes\n",uri.len);
-		return CSCF_RETURN_ERROR;
-	}
-	uri.len=0;
-	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
-	uri.len+=lookup_sip.len;
-	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
-	uri.len+=puri.user.len;
-	uri.s[uri.len++]='@';
-	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
-	uri.len+=puri.host.len;
-	
-	
-	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking for <%.*s>\n",uri.len,uri.s);
-	
-	if (S_is_not_registered_id(uri)) 
-		ret = CSCF_RETURN_TRUE;
-	else 
-		ret = CSCF_RETURN_FALSE;
-			
-	if (uri.s) pkg_free(uri.s);	
-	return ret;
-error:
-	if (uri.s) pkg_free(uri.s);
-	ret=CSCF_RETURN_ERROR;
-	return ret;	
-}
 
 /**
  * Finds if the originating user (in P-Asserted-Identity) is registered at this S-CSCF
@@ -1377,7 +1378,7 @@ error:
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if not registered, else #CSCF_RETURN_FALSE or #CSCF_RETURN_ERROR on error
  */
-int S_orig_not_registered(struct sip_msg *msg,char *str1,char *str2)
+int S_orig_registered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
 	str public_identity;	
@@ -1395,7 +1396,81 @@ int S_orig_not_registered(struct sip_msg *msg,char *str1,char *str2)
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_orig_registered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
 	
-	if (S_is_not_registered_id(public_identity)) 
+	if (r_is_registered_id(public_identity)) 
+		ret = CSCF_RETURN_TRUE;
+	else 
+		ret = CSCF_RETURN_FALSE;
+			
+	
+	return ret;
+error:
+	ret=CSCF_RETURN_ERROR;
+	return ret;	
+}
+
+/**
+ * Finds if the originating user (in P-Asserted-Identity) is not registered at this S-CSCF
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if not registered, else #CSCF_RETURN_FALSE or #CSCF_RETURN_ERROR on error
+ */
+int S_orig_not_registered(struct sip_msg *msg,char *str1,char *str2)
+{
+	int ret=CSCF_RETURN_FALSE;
+	str public_identity;	
+
+	LOG(L_DBG,"DBG:"M_NAME":S_orig_not_registered: Looking if registered\n");
+//	print_r(L_INFO);
+	/* First check the parameters */
+	if (msg->first_line.type!=SIP_REQUEST)
+	{
+		LOG(L_ERR,"ERR:"M_NAME":S_orig_not_registered: This message is not a request\n");
+		goto error;
+	}		
+
+	public_identity = cscf_get_public_identity(msg);
+	
+	LOG(L_DBG,"DBG:"M_NAME":S_orig_not_registered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
+	
+	if (r_is_not_registered_id(public_identity)) 
+		ret = CSCF_RETURN_TRUE;
+	else 
+		ret = CSCF_RETURN_FALSE;
+			
+	
+	return ret;
+error:
+	ret=CSCF_RETURN_ERROR;
+	return ret;	
+}
+
+/**
+ * Finds if the originating user (in P-Asserted-Identity) is unregistered at this S-CSCF
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if not registered, else #CSCF_RETURN_FALSE or #CSCF_RETURN_ERROR on error
+ */
+int S_orig_unregistered(struct sip_msg *msg,char *str1,char *str2)
+{
+	int ret=CSCF_RETURN_FALSE;
+	str public_identity;	
+
+	LOG(L_DBG,"DBG:"M_NAME":S_orig_unregistered: Looking if registered\n");
+//	print_r(L_INFO);
+	/* First check the parameters */
+	if (msg->first_line.type!=SIP_REQUEST)
+	{
+		LOG(L_ERR,"ERR:"M_NAME":S_orig_unregistered: This message is not a request\n");
+		goto error;
+	}		
+
+	public_identity = cscf_get_public_identity(msg);
+	
+	LOG(L_DBG,"DBG:"M_NAME":S_orig_unregistered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
+	
+	if (r_is_unregistered_id(public_identity)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;
@@ -1456,7 +1531,7 @@ int S_is_not_registered(struct sip_msg *msg,char *str1,char *str2)
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered: Looking for <%.*s>\n",uri.len,uri.s);
 	
-	if (S_is_not_registered_id(uri)) 
+	if (r_is_not_registered_id(uri)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;
