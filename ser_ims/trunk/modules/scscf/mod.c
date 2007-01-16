@@ -182,12 +182,14 @@ static cmd_export_t scscf_cmds[]={
 	{"S_assign_server_unreg",		S_assign_server_unreg,		1,0,REQUEST_ROUTE},
 	{"S_update_contacts",			S_update_contacts,			0,0,REQUEST_ROUTE},
 	{"S_lookup",					S_lookup,					0,0,REQUEST_ROUTE},
-	{"S_term_registered",			S_term_registered,			0,0,REQUEST_ROUTE},
-	{"S_term_unregistered",			S_term_unregistered,		0,0,REQUEST_ROUTE},
-	{"S_term_not_registered",		S_term_not_registered,		0,0,REQUEST_ROUTE},
-	{"S_is_not_registered",			S_is_not_registered,		0,0,REQUEST_ROUTE},
 
+	{"S_term_registered",			S_term_registered,			0,0,REQUEST_ROUTE},
+	{"S_term_not_registered",		S_term_not_registered,		0,0,REQUEST_ROUTE},
+	{"S_term_unregistered",			S_term_unregistered,		0,0,REQUEST_ROUTE},
+
+	{"S_orig_registered",			S_orig_registered,			0,0,REQUEST_ROUTE},
 	{"S_orig_not_registered",		S_orig_not_registered,		0,0,REQUEST_ROUTE},
+	{"S_orig_unregistered",			S_orig_unregistered,		0,0,REQUEST_ROUTE},
 
 	{"S_can_subscribe",				S_can_subscribe,			0,0,REQUEST_ROUTE},
 	{"S_subscribe",					S_subscribe,				0,0,REQUEST_ROUTE},
