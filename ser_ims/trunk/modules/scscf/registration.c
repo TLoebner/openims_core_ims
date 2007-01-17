@@ -436,7 +436,10 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 			S_REGISTER_reply(msg,403,MSG_403_NO_NONCE);
 			goto abort;
 		}
-		av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce);		
+		av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce);
+		if (!av)
+	    	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce);
+					
 		if (!av){
 			LOG(L_ERR,"DBG:"M_NAME":S_challenge: Nonce not regonized as sent, no sync!\n");			
 			auts.len = 0; auts.s=0;
