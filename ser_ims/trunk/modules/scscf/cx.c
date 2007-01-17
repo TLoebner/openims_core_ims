@@ -298,7 +298,7 @@ AAAMessage* Cx_RTA(AAAMessage * rtr)
 	}
 
 	/* send an RTA back to the HSS */
-	Cx_add_experimental_result_code(rta_msg,RC_IMS_DIAMETER_FIRST_REGISTRATION);
+	Cx_add_result_code(rta_msg,DIAMETER_SUCCESS);
 	return rta_msg;
 }
 
@@ -335,7 +335,7 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 		LOG(L_INFO,"INFO:"M_NAME":Cx_PPA(): Received a Charging Info PPR\n");
 	}	
 	
-	Cx_add_experimental_result_code(ppa_msg,DIAMETER_SUCCESS);
+	Cx_add_result_code(ppa_msg,DIAMETER_SUCCESS);
 	return ppa_msg;
 }
 
