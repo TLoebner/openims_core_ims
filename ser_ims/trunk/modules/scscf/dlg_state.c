@@ -654,7 +654,8 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq==0 || h==0) return CSCF_RETURN_FALSE;
 		if (d->first_cseq==cseq && d->method_str.len == ((struct cseq_body *)h->parsed)->method.len &&
-			strncasecmp(d->method_str.s,((struct cseq_body *)h->parsed)->method.s,d->method_str.len)==0){
+			strncasecmp(d->method_str.s,((struct cseq_body *)h->parsed)->method.s,d->method_str.len)==0 &&
+			d->state < DLG_STATE_CONFIRMED){
 			/* reply to initial request */
 			if (response<200){
 				d->state = DLG_STATE_EARLY;
