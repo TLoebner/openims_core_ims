@@ -134,7 +134,7 @@ int P_add_require(struct sip_msg *msg,char *str1,char*str2)
 
 
 static str p_charging_vector_s={"P-Charging-Vector: icid-value=\"",31};
-static str p_charging_vector_1={"\"; icid-gen-at=\"",16};
+static str p_charging_vector_1={"\"; icid-generated-at=\"",22};
 static str p_charging_vector_2={"\"; orig-ioi=\"",13};
 static str p_charging_vector_e={"\"\r\n",3};
 static char hex_chars[16]="0123456789abcdef";
