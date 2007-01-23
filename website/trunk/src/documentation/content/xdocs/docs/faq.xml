@@ -100,7 +100,7 @@
       	<li><strong>How do I provision a new user?</strong><br/>
       		Use serweb or another tool to create a user in the credentials table. Alternatively, you can manually add a similar
       		entry to those of Alice/Bob. HA1 is irrelevant and can be left blank. HA1b can be computed using e.g.:
-      		<source>ser_ims/scripts/gen_ha1 user realm password</source>
+      		<source>ser_ims/utils/gen_ha1/gen_ha1 user realm password</source>
       		Don't forget: The username must be the same as the private AND the public identity of the user, as SIP UEs do not usually
       		make a distinction between them.
       	</li>
