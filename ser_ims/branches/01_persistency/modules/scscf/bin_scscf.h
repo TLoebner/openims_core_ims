@@ -1,5 +1,5 @@
 /*
- * $Id: dlg_state.c 95 2007-01-19 16:19:58Z vingarzan $
+ * $Id$
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -46,60 +46,9 @@
 /**
  * \file
  *
- * Binary codec operations
+ * Binary codec operations for the S-CSCF
  *
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
-
-The binary form of the subscription is a vector of bytes and has the same type as
-str from SER.
-
-Basic datatype representations:
-
-- Each integer is written as litter endian on a specific width(1->4 bytes)
-        int(k,2):
-                k & 0x00ff
-                k & 0xff00 >>8
-
-
-- Each str is written as:
-        str(s):
-                int(s.len,2)
-                s.s[0]
-                s.s[1]
-                .
-                .
-                .
-                s.s[len-1]
-
-- Each regex is written as:
-        regex(r):
-                int(sizeof(r),2)
-                &r[0]
-                &r[1]
-                .
-                .
-                .
-                &r[len-1]
-
-- Each pointer is a 4 byte offset into the binary form.
-        ptr(p)
-                int(p,4)
-
-- Array of pointers
-        array(p,len)
-                int(len,4)
-                int(p[1],4)                                     - p[0] can be computed = &array + 4*(len+1)
-                int(p[2],4)
-                .
-                .
-                int(p[len],4)                           - the ptr of the next byte after the array
-
-
-
-
-
-
-
 
         IMSSubscription:
                 str(private_id)
@@ -146,89 +95,11 @@ Basic datatype representations:
 
 
 
-#ifndef _IFC_BIN_H
-#define _IFC_BIN_H
+#ifndef _BIN_SCSCF_H
+#define _BIN_SCSCF_H
 
-#include "ifc_datastruct.h"
-#include "../../str.h"
+#include "bin.h"
 
-
-/**
- *			LOADING/SAVING FROM BINARY FORMAT INTO STRUCTURES
- *		- please see BinaryFormat.txt for more info on this
- **/
-
-/**
- *	Array representation
- */
-struct _ifc_bin_array
-{
-	int cnt;				/* Member count	*/
-	ifc_ims_bin *get;		/* Member data, concatenated */
-};
-typedef struct _ifc_bin_array ifc_bin_array;
-
-
-
-/**
- *	Encode and Append an entire Filter Criteria
- */
-ifc_ims_bin ifc_bin_encode_filter_criteria(ifc_filter_criteria *fc);
-/**
- *	Encode the entire user profile and return the pointer to the binary data
- */
-ifc_ims_bin *ifc_bin_encode(ifc_ims_subscription *s);
-
-/**
- *	simple print function 
- */
-void ifc_bin_print(ifc_ims_bin *imsb);
-
-
-/**
- *	Decode an entire Filter Criteria
- */
-ifc_filter_criteria ifc_bin_decode_filter_criteria(ifc_ims_bin *s);
-/**
- *	Decode a binary string into an IMSSubcription data structure 
- */
-ifc_ims_subscription *ifc_bin_decode(ifc_ims_bin *imsb);
-
-
-
-
-
-/*
- *		Binary encoding functions
- */
-/* memory allocation and initialization macros */
-#define IFC_BIN_ALLOC_METHOD    shm_malloc
-#define IFC_BIN_REALLOC_METHOD  shm_realloc
-#define IFC_BIN_FREE_METHOD     shm_free
-
-#define IFC_BIN_ALLOC(X) {                                \
-	(X) = (ifc_ims_bin*)IFC_BIN_ALLOC_METHOD(sizeof(ifc_ims_bin));     \
-    (X)->s=0;(X)->len=0;\
-}
-
-//(X)->s = (char*)IFC_BIN_ALLOC_METHOD(1024);(X)->len=0;
-
-
-#define IFC_BIN_REALLOC(X,DELTA) {        \
-	DBG("DEBUG: realloc %p from %d to + %d\n",(X)->s,(X)->len,(DELTA));\
-	(X)->s=IFC_BIN_REALLOC_METHOD((X)->s,(X)->len + (DELTA));    \
-	DBG("DEBUG: realloc ok %p from %d to + %d\n",(X)->s,(X)->len,(DELTA));\
-	if ((X)->s==NULL)                             \
-		LOG(L_ERR,"No more memory to expand %d with %d  \n",(X)->len,(DELTA));\
-}
-#define IFC_BIN_FREE(X) {        \
-	IFC_BIN_FREE_METHOD((X)->s);(X)->s=0;(X)->len=0; \
-}
-
-
-
-
-
-
+#define BIN_INITIAL_ALLOC_SIZE 256
 
 #endif
