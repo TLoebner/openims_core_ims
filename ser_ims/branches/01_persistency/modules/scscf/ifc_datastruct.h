@@ -151,8 +151,8 @@ typedef struct _ims_application_server
 
 /** Public Identity Structure */
 typedef struct {
-	str public_identity;		/**< Public Identity string							*/
 	int barring;				/**< Barring state									*/
+	str public_identity;		/**< Public Identity string							*/
 } ims_public_identity;
 
 /** Initial Filter Criteria Structure */
@@ -164,7 +164,7 @@ typedef struct _ims_filter_criteria
 	int *profile_part_indicator;				/**< profile part indicator 0..1 */	
 } ims_filter_criteria;
 
-/** CoreNetowkr Service Authorization */
+/** CoreNetwork Service Authorization */
 typedef struct _ims_cn_service_auth
 {
 	int subscribed_media_profile_id;	/* must be >=0 */
