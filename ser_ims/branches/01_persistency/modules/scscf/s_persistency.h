@@ -46,7 +46,7 @@
 /**
  * \file
  *
- * Binary codec operations for the S-CSCF
+ * S-CSCF persistency operations
  *
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  *
@@ -54,23 +54,11 @@
 
 
 
-#ifndef _BIN_SCSCF_H
-#define _BIN_SCSCF_H
+#ifndef _SCSCF_PERSITENCY_H
+#define _SCSCF_PERSITENCY_H
 
-#include "bin.h"
-#include "ifc_datastruct.h"
-#include "registration.h"
-#include "registrar_storage.h"
+#include "bin_scscf.h"
 
-#define BIN_INITIAL_ALLOC_SIZE 256
-
-int bin_encode_ims_subscription(bin_data *x, ims_subscription *s);
-ims_subscription *bin_decode_ims_subscription(bin_data *x);
-
-int bin_encode_r_public(bin_data *x,r_public *p);
-r_public* bin_decode_r_public(bin_data *x);
-
-int bin_encode_auth_userdata(bin_data *x,auth_userdata *u);
-auth_userdata* bin_decode_auth_userdata(bin_data *x);
+int snapshot_auth(auth_data *ad);
 
 #endif

@@ -46,31 +46,56 @@
 /**
  * \file
  *
- * Binary codec operations for the S-CSCF
+ * S-CSCF persistency operations
  *
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  *
  */
 
+#include <time.h>
+
+#include "bin_scscf.h"
+
+int bin_dump_to_file(bin_data *x,char *prep_fname)
+{
+	char c[256];
+	time_t now;
+	FILE *f;
+	int k;
+	
+	now = time(0);
+	sprintf(c,"%s_%u.bin",prep_fname,(unsigned int)now);
+	f = fopen(c,"w");
+	k = fwrite(x->s,1,x->len,f);
+	LOG(L_INFO,"INFO:"M_NAME":bin_dump_to_file: Dumped %d bytes into %s.\n",k,c);
+	fclose(f);	
+	bin_print(x);
+	if (k==x->len) return 1;
+	else return 0;
+}
 
 
-#ifndef _BIN_SCSCF_H
-#define _BIN_SCSCF_H
+int snapshot_auth(auth_data *ad)
+{
+	bin_data x;
+	auth_userdata *aud;
+	int i;
+	
+	if (!bin_alloc(&x,256)) goto error;
+	
+	for(i=0;i<ad->size;i++){
+		aud = ad->table[i].head;
+		while(aud){
+			if (!bin_encode_auth_userdata(&x,aud)) goto error;
+			bin_print(&x);
+			aud = aud->next;
+		}
+	}
+	i = bin_dump_to_file(&x,"/opt/OpenIMSCore/authdata");
+	bin_free(&x);
+	return i;
+error:
+	return 0;
+}  
 
-#include "bin.h"
-#include "ifc_datastruct.h"
-#include "registration.h"
-#include "registrar_storage.h"
 
-#define BIN_INITIAL_ALLOC_SIZE 256
-
-int bin_encode_ims_subscription(bin_data *x, ims_subscription *s);
-ims_subscription *bin_decode_ims_subscription(bin_data *x);
-
-int bin_encode_r_public(bin_data *x,r_public *p);
-r_public* bin_decode_r_public(bin_data *x);
-
-int bin_encode_auth_userdata(bin_data *x,auth_userdata *u);
-auth_userdata* bin_decode_auth_userdata(bin_data *x);
-
-#endif
