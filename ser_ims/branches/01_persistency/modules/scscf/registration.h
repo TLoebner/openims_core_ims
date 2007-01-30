@@ -108,25 +108,18 @@ typedef struct _auth_userdata{
 	
 	auth_vector *head;		/**< first auth vector in list	*/
 	auth_vector *tail;		/**< last auth vector in list	*/
+	
 	struct _auth_userdata *next;/**< next element in list	*/
 	struct _auth_userdata *prev;/**< previous element in list*/
 } auth_userdata;
 
 /** Authorization user data hash slot */
 typedef struct {
-	void *head;				/**< first in the slot			*/ 
-	void *tail;				/**< last in the slot			*/
-} hash_slot_t;
+	auth_userdata *head;				/**< first in the slot			*/ 
+	auth_userdata *tail;				/**< last in the slot			*/
+	gen_lock_t *lock;			/**< slot lock 							*/	
+} auth_hash_slot_t;
 
-/** User data hash table 
- * \todo move lock in auth_userdata to improve performance of registration
- */
-typedef struct _auth_data{
-	hash_slot_t *table;		/**< hash table 				*/
-	int size;				/**< size of the hash table		*/
-	
-	gen_lock_t *lock;		/**< lock for operations		*/
-} auth_data;
 
 
 
@@ -141,6 +134,9 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 /*
  * Storage of authentication vectors
  */
+
+inline void auth_data_lock(unsigned int hash);
+inline void auth_data_unlock(unsigned int hash);
  
 int auth_data_init(int size);
 
@@ -154,7 +150,7 @@ auth_userdata *new_auth_userdata(str private_identity,str public_identity);
 void free_auth_userdata(auth_userdata *aud);					
 
 int add_auth_vector(str private_identity,str public_identity,auth_vector *av);
-auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce);
+auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce,unsigned int *hash);
 
 int drop_auth_userdata(str private_identity,str public_identity);
 

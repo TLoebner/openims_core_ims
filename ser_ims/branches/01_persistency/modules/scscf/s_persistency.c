@@ -53,8 +53,12 @@
  */
 
 #include <time.h>
+#include <errno.h>
 
 #include "bin_scscf.h"
+
+extern auth_hash_slot_t *auth_data;			/**< Authentication vector hash table */
+extern int auth_data_hash_size;						/**< authentication vector hash table size */
 
 int bin_dump_to_file(bin_data *x,char *prep_fname)
 {
@@ -64,18 +68,42 @@ int bin_dump_to_file(bin_data *x,char *prep_fname)
 	int k;
 	
 	now = time(0);
-	sprintf(c,"%s_%u.bin",prep_fname,(unsigned int)now);
+	sprintf(c,"%s_last.bin",prep_fname/*,(unsigned int)now*/);
 	f = fopen(c,"w");
 	k = fwrite(x->s,1,x->len,f);
 	LOG(L_INFO,"INFO:"M_NAME":bin_dump_to_file: Dumped %d bytes into %s.\n",k,c);
 	fclose(f);	
-	bin_print(x);
 	if (k==x->len) return 1;
 	else return 0;
 }
 
+int bin_load_from_file(bin_data *x,char *prep_fname)
+{
+	char c[256];
+	time_t now;
+	FILE *f;
+	int k;
+	
+	now = time(0);
+	sprintf(c,"%s_last.bin",prep_fname/*,(unsigned int)now*/);
+	f = fopen(c,"r");
+	if (!f) {
+		LOG(L_ERR,"error opening %s : %s\n",c,strerror(errno));
+		return 0;
+	}
+	bin_alloc(x,1024);
+	while(!feof(f)){
+		bin_expand(x,1024);
+		k = fread(x->s+x->len,1,1024,f);
+		x->len+=k;
+	}
+	LOG(L_INFO,"INFO:"M_NAME":bin_load_from_file: Read %d bytes from %s.\n",x->len,c);
+	fclose(f);	
+	return 1;
+}
 
-int snapshot_auth(auth_data *ad)
+
+int make_snapshot_auth(auth_hash_slot_t *ad)
 {
 	bin_data x;
 	auth_userdata *aud;
@@ -83,14 +111,16 @@ int snapshot_auth(auth_data *ad)
 	
 	if (!bin_alloc(&x,256)) goto error;
 	
-	for(i=0;i<ad->size;i++){
-		aud = ad->table[i].head;
+	for(i=0;i<auth_data_hash_size;i++){
+		auth_data_lock(i);
+		aud = auth_data[i].head;
 		while(aud){
 			if (!bin_encode_auth_userdata(&x,aud)) goto error;
-			bin_print(&x);
 			aud = aud->next;
 		}
+		auth_data_unlock(i);
 	}
+	bin_print(&x);
 	i = bin_dump_to_file(&x,"/opt/OpenIMSCore/authdata");
 	bin_free(&x);
 	return i;
@@ -98,4 +128,29 @@ error:
 	return 0;
 }  
 
-
+int load_snapshot_auth(auth_hash_slot_t *ad)
+{
+	bin_data x;
+	auth_userdata *aud;
+	if (!bin_load_from_file(&x,"/opt/OpenIMSCore/authdata")) goto error;
+	bin_print(&x);
+	x.max=0;
+	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_auth: max %d len %d\n",x.max,x.len);
+	while(x.max<x.len){
+		aud = bin_decode_auth_userdata(&x);
+		if (!aud) return 0;
+		LOG(L_INFO,"INFO:"M_NAME":load_snapshot_auth: Loaded auth_userdata for <%.*s>\n",aud->private_identity.len,aud->private_identity.s);
+		auth_data_lock(aud->hash);
+		aud->prev = auth_data[aud->hash].tail;
+		aud->next = 0;
+		if (auth_data[aud->hash].tail) auth_data[aud->hash].tail->next = aud;
+		auth_data[aud->hash].tail = aud;
+		if (!auth_data[aud->hash].head) auth_data[aud->hash].head = aud;
+		auth_data_unlock(aud->hash);
+	}
+	bin_free(&x);
+	return 1;
+error:
+	return 0;
+	
+}

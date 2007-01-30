@@ -289,6 +289,7 @@ static str empty_s={0,0};
 int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 {
 	int ret=CSCF_RETURN_FALSE;
+	unsigned int aud_hash=0;
 	str realm;
 	str private_identity,public_identity;
 	str nonce,response16;
@@ -333,9 +334,9 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	}
 	uri = cscf_get_digest_uri(msg,realm);
 	
-	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce);
+	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
 	if (!av)
-	    av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce);
+	    av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce,&aud_hash);
 	
 	if (!av) {
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: no matching auth vector found - maybe timer expired\n");		
@@ -370,7 +371,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	}		
 	
 		
-
+	auth_data_unlock(aud_hash);
 	return ret;	
 error:
 	ret = CSCF_RETURN_ERROR;		
@@ -387,6 +388,7 @@ error:
 int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 {
 	int ret=CSCF_RETURN_FALSE;
+	unsigned int aud_hash;
 	str realm,private_identity,public_identity,auts={0,0},nonce={0,0};
 	auth_vector *av=0;
 	str algo={0,0};
@@ -437,24 +439,25 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 			S_REGISTER_reply(msg,403,MSG_403_NO_NONCE);
 			goto abort;
 		}
-		av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce);
+		av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
 		if (!av)
-	    	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce);
+	    	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce,&aud_hash);
 					
 		if (!av){
 			LOG(L_ERR,"DBG:"M_NAME":S_challenge: Nonce not regonized as sent, no sync!\n");			
 			auts.len = 0; auts.s=0;
 		}else{
 			av->status = AUTH_VECTOR_USELESS;
+			auth_data_unlock(aud_hash);
+			av =0;
 		}
-		av =0;
 		/* if synchronization - force MAR - if MAR ok, old avs will be droped*/
 		S_MAR(msg,public_identity,private_identity,av_request_at_sync,
 				algo,nonce,auts,scscf_name_str,realm);
 	}
 	
 	/* loop because some other process might steal the auth_vector that we just retrieved */
-	while(!(av=get_auth_vector(private_identity,public_identity,AUTH_VECTOR_UNUSED,0))){
+	while(!(av=get_auth_vector(private_identity,public_identity,AUTH_VECTOR_UNUSED,0,&aud_hash))){
 		if (!S_MAR(msg,public_identity,private_identity,av_request_at_once,
 				algo,nonce,auts,scscf_name_str,realm)) break;
 		/* do sync just once */
@@ -468,10 +471,12 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 
 	if (!pack_challenge(msg,realm,av)){
 		S_REGISTER_reply(msg,500,MSG_500_PACK_AV);
+		auth_data_unlock(aud_hash);
 		goto error;
 	}
 	start_reg_await_timer(av);
 	//S_REGISTER_reply(msg,401,MSG_401_CHALLENGE);
+	auth_data_unlock(aud_hash);
 	return ret;
 error:
 	ret = CSCF_RETURN_ERROR;	
@@ -697,7 +702,30 @@ done:
  * Storage of authentication vectors
  */
  
-auth_data *Auth_data;			/**< Authentication vector hash table */
+auth_hash_slot_t *auth_data;			/**< Authentication vector hash table */
+extern int auth_data_hash_size;						/**< authentication vector hash table size */
+
+/**
+ * Locks the required slot of the auth_data.
+ * @param hash - the index of the slot
+ */
+inline void auth_data_lock(unsigned int hash)
+{
+//	LOG(L_CRIT,"GET %d\n",hash);
+	lock_get(auth_data[(hash)].lock);
+//	LOG(L_CRIT,"GOT %d\n",hash);	
+}
+
+/**
+ * UnLocks the required slot of the auth_data
+ * @param hash - the index of the slot
+ */
+inline void auth_data_unlock(unsigned int hash)
+{
+	lock_release(auth_data[(hash)].lock);
+//	LOG(L_CRIT,"RELEASED %d\n",hash);	
+}
+
 
 /**
  * Initializes the Authorization Data structures.
@@ -706,21 +734,19 @@ auth_data *Auth_data;			/**< Authentication vector hash table */
  */
 int auth_data_init(int size)
 {
-	Auth_data = shm_malloc(sizeof(auth_data));
-	if (!Auth_data){
+	int i;
+	auth_data = shm_malloc(sizeof(auth_hash_slot_t)*size);
+	if (!auth_data) {
 		LOG(L_ERR,"ERR:"M_NAME":auth_data_init: error allocating mem\n");
 		return 0;
 	}
-	Auth_data->table = shm_malloc(sizeof(hash_slot_t)*size);
-	if (!Auth_data->table) {
-		LOG(L_ERR,"ERR:"M_NAME":auth_data_init: error allocating mem\n");
-		return 0;
+	memset(auth_data,0,sizeof(auth_hash_slot_t)*size);
+	auth_data_hash_size = size;
+	for(i=0;i<size;i++){
+		auth_data[i].lock = lock_alloc();
+		lock_init(auth_data[i].lock);
 	}
-	memset(Auth_data->table,0,sizeof(hash_slot_t)*size);
-	Auth_data->size = size;
-	Auth_data->lock = lock_alloc();
-	lock_init(Auth_data->lock);
-	
+	load_snapshot_auth(auth_data);
 	return 1;
 }
 
@@ -730,19 +756,17 @@ void auth_data_destroy()
 {
 	int i;
 	auth_userdata *aud,*next;
-	if (Auth_data) {
-		lock_destroy(Auth_data->lock);
-		lock_dealloc(Auth_data->lock);
-		for(i=0;i<Auth_data->size;i++){
-			aud = Auth_data->table[i].head;
-			while(aud){
-				next = aud->next;
-				free_auth_userdata(aud);
-				aud = next;
-			}
+	for(i=0;i<auth_data_hash_size;i++){
+		auth_data_lock(i);
+		lock_destroy(auth_data[i].lock);
+		lock_dealloc(auth_data[i].lock);
+		aud = auth_data[i].head;
+		while(aud){
+			next = aud->next;
+			free_auth_userdata(aud);
+			aud = next;
 		}
-		if (Auth_data->table) shm_free(Auth_data->table);
-		shm_free(Auth_data);
+		if (auth_data) shm_free(auth_data);
 	}
 }
 
@@ -967,13 +991,13 @@ static inline unsigned int get_hash(str private_identity,str public_identity)
    }
 
    h=((h)+(h>>11))+((h>>13)+(h>>23));
-   return (h)%Auth_data->size;
+   return (h)%auth_data_hash_size;
 #undef h_inc 
 }
 
 /**
  * Retrieve the auth_userdata for a user.
- * \note You must have the lock on the hash table when you call this!!!
+ * \note you will return with lock on the hash slot, so release it!
  * @param private_identity - the private identity
  * @param public_identity - the public identity
  * @returns the auth_userdata* found or newly created on success, NULL on error
@@ -982,12 +1006,12 @@ auth_userdata* get_auth_userdata(str private_identity,str public_identity)
 {
 	
 	unsigned int hash=0;
-	hash_slot_t *slot;
 	auth_userdata *aud=0;
 	
+	
 	hash = get_hash(private_identity,public_identity);
-	slot = Auth_data->table + hash;
-	aud = slot->head;
+	auth_data_lock(hash);
+	aud = auth_data[hash].head;
 	while(aud){
 		if (aud->private_identity.len == private_identity.len &&
 			aud->public_identity.len == public_identity.len &&
@@ -1000,15 +1024,18 @@ auth_userdata* get_auth_userdata(str private_identity,str public_identity)
 	}
 	/* if we get here, there is no auth_userdata for this user */
 	aud = new_auth_userdata(private_identity,public_identity);
-	if (!aud) return 0;
+	if (!aud) {
+		auth_data_unlock(hash);
+		return 0;
+	}
 	
-	aud->prev = slot->tail;
+	aud->prev = auth_data[hash].tail;
 	aud->next = 0;
 	aud->hash = hash;
 	
-	if (!slot->head) slot->head = aud;
-	if (slot->tail) ((auth_userdata *) (slot->tail))->next = aud;
-	slot->tail = aud;
+	if (!auth_data[hash].head) auth_data[hash].head = aud;
+	if (auth_data[hash].tail) auth_data[hash].tail->next = aud;
+	auth_data[hash].tail = aud;
 	
 	return aud;
 }
@@ -1036,7 +1063,6 @@ auth_userdata* get_auth_userdata(str private_identity,str public_identity)
 int add_auth_vector(str private_identity,str public_identity,auth_vector *av)
 {
 	auth_userdata *aud;
-	lock_get(Auth_data->lock);
 	aud = get_auth_userdata(private_identity,public_identity);
 	if (!aud) goto error;
 
@@ -1047,26 +1073,26 @@ int add_auth_vector(str private_identity,str public_identity,auth_vector *av)
 	if (aud->tail) aud->tail->next = av;
 	aud->tail = av;
 	
-	lock_release(Auth_data->lock);
+	auth_data_unlock(aud->hash);
 	return 1;
 error:
-	lock_release(Auth_data->lock);
 	return 0;
 }
 
 /**
  * Retrieve an authentication vector.
+ * \note returns with a lock, so unlock it when done
  * @param private_identity - the private identity
  * @param public_identity - the public identity
  * @param status - the status of the authentication vector
  * @param nonce - the nonce in the auth vector
+ * @param hash - the hash to unlock when done
  * @returns the auth_vector* if found or NULL if not
  */
-auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce)
+auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce,unsigned int *hash)
 {
 	auth_userdata *aud;
 	auth_vector *av;
-	lock_get(Auth_data->lock);
 	aud = get_auth_userdata(private_identity,public_identity);
 	if (!aud) goto error;
 
@@ -1086,14 +1112,14 @@ auth_vector* get_auth_vector(str private_identity,str public_identity,int status
 				default:	
 					break;					
 			}			
-			lock_release(Auth_data->lock);
+			*hash = aud->hash;
 			return av;
 		}
 		av = av->next;
 	}
 	
 error:
-	lock_release(Auth_data->lock);
+	if (aud) auth_data_unlock(aud->hash);
 	return 0;
 }
 
@@ -1107,7 +1133,6 @@ int drop_auth_userdata(str private_identity,str public_identity)
 {
 	auth_userdata *aud;
 	auth_vector *av;
-	lock_get(Auth_data->lock);
 	aud = get_auth_userdata(private_identity,public_identity);
 	if (!aud) goto error;
 
@@ -1116,10 +1141,10 @@ int drop_auth_userdata(str private_identity,str public_identity)
 		av->status = AUTH_VECTOR_USELESS;
 		av = av->next;
 	}
-	lock_release(Auth_data->lock);
+	auth_data_unlock(aud->hash);
 	return 1;
 error:	
-	lock_release(Auth_data->lock);
+	if (aud) auth_data_unlock(aud->hash);
 	return 0;
 }
 
@@ -1143,16 +1168,14 @@ void reg_await_timer(unsigned int ticks, void* param)
 {
 	auth_userdata *aud,*aud_next;
 	auth_vector *av,*av_next;
-	hash_slot_t *slot;
-	auth_data *ad;
+	auth_hash_slot_t *ad;
 	int i;
-	ad = (auth_data*) param;
+	ad = (auth_hash_slot_t*) param;
 	
-	lock_get(ad->lock);
 	LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: Looking for expired/useless at %d\n",ticks);
-	for(i=0;i<ad->size;i++){
-		slot = ad->table +i;
-		aud = slot->head;
+	for(i=0;i<auth_data_hash_size;i++){
+		auth_data_lock(i);
+		aud = auth_data[i].head;
 		while(aud){
 			LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: . Slot %4d <%.*s>\n",
 				aud->hash,aud->private_identity.len,aud->private_identity.s);
@@ -1184,9 +1207,9 @@ void reg_await_timer(unsigned int ticks, void* param)
 				if (aud->expires<ticks){
 					LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: ... dropping aud \n");
 					if (aud->prev) aud->prev->next = aud->next;
-					else slot->head = aud->next;
+					else auth_data[i].head = aud->next;
 					if (aud->next) aud->next->prev = aud->prev;
-					else slot->tail = aud->prev;
+					else auth_data[i].tail = aud->prev;
 					free_auth_userdata(aud);	
 				}
 			}
@@ -1194,8 +1217,8 @@ void reg_await_timer(unsigned int ticks, void* param)
 				
 			aud = aud_next;
 		}
+		auth_data_unlock(i);
 	}
-	snapshot_auth(ad); 
-	lock_release(Auth_data->lock);	
+	make_snapshot_auth(ad); 
 }
 

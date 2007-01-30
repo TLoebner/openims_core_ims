@@ -99,7 +99,7 @@ static int bin_decode_public_identity(bin_data *x,ims_public_identity *pi)
 	
 	return 1;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_public_identity: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_public_identity: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (pi) {
 		if (pi->public_identity.s) shm_free(pi->public_identity.s);
 	}
@@ -195,7 +195,7 @@ static int bin_decode_spt(bin_data *x, ims_spt *spt)
 	return 1;
 	
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_spt: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_spt: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (spt){
 		switch (spt->type){
 			case 1:
@@ -327,7 +327,7 @@ static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 
 	return 1;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_filter_criteria: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_filter_criteria: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (fc){
 		if (fc->trigger_point){
 			if (fc->trigger_point){
@@ -446,7 +446,7 @@ static int bin_decode_service_profile(bin_data *x, ims_service_profile *sp)
 
 	return 1;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_service_profile: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_service_profile: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (sp) {
 		if (sp->public_identities) shm_free(sp->public_identities);
 		if (sp->filter_criteria) shm_free(sp->filter_criteria);
@@ -528,7 +528,7 @@ ims_subscription *bin_decode_ims_subscription(bin_data *x)
 
 	return imss;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_ims_subscription: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_ims_subscription: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (imss) {
 		if (imss->private_identity.s) shm_free(imss->private_identity.s);
 		if (imss->service_profiles) shm_free(imss->service_profiles);
@@ -587,7 +587,7 @@ r_contact* bin_decode_r_contact(bin_data *x)
 	
 	return c;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (c) {
 		if (c->uri.s) shm_free(c->uri.s);
 		if (c->ua.s) shm_free(c->ua.s);
@@ -645,7 +645,7 @@ r_subscriber* bin_decode_r_subscriber(bin_data *x)
 	
 	return s;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (s) {
 		if (s->subscriber.s) shm_free(s->subscriber.s);
 		shm_free(s);
@@ -747,7 +747,7 @@ r_public* bin_decode_r_public(bin_data *x)
 	
 	return p;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_public: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_public: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (p) {
 		if (p->aor.s) shm_free(p->aor.s);
 		while(p->head){
@@ -791,7 +791,7 @@ error:
 	if (!bin_encode_str(x,&(v->ik))) goto error;
 	if (!bin_encode_int4(x,v->expires)) goto error;
 	k = v->status;
-	if (!bin_encode_int4(x,k)) goto error;
+	if (!bin_encode_int1(x,k)) goto error;
 
 	return 1;
 error:
@@ -818,6 +818,7 @@ auth_vector* bin_decode_auth_vector(bin_data *x)
 	}
 	memset(v,0,len);
 	
+	if (!bin_decode_int4(x,&(v->item_number))) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->algorithm),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->authenticate),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->authorization),&s)) goto error;
@@ -830,7 +831,7 @@ auth_vector* bin_decode_auth_vector(bin_data *x)
 	
 	return v;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_vector: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_vector: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (v) {
 		if (v->algorithm.s) shm_free(v->algorithm.s);
 		if (v->authenticate.s) shm_free(v->authenticate.s);
@@ -861,7 +862,7 @@ error:
 	if (!bin_encode_str(x,&(u->public_identity))) goto error;
 	if (!bin_encode_int4(x,u->hash)) goto error;
 	if (!bin_encode_int4(x,u->expires)) goto error;
-
+	
 	for(v=u->head;v;v=v->next)
 		k++;
 
@@ -890,7 +891,7 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 	len = sizeof(auth_userdata);
 	u = (auth_userdata*) shm_malloc(len);
 	if (!u) {
-		LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_vector: Error allocating %d bytes.\n",len);
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_userdata: Error allocating %d bytes.\n",len);
 		goto error;
 	}
 	memset(u,0,len);
@@ -900,7 +901,7 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 	if (!bin_decode_int4(x,	&(u->hash))) goto error;
 	if (!bin_decode_int4(x,	&(u->expires))) goto error;
 	
-	if (!bin_decode_int4(x,	&k)) goto error;
+	if (!bin_decode_int2(x,	&k)) goto error;
 	
 	for(i=0;i<k;i++){
 		v = bin_decode_auth_vector(x);
@@ -914,7 +915,7 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 	
 	return u;
 error:
-	LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_vector: Error while decoding.\n");
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_userdata: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (u) {
 		if (u->private_identity.s) shm_free(u->private_identity.s);
 		if (u->public_identity.s) shm_free(u->public_identity.s);

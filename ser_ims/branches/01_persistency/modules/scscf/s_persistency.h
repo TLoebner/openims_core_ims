@@ -59,6 +59,7 @@
 
 #include "bin_scscf.h"
 
-int snapshot_auth(auth_data *ad);
+int make_snapshot_auth(auth_hash_slot_t *ad);
+int load_snapshot_auth(auth_hash_slot_t *ad);
 
 #endif
