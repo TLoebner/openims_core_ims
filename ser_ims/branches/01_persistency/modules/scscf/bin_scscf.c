@@ -498,10 +498,9 @@ error:
 /**
  *	Decode a binary string from a binary data structure
  * @param x - binary data to decode from
- * @param sp - the service profile to decode into, NULL if you want a new one
  * @returns the ims_subscription* where the data has been decoded
  */
-ims_subscription *bin_decode_ims_subscription(bin_data *x,ims_service_profile *sp)
+ims_subscription *bin_decode_ims_subscription(bin_data *x)
 {
 	ims_subscription *imss=0;
 	int i,len;
@@ -724,6 +723,9 @@ r_public* bin_decode_r_public(bin_data *x)
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->aor),&st)) goto error;
 	if (!bin_decode_int1(x,&k)) goto error;
 	p->reg_state = k;
+	
+	p->s = bin_decode_ims_subscription(x);
+	if (!p->s) goto error;
 	
 	if (!bin_decode_int2(x,&k)) goto error;
 	for(i=0;i<k;i++){
