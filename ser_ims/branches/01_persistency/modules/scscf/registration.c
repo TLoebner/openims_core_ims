@@ -65,6 +65,7 @@
 #include "registrar.h"
 #include "sip_messages.h" 
 #include "rfc2617.h"
+#include "s_persistency.h"
 
 extern struct tm_binds tmb;						/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs 		*/
@@ -1194,7 +1195,7 @@ void reg_await_timer(unsigned int ticks, void* param)
 			aud = aud_next;
 		}
 	}
-	 
+	snapshot_auth(ad); 
 	lock_release(Auth_data->lock);	
 }
 

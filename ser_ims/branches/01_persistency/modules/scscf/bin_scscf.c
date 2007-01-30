@@ -52,11 +52,7 @@
  *
  */
 
-#include "bin.h"
 #include "bin_scscf.h"
-#include "ifc_datastruct.h"
-#include "registration.h"
-#include "registrar_storage.h"
 
 /* structures reprezentation functions */
 
