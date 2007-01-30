@@ -56,6 +56,18 @@
 #include <stdio.h>
 #include "bin.h"
 
+/** 
+ * Whether to print debug message while encoding/decoding 
+ */
+#define BIN_DEBUG 1
+
+/** 
+ * Whether to do sanity checks on the available data when decoding
+ * If you are crazy about start-up performance you can disable this.
+ * However, this is very useful for detecting broken snapshots
+ */
+#define BIN_DECODE_CHECKS 1
+
 inline int bin_alloc(bin_data *x, int max_len)
 {                                
 	x->s = (char*)BIN_ALLOC_METHOD(max_len);     
@@ -72,7 +84,9 @@ inline int bin_alloc(bin_data *x, int max_len)
 
 inline int bin_realloc(bin_data *x, int delta)
 {
-	DBG("DBG:"M_NAME":bin_realloc: realloc %p from %d to + %d\n",x->s,x->max,delta);
+#if BIN_DEBUG
+	LOG(L_INFO,"INFO:"M_NAME":bin_realloc: realloc %p from %d to + %d\n",x->s,x->max,delta);
+#endif	
 	x->s=BIN_REALLOC_METHOD(x->s,x->max + delta);    
 	if (x->s==NULL){                             
 		LOG(L_ERR,"ERR:"M_NAME":bin_realloc: No more memory to expand %d with %d  \n",x->max,delta);
@@ -85,8 +99,9 @@ inline int bin_realloc(bin_data *x, int delta)
 inline int bin_expand(bin_data *x, int delta)
 {
 	if (x->max-x->len>=delta) return 1;
-	
-	DBG("DBG:"M_NAME":bin_realloc: realloc %p from %d to + %d\n",x->s,x->max,delta);
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_realloc: realloc %p from %d to + %d\n",x->s,x->max,delta);
+#endif	
 	x->s=BIN_REALLOC_METHOD(x->s,x->max + delta);    
 	if (x->s==NULL){                             
 		LOG(L_ERR,"ERR:"M_NAME":bin_realloc: No more memory to expand %d with %d  \n",x->max,delta);
@@ -110,22 +125,22 @@ inline void bin_print(bin_data *x)
 {
 	int i,j,w=16;
 	char c;
-	printf("----------------------------------\nBinary form %d (max %d) bytes:\n",x->len,x->max);
+	fprintf(stderr,"----------------------------------\nBinary form %d (max %d) bytes:\n",x->len,x->max);
 	for(i=0;i<x->len;i+=w){
-		printf("%04X> ",i);
+		fprintf(stderr,"%04X> ",i);
 		for(j=0;j<w;j++){
-			if (i+j<x->len) printf("%02X ",(unsigned char)x->s[i+j]);
-			else printf("   ");
+			if (i+j<x->len) fprintf(stderr,"%02X ",(unsigned char)x->s[i+j]);
+			else fprintf(stderr,"   ");
 		}
 		printf("\t");
 		for(j=0;j<w;j++)if (i+j<x->len){
 			if (x->s[i+j]>32) c=x->s[i+j];
 			else c = '.';
-			printf("%c",c);
-		}else printf(" ");
-		printf("\n");
+			fprintf(stderr,"%c",c);
+		}else fprintf(stderr," ");
+		fprintf(stderr,"\n");
 	}
-	printf("\n---------------------------------\n");
+	fprintf(stderr,"\n---------------------------------\n");
 }
 
 
@@ -140,6 +155,9 @@ inline int bin_encode_int1(bin_data *x,int k)
 	if (k>0xff) 
 		LOG(L_ERR,"ERROR:"M_NAME":bin_encode_int1: Possible loss in encoding (int > 0xff bytes) %d bytes \n",k);
 	x->s[x->len++]=k & 0x000000FF; 
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_int1: [%d]:[%.02x] new len %04x\n",k,x->s[x->len-1],x->len);
+#endif
 	return 1;   
 }
 
@@ -152,7 +170,10 @@ inline int bin_encode_int2(bin_data *x,int k)
 	if (k>0xffff) 
 		LOG(L_ERR,"ERROR:"M_NAME":bin_encode_int2: Possible loss in encoding (int > 0xffff bytes) %d bytes \n",k);
 	x->s[x->len++]=k & 0x000000FF;    
-	x->s[x->len++]=k & 0x0000FF00 >> 8;   
+	x->s[x->len++]=(k & 0x0000FF00) >> 8;   
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_int2: [%d]:[%.02x %.02x] new len %04x\n",k,x->s[x->len-2],x->s[x->len-1],x->len);
+#endif
 	return 1;   
 }
 
@@ -167,7 +188,11 @@ inline int bin_encode_int4(bin_data *x,int k)
 	x->s[x->len++]= k & 0x000000FF;          
 	x->s[x->len++]=(k & 0x0000FF00) >> 8;    
 	x->s[x->len++]=(k & 0x00FF0000) >>16;    
-	x->s[x->len++]=(k & 0xFF000000) >>24;    
+	x->s[x->len++]=(k & 0xFF000000) >>24;
+#if BIN_DEBUG		    
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_int4: [%d]:[%.02x %.02x %.02x %.02x] new len %04x\n",k,
+		x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],x->len);
+#endif		
 	return 1;   
 }
 
@@ -183,6 +208,10 @@ inline int bin_encode_str(bin_data *x,str *s)
 	x->s[x->len++]=(s->len & 0x0000FF00)>>8;
 	memcpy(x->s+x->len,s->s,s->len);
 	x->len+=s->len;
+#if BIN_DEBUG		
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_str : [%d]:[%.02x %.02x]:[%.*s] new len %04x\n",s->len,
+		x->s[x->len-s->len-2],x->s[x->len-s->len-1],s->len,s->s,x->len);
+#endif		
 	return 1;   
 }
 
@@ -216,8 +245,14 @@ inline int bin_encode_str(bin_data *x,str *s)
  */
 inline int bin_decode_int1(bin_data *x,int *v)
 {
-	if (x->max+1>x->len) return 0;
-	*v = (unsigned char)x->s[x->max++];
+#if BIN_DECODE_CHECKS
+	if (x->max+1 > x->len) return 0;
+#endif	
+	*v = (unsigned char)x->s[x->max];
+	x->max += 1;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int1: [%d] new pos %04x\n",*v,x->max);
+#endif
 	return 1;
 }
 
@@ -226,9 +261,15 @@ inline int bin_decode_int1(bin_data *x,int *v)
  */
 inline int bin_decode_int2(bin_data *x,int *v)
 {
-	if (x->max+2>x->len) return 0;
-	*v =	((unsigned char)x->s[x->max++] | 
-	 		 (unsigned char)x->s[x->max++] <<8);
+#if BIN_DECODE_CHECKS
+	if (x->max+2 > x->len) return 0;
+#endif
+	*v =	(unsigned char)x->s[x->max  ]    |
+	 		(unsigned char)x->s[x->max+1]<<8;
+	x->max += 2;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int2: [%d] new pos %04x\n",*v,x->max);
+#endif
 	return 1;
 }
 
@@ -237,11 +278,17 @@ inline int bin_decode_int2(bin_data *x,int *v)
  */
 inline int bin_decode_int4(bin_data *x,int *v)
 {
-	if (x->max+4>x->len) return 0;
-	*v =   ((unsigned char)x->s[x->max++] 			|
-			(unsigned char)x->s[x->max++] <<8 	|
-		  	(unsigned char)x->s[x->max++] <<16 	|
-		  	(unsigned char)x->s[x->max++] <<24 	 );
+#if BIN_DECODE_CHECKS
+	if (x->max+4 > x->len) return 0;
+#endif
+	*v =    (unsigned char)x->s[x->max  ] 		|
+			(unsigned char)x->s[x->max+1] <<8 	|
+		  	(unsigned char)x->s[x->max+2] <<16 	|
+		  	(unsigned char)x->s[x->max+3] <<24 	;
+	x->max += 4;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int4: [%d] new pos %04x\n",*v,x->max);
+#endif
 	return 1;
 }
 
@@ -250,11 +297,18 @@ inline int bin_decode_int4(bin_data *x,int *v)
  */
 inline int bin_decode_str(bin_data *x,str *s)
 {
-	s->len = (unsigned char)x->s[x->max++] 	|
-			 (unsigned char)x->s[x->max++]<<8;
-	if (x->max+s->len>x->len) return 0;
+#if BIN_DECODE_CHECKS
+	if (x->max+2 > x->len) return 0;
+#endif
+	s->len = (unsigned char)x->s[x->max  ]    |
+	 		(unsigned char)x->s[x->max+1]<<8;
+	x->max +=2;
+	if (x->max+s->len>=x->len) return 0;
 	s->s = x->s + x->max;
 	x->max += s->len;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_str : [%d]:[%.*s] new pos %04x\n",s->len,s->len,s->s,x->max);
+#endif
 	return 1;
 }
 

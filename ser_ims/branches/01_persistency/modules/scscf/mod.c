@@ -299,7 +299,7 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 struct tm_binds tmb;							/**< Structure with pointers to tm funcs 				*/
 struct cdp_binds cdpb;							/**< Structure with pointers to cdp funcs				*/
 
-extern auth_data *Auth_data;					/**< authentication vectors hast table 					*/
+extern auth_hash_slot_t *auth_data;					/**< authentication vectors hast table 					*/
 extern r_hash_slot *registrar;					/**< the S-CSCF registrar								*/
 extern r_notification_list *notification_list; 	/**< list of notifications for reg to be sent			*/
 
@@ -463,7 +463,7 @@ static int mod_init(void)
 	if (!auth_data_init(auth_data_hash_size)) goto error;
 
 	/* register the authentication vectors timer */
-	if (register_timer(reg_await_timer,Auth_data,5)<0) goto error;
+	if (register_timer(reg_await_timer,auth_data,10)<0) goto error;
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
