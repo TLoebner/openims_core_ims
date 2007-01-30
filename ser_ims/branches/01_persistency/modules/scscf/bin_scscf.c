@@ -56,6 +56,7 @@
 #include "bin_scscf.h"
 #include "ifc_datastruct.h"
 #include "registration.h"
+#include "registrar_storage.h"
 
 /* structures reprezentation functions */
 
@@ -545,6 +546,230 @@ error:
 
 
 
+/**
+ * Encode a r_public into a binary form
+ * @param x - binary data to append to
+ * @param c - the r_contact to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_r_contact(bin_data *x,r_contact *c)
+{
+	if (!bin_encode_str(x,&(c->uri))) goto error;
+	if (!bin_encode_int4(x,c->expires)) goto error;
+	if (!bin_encode_str(x,&(c->ua))) goto error;
+	if (!bin_encode_str(x,&(c->path))) goto error;
+
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_contact: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode a contact from a binary data structure
+ * @param x - binary data to decode from
+ * @returns the r_contact* where the data has been decoded
+ */
+r_contact* bin_decode_r_contact(bin_data *x)
+{
+	r_contact *c=0;
+	int len,k;
+	str s;
+	
+	len = sizeof(r_contact);
+	c = (r_contact*) shm_malloc(len);
+	if (!c) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(c,0,len);
+	
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->uri),&s)) goto error;
+	if (!bin_decode_int4(x,&(k))) goto error;
+	c->expires = k;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->ua),&s)) goto error;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->path),&s)) goto error;
+	
+	return c;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding.\n");
+	if (c) {
+		if (c->uri.s) shm_free(c->uri.s);
+		if (c->ua.s) shm_free(c->ua.s);
+		if (c->path.s) shm_free(c->path.s);
+		
+		shm_free(c);
+	}
+	return 0;
+}
+
+/**
+ * Encode a r_subscriber into a binary form
+ * @param x - binary data to append to
+ * @param s - the r_subscriber to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_r_subscriber(bin_data *x,r_subscriber *s)
+{
+	if (!bin_encode_str(x,&(s->subscriber))) goto error;
+	if (!bin_encode_int1(x,s->event)) goto error;
+	if (!bin_encode_int4(x,s->expires)) goto error;
+	//TODO - encode the dlg_t in s->dialog!!!
+	if (!bin_encode_int4(x,s->version)) goto error;
+
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_subscriber: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode a subscriber from a binary data structure
+ * @param x - binary data to decode from
+ * @returns the r_subscriber* where the data has been decoded
+ */
+r_subscriber* bin_decode_r_subscriber(bin_data *x)
+{
+	r_subscriber *s=0;
+	int len;
+	str st;
+	
+	len = sizeof(r_subscriber);
+	s = (r_subscriber*) shm_malloc(len);
+	if (!s) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(s,0,len);
+	
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(s->subscriber),&st)) goto error;
+	if (!bin_decode_int1(x,&(s->event))) goto error;
+	if (!bin_decode_int4(x,&(s->expires))) goto error;
+	//TODO - decode the dlg_t into s->dialog!!!	
+	if (!bin_decode_int4(x,&(s->version))) goto error;	
+	
+	return s;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding.\n");
+	if (s) {
+		if (s->subscriber.s) shm_free(s->subscriber.s);
+		shm_free(s);
+	}
+	return 0;
+}
+
+
+
+/**
+ * Encode a r_public into a binary form
+ * @param x - binary data to append to
+ * @param p - the r_public to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_r_public(bin_data *x,r_public *p)
+{
+	int k;
+	r_contact *c=0;
+	r_subscriber *s=0;
+	
+	if (!bin_encode_int4(x,p->hash)) goto error;
+	if (!bin_encode_str(x,&(p->aor))) goto error;
+	k = p->reg_state;
+	if (!bin_encode_int1(x,k)) goto error;
+	if (!bin_encode_ims_subscription(x,p->s)) goto error;
+	
+	k=0;
+	for(c=p->head;c;c=c->next)
+		k++;
+	if (!bin_encode_int2(x,k)) goto error;
+	for(c=p->head;c;c=c->next)
+		if (!bin_encode_r_contact(x,c)) goto error;	
+	
+	k=0;
+	for(s=p->shead;s;s=s->next)
+		k++;
+	if (!bin_encode_int2(x,k)) goto error;
+	for(s=p->shead;s;s=s->next)
+		if (!bin_encode_r_subscriber(x,s)) goto error;	
+	
+
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_public: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode a r_public from a binary data structure
+ * @param x - binary data to decode from
+ * @returns the r_public* where the data has been decoded
+ */
+r_public* bin_decode_r_public(bin_data *x)
+{
+	r_public *p=0;
+	r_contact *c=0,*cn=0;
+	r_subscriber *s,*sn=0;
+	int len,k,i;
+	str st;
+	
+	len = sizeof(r_public);
+	p = (r_public*) shm_malloc(len);
+	if (!p) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_public: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(p,0,len);
+	
+	if (!bin_decode_int4(x,&(p->hash))) goto error;
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->aor),&st)) goto error;
+	if (!bin_decode_int1(x,&k)) goto error;
+	p->reg_state = k;
+	
+	if (!bin_decode_int2(x,&k)) goto error;
+	for(i=0;i<k;i++){
+		c = bin_decode_r_contact(x);
+		if (!c) goto error;
+		c->prev = p->tail;
+		c->next = 0;
+		if (!p->head) p->head = c;
+		if (p->tail) p->tail->next = c;
+		p->tail = c;
+	}
+
+	if (!bin_decode_int2(x,&k)) goto error;
+	for(i=0;i<k;i++){
+		s = bin_decode_r_subscriber(x);
+		if (!s) goto error;
+		s->prev = p->stail;
+		s->next = 0;
+		if (!p->shead) p->shead = s;
+		if (p->stail) p->stail->next = s;
+		p->stail = s;
+	}
+	
+	return p;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_public: Error while decoding.\n");
+	if (p) {
+		if (p->aor.s) shm_free(p->aor.s);
+		while(p->head){
+			c = p->head;
+			cn = c->next;
+			free_r_contact(c);
+			p->head = cn;
+		}
+		while(p->shead){
+			s = p->shead;
+			sn = s->next;
+			free_r_subscriber(s);
+			p->shead = sn;
+		}
+		shm_free(p);
+	}
+	return 0;
+}
+
+
 
 
 
@@ -620,6 +845,9 @@ error:
 }
 
 
+
+
+
 /**
  * Encode an authentication userdata into a binary form
  * @param x - binary data to append to
@@ -678,7 +906,7 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 	
 	for(i=0;i<k;i++){
 		v = bin_decode_auth_vector(x);
-		if (v) goto error;
+		if (!v) goto error;
 		v->prev = u->tail;
 		v->next = 0;
 		if (!u->head) u->head = v;
