@@ -72,6 +72,7 @@
 #include "cx.h"
 #include "scscf_load.h"
 #include "dlg_state.h"
+#include "s_persistency.h"
 
 MODULE_VERSION
 
@@ -83,12 +84,12 @@ static void mod_destroy(void);
 /* parameters storage */
 char* scscf_name="sip:scscf.open-ims.test:6060";	/**< name of the S-CSCF */
 
-char* scscf_aaa_peer="hss.open-ims.test";/**< FQDN of the Diameter Peer (HSS) 			*/
+char* scscf_aaa_peer="hss.open-ims.test";/**< FQDN of the Diameter Peer (HSS) */
 
 char *scscf_user_data_dtd=0; 			/* Path to "CxDataType.dtd" 	 							*/
 char *scscf_user_data_xsd=0; 			/* Path to "CxDataType_Rel6.xsd" or "CxDataType_Rel7.xsd"	*/
 
-int auth_data_hash_size=1024;			/**< the size of the hash table 				*/
+int auth_data_hash_size=1024;			/**< the size of the hash table 							*/
 int auth_vector_timeout=60;				/**< timeout for a sent auth vector to expire in sec 		*/
 int auth_data_timeout=60;				/**< timeout for a hash entry to expire when empty in sec 	*/
 int av_request_at_once=1;				/**< how many auth vectors to request in a MAR 				*/
@@ -100,8 +101,8 @@ int registrar_hash_size=1024;			/**< the size of the hash table					*/
 int registration_default_expires=3600;	/**< the default value for expires if none found*/
 int registration_min_expires=10;		/**< minimum registration expiration time 		*/
 int registration_max_expires=1000000;	/**< maximum registration expiration time 		*/
-char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)	*/
-str registration_default_algorithm_s={0,0};	/**< fixed default algorithm for registration (if none present)	*/
+char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)*/
+str registration_default_algorithm_s={0,0};	/**< fixed default algorithm for registration (if none present)	 */
 
 int subscription_default_expires=3600;	/**< the default value for expires if none found*/
 int subscription_min_expires=10;		/**< minimum subscription expiration time 		*/
@@ -113,19 +114,23 @@ int append_branches=1;					/**< if to append branches						*/
 int scscf_dialogs_hash_size=256;		/**< size of the dialog hash table 				*/
 int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs		*/
 
-/* fixed parameter storage */
-str scscf_name_str;						/**< fixed name of the S-CSCF 					*/
-str scscf_record_route_mo;				/**< the record route header for Mobile Originating */
-str scscf_record_route_mt;				/**< the record route header for Mobile Terminating */
-str scscf_record_route_mo_uri;			/**< just the record route uri for Mobile Originating */
-str scscf_record_route_mt_uri;			/**< just the record route uri for Mobile Terminating */
-str scscf_service_route;				/**< the service route header					*/
-str scscf_service_route_uri;			/**< just the service route uri 				*/
-str scscf_registration_min_expires;		/**< fixed minimum registration expiration time */
-str scscf_subscription_min_expires;		/**< fixed minimum subscription expiration time */
-str scscf_aaa_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 		*/
+persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
+char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
+int scscf_persistency_auth_data_timer=60;							/**< interval to snapshot authorization data*/ 
 
-int * callback_singleton;				/**< Cx callback singleton 						*/
+/* fixed parameter storage */
+str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
+str scscf_record_route_mo;				/**< the record route header for Mobile Originating 	*/
+str scscf_record_route_mt;				/**< the record route header for Mobile Terminating 	*/
+str scscf_record_route_mo_uri;			/**< just the record route uri for Mobile Originating 	*/
+str scscf_record_route_mt_uri;			/**< just the record route uri for Mobile Terminating 	*/
+str scscf_service_route;				/**< the service route header							*/
+str scscf_service_route_uri;			/**< just the service route uri 						*/
+str scscf_registration_min_expires;		/**< fixed minimum registration expiration time 		*/
+str scscf_subscription_min_expires;		/**< fixed minimum subscription expiration time 		*/
+str scscf_aaa_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 				*/
+
+int * callback_singleton;				/**< Cx callback singleton 								*/
 
 /** 
  * Exported functions.
@@ -241,7 +246,10 @@ static cmd_export_t scscf_cmds[]={
  * - append-branches - if to fork the requests on multiple contacts
  * <p>
  * - dialogs_hash_size - size of the dialogs hash table 
- * - dialogs_expiration_time - default dialogs expiration time 
+ * - dialogs_expiration_time - default dialogs expiration time
+ * <p>
+ * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
+ * - persistency_location - where to dump/load the persistency data to/from
  */	
 static param_export_t scscf_params[]={ 
 	{"name", 							STR_PARAM, &scscf_name},
@@ -274,6 +282,9 @@ static param_export_t scscf_params[]={
 	{"dialogs_hash_size", 				INT_PARAM, &scscf_dialogs_hash_size},
 	{"dialogs_expiration_time", 		INT_PARAM, &scscf_dialogs_expiration_time},
 	
+	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
+	{"persistency_location", 			STR_PARAM, &scscf_persistency_location},
+	{"persistency_auth_data_timer",		INT_PARAM, &scscf_persistency_auth_data_timer},
 	{0,0,0} 
 };
 
@@ -461,6 +472,12 @@ static int mod_init(void)
 	
 	/* Init the authorization data storage */
 	if (!auth_data_init(auth_data_hash_size)) goto error;
+	
+	if (scscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_auth(auth_data);
+		if (register_timer(auth_persistency_timer,0,scscf_persistency_auth_data_timer)<0) goto error;
+	}
+	
 
 	/* register the authentication vectors timer */
 	if (register_timer(reg_await_timer,auth_data,10)<0) goto error;
