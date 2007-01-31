@@ -764,9 +764,9 @@ void auth_data_destroy()
 			next = aud->next;
 			free_auth_userdata(aud);
 			aud = next;
-		}
-		if (auth_data) shm_free(auth_data);
+		}		
 	}
+	if (auth_data) shm_free(auth_data);
 }
 
 /**

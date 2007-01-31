@@ -65,8 +65,8 @@ typedef enum {
 	WITH_DATABASE=2
 } persistency_mode_t;
 
-int make_snapshot_auth(auth_hash_slot_t *ad);
-int load_snapshot_auth(auth_hash_slot_t *ad);
+int make_snapshot_auth();
+int load_snapshot_auth();
 
 void auth_persistency_timer(unsigned int ticks, void* param);
 
