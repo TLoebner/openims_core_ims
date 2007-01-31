@@ -117,6 +117,7 @@ int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs
 persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
 char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
 int scscf_persistency_auth_data_timer=60;							/**< interval to snapshot authorization data*/ 
+int scscf_persistency_dialogs_timer=60;								/**< interval to snapshot dialogs data		*/ 
 
 /* fixed parameter storage */
 str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
@@ -251,6 +252,8 @@ static cmd_export_t scscf_cmds[]={
  * <p>
  * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
  * - persistency_location - where to dump/load the persistency data to/from
+ * - persistency_auth_data_timer - interval to make authorization data snapshots at
+ * - persistency_dialogs_timer - interval to make dialogs data snapshots at
  */	
 static param_export_t scscf_params[]={ 
 	{"name", 							STR_PARAM, &scscf_name},
@@ -286,6 +289,7 @@ static param_export_t scscf_params[]={
 	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
 	{"persistency_location", 			STR_PARAM, &scscf_persistency_location},
 	{"persistency_auth_data_timer",		INT_PARAM, &scscf_persistency_auth_data_timer},
+	{"persistency_dialogs_timer",		INT_PARAM, &scscf_persistency_dialogs_timer},
 	{0,0,0} 
 };
 
@@ -502,6 +506,10 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
+	if (scscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_dlg();
+		if (register_timer(dlg_persistency_timer,0,scscf_persistency_dialogs_timer)<0) goto error;
+	}
 
 	/* register the dialog timer */
 	if (register_timer(dialog_timer,s_dialogs,60)<0) goto error;
@@ -564,6 +572,7 @@ static void mod_destroy(void)
 	if (do_destroy){
 		/* First let's snapshot everything */
 		make_snapshot_auth();
+		make_snapshot_dlg();
 		/* Then nuke it all */
 		auth_data_destroy();
 		parser_destroy();
