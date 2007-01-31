@@ -61,12 +61,7 @@
 
 extern persistency_mode_t scscf_persistency_mode;/**< the type of persistency					*/
 extern char* scscf_persistency_location;		/**< where to dump the persistency data 		*/ 
-
-
 int scscf_persistency_keep_count=3;				/**< how many old snapshots to keep				*/
-
-extern auth_hash_slot_t *auth_data;				/**< Authentication vector hash table 			*/
-extern int auth_data_hash_size;					/**< authentication vector hash table size 		*/
 
 
 /**
@@ -173,6 +168,53 @@ int bin_load_from_file(bin_data *x,char *prepend_fname)
 }
 
 
+/**
+ * Dump a binary data where configured to.
+ * @param x - binary data to dump
+ * @returns 1 on success or 0 on failure
+ */
+int bin_dump(bin_data *x,char* prepend_fname)
+{	
+	switch (scscf_persistency_mode){
+		case NO_PERSISTENCY:
+			LOG(L_ERR,"ERR:"M_NAME":bin_dump: Snapshot done but persistency was disabled...\n");
+			return 0;
+		case WITH_FILES:
+			return bin_dump_to_file(x,prepend_fname);
+		case WITH_DATABASE:
+			LOG(L_ERR,"ERR:"M_NAME":bin_dump: Snapshot done but WITH_DATABASE not implemented...\n");
+			return 0;
+		default:
+			LOG(L_ERR,"ERR:"M_NAME":bin_dump: Snapshot done but no such mode %d\n",scscf_persistency_mode);
+			return 0;
+	}
+}
+
+/**
+ * Reloads the bin_data from where configured to.
+ * @param x - where to load into
+ * @returns 1 on success, 0 on error
+ */
+int bin_load(bin_data *x,char* prepend_fname)
+{
+	switch (scscf_persistency_mode){
+		case NO_PERSISTENCY:
+			LOG(L_ERR,"ERR:"M_NAME":bin_load: Persistency support was disabled\n");
+			return 0;
+		case WITH_FILES:
+			return bin_load_from_file(x,prepend_fname);		
+		case WITH_DATABASE:
+			LOG(L_ERR,"ERR:"M_NAME":bin_load: WITH_DATABASE not implemented...\n");
+			return 0;
+		default:
+			LOG(L_ERR,"ERR:"M_NAME":bin_load: Can't resume because no such mode %d\n",scscf_persistency_mode);
+			return 0;
+	}
+}
+
+
+extern auth_hash_slot_t *auth_data;				/**< Authentication vector hash table 			*/
+extern int auth_data_hash_size;					/**< authentication vector hash table size 		*/
 
 /**
  * Creates a snapshots of the authorization data and then calls the dumping function.
@@ -182,10 +224,8 @@ int make_snapshot_auth()
 {
 	bin_data x;
 	auth_userdata *aud;
-	int i;
-	
-	if (!bin_alloc(&x,256)) goto error;
-	
+	int i;	
+	if (!bin_alloc(&x,256)) goto error;		
 	for(i=0;i<auth_data_hash_size;i++){
 		auth_data_lock(i);
 		aud = auth_data[i].head;
@@ -196,49 +236,22 @@ int make_snapshot_auth()
 		auth_data_unlock(i);
 	}
 	bin_print(&x);
-	switch (scscf_persistency_mode){
-		case NO_PERSISTENCY:
-			LOG(L_ERR,"ERR:"M_NAME":make_snapshot_auth: Snapshot done but persistency was disabled...\n");
-			i = 0;
-			break;
-		case WITH_FILES:
-			i = bin_dump_to_file(&x,"authdata");
-			break;
-		case WITH_DATABASE:
-			LOG(L_ERR,"ERR:"M_NAME":make_snapshot_auth: Snapshot done but WITH_DATABASE not implemented...\n");
-			i = 0;
-			break;
-		default:
-			LOG(L_ERR,"ERR:"M_NAME":make_snapshot_auth: Snapshot done but no such mode %d\n",scscf_persistency_mode);
-			i = 0;
-	}
-	
+	i = bin_dump(&x,"authdata");		
 	bin_free(&x);
 	return i;
 error:
 	return 0;
 }  
 
+/**
+ * Loads the authorization data from the last snapshot.
+ * @returns 1 on success or 0 on failure
+ */
 int load_snapshot_auth()
 {
 	bin_data x;
 	auth_userdata *aud;
-	switch (scscf_persistency_mode){
-		case NO_PERSISTENCY:
-			LOG(L_ERR,"ERR:"M_NAME":load_snapshot_auth: Persistency support was disabled\n");
-			return 0;
-			break;
-		case WITH_FILES:
-			if (!bin_load_from_file(&x,"authdata")) goto error;		
-			break;
-		case WITH_DATABASE:
-			LOG(L_ERR,"ERR:"M_NAME":load_snapshot_auth: WITH_DATABASE not implemented...\n");
-			goto error;
-			break;
-		default:
-			LOG(L_ERR,"ERR:"M_NAME":load_snapshot_auth: Can't resume because no such mode %d\n",scscf_persistency_mode);
-			goto error;
-	}
+	if (!bin_load(&x,"authdata")) goto error;
 	bin_print(&x);
 	x.max=0;
 	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_auth: max %d len %d\n",x.max,x.len);
@@ -270,6 +283,82 @@ error:
 void auth_persistency_timer(unsigned int ticks, void* param)
 {
 	make_snapshot_auth();	 	
+}
+
+
+
+
+
+extern int s_dialogs_hash_size;						/**< size of the dialog hash table 					*/
+extern s_dialog_hash_slot *s_dialogs;				/**< the hash table									*/
+
+/**
+ * Creates a snapshots of the authorization data and then calls the dumping function.
+ * @returns 1 on success or 0 on failure
+ */
+int make_snapshot_dlg()
+{
+	bin_data x;
+	s_dialog *d;
+	int i;	
+	if (!bin_alloc(&x,256)) goto error;		
+	for(i=0;i<s_dialogs_hash_size;i++){
+		d_lock(i);
+		d = s_dialogs[i].head;
+		while(d){
+			if (!bin_encode_s_dialog(&x,d)) goto error;
+			d = d->next;
+		}
+		d_unlock(i);
+	}
+	bin_print(&x);
+	i = bin_dump(&x,"dlg");		
+	bin_free(&x);
+	return i;
+error:
+	return 0;
+}  
+
+/**
+ * Loads the authorization data from the last snapshot.
+ * @returns 1 on success or 0 on failure
+ */
+int load_snapshot_dlg()
+{
+	bin_data x;
+	s_dialog *d;
+	if (!bin_load(&x,"dlg")) goto error;
+	bin_print(&x);
+	x.max=0;
+	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_dlg: max %d len %d\n",x.max,x.len);
+	while(x.max<x.len){
+		d = bin_decode_s_dialog(&x);
+		if (!d) return 0;
+		LOG(L_INFO,"INFO:"M_NAME":load_snapshot_dlg: Loaded s_dialog for <%.*s>\n",d->aor.len,d->aor.s);
+		d_lock(d->hash);
+		d->prev = s_dialogs[d->hash].tail;
+		d->next = 0;
+		if (s_dialogs[d->hash].tail) s_dialogs[d->hash].tail->next = d;
+		s_dialogs[d->hash].tail = d;
+		if (!s_dialogs[d->hash].head) s_dialogs[d->hash].head = d;
+		d_unlock(d->hash);
+	}
+	bin_free(&x);
+	return 1;
+error:
+	return 0;
+	
+}
+
+
+/**
+ * Timer callback for persistency dumps
+ * @param ticks - what's the time
+ * @param param - a given parameter to be called with
+ */
+void dlg_persistency_timer(unsigned int ticks, void* param)
+{
+	make_snapshot_dlg();	 	
 }
 
 

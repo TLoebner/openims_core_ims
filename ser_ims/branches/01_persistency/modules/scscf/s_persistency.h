@@ -67,7 +67,10 @@ typedef enum {
 
 int make_snapshot_auth();
 int load_snapshot_auth();
-
 void auth_persistency_timer(unsigned int ticks, void* param);
+
+int make_snapshot_dlg();
+int load_snapshot_dlg();
+void dlg_persistency_timer(unsigned int ticks, void* param);
 
 #endif

@@ -938,3 +938,92 @@ error:
 
 
 
+
+
+
+
+/**
+ * Encode an authentication userdata into a binary form
+ * @param x - binary data to append to
+ * @param u - the authentication usedata to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_s_dialog(bin_data *x,s_dialog *d)
+{
+	if (!bin_encode_int4(x,d->hash)) goto error;	
+	if (!bin_encode_str(x,&(d->call_id))) goto error;
+	if (!bin_encode_int1(x,d->direction)) goto error;
+	
+	if (!bin_encode_str(x,&(d->aor))) goto error;
+	
+	if (!bin_encode_int1(x,d->method)) goto error;	
+	if (!bin_encode_str(x,&(d->method_str))) goto error;
+	
+	if (!bin_encode_int4(x,d->first_cseq)) goto error;	
+	if (!bin_encode_int4(x,d->last_cseq)) goto error;	
+
+	if (!bin_encode_int1(x,d->state)) goto error;	
+
+	if (!bin_encode_int4(x,d->expires)) goto error;	
+	
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_s_dialog: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode an authentication userdata from a binary data structure
+ * @param x - binary data to decode from
+ * @returns the auth_userdata* where the data has been decoded
+ */
+s_dialog* bin_decode_s_dialog(bin_data *x)
+{
+	s_dialog *d=0;
+	int len,k;
+	str s;
+	
+	len = sizeof(s_dialog);
+	d = (s_dialog*) shm_malloc(len);
+	if (!d) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_s_dialog: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(d,0,len);
+
+	if (!bin_decode_int4(x,	&(d->hash))) goto error;		
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->call_id),&s)) goto error;
+
+	if (!bin_decode_int1(x,	&k)) goto error;
+	d->direction = k;
+	
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->aor),&s)) goto error;
+		
+	if (!bin_decode_int1(x,	&k)) goto error;
+	d->method = k;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->method_str),&s)) goto error;
+	
+	if (!bin_decode_int4(x,	&k)) goto error;
+	d->first_cseq = k;
+	if (!bin_decode_int4(x,	&k)) goto error;
+	d->last_cseq = k;
+
+	if (!bin_decode_int1(x,	&k)) goto error;
+	d->state = k;
+	
+	if (!bin_decode_int4(x,	&k)) goto error;
+	d->expires = k;
+	
+	return d;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_s_dialog: Error while decoding (at %d (%04x)).\n",x->max,x->max);
+	if (d) {
+		if (d->call_id.s) shm_free(d->call_id.s);
+		if (d->aor.s) shm_free(d->aor.s);
+		if (d->method_str.s) shm_free(d->method_str.s);
+		shm_free(d);
+	}
+	return 0;
+}
+
+

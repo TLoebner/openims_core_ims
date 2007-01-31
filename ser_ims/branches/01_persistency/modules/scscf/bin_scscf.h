@@ -61,6 +61,7 @@
 #include "ifc_datastruct.h"
 #include "registration.h"
 #include "registrar_storage.h"
+#include "dlg_state.h"
 
 #define BIN_INITIAL_ALLOC_SIZE 256
 
@@ -72,5 +73,8 @@ r_public* bin_decode_r_public(bin_data *x);
 
 int bin_encode_auth_userdata(bin_data *x,auth_userdata *u);
 auth_userdata* bin_decode_auth_userdata(bin_data *x);
+
+int bin_encode_s_dialog(bin_data *x,s_dialog *d);
+s_dialog* bin_decode_s_dialog(bin_data *x);
 
 #endif
