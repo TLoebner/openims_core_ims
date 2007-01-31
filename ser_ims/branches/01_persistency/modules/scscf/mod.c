@@ -131,6 +131,7 @@ str scscf_subscription_min_expires;		/**< fixed minimum subscription expiration 
 str scscf_aaa_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 				*/
 
 int * callback_singleton;				/**< Cx callback singleton 								*/
+int * shutdown_singleton;				/**< Shutdown singleton 								*/
 
 /** 
  * Exported functions.
@@ -432,6 +433,9 @@ static int mod_init(void)
 	load_cdp_f load_cdp;
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
+	shutdown_singleton=shm_malloc(sizeof(int));
+	*shutdown_singleton=0;
+	
 		
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	/* fix the parameters */
@@ -471,10 +475,9 @@ static int mod_init(void)
 	
 	
 	/* Init the authorization data storage */
-	if (!auth_data_init(auth_data_hash_size)) goto error;
-	
+	if (!auth_data_init(auth_data_hash_size)) goto error;	
 	if (scscf_persistency_mode!=NO_PERSISTENCY){
-		load_snapshot_auth(auth_data);
+		load_snapshot_auth();
 		if (register_timer(auth_persistency_timer,0,scscf_persistency_auth_data_timer)<0) goto error;
 	}
 	
@@ -534,10 +537,10 @@ static int mod_child_init(int rank)
 //		scscf_db_capabilities_table);
 	/* init the diameter callback - must be done just once */
 	lock_get(process_lock);
-	if((*callback_singleton)==0){
-		*callback_singleton=1;
-		cdpb.AAAAddRequestHandler(CxRequestHandler,NULL);
-	}
+		if((*callback_singleton)==0){
+			*callback_singleton=1;
+			cdpb.AAAAddRequestHandler(CxRequestHandler,NULL);
+		}
 	lock_release(process_lock);
 	/* Init the user data parser */
 	if (!parser_init(scscf_user_data_dtd,scscf_user_data_xsd)) return -1;
@@ -550,13 +553,25 @@ static int mod_child_init(int rank)
  */
 static void mod_destroy(void)
 {
+	int do_destroy=0;
 	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
-	auth_data_destroy();
-	parser_destroy();
-	r_notify_destroy();	
-	r_storage_destroy();
-	s_dialogs_destroy();	
-	pkg_free(scscf_service_route.s);
+	lock_get(process_lock);
+		if((*shutdown_singleton)==0){
+			*shutdown_singleton=1;
+			do_destroy=1;
+		}
+	lock_release(process_lock);
+	if (do_destroy){
+		/* First let's snapshot everything */
+		make_snapshot_auth();
+		/* Then nuke it all */
+		auth_data_destroy();
+		parser_destroy();
+		r_notify_destroy();	
+		r_storage_destroy();
+		s_dialogs_destroy();	
+		pkg_free(scscf_service_route.s);
+	}
 }
 
 

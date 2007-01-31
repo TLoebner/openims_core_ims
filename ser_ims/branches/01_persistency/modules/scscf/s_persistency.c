@@ -68,6 +68,17 @@ int scscf_persistency_keep_count=3;				/**< how many old snapshots to keep				*/
 extern auth_hash_slot_t *auth_data;				/**< Authentication vector hash table 			*/
 extern int auth_data_hash_size;					/**< authentication vector hash table size 		*/
 
+
+/**
+ * Writes the binary data to a snapshot file.
+ * The file names contain the time of the dump. If a file was dumped 
+ * just partialy it will contain a ".part" in the name. 
+ * A link to the last complete file is created each time.
+ * Old files are deleted and only scscf_persistency_keep_count time-stamped-files are kept.
+ * @param x - the binary data to write
+ * @param prepend_fname - what to prepend to the file_name
+ * @returns 1 on success or 0 on failure
+ */
 int bin_dump_to_file(bin_data *x,char *prepend_fname)
 {
 	char c_part[256],c_time[256],c_last[256];
@@ -132,6 +143,12 @@ int bin_dump_to_file(bin_data *x,char *prepend_fname)
 	else return 0;
 }
 
+/**
+ * Reloads the snapshot from the link to the last time-stamped-file.
+ * @param x - where to load
+ * @param prepend_fname - with what to prepend the filename
+ * @returns 1 on success, 0 on error
+ */
 int bin_load_from_file(bin_data *x,char *prepend_fname)
 {
 	char c[256];
@@ -156,7 +173,12 @@ int bin_load_from_file(bin_data *x,char *prepend_fname)
 }
 
 
-int make_snapshot_auth(auth_hash_slot_t *ad)
+
+/**
+ * Creates a snapshots of the authorization data and then calls the dumping function.
+ * @returns 1 on success or 0 on failure
+ */
+int make_snapshot_auth()
 {
 	bin_data x;
 	auth_userdata *aud;
@@ -197,7 +219,7 @@ error:
 	return 0;
 }  
 
-int load_snapshot_auth(auth_hash_slot_t *ad)
+int load_snapshot_auth()
 {
 	bin_data x;
 	auth_userdata *aud;
@@ -247,7 +269,7 @@ error:
  */
 void auth_persistency_timer(unsigned int ticks, void* param)
 {
-	make_snapshot_auth(auth_data);	 	
+	make_snapshot_auth();	 	
 }
 
 
