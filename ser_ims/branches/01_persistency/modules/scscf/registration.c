@@ -746,7 +746,6 @@ int auth_data_init(int size)
 		auth_data[i].lock = lock_alloc();
 		lock_init(auth_data[i].lock);
 	}
-	load_snapshot_auth(auth_data);
 	return 1;
 }
 
@@ -1219,6 +1218,5 @@ void reg_await_timer(unsigned int ticks, void* param)
 		}
 		auth_data_unlock(i);
 	}
-	make_snapshot_auth(ad); 
 }
 
