@@ -23,7 +23,34 @@
   <body> 
     <section id="General">
       <title>General Questions</title>
+      <ul>
+      	<li><strong>How do I provision a new identity?</strong><br/>
+      	    <p>	
+	    You can always use the FHoSS web interface running accesible <a href="http://localhost:8080/">http://localhost:8080</a> 
+	    on the FHoSS machine (this web-interface is part of the HSS, so you need to run the HSS in order to access it). 
+	    If you also want to use the user with the SIP2IMS Gateway, look further <a href="/docs/faq.html#sip2ims">down</a> in the
+	    SIP2IMS FAQ.
+	    </p>	
+	    <p>
+	    For automating this process, you can also use the add-imscore-user.sh script found in the ser_ims/cfg/. Look inside
+	    for usage instructions.
+	    </p>	
+      	</li>
+      	<li><strong>I want to commit something, but I don't have right access.</strong><br/>
+      		In order to keep a high quality for the code, only a limited number of maintainers have modification permissions. Each is 
+      		responsible	for checking if new patches work properly and for the administration of the sub-projects. Please post your 
+      		patches to the mailing-lists and they will be checked and applied. If you are an active contributor and you demonstrate
+      		that your patches can be trusted, we will add you as a project maintainer.
+      	</li>
+      	<li><strong>OK, but what if I want to make a big change and would require a branch?</strong><br/>
+      		Then you will get this access sooner. You will just have to convince one of the maintainers that your branch makes sense.
+      	</li>
+      	<li><strong>Can I contribute with another IMS component that I am working on?</strong><br/>
+      		You are most welcomed. Just let us know and we will import it in the SVN.
+      	</li>
+      </ul>
     </section>
+
     <section id="SVN">
       <title>Subversion</title>
       <ul>
@@ -102,7 +129,9 @@
       		entry to those of Alice/Bob. HA1 is irrelevant and can be left blank. HA1b can be computed using e.g.:
       		<source>ser_ims/utils/gen_ha1/gen_ha1 user realm password</source>
       		Don't forget: The username must be the same as the private AND the public identity of the user, as SIP UEs do not usually
-      		make a distinction between them.
+      		make a distinction between them. The password must be the same as the secret key provisioned in the HSS. It seems that 
+		many users confuse the private identity, so here is a correct example:				
+		<source>ser_ims/utils/gen_ha1/gen_ha1 alice@open-ims.test open-ims.test alice</source>
       	</li>
       	<li><strong>It doesn't work with another Proxy-CSCF. Why?</strong><br/>
       		The P-CSCF assumes that it is the first hop for any UE originated requests. Unfortunately now the SIP-to-IMS Gateway
