@@ -175,4 +175,41 @@
   *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
   * 
   */
-    
+
+
+ /**
+  * add-imscore-user.sh
+  * Version: 0.1
+ Released: 02/02/07
+ Author: Sven Bornemann -at- materna de
+
+ Script for generating two SQL scripts for creating/deleting IMS Core users
+ in the HSS and the SIP2IMS gateway tables.
+
+ Example for creating user 'brooke' with password 'brooke' for realm
+ 'open-ims.test':
+
+ # ./add-imscore-user.sh brooke
+ Successfully wrote add-user-brooke.sql
+ Successfully wrote delete-user-brooke.sql
+
+ Apply scripts with
+ # mysql -u root -p < add-user-brooke.sql
+ or
+ # mysql -u root -p < delete-user-brooke.sql
+
+ After applying the add script, you should be able # to register with IMS Core
+ with SIP clients (e.g. as 'brooke') via SIP2IMS. Use delete script for removing
+ the user from IMS Core database tables.
+
+ Usage for add-imscore-user.sh:
+
+ add-imscore-user.sh user [realm password]
+ Default for realm is 'open-ims.test'
+ Default for password is value of user
+
+ Known limits:
+ - IMS Core installation in /opt/OpenIMSCore required.
+ - Password is limited to 16 characters.
+
+ */    
