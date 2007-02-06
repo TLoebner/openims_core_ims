@@ -116,8 +116,9 @@ int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs
 
 persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
 char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
-int scscf_persistency_auth_data_timer=60;							/**< interval to snapshot authorization data*/ 
-int scscf_persistency_dialogs_timer=60;								/**< interval to snapshot dialogs data		*/ 
+int scscf_persistency_timer_authdata=60;							/**< interval to snapshot authorization data*/ 
+int scscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
+int scscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
 
 /* fixed parameter storage */
 str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
@@ -288,8 +289,9 @@ static param_export_t scscf_params[]={
 	
 	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
 	{"persistency_location", 			STR_PARAM, &scscf_persistency_location},
-	{"persistency_auth_data_timer",		INT_PARAM, &scscf_persistency_auth_data_timer},
-	{"persistency_dialogs_timer",		INT_PARAM, &scscf_persistency_dialogs_timer},
+	{"persistency_timer_authdata",		INT_PARAM, &scscf_persistency_timer_authdata},
+	{"persistency_timer_dialogs",		INT_PARAM, &scscf_persistency_timer_dialogs},
+	{"persistency_timer_registrar",		INT_PARAM, &scscf_persistency_timer_registrar},
 	{0,0,0} 
 };
 
@@ -481,8 +483,8 @@ static int mod_init(void)
 	/* Init the authorization data storage */
 	if (!auth_data_init(auth_data_hash_size)) goto error;	
 	if (scscf_persistency_mode!=NO_PERSISTENCY){
-		load_snapshot_auth();
-		if (register_timer(auth_persistency_timer,0,scscf_persistency_auth_data_timer)<0) goto error;
+		load_snapshot_authdata();
+		if (register_timer(persistency_timer_authdata,0,scscf_persistency_timer_authdata)<0) goto error;
 	}
 	
 
@@ -491,6 +493,10 @@ static int mod_init(void)
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
+	if (scscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_registrar();
+		if (register_timer(persistency_timer_registrar,0,scscf_persistency_timer_registrar)<0) goto error;
+	}
 
 	/* register the registrar timer */
 	if (register_timer(registrar_timer,registrar,10)<0) goto error;
@@ -507,8 +513,8 @@ static int mod_init(void)
 		goto error;
 	}		
 	if (scscf_persistency_mode!=NO_PERSISTENCY){
-		load_snapshot_dlg();
-		if (register_timer(dlg_persistency_timer,0,scscf_persistency_dialogs_timer)<0) goto error;
+		load_snapshot_dialogs();
+		if (register_timer(persistency_timer_dialogs,0,scscf_persistency_timer_dialogs)<0) goto error;
 	}
 
 	/* register the dialog timer */
@@ -571,8 +577,9 @@ static void mod_destroy(void)
 	lock_release(process_lock);
 	if (do_destroy){
 		/* First let's snapshot everything */
-		make_snapshot_auth();
-		make_snapshot_dlg();
+		make_snapshot_authdata();
+		make_snapshot_dialogs();
+		make_snapshot_registrar();
 		/* Then nuke it all */
 		auth_data_destroy();
 		parser_destroy();

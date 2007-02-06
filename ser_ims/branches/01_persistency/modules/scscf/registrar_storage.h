@@ -68,12 +68,6 @@
 
 /* REGISTRAR Structures */
 
-/** S-CSCF registrar hash slot */
-typedef struct {
-	void *head;					/**< first slot in the table			*/
-	void *tail;					/**< last slot in the table				*/
-	gen_lock_t *lock;			/**< slot lock 							*/	
-} r_hash_slot;
 
 /** Events for subscriptions */
 enum {
@@ -125,6 +119,16 @@ typedef struct _r_public {
 	
 	struct _r_public *next,*prev; /**< collision hash neighbours		*/
 } r_public;
+
+
+/** S-CSCF registrar hash slot */
+typedef struct {
+	r_public *head;					/**< first slot in the table			*/
+	r_public *tail;					/**< last slot in the table				*/
+	gen_lock_t *lock;			/**< slot lock 							*/	
+} r_hash_slot;
+
+
 
 /** funtion to find a public identity in a registrar */
 typedef r_public* (*get_r_public_f)(str aor);

@@ -56,6 +56,8 @@
 
 /* structures reprezentation functions */
 
+extern int r_hash_size;						/**< Size of S-CSCF registrar hash table		*/
+
 
 static inline int str_shm_dup(str *dest,str *src)
 {
@@ -162,6 +164,8 @@ error:
 static int bin_decode_spt(bin_data *x, ims_spt *spt)
 {
 	int k;
+	str s;
+	
 	if (!bin_decode_int1(x,&k)) goto error;
 	
 	spt->type = k & 0x0F;
@@ -172,23 +176,23 @@ static int bin_decode_spt(bin_data *x, ims_spt *spt)
 
 	switch (spt->type){
 		case 1:
-			if (!bin_decode_str(x,&(spt->request_uri))) goto error;
+			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->request_uri),&s)) goto error;
 			break;
 		case 2:
-			if (!bin_decode_str(x,&(spt->method))) goto error;
+			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->method),&s)) goto error;
 			break;
 		case 3:
 			if (!bin_decode_int1(x,&(spt->sip_header.type))) goto error;
-			if (!bin_decode_str(x,&(spt->sip_header.header))) goto error;
-			if (!bin_decode_str(x,&(spt->sip_header.content))) goto error;
+			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->sip_header.header),&s)) goto error;
+			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->sip_header.content),&s)) goto error;
 			//TODO - compute the regex!!!
 			break;
 		case 4:
 			if (!bin_decode_int1(x,&(spt->session_case))) goto error;
 			break;
 		case 5:
-			if (!bin_decode_str(x,&(spt->session_desc.line))) goto error;
-			if (!bin_decode_str(x,&(spt->session_desc.content))) goto error;
+			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->session_desc.line),&s)) goto error;
+			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->session_desc.content),&s)) goto error;
 			break;
 
 	}
@@ -247,7 +251,7 @@ static int bin_encode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 		for(i=0;i<fc->trigger_point->spt_cnt;i++)
 			if (!bin_encode_spt(x,fc->trigger_point->spt+i)) goto error;
 	} else {
-		if (!bin_encode_int1(x,0xff)) goto error;
+		if (!bin_encode_int1(x,0xFF)) goto error;
 	}
 	
 	//app server
@@ -255,6 +259,7 @@ static int bin_encode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 	if (!bin_encode_int1(x,fc->application_server.default_handling)) goto error;
 	if (!bin_encode_str(x,&(fc->application_server.service_info))) goto error;
 	
+	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_encode_filter_criteria: Error while encoding.\n");
 	return 0;		
@@ -269,7 +274,7 @@ error:
  */
 static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 {
-	int cnf,i,ppindicator,len;
+	int cnf,i,ppindicator,len,k;
 	str s;
 	
 	//priority
@@ -307,14 +312,15 @@ static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 		memset(tp,0,len);
 		tp->condition_type_cnf=cnf;
 		
-		if (!bin_decode_int2(x,&(tp->spt_cnt))) goto error;
+		if (!bin_decode_int2(x,&k)) goto error;
+		tp->spt_cnt = k;
 		len = sizeof(ims_spt)*tp->spt_cnt;
 		tp->spt = (ims_spt*)shm_malloc(len);
 		if (!tp->spt) {
 			LOG(L_ERR,"ERR:"M_NAME":bin_decode_filter_criteria: Error allocating %d bytes.\n",len);
 			goto error;
 		}
-		memset(tp,0,len);
+		memset(tp->spt,0,len);
 		for(i=0;i<tp->spt_cnt;i++)
 			if (!bin_decode_spt(x,tp->spt+i)) goto error;
 	}
@@ -525,6 +531,7 @@ ims_subscription *bin_decode_ims_subscription(bin_data *x)
 
 	imss->lock = lock_alloc();
 	imss->lock = lock_init(imss->lock);
+	imss->ref_count = 1;
 
 	return imss;
 error:
@@ -667,7 +674,6 @@ int bin_encode_r_public(bin_data *x,r_public *p)
 	r_contact *c=0;
 	r_subscriber *s=0;
 	
-	if (!bin_encode_int4(x,p->hash)) goto error;
 	if (!bin_encode_str(x,&(p->aor))) goto error;
 	k = p->reg_state;
 	if (!bin_encode_int1(x,k)) goto error;
@@ -715,8 +721,8 @@ r_public* bin_decode_r_public(bin_data *x)
 	}
 	memset(p,0,len);
 	
-	if (!bin_decode_int4(x,&(p->hash))) goto error;
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->aor),&st)) goto error;
+	p->hash = get_aor_hash(p->aor,r_hash_size);
 	if (!bin_decode_int1(x,&k)) goto error;
 	p->reg_state = k;
 	
