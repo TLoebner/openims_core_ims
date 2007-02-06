@@ -63,6 +63,7 @@
 #include "registrar_storage.h"
 #include "dlg_state.h"
 
+
 #define BIN_INITIAL_ALLOC_SIZE 256
 
 int bin_encode_ims_subscription(bin_data *x, ims_subscription *s);

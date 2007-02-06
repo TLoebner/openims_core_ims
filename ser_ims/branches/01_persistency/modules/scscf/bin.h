@@ -104,6 +104,8 @@ Basic datatype representations:
 
 #include "mod.h"
 #include "../../mem/mem.h"
+#include "../dialog/dlg_mod.h"
+
 
 typedef struct _bin_data {
 	char* s; /*string*/
@@ -142,6 +144,8 @@ inline int bin_decode_str(bin_data *x,str *s);
  */
 void bin_print(bin_data *s);
 
+int bin_encode_dlg_t(bin_data *x,dlg_t *d);
+int bin_decode_dlg_t(bin_data *x,dlg_t **d);
 
 
 typedef enum {

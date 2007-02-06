@@ -71,6 +71,7 @@
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
+#include "../dialog/dlg_mod.h"
 
 //#include "db.h"
 #include "registration.h"
@@ -380,6 +381,7 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 										/**< link to the stateless reply function in sl module */
 
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
+dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -520,7 +522,9 @@ int fix_parameters()
  */
 static int mod_init(void)
 {
-	load_tm_f load_tm;		
+	load_tm_f load_tm;
+	bind_dlg_mod_f load_dlg;
+			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
@@ -548,6 +552,16 @@ static int mod_init(void)
 	}
 	if (load_tm(&tmb) == -1)
 		goto error;
+
+	/* bind to the dialog module */
+	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
+	if (!load_dlg) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
+		return -1;
+	}
+	if (load_dlg(&dialogb) != 0) {
+		return -1;
+	}
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
