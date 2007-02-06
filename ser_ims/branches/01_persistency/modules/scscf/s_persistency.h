@@ -59,11 +59,6 @@
 
 #include "bin_scscf.h"
 
-typedef enum {
-	NO_PERSISTENCY=0,
-	WITH_FILES=1,
-	WITH_DATABASE=2
-} persistency_mode_t;
 
 int make_snapshot_authdata();
 int load_snapshot_authdata();
