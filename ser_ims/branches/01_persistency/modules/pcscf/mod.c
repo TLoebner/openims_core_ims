@@ -81,6 +81,7 @@
 #include "security.h"
 #include "dlg_state.h"
 #include "sdp_util.h"
+#include "p_persistency.h"
 
 
 MODULE_VERSION
@@ -160,6 +161,16 @@ str pcscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
 
 str pcscf_sip2ims_via_host;					/**< fixed Via host of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
 int pcscf_sip2ims_via_port;					/**< fixed Via port of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
+
+
+persistency_mode_t pcscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
+char* pcscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
+int pcscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
+int pcscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
+
+
+int * shutdown_singleton;				/**< Shutdown singleton 								*/
+
 
 /** 
  * Exported functions.
@@ -294,6 +305,11 @@ static cmd_export_t pcscf_cmds[]={
  * - subscribe_retries - how many times to attempt SUBSCRIBE to reg on failure
  * <p>
  * - sip2ims_via - Via address of the SIP2IMS gateway \todo - remove when we would have a full B2B gateway
+ * <p>
+ * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
+ * - persistency_location - where to dump/load the persistency data to/from
+ * - persistency_timer_dialogs - interval to make dialogs data snapshots at
+ * - persistency_timer_registrar - interval to make registrar snapshots at
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -335,6 +351,11 @@ static param_export_t pcscf_params[]={
 	{"icid_gen_addr",			STR_PARAM,		&pcscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM,		&pcscf_orig_ioi},
 	{"term_ioi",				STR_PARAM,		&pcscf_term_ioi},
+
+	{"persistency_mode",	 			INT_PARAM, &pcscf_persistency_mode},	
+	{"persistency_location", 			STR_PARAM, &pcscf_persistency_location},
+	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
+	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
 	
 	{0,0,0} 
 };
@@ -499,8 +520,12 @@ int fix_parameters()
  */
 static int mod_init(void)
 {
-	load_tm_f load_tm;
+	load_tm_f load_tm;		
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	shutdown_singleton=shm_malloc(sizeof(int));
+	*shutdown_singleton=0;
+	
+	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
 	
@@ -526,6 +551,10 @@ static int mod_init(void)
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
+	if (pcscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_registrar();
+		if (register_timer(persistency_timer_registrar,0,pcscf_persistency_timer_registrar)<0) goto error;
+	}
 
 	/* register the registrar timer */
 	if (register_timer(registrar_timer,registrar,10)<0) goto error;
@@ -541,6 +570,10 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
+	if (pcscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_dialogs();
+		if (register_timer(persistency_timer_dialogs,0,pcscf_persistency_timer_dialogs)<0) goto error;
+	}
 
 	/* register the dialog timer */
 	if (register_timer(dialog_timer,p_dialogs,60)<0) goto error;
@@ -557,6 +590,8 @@ static int mod_init(void)
 error:
 	return -1;
 }
+
+extern gen_lock_t* process_lock;		/* lock on the process table */
 
 /**
  * Initializes the module in child.
@@ -585,11 +620,24 @@ static int mod_child_init(int rank)
  */
 static void mod_destroy(void)
 {
-	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");	
-	parser_destroy();
-	r_subscription_destroy();
-	r_storage_destroy();
-	p_dialogs_destroy();
+	int do_destroy=0;
+	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
+	lock_get(process_lock);
+		if((*shutdown_singleton)==0){
+			*shutdown_singleton=1;
+			do_destroy=1;
+		}
+	lock_release(process_lock);
+	if (do_destroy){
+		/* First let's snapshot everything */
+		make_snapshot_dialogs();
+		make_snapshot_registrar();
+		/* Then nuke it all */		
+		parser_destroy();
+		r_subscription_destroy();
+		r_storage_destroy();
+		p_dialogs_destroy();
+	}
 }
 
 
