@@ -64,13 +64,6 @@ typedef struct _r_nat_dest{
 	unsigned short nat_port;	/**< port of the pin hole in the NAT 	*/
 }r_nat_dest;
 
-/** Registrar Slot Structure */
-typedef struct {
-	void *head;					/**< first contact in the slot			*/
-	void *tail;					/**< last contact in the slot			*/
-	gen_lock_t *lock;			/**< slot lock 							*/
-} r_hash_slot;
-
 /** Registrar Public Identity Structure */
 typedef struct _r_public {
 	str aor;					/**< the public identity 				*/
@@ -130,6 +123,12 @@ typedef struct _r_contact {
 	struct _r_contact *prev;	/**< previous contact in this hash slot	*/
 } r_contact;
 
+/** Registrar Slot Structure */
+typedef struct {
+	r_contact *head;					/**< first contact in the slot			*/
+	r_contact *tail;					/**< last contact in the slot			*/
+	gen_lock_t *lock;			/**< slot lock 							*/
+} r_hash_slot;
 
 
 void r_act_time();
@@ -142,6 +141,8 @@ void r_storage_destroy();
 
 inline void r_lock(unsigned int hash);
 inline void r_unlock(unsigned int hash);
+
+unsigned int get_contact_hash(str aor,int port,int transport,int hash_size);
 
 r_public* new_r_public(str aor, int is_default);
 r_public* get_r_public(r_contact *c, str aor);
