@@ -149,6 +149,8 @@ void free_auth_vector(auth_vector *av);
 auth_userdata *new_auth_userdata(str private_identity,str public_identity);
 void free_auth_userdata(auth_userdata *aud);					
 
+inline unsigned int get_hash_auth(str private_identity,str public_identity);
+
 int add_auth_vector(str private_identity,str public_identity,auth_vector *av);
 auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce,unsigned int *hash);
 
