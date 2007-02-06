@@ -860,7 +860,7 @@ error:
 	
 	if (!bin_encode_str(x,&(u->private_identity))) goto error;
 	if (!bin_encode_str(x,&(u->public_identity))) goto error;
-	if (!bin_encode_int4(x,u->hash)) goto error;
+//	if (!bin_encode_int4(x,u->hash)) goto error;
 	if (!bin_encode_int4(x,u->expires)) goto error;
 	
 	for(v=u->head;v;v=v->next)
@@ -898,7 +898,8 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 	
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(u->private_identity),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(u->public_identity),&s)) goto error;
-	if (!bin_decode_int4(x,	&(u->hash))) goto error;
+	u->hash = get_hash_auth(u->private_identity,u->public_identity);	
+//	if (!bin_decode_int4(x,	&(u->hash))) goto error;
 	if (!bin_decode_int4(x,	&(u->expires))) goto error;
 	
 	if (!bin_decode_int2(x,	&k)) goto error;
@@ -950,7 +951,7 @@ error:
  */
 int bin_encode_s_dialog(bin_data *x,s_dialog *d)
 {
-	if (!bin_encode_int4(x,d->hash)) goto error;	
+//	if (!bin_encode_int4(x,d->hash)) goto error;	
 	if (!bin_encode_str(x,&(d->call_id))) goto error;
 	if (!bin_encode_int1(x,d->direction)) goto error;
 	
@@ -991,7 +992,7 @@ s_dialog* bin_decode_s_dialog(bin_data *x)
 	}
 	memset(d,0,len);
 
-	if (!bin_decode_int4(x,	&(d->hash))) goto error;		
+//	if (!bin_decode_int4(x,	&(d->hash))) goto error;		
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->call_id),&s)) goto error;
 
 	if (!bin_decode_int1(x,	&k)) goto error;
@@ -1013,6 +1014,8 @@ s_dialog* bin_decode_s_dialog(bin_data *x)
 	
 	if (!bin_decode_int4(x,	&k)) goto error;
 	d->expires = k;
+	
+	d->hash = get_s_dialog_hash(d->call_id);		
 	
 	return d;
 error:

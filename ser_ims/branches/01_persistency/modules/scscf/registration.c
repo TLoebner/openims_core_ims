@@ -961,7 +961,7 @@ void free_auth_userdata(auth_userdata *aud)
  * @param public_identity - the public identity
  * @returns the hash % Auth_data->size
  */
-static inline unsigned int get_hash(str private_identity,str public_identity)
+inline unsigned int get_hash_auth(str private_identity,str public_identity)
 {
 #define h_inc h+=v^(v>>3)
    char* p;
@@ -1008,7 +1008,7 @@ auth_userdata* get_auth_userdata(str private_identity,str public_identity)
 	auth_userdata *aud=0;
 	
 	
-	hash = get_hash(private_identity,public_identity);
+	hash = get_hash_auth(private_identity,public_identity);
 	auth_data_lock(hash);
 	aud = auth_data[hash].head;
 	while(aud){
