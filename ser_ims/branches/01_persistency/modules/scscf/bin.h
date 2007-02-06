@@ -143,6 +143,21 @@ void bin_print(bin_data *s);
 
 
 
+typedef enum {
+	NO_PERSISTENCY=0,
+	WITH_FILES=1,
+	WITH_DATABASE=2
+} persistency_mode_t;
+
+/* Dumping functions */
+
+
+int bin_dump_to_file(bin_data *x,char *location,char *prepend_fname);
+int bin_load_from_file(bin_data *x,char *location,char *prepend_fname);
+
+int bin_dump(bin_data *x,int mode,char *location,char* prepend_fname);
+int bin_load(bin_data *x,int mode,char *location,char* prepend_fname);
+
 
 
 #endif
