@@ -65,12 +65,16 @@ typedef enum {
 	WITH_DATABASE=2
 } persistency_mode_t;
 
-int make_snapshot_auth();
-int load_snapshot_auth();
-void auth_persistency_timer(unsigned int ticks, void* param);
+int make_snapshot_authdata();
+int load_snapshot_authdata();
+void persistency_timer_authdata(unsigned int ticks, void* param);
 
-int make_snapshot_dlg();
-int load_snapshot_dlg();
-void dlg_persistency_timer(unsigned int ticks, void* param);
+int make_snapshot_dialogs();
+int load_snapshot_dialogs();
+void persistency_timer_dialogs(unsigned int ticks, void* param);
+
+int make_snapshot_registrar();
+int load_snapshot_registrar();
+void persistency_timer_registrar(unsigned int ticks, void* param);
 
 #endif

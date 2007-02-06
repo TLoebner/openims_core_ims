@@ -109,7 +109,6 @@ inline int bin_expand(bin_data *x, int delta)
 	}
 	x->max += delta;
 	return 1;
-	
 }
 
 inline void bin_free(bin_data *x)

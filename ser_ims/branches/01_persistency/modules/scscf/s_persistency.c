@@ -220,7 +220,7 @@ extern int auth_data_hash_size;					/**< authentication vector hash table size 	
  * Creates a snapshots of the authorization data and then calls the dumping function.
  * @returns 1 on success or 0 on failure
  */
-int make_snapshot_auth()
+int make_snapshot_authdata()
 {
 	bin_data x;
 	auth_userdata *aud;
@@ -247,7 +247,7 @@ error:
  * Loads the authorization data from the last snapshot.
  * @returns 1 on success or 0 on failure
  */
-int load_snapshot_auth()
+int load_snapshot_authdata()
 {
 	bin_data x;
 	auth_userdata *aud;
@@ -256,7 +256,7 @@ int load_snapshot_auth()
 	x.max=0;
 	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_auth: max %d len %d\n",x.max,x.len);
 	while(x.max<x.len){
-		aud = bin_decode_auth_userdata(&x);
+		aud = bin_decode_auth_userdata(&x);		
 		if (!aud) return 0;
 		LOG(L_INFO,"INFO:"M_NAME":load_snapshot_auth: Loaded auth_userdata for <%.*s>\n",aud->private_identity.len,aud->private_identity.s);
 		auth_data_lock(aud->hash);
@@ -280,9 +280,9 @@ error:
  * @param ticks - what's the time
  * @param param - a given parameter to be called with
  */
-void auth_persistency_timer(unsigned int ticks, void* param)
+void persistency_timer_authdata(unsigned int ticks, void* param)
 {
-	make_snapshot_auth();	 	
+	make_snapshot_authdata();	 	
 }
 
 
@@ -293,10 +293,10 @@ extern int s_dialogs_hash_size;						/**< size of the dialog hash table 					*/
 extern s_dialog_hash_slot *s_dialogs;				/**< the hash table									*/
 
 /**
- * Creates a snapshots of the authorization data and then calls the dumping function.
+ * Creates a snapshots of the dialogs data and then calls the dumping function.
  * @returns 1 on success or 0 on failure
  */
-int make_snapshot_dlg()
+int make_snapshot_dialogs()
 {
 	bin_data x;
 	s_dialog *d;
@@ -312,7 +312,7 @@ int make_snapshot_dlg()
 		d_unlock(i);
 	}
 	bin_print(&x);
-	i = bin_dump(&x,"dlg");		
+	i = bin_dump(&x,"dialogs");		
 	bin_free(&x);
 	return i;
 error:
@@ -320,14 +320,14 @@ error:
 }  
 
 /**
- * Loads the authorization data from the last snapshot.
+ * Loads the dialogs data from the last snapshot.
  * @returns 1 on success or 0 on failure
  */
-int load_snapshot_dlg()
+int load_snapshot_dialogs()
 {
 	bin_data x;
 	s_dialog *d;
-	if (!bin_load(&x,"dlg")) goto error;
+	if (!bin_load(&x,"dialogs")) goto error;
 	bin_print(&x);
 	x.max=0;
 	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_dlg: max %d len %d\n",x.max,x.len);
@@ -356,9 +356,82 @@ error:
  * @param ticks - what's the time
  * @param param - a given parameter to be called with
  */
-void dlg_persistency_timer(unsigned int ticks, void* param)
+void persistency_timer_dialogs(unsigned int ticks, void* param)
 {
-	make_snapshot_dlg();	 	
+	make_snapshot_dialogs();	 	
 }
 
+
+
+extern int r_hash_size;						/**< Size of S-CSCF registrar hash table		*/
+extern r_hash_slot *registrar;				/**< The S-CSCF registrar 						*/
+
+/**
+ * Creates a snapshots of the registrar and then calls the dumping function.
+ * @returns 1 on success or 0 on failure
+ */
+int make_snapshot_registrar()
+{
+	bin_data x;
+	r_public *p;
+	int i;	
+	if (!bin_alloc(&x,256)) goto error;		
+	for(i=0;i<r_hash_size;i++){
+		r_lock(i);
+		p = registrar[i].head;
+		while(p){
+			if (!bin_encode_r_public(&x,p)) goto error;
+			p = p->next;
+		}
+		r_unlock(i);
+	}
+	bin_print(&x);
+	i = bin_dump(&x,"sregistrar");		
+	bin_free(&x);
+	return i;
+error:
+	return 0;
+}  
+
+/**
+ * Loads the registrar data from the last snapshot.
+ * @returns 1 on success or 0 on failure
+ */
+int load_snapshot_registrar()
+{
+	bin_data x;
+	r_public *p;
+	if (!bin_load(&x,"sregistrar")) goto error;
+	bin_print(&x);
+	x.max=0;
+	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_registrar: max %d len %d\n",x.max,x.len);
+	while(x.max<x.len){
+		p = bin_decode_r_public(&x);
+		if (!p) return 0;
+		LOG(L_INFO,"INFO:"M_NAME":load_snapshot_registrar: Loaded r_public for <%.*s>\n",p->aor.len,p->aor.s);
+		r_lock(p->hash);
+		p->prev = registrar[p->hash].tail;
+		p->next = 0;
+		if (registrar[p->hash].tail) registrar[p->hash].tail->next = p;
+		registrar[p->hash].tail = p;
+		if (!registrar[p->hash].head) registrar[p->hash].head = p;
+		r_unlock(p->hash);
+	}
+	bin_free(&x);
+	return 1;
+error:
+	return 0;
+	
+}
+
+
+/**
+ * Timer callback for persistency dumps
+ * @param ticks - what's the time
+ * @param param - a given parameter to be called with
+ */
+void persistency_timer_registrar(unsigned int ticks, void* param)
+{
+	make_snapshot_registrar();	 	
+}
 
