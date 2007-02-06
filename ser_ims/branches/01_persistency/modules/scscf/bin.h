@@ -103,6 +103,7 @@ Basic datatype representations:
 #define _BIN_H
 
 #include "mod.h"
+#include "../../mem/mem.h"
 
 typedef struct _bin_data {
 	char* s; /*string*/
