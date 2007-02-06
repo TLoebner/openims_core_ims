@@ -605,6 +605,7 @@ error:
 	return 0;
 }
 
+
 /**
  * Encode a r_subscriber into a binary form
  * @param x - binary data to append to
@@ -616,7 +617,7 @@ int bin_encode_r_subscriber(bin_data *x,r_subscriber *s)
 	if (!bin_encode_str(x,&(s->subscriber))) goto error;
 	if (!bin_encode_int1(x,s->event)) goto error;
 	if (!bin_encode_int4(x,s->expires)) goto error;
-	//TODO - encode the dlg_t in s->dialog!!!
+	if (!bin_encode_dlg_t(x,s->dialog)) goto error;
 	if (!bin_encode_int4(x,s->version)) goto error;
 
 	return 1;
@@ -647,7 +648,7 @@ r_subscriber* bin_decode_r_subscriber(bin_data *x)
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(s->subscriber),&st)) goto error;
 	if (!bin_decode_int1(x,&(s->event))) goto error;
 	if (!bin_decode_int4(x,&(s->expires))) goto error;
-	//TODO - decode the dlg_t into s->dialog!!!	
+	if (!bin_decode_dlg_t(x,&(s->dialog))) goto error;
 	if (!bin_decode_int4(x,&(s->version))) goto error;	
 	
 	return s;

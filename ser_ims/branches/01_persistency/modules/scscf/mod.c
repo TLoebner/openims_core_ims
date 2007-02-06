@@ -63,6 +63,7 @@
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "../cdp/cdp_load.h"
+#include "../dialog/dlg_mod.h"
 
 #include "registration.h"
 #include "registrar.h"
@@ -317,8 +318,9 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 
 struct tm_binds tmb;							/**< Structure with pointers to tm funcs 				*/
 struct cdp_binds cdpb;							/**< Structure with pointers to cdp funcs				*/
+dlg_func_t dialogb;								/**< Structure with pointers to dialog funcs			*/
 
-extern auth_hash_slot_t *auth_data;					/**< authentication vectors hast table 					*/
+extern auth_hash_slot_t *auth_data;				/**< authentication vectors hast table 					*/
 extern r_hash_slot *registrar;					/**< the S-CSCF registrar								*/
 extern r_notification_list *notification_list; 	/**< list of notifications for reg to be sent			*/
 
@@ -438,6 +440,8 @@ static int mod_init(void)
 {
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
+	bind_dlg_mod_f load_dlg;
+	
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
 	shutdown_singleton=shm_malloc(sizeof(int));
@@ -479,6 +483,16 @@ static int mod_init(void)
 	}
 	if (load_cdp(&cdpb) == -1)
 		goto error;
+
+	/* bind to the dialog module */
+	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
+	if (!load_dlg) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
+		return -1;
+	}
+	if (load_dlg(&dialogb) != 0) {
+		return -1;
+	}
 	
 	
 	/* Init the authorization data storage */

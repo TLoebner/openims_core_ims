@@ -66,7 +66,7 @@
 /** 
  * Whether to print debug message while encoding/decoding 
  */
-#define BIN_DEBUG 1
+#define BIN_DEBUG 0
 
 /** 
  * Whether to do sanity checks on the available data when decoding
@@ -327,6 +327,67 @@ inline int bin_decode_str(bin_data *x,str *s)
 	      (unsigned char)x->s[(*(PTR))+1]<<8;\
 	(R)=*((regex_t*) (x->s+(*PTR)+2));		\
 	(*(PTR))+= 2+len;\
+}
+
+
+extern dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
+
+
+/**
+ * Encode a dlg_t into a binary form
+ * @param x - binary data to append to
+ * @param d - the dlg_t to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_dlg_t(bin_data *x,dlg_t *d)
+{
+	str s={0,0};
+	if (d){
+		if (dialogb.dlg2str(d,&s)!=0) goto error;
+	}
+	if (!bin_encode_str(x,&s)) goto error;
+	str_free_content(&s);
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_dlg_t: Error while encoding.\n");
+	if (s.s) str_free_content(&s);
+	return 0;		
+}
+
+/**
+ *	Decode a dlg_t from a binary data structure
+ * @param x - binary data to decode from
+ * @param dlg - the dlg_t ** to write to
+ * @returns 1 on success or 0 on failure
+ */
+int bin_decode_dlg_t(bin_data *x,dlg_t **d)
+{
+	int len;
+	str s;
+	
+	if (!bin_decode_str(x,&s)) goto error;
+
+	if (!s.len) {
+		*d = 0;
+		return 1;
+	}
+	
+	len = sizeof(dlg_t);
+	*d = (dlg_t*) shm_malloc(len);
+	if (!*d) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_dlg_t: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(*d,0,len);
+	if (dialogb.str2dlg(&s,*d)!=0) goto error;
+	
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_dlg_t: Error while decoding (at %d (%04x)).\n",x->max,x->max);
+	if (*d) {
+		shm_free(*d);
+	}
+	return 0;
 }
 
 
