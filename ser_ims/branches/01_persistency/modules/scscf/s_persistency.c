@@ -157,7 +157,7 @@ int make_snapshot_dialogs()
 		d_unlock(i);
 	}
 	bin_print(&x);
-	i = bin_dump(&x,scscf_persistency_mode,scscf_persistency_location,"dialogs");		
+	i = bin_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sdialogs");		
 	bin_free(&x);
 	return i;
 error:
@@ -172,7 +172,7 @@ int load_snapshot_dialogs()
 {
 	bin_data x;
 	s_dialog *d;
-	if (!bin_load(&x,scscf_persistency_mode,scscf_persistency_location,"dialogs")) goto error;
+	if (!bin_load(&x,scscf_persistency_mode,scscf_persistency_location,"sdialogs")) goto error;
 	bin_print(&x);
 	x.max=0;
 	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_dlg: max %d len %d\n",x.max,x.len);

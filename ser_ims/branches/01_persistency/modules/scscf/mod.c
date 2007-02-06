@@ -253,8 +253,9 @@ static cmd_export_t scscf_cmds[]={
  * <p>
  * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
  * - persistency_location - where to dump/load the persistency data to/from
- * - persistency_auth_data_timer - interval to make authorization data snapshots at
- * - persistency_dialogs_timer - interval to make dialogs data snapshots at
+ * - persistency_timer_authdata - interval to make authorization data snapshots at
+ * - persistency_timer_dialogs - interval to make dialogs data snapshots at
+ * - persistency_timer_registrar - interval to make registrar snapshots at
  */	
 static param_export_t scscf_params[]={ 
 	{"name", 							STR_PARAM, &scscf_name},

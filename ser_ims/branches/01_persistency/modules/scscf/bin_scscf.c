@@ -950,9 +950,9 @@ error:
 
 
 /**
- * Encode an authentication userdata into a binary form
+ * Encode a dialog into a binary form
  * @param x - binary data to append to
- * @param u - the authentication usedata to encode
+ * @param u - the dialog to encode
  * @returns 1 on succcess or 0 on error
  */
 int bin_encode_s_dialog(bin_data *x,s_dialog *d)
@@ -980,9 +980,9 @@ error:
 }
 
 /**
- *	Decode an authentication userdata from a binary data structure
+ *	Decode a dialog userdata from a binary data structure
  * @param x - binary data to decode from
- * @returns the auth_userdata* where the data has been decoded
+ * @returns the s_dialog* where the data has been decoded
  */
 s_dialog* bin_decode_s_dialog(bin_data *x)
 {
