@@ -683,11 +683,11 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					if (req && req->first_line.u.request.method.len==6 &&
 						strncasecmp(req->first_line.u.request.method.s,"NOTIFY",6)==0){
 						expires = cscf_get_subscription_state(req);
-						if (expires==-2){						
+						if (expires==0){						
 							d->state = DLG_STATE_TERMINATED;
 							d_unlock(d->hash);				
 							return P_drop_dialog(msg,str1,str2);
-						}else if (expires>=0){
+						}else if (expires>0){
 							d->expires = expires;
 						}
 					}

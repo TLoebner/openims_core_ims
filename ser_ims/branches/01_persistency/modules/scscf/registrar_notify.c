@@ -534,8 +534,8 @@ static inline long r_update_subscription_status(r_public *p)
 	c = p->head;
 	while(c){
 		if (r_valid_contact(c)){
-			if (c->expires-time_now>expires)
-				expires = c->expires-time_now;
+			if (c->expires-time_now+30>expires)
+				expires = c->expires-time_now+30;
 			cnt++;
 		}
 		c = c->next;

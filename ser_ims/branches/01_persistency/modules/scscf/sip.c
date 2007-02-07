@@ -1283,7 +1283,7 @@ int cscf_get_subscription_state(struct sip_msg *msg)
 			}				
 			
 			if (state.len>=s_terminated.len && strncasecmp(state.s,s_terminated.s,s_terminated.len)==0)
-				return -2;
+				return 0;
 			else if (state.len>=s_active.len && strncasecmp(state.s,s_active.s,s_active.len)==0){
 				i=0;
 				while(i<state.len-s_expires.len && strncasecmp(state.s+i,s_expires.s,s_expires.len)!=0)

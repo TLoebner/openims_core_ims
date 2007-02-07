@@ -222,20 +222,6 @@ inline int bin_encode_str(bin_data *x,str *s)
 }
 
 
-/**
- *	Append a regular expression
- */
-#define bin_encode_REGEX(X,R) {\
-	int len;    \
-	len = sizeof(*(R));\
-	BIN_REALLOC(x,2+len);\
-	if (len>65535)\
-		LOG(L_ERR,"ERROR:"M_NAME":bin_encode_REGEX: Possible loss of characters in encoding (regex > 65535bytes) %d bytes \n",len);\
-	x->s[x->len++]=len & 0x000000FF;\
-	x->s[x->len++]=(len & 0x0000FF00)>>8;\
-	memcpy(x->s+x->len,(R),len);\
-	x->len+=len;\
-}
 
 
 /* advanced data type reprezentation functions */
@@ -318,16 +304,6 @@ inline int bin_decode_str(bin_data *x,str *s)
 	return 1;
 }
 
-/**
- *	Decode of a regular expression
- */
-#define BIN_DECODE_REGEX(R,X,PTR) {\
-	int len;\
-	len = (unsigned char)x->s[(*(PTR))] |\
-	      (unsigned char)x->s[(*(PTR))+1]<<8;\
-	(R)=*((regex_t*) (x->s+(*PTR)+2));		\
-	(*(PTR))+= 2+len;\
-}
 
 
 extern dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
