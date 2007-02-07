@@ -90,12 +90,14 @@ enum {
 
 /** reg Subscription Structure */
 typedef struct _r_subscription {
-	str req_uri;		/**< public id of the user, same thing for To: 	*/
-	str from;			/**< own uri									*/
-	int duration;		/**< duration of subscription					*/
-	int expires;		/**< time of expiration							*/
-	int attempts;		/**< number of unsuccesful attempts to subscribe*/
-	str asserted_identity; /**< uri inserted into path					*/ 
+	unsigned int hash;
+	str req_uri;			/**< public id of the user, same thing for To: 	*/
+//	str from;				/**< own uri									*/
+	int duration;			/**< duration of subscription					*/
+	int expires;			/**< time of expiration							*/
+	int attempts_left;		/**< number of unsuccesful attempts to subscribe*/
+//	str asserted_identity; 	/**< uri inserted into path					*/
+	dlg_t *dialog; 
 		
 	struct _r_subscription *next, *prev;
 } r_subscription;
@@ -105,7 +107,7 @@ typedef struct {
 	gen_lock_t *lock;		/**< lock fo subscription list operations 	*/
 	r_subscription *head;	/**< first subscription in the list			*/
 	r_subscription *tail;	/**< last subscription in the list			*/ 
-} r_subscription_list;
+} r_subscription_hash_slot;
 
 
  
@@ -126,13 +128,15 @@ int P_notify(struct sip_msg *msg,char *str1,char *str2);
 
 void subscription_timer(unsigned int ticks, void* param);
 
-r_subscription* new_r_subscription(str req_uri,str from,int duration,str asserted_identity);
+r_subscription* new_r_subscription(str req_uri,int duration);
 void add_r_subscription(r_subscription *s);
-int update_r_subscription(str aor,int expires);
+int update_r_subscription(r_subscription *s,int expires);
+r_subscription* get_r_subscription(str aor);
 int is_r_subscription(str aor);
 void del_r_subscription(r_subscription *s);
 void del_r_subscription_nolock(r_subscription *s);
 void free_r_subscription(r_subscription *s);
+void print_subs(int log_level);
 
 /** reg Contact structure */
 typedef struct _r_regcontact {

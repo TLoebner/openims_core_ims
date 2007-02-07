@@ -120,6 +120,8 @@ int registrar_hash_size=1024;				/**< the size of the hash table for registrar		
 char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/pcscf/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
 int pcscf_subscribe_retries = 1;			/**< times to retry subscribe to reg on failure 	*/
 
+int subscriptions_hash_size=1024;			/**< the size of the hash table for subscriptions	*/
+
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
 int pcscf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
 
@@ -278,6 +280,7 @@ static cmd_export_t pcscf_cmds[]={
  * <p>  
  * - registrar_hash_size - size of the registrar hash table
  * - reginfo_dtd - DTD file for checking the reginfo/xml in the NOTIFY to reg event
+ * - subscriptions_hash_size - size of the subscriptions hash table
  * <p>
  * - dialogs_hash_size - size of the dialog hash table
  * - dialogs_expiration_time - time-out for dialog expiration
@@ -317,6 +320,7 @@ static param_export_t pcscf_params[]={
 
 	{"registrar_hash_size",		INT_PARAM, &registrar_hash_size},
 	{"reginfo_dtd", 			STR_PARAM, &pcscf_reginfo_dtd},
+	{"subscriptions_hash_size",	INT_PARAM, &subscriptions_hash_size},
 
 	{"dialogs_hash_size",		INT_PARAM, &pcscf_dialogs_hash_size},
 	{"dialogs_expiration_time",	INT_PARAM, &pcscf_dialogs_expiration_time},

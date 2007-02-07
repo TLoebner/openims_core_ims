@@ -60,6 +60,7 @@
 #include "bin.h"
 #include "registrar_storage.h"
 #include "dlg_state.h"
+#include "registrar_subscribe.h"
 
 #define BIN_INITIAL_ALLOC_SIZE 256
 

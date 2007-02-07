@@ -143,7 +143,7 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	d->routes_cnt = k;
 
 	len = sizeof(str)*d->routes_cnt;
-	d = (p_dialog*) shm_malloc(len);
+	d->routes = (str*) shm_malloc(len);
 	if (!d) {
 		LOG(L_ERR,"ERR:"M_NAME":bin_decode_p_dialog: Error allocating %d bytes.\n",len);
 		goto error;
@@ -558,5 +558,134 @@ error:
 
 
 
-
-
+//
+///**
+// * Encode a r_subscription into a binary form
+// * @param x - binary data to append to
+// * @param p - the r_subscription to encode
+// * @returns 1 on succcess or 0 on error
+// */
+//int bin_encode_r_subscription(bin_data *x,r_subscription *s)
+//{
+//	int k,i;
+//	
+//	if (!bin_encode_str(x,&(c->host))) goto error;
+//	k = c->port;
+//	if (!bin_encode_int2(x,k)) goto error;
+//	k = c->transport;
+//	if (!bin_encode_int1(x,k)) goto error;
+//	
+//	if (!bin_encode_ipsec(x,c->ipsec)) goto error;
+//	
+//	if (!bin_encode_str(x,&(c->uri))) goto error;
+//	
+//	k = c->reg_state+5;
+//	if (!bin_encode_int1(x,k)) goto error;
+//
+//	if (!bin_encode_int4(x,c->expires)) goto error;
+//
+//	k = c->service_route_cnt;
+//	if (!bin_encode_int2(x,k)) goto error;
+//	for(i=0;i<c->service_route_cnt;i++)
+//		if (!bin_encode_str(x,c->service_route+i)) goto error;
+//		
+//	if (!bin_encode_pinhole(x,c->pinhole)) goto error;
+//	
+//	k=0;
+//	for(p=c->head;p;p=p->next)
+//		k++;
+//	if (!bin_encode_int2(x,k)) goto error;
+//	for(p=c->head;p;p=p->next)
+//		if (!bin_encode_r_public(x,p)) goto error;	
+//	
+//	return 1;
+//error:
+//	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_subscription: Error while encoding.\n");
+//	return 0;		
+//}
+//
+///**
+// *	Decode a r_subscription from a binary data structure
+// * @param x - binary data to decode from
+// * @returns the r_subscription* where the data has been decoded
+// */
+//r_subscription* bin_decode_r_subscription(bin_data *x)
+//{
+//	r_subscription *c=0;
+//	r_public *p=0,*pn=0;
+//	int len,k,i;
+//	str st;
+//	
+//	len = sizeof(r_subscription);
+//	c = (r_subscription*) shm_malloc(len);
+//	if (!c) {
+//		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error allocating %d bytes.\n",len);
+//		goto error;
+//	}
+//	memset(c,0,len);
+//	
+//	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->host),&st)) goto error;
+//	if (!bin_decode_int2(x,&k)) goto error;
+//	c->port = k;
+//	if (!bin_decode_int1(x,&k)) goto error;
+//	c->transport = k;
+//
+//	c->hash = get_contact_hash(c->host,c->port,c->transport,r_hash_size);
+//	
+//	if (!bin_decode_ipsec(x,&(c->ipsec ))) goto error;
+//	
+//	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->uri),&st)) goto error;
+//	
+//	if (!bin_decode_int1(x,&k)) goto error;
+//	c->reg_state = k-5;
+//
+//	if (!bin_decode_int4(x,&k)) goto error;
+//	c->expires = k;
+//	
+//	if (!bin_decode_int2(x,	&k)) goto error;
+//	c->service_route_cnt = k;
+//
+//	len = sizeof(str)*c->service_route_cnt;
+//	c->service_route = (str*) shm_malloc(len);
+//	if (!c->service_route) {
+//		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error allocating %d bytes.\n",len);
+//		goto error;
+//	}
+//	memset(c->service_route,0,len);	
+//	for(i=0;i<c->service_route_cnt;i++)
+//		if (!bin_decode_str(x,&st)||!str_shm_dup(c->service_route+i,&st)) goto error;
+//	
+//	if (!bin_decode_pinhole(x,&(c->pinhole ))) goto error;
+//		
+//	if (!bin_decode_int2(x,&k)) goto error;
+//	for(i=0;i<k;i++){
+//		p = bin_decode_r_public(x);
+//		if (!p) goto error;
+//		p->prev = c->tail;
+//		p->next = 0;
+//		if (c->tail) c->tail->next = p;
+//		c->tail = p;
+//		if (!c->head) c->head = p;
+//	}
+//	return c;
+//error:
+//	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error while decoding (at %d (%04x)).\n",x->max,x->max);
+//	if (c) {
+//		if (c->host.s) shm_free(c->host.s);		
+//		if (c->ipsec) shm_free(c->ipsec);
+//		if (c->uri.s) shm_free(c->uri.s);
+//		if (c->pinhole) shm_free(c->pinhole);
+//		while(c->head){
+//			p = c->head;
+//			pn = p->next;
+//			free_r_public(p);
+//			c->head = pn;
+//		}
+//		shm_free(c);
+//	}
+//	return 0;
+//}
+//
+//
+//
+//
