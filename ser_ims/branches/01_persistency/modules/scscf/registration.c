@@ -1182,7 +1182,7 @@ void reg_await_timer(unsigned int ticks, void* param)
 			av = aud->head;
 			while(av){
 				LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: .. AV %4d - %d Exp %3d  %p\n",
-					av->item_number,av->status,av->expires,av);
+					av->item_number,av->status,(int)av->expires,av);
 				av_next = av->next;
 				if ((av->status == AUTH_VECTOR_USELESS || 
 					av->status == AUTH_VECTOR_SENT) && av->expires<ticks)

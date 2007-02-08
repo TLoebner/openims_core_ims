@@ -170,6 +170,7 @@ persistency_mode_t pcscf_persistency_mode=NO_PERSISTENCY;			/**< the type of per
 char* pcscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
 int pcscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
 int pcscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
+int pcscf_persistency_timer_subscriptions=60;						/**< interval to snapshot subscriptions data*/ 
 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
@@ -314,6 +315,7 @@ static cmd_export_t pcscf_cmds[]={
  * - persistency_location - where to dump/load the persistency data to/from
  * - persistency_timer_dialogs - interval to make dialogs data snapshots at
  * - persistency_timer_registrar - interval to make registrar snapshots at
+ * - persistency_timer_subscriptions - interval to make subscriptions snapshots at
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -361,6 +363,7 @@ static param_export_t pcscf_params[]={
 	{"persistency_location", 			STR_PARAM, &pcscf_persistency_location},
 	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
 	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
+	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
 	
 	{0,0,0} 
 };
@@ -579,6 +582,10 @@ static int mod_init(void)
 	
 	/* init the registrar subscriptions */
 	if (!r_subscription_init()) goto error;
+	if (pcscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_subscriptions();
+		if (register_timer(persistency_timer_subscriptions,0,pcscf_persistency_timer_subscriptions)<0) goto error;
+	}
 
 	/* register the subscription timer */
 	if (register_timer(subscription_timer,registrar,5)<0) goto error;
@@ -650,6 +657,7 @@ static void mod_destroy(void)
 		/* First let's snapshot everything */
 		make_snapshot_dialogs();
 		make_snapshot_registrar();
+		make_snapshot_subscriptions();
 		/* Then nuke it all */		
 		parser_destroy();
 		r_subscription_destroy();

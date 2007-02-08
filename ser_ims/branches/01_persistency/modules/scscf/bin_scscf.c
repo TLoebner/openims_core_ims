@@ -54,7 +54,7 @@
 
 #include "bin_scscf.h"
 
-/* structures reprezentation functions */
+extern struct tm_binds tmb;   		/**< Structure with pointers to tm funcs 		*/
 
 extern int r_hash_size;						/**< Size of S-CSCF registrar hash table		*/
 
@@ -79,7 +79,7 @@ static inline int str_shm_dup(str *dest,str *src)
  */
 static int bin_encode_public_identity(bin_data *x,ims_public_identity *pi)
 {
-	if (!bin_encode_int1(x,pi->barring)) goto error;
+	if (!bin_encode_char(x,pi->barring)) goto error;
 	if (!bin_encode_str(x,&(pi->public_identity))) goto error;	
 	return 1;
 error:
@@ -96,7 +96,7 @@ error:
 static int bin_decode_public_identity(bin_data *x,ims_public_identity *pi)
 {
 	str s;
-	if (!bin_decode_int1(x,	&(pi->barring))) goto error;
+	if (!bin_decode_char(x,	&(pi->barring))) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(pi->public_identity),&s))	goto error;
 	
 	return 1;
@@ -121,11 +121,12 @@ error:
  */
 static int bin_encode_spt(bin_data *x, ims_spt *spt)
 {
+	unsigned char c = spt->condition_negated<<7 | spt->registration_type<<4 | spt->type;
 	// cond negated, reg type, spt type
-	if (!bin_encode_int1(x,spt->condition_negated<<7 | spt->registration_type<<4 | spt->type)) goto error;
+	if (!bin_encode_uchar(x,c)) goto error;
 
 	//group
-	if (!bin_encode_int2(x,spt->group)) goto error;
+	if (!bin_encode_int(x,spt->group)) goto error;
 
 	//spt
 	switch(spt->type){
@@ -136,12 +137,12 @@ static int bin_encode_spt(bin_data *x, ims_spt *spt)
 			if (!bin_encode_str(x,&(spt->method))) goto error; 
 			break;
 		case 3:
-			if (!bin_encode_int1(x,spt->sip_header.type)) goto error;
+			if (!bin_encode_short(x,spt->sip_header.type)) goto error;
 			if (!bin_encode_str(x,&(spt->sip_header.header))) goto error; 
 			if (!bin_encode_str(x,&(spt->sip_header.content))) goto error; 
 			break;
 		case 4:
-			if (!bin_encode_int1(x,spt->session_case)) goto error;
+			if (!bin_encode_char(x,spt->session_case)) goto error;
 			break;
 		case 5:
 			if (!bin_encode_str(x,&(spt->session_desc.line))) goto error; 
@@ -163,16 +164,16 @@ error:
  */
 static int bin_decode_spt(bin_data *x, ims_spt *spt)
 {
-	int k;
+	unsigned char k;
 	str s;
 	
-	if (!bin_decode_int1(x,&k)) goto error;
+	if (!bin_decode_uchar(x,&k)) goto error;
 	
 	spt->type = k & 0x0F;
 	spt->condition_negated = ((k & 0x80)!=0);
 	spt->registration_type = ((k & 0x70)>>4);
 	
-	if (!bin_decode_int2(x,&(spt->group))) goto error;
+	if (!bin_decode_int(x,&(spt->group))) goto error;
 
 	switch (spt->type){
 		case 1:
@@ -182,13 +183,12 @@ static int bin_decode_spt(bin_data *x, ims_spt *spt)
 			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->method),&s)) goto error;
 			break;
 		case 3:
-			if (!bin_decode_int1(x,&(spt->sip_header.type))) goto error;
+			if (!bin_decode_short(x,&(spt->sip_header.type))) goto error;
 			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->sip_header.header),&s)) goto error;
 			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->sip_header.content),&s)) goto error;
-			//TODO - compute the regex!!!
 			break;
 		case 4:
-			if (!bin_decode_int1(x,&(spt->session_case))) goto error;
+			if (!bin_decode_char(x,&(spt->session_case))) goto error;
 			break;
 		case 5:
 			if (!bin_decode_str(x,&s)||!str_shm_dup(&(spt->session_desc.line),&s)) goto error;
@@ -232,31 +232,32 @@ error:
  */
 static int bin_encode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 {
-	int i,ppindicator;
+	int i;
+	char ppindicator;
 
 	//priority
-	if (!bin_encode_int4(x,fc->priority)) goto error;
+	if (!bin_encode_int(x,fc->priority)) goto error;
 	
 	//profile part indicator
 	if (fc->profile_part_indicator) ppindicator = (*fc->profile_part_indicator)+1;
 	else ppindicator = 0;
-	if (!bin_encode_int1(x,ppindicator)) goto error;
+	if (!bin_encode_char(x,ppindicator)) goto error;
 			
 	// trigger point 
 	if (fc->trigger_point) {
-		if (!bin_encode_int1(x,fc->trigger_point->condition_type_cnf)) goto error;
+		if (!bin_encode_char(x,fc->trigger_point->condition_type_cnf)) goto error;
 		
-		if (!bin_encode_int2(x,fc->trigger_point->spt_cnt)) goto error;
+		if (!bin_encode_ushort(x,fc->trigger_point->spt_cnt)) goto error;
 		
 		for(i=0;i<fc->trigger_point->spt_cnt;i++)
 			if (!bin_encode_spt(x,fc->trigger_point->spt+i)) goto error;
 	} else {
-		if (!bin_encode_int1(x,0xFF)) goto error;
+		if (!bin_encode_char(x,100)) goto error;
 	}
 	
 	//app server
 	if (!bin_encode_str(x,&(fc->application_server.server_name))) goto error;
-	if (!bin_encode_int1(x,fc->application_server.default_handling)) goto error;
+	if (!bin_encode_char(x,fc->application_server.default_handling)) goto error;
 	if (!bin_encode_str(x,&(fc->application_server.service_info))) goto error;
 	
 	return 1;
@@ -274,19 +275,20 @@ error:
  */
 static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 {
-	int cnf,i,ppindicator,len,k;
+	int i,len;
 	str s;
+	char ppindicator,cnf;
 	
 	//priority
-	if (!bin_decode_int4(x,&(fc->priority))) goto error;
+	if (!bin_decode_int(x,&(fc->priority))) goto error;
 	
 	// profile part indicator
-	if (!bin_decode_int1(x,&ppindicator)) goto error;
+	if (!bin_decode_char(x,&ppindicator)) goto error;
 	if (!ppindicator){
 		fc->profile_part_indicator = 0;
 	}
 	else {
-		fc->profile_part_indicator = (int*)shm_malloc(sizeof(int));
+		fc->profile_part_indicator = (char*)shm_malloc(sizeof(char));
 		if (!fc->profile_part_indicator) {
 			LOG(L_ERR,"ERR:"M_NAME":bin_decode_filter_criteria: Error allocating %d bytes.\n",sizeof(int));
 			goto error;
@@ -295,9 +297,9 @@ static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 	}
 	
 	//cnf 
-	if (!bin_decode_int1(x,&cnf)) goto error;
+	if (!bin_decode_char(x,&cnf)) goto error;
 
-	if (cnf==0xFF)
+	if (cnf==100)
 		fc->trigger_point=NULL;
 	else {
 		ims_trigger_point *tp=0;
@@ -312,8 +314,7 @@ static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 		memset(tp,0,len);
 		tp->condition_type_cnf=cnf;
 		
-		if (!bin_decode_int2(x,&k)) goto error;
-		tp->spt_cnt = k;
+		if (!bin_decode_ushort(x,&tp->spt_cnt)) goto error;
 		len = sizeof(ims_spt)*tp->spt_cnt;
 		tp->spt = (ims_spt*)shm_malloc(len);
 		if (!tp->spt) {
@@ -327,7 +328,7 @@ static int bin_decode_filter_criteria(bin_data *x, ims_filter_criteria *fc)
 	//app server uri
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(fc->application_server.server_name),&s)) goto error;
 	// app server default handling
-	if (!bin_decode_int1(x,&(fc->application_server.default_handling)))goto error;
+	if (!bin_decode_char(x,&(fc->application_server.default_handling)))goto error;
 	// app server service info
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(fc->application_server.service_info),&s)) goto error;
 
@@ -363,12 +364,12 @@ static int bin_encode_service_profile(bin_data *x,ims_service_profile *sp)
 	int i;
 		
 	//public identity
-	if (!bin_encode_int2(x,sp->public_identities_cnt)) return 0;
+	if (!bin_encode_ushort(x,sp->public_identities_cnt)) return 0;
 	for(i=0;i<sp->public_identities_cnt;i++)
 		if (!bin_encode_public_identity(x,sp->public_identities+i)) goto error;
 	
 	//filter criteria
-	if (!bin_encode_int2(x,sp->filter_criteria_cnt)) return 0;
+	if (!bin_encode_ushort(x,sp->filter_criteria_cnt)) return 0;
 	for(i=0;i<sp->filter_criteria_cnt;i++)
 		if (!bin_encode_filter_criteria(x,sp->filter_criteria+i)) goto error;
 		
@@ -376,12 +377,12 @@ static int bin_encode_service_profile(bin_data *x,ims_service_profile *sp)
 	if (sp->cn_service_auth)
 		i = sp->cn_service_auth->subscribed_media_profile_id;
 	else i = 0xFFFFFFFF;
-	if (!bin_encode_int4(x,i)) goto error;
+	if (!bin_encode_int(x,i)) goto error;
 
 	//shared_ifc
-	if (!bin_encode_int2(x,sp->shared_ifc_set_cnt)) return 0;
+	if (!bin_encode_ushort(x,sp->shared_ifc_set_cnt)) return 0;
 	for(i=0;i<sp->shared_ifc_set_cnt;i++)
-		if (!bin_encode_int4(x,sp->shared_ifc_set[i])) goto error;
+		if (!bin_encode_int(x,sp->shared_ifc_set[i])) goto error;
 
 	return 1;
 error:
@@ -401,7 +402,7 @@ static int bin_decode_service_profile(bin_data *x, ims_service_profile *sp)
 	int i,len;
 
 	//public identities
-	if (!bin_decode_int2(x,&(sp->public_identities_cnt))) goto error;
+	if (!bin_decode_ushort(x,&(sp->public_identities_cnt))) goto error;
 	len = sizeof(ims_public_identity)*sp->public_identities_cnt;
 	sp->public_identities = (ims_public_identity*)shm_malloc(len);
 	if (!sp->public_identities) {
@@ -413,7 +414,7 @@ static int bin_decode_service_profile(bin_data *x, ims_service_profile *sp)
 		if (!bin_decode_public_identity(x,sp->public_identities+i)) goto error;
 	
 	// filter criteria
-	if (!bin_decode_int2(x,&(sp->filter_criteria_cnt))) goto error;	
+	if (!bin_decode_ushort(x,&(sp->filter_criteria_cnt))) goto error;	
 	len = sizeof(ims_filter_criteria)*sp->filter_criteria_cnt;
 	sp->filter_criteria = (ims_filter_criteria*)shm_malloc(len);
 	if (!sp->filter_criteria) {
@@ -425,7 +426,7 @@ static int bin_decode_service_profile(bin_data *x, ims_service_profile *sp)
 		if (!bin_decode_filter_criteria(x,sp->filter_criteria+i)) goto error;
 
 	// cn service auth
-	if (!bin_decode_int4(x,&i)) goto error;
+	if (!bin_decode_int(x,&i)) goto error;
 	if (i==0xFFFFFFFF)
 		sp->cn_service_auth = 0;
 	else {
@@ -439,7 +440,7 @@ static int bin_decode_service_profile(bin_data *x, ims_service_profile *sp)
 	}
 	
 	//shared ifc
-	if (!bin_decode_int2(x,&(sp->shared_ifc_set_cnt))) goto error;	
+	if (!bin_decode_ushort(x,&(sp->shared_ifc_set_cnt))) goto error;	
 	len = sizeof(int)*sp->shared_ifc_set_cnt;
 	sp->shared_ifc_set = (int*)shm_malloc(len);
 	if (!sp->shared_ifc_set) {
@@ -448,7 +449,7 @@ static int bin_decode_service_profile(bin_data *x, ims_service_profile *sp)
 	}
 	memset(sp->shared_ifc_set,0,len);
 	for(i=0;i<sp->shared_ifc_set_cnt;i++)
-		if (!bin_decode_int4(x,sp->shared_ifc_set+i)) goto error;
+		if (!bin_decode_int(x,sp->shared_ifc_set+i)) goto error;
 
 	return 1;
 error:
@@ -458,7 +459,6 @@ error:
 		if (sp->filter_criteria) shm_free(sp->filter_criteria);
 		if (sp->cn_service_auth) shm_free(sp->cn_service_auth);
 		if (sp->shared_ifc_set) shm_free(sp->shared_ifc_set);
-		shm_free(sp);
 	}
 	return 0;
 }
@@ -485,7 +485,7 @@ int bin_encode_ims_subscription(bin_data *x, ims_subscription *s)
 {
 	int i;
 	if (!bin_encode_str(x,&(s->private_identity))) goto error;
-	if (!bin_encode_int2(x,s->service_profiles_cnt)) goto error;
+	if (!bin_encode_ushort(x,s->service_profiles_cnt)) goto error;
 
 	for(i=0;i<s->service_profiles_cnt;i++)
 		if (!bin_encode_service_profile(x,s->service_profiles+i)) goto error;
@@ -516,7 +516,7 @@ ims_subscription *bin_decode_ims_subscription(bin_data *x)
 	memset(imss,0,sizeof(ims_subscription));
 	
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(imss->private_identity),&s)) goto error;
-	if (!bin_decode_int2(x,	&(imss->service_profiles_cnt))) goto error;
+	if (!bin_decode_ushort(x,	&(imss->service_profiles_cnt))) goto error;
 	
 	len = sizeof(ims_service_profile)*imss->service_profiles_cnt;
 	imss->service_profiles = (ims_service_profile*)shm_malloc(len);
@@ -557,7 +557,7 @@ error:
 int bin_encode_r_contact(bin_data *x,r_contact *c)
 {
 	if (!bin_encode_str(x,&(c->uri))) goto error;
-	if (!bin_encode_int4(x,c->expires)) goto error;
+	if (!bin_encode_time_t(x,c->expires)) goto error;
 	if (!bin_encode_str(x,&(c->ua))) goto error;
 	if (!bin_encode_str(x,&(c->path))) goto error;
 
@@ -575,7 +575,7 @@ error:
 r_contact* bin_decode_r_contact(bin_data *x)
 {
 	r_contact *c=0;
-	int len,k;
+	int len;
 	str s;
 	
 	len = sizeof(r_contact);
@@ -587,8 +587,7 @@ r_contact* bin_decode_r_contact(bin_data *x)
 	memset(c,0,len);
 	
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->uri),&s)) goto error;
-	if (!bin_decode_int4(x,&(k))) goto error;
-	c->expires = k;
+	if (!bin_decode_time_t(x,&c->expires)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->ua),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->path),&s)) goto error;
 	
@@ -615,10 +614,10 @@ error:
 int bin_encode_r_subscriber(bin_data *x,r_subscriber *s)
 {
 	if (!bin_encode_str(x,&(s->subscriber))) goto error;
-	if (!bin_encode_int1(x,s->event)) goto error;
-	if (!bin_encode_int4(x,s->expires)) goto error;
+	if (!bin_encode_char(x,s->event)) goto error;
+	if (!bin_encode_time_t(x,s->expires)) goto error;
 	if (!bin_encode_dlg_t(x,s->dialog)) goto error;
-	if (!bin_encode_int4(x,s->version)) goto error;
+	if (!bin_encode_int(x,s->version)) goto error;
 
 	return 1;
 error:
@@ -646,16 +645,17 @@ r_subscriber* bin_decode_r_subscriber(bin_data *x)
 	memset(s,0,len);
 	
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(s->subscriber),&st)) goto error;
-	if (!bin_decode_int1(x,&(s->event))) goto error;
-	if (!bin_decode_int4(x,&(s->expires))) goto error;
+	if (!bin_decode_char(x,&(s->event))) goto error;
+	if (!bin_decode_time_t(x,&(s->expires))) goto error;
 	if (!bin_decode_dlg_t(x,&(s->dialog))) goto error;
-	if (!bin_decode_int4(x,&(s->version))) goto error;	
+	if (!bin_decode_int(x,&(s->version))) goto error;	
 	
 	return s;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (s) {
 		if (s->subscriber.s) shm_free(s->subscriber.s);
+		if (s->dialog) tmb.free_dlg(s->dialog);
 		shm_free(s);
 	}
 	return 0;
@@ -671,30 +671,30 @@ error:
  */
 int bin_encode_r_public(bin_data *x,r_public *p)
 {
-	int k;
+	unsigned short k;
+	char ch;
 	r_contact *c=0;
 	r_subscriber *s=0;
 	
 	if (!bin_encode_str(x,&(p->aor))) goto error;
-	k = p->reg_state;
-	if (!bin_encode_int1(x,k)) goto error;
+	ch = p->reg_state;
+	if (!bin_encode_char(x,ch)) goto error;
 	if (!bin_encode_ims_subscription(x,p->s)) goto error;
 	
 	k=0;
 	for(c=p->head;c;c=c->next)
 		k++;
-	if (!bin_encode_int2(x,k)) goto error;
+	if (!bin_encode_ushort(x,k)) goto error;
 	for(c=p->head;c;c=c->next)
 		if (!bin_encode_r_contact(x,c)) goto error;	
 	
 	k=0;
 	for(s=p->shead;s;s=s->next)
 		k++;
-	if (!bin_encode_int2(x,k)) goto error;
+	if (!bin_encode_ushort(x,k)) goto error;
 	for(s=p->shead;s;s=s->next)
 		if (!bin_encode_r_subscriber(x,s)) goto error;	
 	
-
 	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_public: Error while encoding.\n");
@@ -711,7 +711,9 @@ r_public* bin_decode_r_public(bin_data *x)
 	r_public *p=0;
 	r_contact *c=0,*cn=0;
 	r_subscriber *s,*sn=0;
-	int len,k,i;
+	int len,i;
+	unsigned short k;
+	char ch;
 	str st;
 	
 	len = sizeof(r_public);
@@ -724,13 +726,13 @@ r_public* bin_decode_r_public(bin_data *x)
 	
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->aor),&st)) goto error;
 	p->hash = get_aor_hash(p->aor,r_hash_size);
-	if (!bin_decode_int1(x,&k)) goto error;
-	p->reg_state = k;
+	if (!bin_decode_char(x,&ch)) goto error;
+	p->reg_state = ch;
 	
 	p->s = bin_decode_ims_subscription(x);
 	if (!p->s) goto error;
 	
-	if (!bin_decode_int2(x,&k)) goto error;
+	if (!bin_decode_ushort(x,&k)) goto error;
 	for(i=0;i<k;i++){
 		c = bin_decode_r_contact(x);
 		if (!c) goto error;
@@ -741,7 +743,7 @@ r_public* bin_decode_r_public(bin_data *x)
 		p->tail = c;
 	}
 
-	if (!bin_decode_int2(x,&k)) goto error;
+	if (!bin_decode_ushort(x,&k)) goto error;
 	for(i=0;i<k;i++){
 		s = bin_decode_r_subscriber(x);
 		if (!s) goto error;
@@ -789,16 +791,16 @@ error:
  */
  int bin_encode_auth_vector(bin_data *x,auth_vector *v)
 {
-	int k;
-	if (!bin_encode_int4(x,v->item_number)) goto error;
+	char ch;
+	if (!bin_encode_int(x,v->item_number)) goto error;
 	if (!bin_encode_str(x,&(v->algorithm))) goto error;
 	if (!bin_encode_str(x,&(v->authenticate))) goto error;
 	if (!bin_encode_str(x,&(v->authorization))) goto error;
 	if (!bin_encode_str(x,&(v->ck))) goto error;
 	if (!bin_encode_str(x,&(v->ik))) goto error;
-	if (!bin_encode_int4(x,v->expires)) goto error;
-	k = v->status;
-	if (!bin_encode_int1(x,k)) goto error;
+	if (!bin_encode_time_t(x,v->expires)) goto error;
+	ch = v->status;
+	if (!bin_encode_char(x,ch)) goto error;
 
 	return 1;
 error:
@@ -814,7 +816,8 @@ error:
 auth_vector* bin_decode_auth_vector(bin_data *x)
 {
 	auth_vector *v=0;
-	int len,k;
+	int len;
+	char ch;
 	str s;
 	
 	len = sizeof(auth_vector);
@@ -825,16 +828,16 @@ auth_vector* bin_decode_auth_vector(bin_data *x)
 	}
 	memset(v,0,len);
 	
-	if (!bin_decode_int4(x,&(v->item_number))) goto error;
+	if (!bin_decode_int(x,&(v->item_number))) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->algorithm),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->authenticate),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->authorization),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->ck),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->ik),&s)) goto error;
 
-	if (!bin_decode_int4(x,	&(v->expires))) goto error;
-	if (!bin_decode_int1(x,	&k)) goto error;
-	v->status=k;
+	if (!bin_decode_time_t(x,	&(v->expires))) goto error;
+	if (!bin_decode_char(x,	&ch)) goto error;
+	v->status=ch;
 	
 	return v;
 error:
@@ -862,18 +865,17 @@ error:
  */
  int bin_encode_auth_userdata(bin_data *x,auth_userdata *u)
 {
-	int k=0;
+	unsigned short k=0;
 	auth_vector *v;
 	
 	if (!bin_encode_str(x,&(u->private_identity))) goto error;
 	if (!bin_encode_str(x,&(u->public_identity))) goto error;
-//	if (!bin_encode_int4(x,u->hash)) goto error;
-	if (!bin_encode_int4(x,u->expires)) goto error;
+	if (!bin_encode_time_t(x,u->expires)) goto error;
 	
 	for(v=u->head;v;v=v->next)
 		k++;
 
-	if (!bin_encode_int2(x,k)) goto error;
+	if (!bin_encode_ushort(x,k)) goto error;
 	for(v=u->head;v;v=v->next)
 		if (!bin_encode_auth_vector(x,v)) goto error;
 
@@ -892,7 +894,8 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 {
 	auth_userdata *u=0;
 	auth_vector *v=0,*vn=0;
-	int i,len,k;
+	int i,len;
+	unsigned short k;
 	str s;
 	
 	len = sizeof(auth_userdata);
@@ -906,10 +909,9 @@ auth_userdata* bin_decode_auth_userdata(bin_data *x)
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(u->private_identity),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(u->public_identity),&s)) goto error;
 	u->hash = get_hash_auth(u->private_identity,u->public_identity);	
-//	if (!bin_decode_int4(x,	&(u->hash))) goto error;
-	if (!bin_decode_int4(x,	&(u->expires))) goto error;
+	if (!bin_decode_time_t(x,	&(u->expires))) goto error;
 	
-	if (!bin_decode_int2(x,	&k)) goto error;
+	if (!bin_decode_ushort(x,	&k)) goto error;
 	
 	for(i=0;i<k;i++){
 		v = bin_decode_auth_vector(x);
@@ -958,21 +960,24 @@ error:
  */
 int bin_encode_s_dialog(bin_data *x,s_dialog *d)
 {
-//	if (!bin_encode_int4(x,d->hash)) goto error;	
+	char ch;
 	if (!bin_encode_str(x,&(d->call_id))) goto error;
-	if (!bin_encode_int1(x,d->direction)) goto error;
+	ch = d->direction;
+	if (!bin_encode_char(x,ch)) goto error;
 	
 	if (!bin_encode_str(x,&(d->aor))) goto error;
 	
-	if (!bin_encode_int1(x,d->method)) goto error;	
+	ch = d->method;
+	if (!bin_encode_char(x,ch)) goto error;	
 	if (!bin_encode_str(x,&(d->method_str))) goto error;
 	
-	if (!bin_encode_int4(x,d->first_cseq)) goto error;	
-	if (!bin_encode_int4(x,d->last_cseq)) goto error;	
+	if (!bin_encode_int(x,d->first_cseq)) goto error;	
+	if (!bin_encode_int(x,d->last_cseq)) goto error;	
 
-	if (!bin_encode_int1(x,d->state)) goto error;	
+	ch = d->state;
+	if (!bin_encode_char(x,ch)) goto error;	
 
-	if (!bin_encode_int4(x,d->expires)) goto error;	
+	if (!bin_encode_time_t(x,d->expires)) goto error;	
 	
 	return 1;
 error:
@@ -988,8 +993,9 @@ error:
 s_dialog* bin_decode_s_dialog(bin_data *x)
 {
 	s_dialog *d=0;
-	int len,k;
+	int len;
 	str s;
+	char ch;
 	
 	len = sizeof(s_dialog);
 	d = (s_dialog*) shm_malloc(len);
@@ -999,28 +1005,24 @@ s_dialog* bin_decode_s_dialog(bin_data *x)
 	}
 	memset(d,0,len);
 
-//	if (!bin_decode_int4(x,	&(d->hash))) goto error;		
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->call_id),&s)) goto error;
 
-	if (!bin_decode_int1(x,	&k)) goto error;
-	d->direction = k;
+	if (!bin_decode_char(x,	&ch)) goto error;
+	d->direction = ch;
 	
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->aor),&s)) goto error;
 		
-	if (!bin_decode_int1(x,	&k)) goto error;
-	d->method = k;
+	if (!bin_decode_char(x,	&ch)) goto error;
+	d->method = ch;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->method_str),&s)) goto error;
 	
-	if (!bin_decode_int4(x,	&k)) goto error;
-	d->first_cseq = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	d->last_cseq = k;
+	if (!bin_decode_int(x,	&d->first_cseq)) goto error;
+	if (!bin_decode_int(x,	&d->last_cseq)) goto error;
 
-	if (!bin_decode_int1(x,	&k)) goto error;
-	d->state = k;
+	if (!bin_decode_char(x,	&ch)) goto error;
+	d->state = ch;
 	
-	if (!bin_decode_int4(x,	&k)) goto error;
-	d->expires = k;
+	if (!bin_decode_time_t(x, &d->expires)) goto error;
 	
 	d->hash = get_s_dialog_hash(d->call_id);		
 	

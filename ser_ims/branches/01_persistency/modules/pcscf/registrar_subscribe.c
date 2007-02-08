@@ -291,8 +291,8 @@ int r_send_subscribe(r_subscription *s,int duration)
 	h.len += expires_s.len + 12 + expires_e.len;
 
 	h.len += contact_s.len + pcscf_name_str.len + contact_e.len;
-	if (pcscf_name_str.len) h.len += p_asserted_identity_s.len + 
-		p_asserted_identity_e.len + pcscf_name_str.len;
+	if (pcscf_path_str.len) h.len += p_asserted_identity_s.len + 
+		p_asserted_identity_e.len + pcscf_path_str.len;
 
 	h.s = pkg_malloc(h.len);
 	if (!h.s){
@@ -316,9 +316,9 @@ int r_send_subscribe(r_subscription *s,int duration)
 	STR_APPEND(h,pcscf_name_str);
 	STR_APPEND(h,contact_e);
 	
-	if (pcscf_name_str.len) {
+	if (pcscf_path_str.len) {
 		STR_APPEND(h,p_asserted_identity_s);
-		STR_APPEND(h,pcscf_name_str);
+		STR_APPEND(h,pcscf_path_str);
 		STR_APPEND(h,p_asserted_identity_e);
 	}
 	

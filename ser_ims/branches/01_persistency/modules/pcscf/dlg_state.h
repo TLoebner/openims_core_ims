@@ -88,11 +88,11 @@ typedef struct _p_dialog {
 //	enum p_dialog_direction direction;
 	
 	str host;					/**< host of the UE						*/
-	int port;					/**< port of the UE						*/
-	int transport;				/**< transport for the UE				*/
+	unsigned short port;					/**< port of the UE						*/
+	char transport;				/**< transport for the UE				*/
 	
 	str *routes;
-	int routes_cnt;
+	unsigned short routes_cnt;
 	
 	enum p_dialog_method method;
 	str method_str;

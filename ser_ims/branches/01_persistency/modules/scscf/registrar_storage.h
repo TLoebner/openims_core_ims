@@ -78,9 +78,9 @@ enum {
 /** registrar subscriber structure */
 typedef struct _r_subscriber {
 	str subscriber;				/**< The subscribers contact 			*/
-	int event;
+	char event;
 
-	int expires;				/**< Time of expiration		 			*/
+	time_t expires;				/**< Time of expiration		 			*/
 	dlg_t *dialog;				/**< tm dialog to send notify out		*/
 	
 	int version;				/**< Last version sent to this subs.	*/

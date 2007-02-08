@@ -66,7 +66,7 @@
 /** 
  * Whether to print debug message while encoding/decoding 
  */
-#define BIN_DEBUG 0
+#define BIN_DEBUG 1
 
 /** 
  * Whether to do sanity checks on the available data when decoding
@@ -150,57 +150,280 @@ inline void bin_print(bin_data *x)
 }
 
 
+
+
+
+
+
 /* basic data type reprezentation functions */
 
+
+
+
 /**
- *	Append an integer of 1 byte 
+ *	Append a char of 1 byte 
  */
-inline int bin_encode_int1(bin_data *x,int k) 
+inline int bin_encode_char(bin_data *x,char k) 
 { 
 	if (!bin_expand(x,1)) return 0;
-	if (k>0xff) 
-		LOG(L_ERR,"ERROR:"M_NAME":bin_encode_int1: Possible loss in encoding (int > 0xff bytes) %d bytes \n",k);
-	x->s[x->len++]=k & 0x000000FF; 
+	x->s[x->len++]= k; 
 #if BIN_DEBUG	
-	LOG(L_INFO,"INFO:"M_NAME":bin_encode_int1: [%d]:[%.02x] new len %04x\n",k,x->s[x->len-1],x->len);
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_char: [%d]:[%.02x] new len %04x\n",k,x->s[x->len-1],x->len);
 #endif
 	return 1;   
 }
+/**
+ *	Decode of 1 char
+ */
+inline int bin_decode_char(bin_data *x,char *c)
+{
+#if BIN_DECODE_CHECKS
+	if (x->max+1 > x->len) return 0;
+#endif	
+	*c = x->s[x->max];
+	x->max += 1;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_char: [%d] new pos %04x\n",*c,x->max);
+#endif
+	return 1;
+}
+
+
+
 
 /**
- *	Append an integer of 2 bytes 
+ *	Append an unsigned char of 1 byte 
  */
-inline int bin_encode_int2(bin_data *x,int k) 
+inline int bin_encode_uchar(bin_data *x,unsigned char k) 
+{ 
+	if (!bin_expand(x,1)) return 0;
+	x->s[x->len++]= k; 
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_uchar: [%u]:[%.02x] new len %04x\n",k,x->s[x->len-1],x->len);
+#endif
+	return 1;   
+}
+/**
+ *	Decode of 1 unsigned char
+ */
+inline int bin_decode_uchar(bin_data *x,unsigned char *c)
+{
+#if BIN_DECODE_CHECKS
+	if (x->max+1 > x->len) return 0;
+#endif	
+	*c = x->s[x->max];
+	x->max += 1;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_uchar: [%u] new pos %04x\n",*c,x->max);
+#endif
+	return 1;
+}
+
+
+
+
+
+
+
+/**
+ *	Append the a short  
+ */
+inline int bin_encode_short(bin_data *x,short k) 
 { 
 	if (!bin_expand(x,2)) return 0;
-	if (k>0xffff) 
-		LOG(L_ERR,"ERROR:"M_NAME":bin_encode_int2: Possible loss in encoding (int > 0xffff bytes) %d bytes \n",k);
-	x->s[x->len++]=k & 0x000000FF;    
-	x->s[x->len++]=(k & 0x0000FF00) >> 8;   
+	x->s[x->len++]=k & 0x00FF;    
+	x->s[x->len++]=(k & 0xFF00) >> 8;   
 #if BIN_DEBUG	
-	LOG(L_INFO,"INFO:"M_NAME":bin_encode_int2: [%d]:[%.02x %.02x] new len %04x\n",k,x->s[x->len-2],x->s[x->len-1],x->len);
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_short: [%d]:[%.02x %.02x] new len %04x\n",k,x->s[x->len-2],x->s[x->len-1],x->len);
 #endif
 	return 1;   
 }
+/**
+ *	Decode of a short
+ */
+inline int bin_decode_short(bin_data *x,short *v)
+{
+#if BIN_DECODE_CHECKS
+	if (x->max+2 > x->len) return 0;
+#endif
+	*v =	(unsigned char)x->s[x->max  ]    |
+	 		(unsigned char)x->s[x->max+1]<<8;
+	x->max += 2;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_short: [%d] new pos %04x\n",*v,x->max);
+#endif
+	return 1;
+}
+
 
 /**
- *	Append an integer of 4 bytes
+ *	Append the an unsigned short  
  */
-inline int bin_encode_int4(bin_data *x,int k) 
+inline int bin_encode_ushort(bin_data *x,unsigned short k) 
 { 
-	if (!bin_expand(x,4)) return 0;
-	if (k>0xffffffff) 
-		LOG(L_ERR,"ERROR:"M_NAME":bin_encode_int4: Possible loss in encoding (int > 0xffffffff bytes) %d bytes \n",k);
-	x->s[x->len++]= k & 0x000000FF;          
-	x->s[x->len++]=(k & 0x0000FF00) >> 8;    
-	x->s[x->len++]=(k & 0x00FF0000) >>16;    
-	x->s[x->len++]=(k & 0xFF000000) >>24;
+	if (!bin_expand(x,2)) return 0;
+	x->s[x->len++]=k & 0x00FF;    
+	x->s[x->len++]=(k & 0xFF00) >> 8;   
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_encode_ushort: [%u]:[%.02x %.02x] new len %04x\n",k,x->s[x->len-2],x->s[x->len-1],x->len);
+#endif
+	return 1;   
+}
+/**
+ *	Decode of a short
+ */
+inline int bin_decode_ushort(bin_data *x,unsigned short *v)
+{
+#if BIN_DECODE_CHECKS
+	if (x->max+2 > x->len) return 0;
+#endif
+	*v =	(unsigned char)x->s[x->max  ]    |
+	 		(unsigned char)x->s[x->max+1]<<8;
+	x->max += 2;
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_ushort: [%u] new pos %04x\n",*v,x->max);
+#endif
+	return 1;
+}
+
+
+/**
+ *	Append an integer
+ */
+inline int bin_encode_int(bin_data *x,int k) 
+{ 
+	int len = sizeof(int),i;
+	if (!bin_expand(x,len)) return 0;
+	for(i=0;i<len;i++){
+		x->s[x->len++]= k & 0xFF;
+		k = k>>8;          
+	}
 #if BIN_DEBUG		    
-	LOG(L_INFO,"INFO:"M_NAME":bin_encode_int4: [%d]:[%.02x %.02x %.02x %.02x] new len %04x\n",k,
-		x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],x->len);
+	switch(len){
+		case 4:
+			LOG(L_INFO,"INFO:"M_NAME":bin_encode_int: [%d]:[%.02x %.02x %.02x %.02x] new len %04x\n",k,
+				x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],x->len);
+			break;
+		case 8:
+			LOG(L_INFO,"INFO:"M_NAME":bin_encode_int: [%d]:[%.02x %.02x %.02x %.02x%.02x %.02x %.02x %.02x] new len %04x\n",k,
+				x->s[x->len-8],x->s[x->len-7],x->s[x->len-6],x->s[x->len-5],
+				x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],
+				x->len);
+			break;
+	}
 #endif		
 	return 1;   
 }
+/**
+ *	Decode an integer
+ */
+inline int bin_decode_int(bin_data *x,int *v)
+{
+	int len = sizeof(int),i;
+#if BIN_DECODE_CHECKS
+	if (x->max+len > x->len) return 0;
+#endif
+	*v = 0;
+	for(i=0;i<len;i++)
+		*v =  *v | ((unsigned char)x->s[x->max++] <<(8*i));
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int: [%d] new pos %04x\n",*v,x->max);
+#endif
+	return 1;
+}
+
+
+
+/**
+ *	Append an unsigned integer
+ */
+inline int bin_encode_uint(bin_data *x,unsigned int k) 
+{ 
+	int len = sizeof(unsigned int),i;
+	if (!bin_expand(x,len)) return 0;
+	for(i=0;i<len;i++){
+		x->s[x->len++]= k & 0xFF;
+		k = k>>8;          
+	}
+#if BIN_DEBUG		    
+	switch(len){
+		case 4:
+			LOG(L_INFO,"INFO:"M_NAME":bin_encode_uint: [%u]:[%.02x %.02x %.02x %.02x] new len %04x\n",k,
+				x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],x->len);
+			break;
+		case 8:
+			LOG(L_INFO,"INFO:"M_NAME":bin_encode_uint: [%u]:[%.02x %.02x %.02x %.02x%.02x %.02x %.02x %.02x] new len %04x\n",k,
+				x->s[x->len-8],x->s[x->len-7],x->s[x->len-6],x->s[x->len-5],
+				x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],
+				x->len);
+			break;
+	}
+#endif		
+	return 1;   
+}
+/**
+ *	Decode an unsigned integer
+ */
+inline int bin_decode_uint(bin_data *x,unsigned int *v)
+{
+	int len = sizeof(unsigned int),i;
+#if BIN_DECODE_CHECKS
+	if (x->max+len > x->len) return 0;
+#endif
+	*v = 0;
+	for(i=0;i<len;i++)
+		*v =  *v | ((unsigned char)x->s[x->max++] <<(8*i));
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_uint: [%u] new pos %04x\n",*v,x->max);
+#endif
+	return 1;
+}
+
+/**
+ *	Append a time_t structure
+ */
+inline int bin_encode_time_t(bin_data *x,time_t k) 
+{ 
+	int len = sizeof(time_t),i;
+	if (!bin_expand(x,len)) return 0;
+	for(i=0;i<len;i++){
+		x->s[x->len++]= k & 0xFF;
+		k = k>>8;          
+	}
+#if BIN_DEBUG		    
+	switch(len){
+		case 4:
+			LOG(L_INFO,"INFO:"M_NAME":bin_encode_time_t: [%u]:[%.02x %.02x %.02x %.02x] new len %04x\n",(unsigned int)k,
+				x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],x->len);
+			break;
+		case 8:
+			LOG(L_INFO,"INFO:"M_NAME":bin_encode_time_t: [%u]:[%.02x %.02x %.02x %.02x%.02x %.02x %.02x %.02x] new len %04x\n",(unsigned int)k,
+				x->s[x->len-8],x->s[x->len-7],x->s[x->len-6],x->s[x->len-5],
+				x->s[x->len-4],x->s[x->len-3],x->s[x->len-2],x->s[x->len-1],
+				x->len);
+			break;
+	}
+#endif		
+	return 1;   
+}
+/**
+ *	Decode an unsigned integer
+ */
+inline int bin_decode_time_t(bin_data *x,time_t *v)
+{
+	int len = sizeof(time_t),i;
+#if BIN_DECODE_CHECKS
+	if (x->max+len > x->len) return 0;
+#endif
+	*v = 0;
+	for(i=0;i<len;i++)
+		*v =  *v | ((unsigned char)x->s[x->max++] <<(8*i));
+#if BIN_DEBUG	
+	LOG(L_INFO,"INFO:"M_NAME":bin_decode_time_t: [%u] new pos %04x\n",(unsigned int) *v,x->max);
+#endif
+	return 1;
+}
+
 
 /**
  *	Append a string 
@@ -220,70 +443,6 @@ inline int bin_encode_str(bin_data *x,str *s)
 #endif		
 	return 1;   
 }
-
-
-
-
-/* advanced data type reprezentation functions */
-
-
-
-/**
- * Decoding into structures functions, without allocating new space for data
- */
-
-/**
- *	Decode of 1 byte integer
- */
-inline int bin_decode_int1(bin_data *x,int *v)
-{
-#if BIN_DECODE_CHECKS
-	if (x->max+1 > x->len) return 0;
-#endif	
-	*v = (unsigned char)x->s[x->max];
-	x->max += 1;
-#if BIN_DEBUG	
-	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int1: [%d] new pos %04x\n",*v,x->max);
-#endif
-	return 1;
-}
-
-/**
- *	Decode of 2 byte integer
- */
-inline int bin_decode_int2(bin_data *x,int *v)
-{
-#if BIN_DECODE_CHECKS
-	if (x->max+2 > x->len) return 0;
-#endif
-	*v =	(unsigned char)x->s[x->max  ]    |
-	 		(unsigned char)x->s[x->max+1]<<8;
-	x->max += 2;
-#if BIN_DEBUG	
-	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int2: [%d] new pos %04x\n",*v,x->max);
-#endif
-	return 1;
-}
-
-/**
- *	Decode of 4 byte integer
- */
-inline int bin_decode_int4(bin_data *x,int *v)
-{
-#if BIN_DECODE_CHECKS
-	if (x->max+4 > x->len) return 0;
-#endif
-	*v =    (unsigned char)x->s[x->max  ] 		|
-			(unsigned char)x->s[x->max+1] <<8 	|
-		  	(unsigned char)x->s[x->max+2] <<16 	|
-		  	(unsigned char)x->s[x->max+3] <<24 	;
-	x->max += 4;
-#if BIN_DEBUG	
-	LOG(L_INFO,"INFO:"M_NAME":bin_decode_int4: [%d] new pos %04x\n",*v,x->max);
-#endif
-	return 1;
-}
-
 /**
  *	Decode of a str string
  */
@@ -295,7 +454,7 @@ inline int bin_decode_str(bin_data *x,str *s)
 	s->len = (unsigned char)x->s[x->max  ]    |
 	 		(unsigned char)x->s[x->max+1]<<8;
 	x->max +=2;
-	if (x->max+s->len>=x->len) return 0;
+	if (x->max+s->len>x->len) return 0;
 	s->s = x->s + x->max;
 	x->max += s->len;
 #if BIN_DEBUG	
@@ -304,6 +463,10 @@ inline int bin_decode_str(bin_data *x,str *s)
 	return 1;
 }
 
+
+
+
+/* complex data types */
 
 
 extern dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
@@ -367,6 +530,10 @@ error:
 }
 
 
+
+
+
+/* file dumping routines */
 
 
 int bin_files_keep_count=3;				/**< how many old snapshots to keep				*/

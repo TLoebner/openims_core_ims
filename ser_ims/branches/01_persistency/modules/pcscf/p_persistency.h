@@ -68,4 +68,8 @@ int make_snapshot_registrar();
 int load_snapshot_registrar();
 void persistency_timer_registrar(unsigned int ticks, void* param);
 
+int make_snapshot_subscriptions();
+int load_snapshot_subscriptions();
+void persistency_timer_subscriptions(unsigned int ticks, void* param);
+
 #endif
