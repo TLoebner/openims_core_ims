@@ -591,10 +591,12 @@ static void mod_destroy(void)
 		}
 	lock_release(process_lock);
 	if (do_destroy){
-		/* First let's snapshot everything */
-		make_snapshot_authdata();
-		make_snapshot_dialogs();
-		make_snapshot_registrar();
+		if (scscf_persistency_mode!=NO_PERSISTENCY){
+			/* First let's snapshot everything */
+			make_snapshot_authdata();
+			make_snapshot_dialogs();
+			make_snapshot_registrar();
+		}
 		/* Then nuke it all */
 		auth_data_destroy();
 		parser_destroy();
