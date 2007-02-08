@@ -204,3 +204,79 @@ void persistency_timer_registrar(unsigned int ticks, void* param)
 	make_snapshot_registrar();	 	
 }
 
+
+
+
+
+extern int subscriptions_hash_size;						/**< Size of P-CSCF subscriptions hash table		*/
+extern r_subscription_hash_slot *subscriptions;				/**< The P-CSCF subscriptions 						*/
+
+/**
+ * Creates a snapshots of the subscriptions and then calls the dumping function.
+ * @returns 1 on success or 0 on failure
+ */
+int make_snapshot_subscriptions()
+{
+	bin_data x;
+	r_subscription *s;
+	int i;	
+	if (!bin_alloc(&x,256)) goto error;		
+	for(i=0;i<subscriptions_hash_size;i++){
+		subs_lock(i);
+		s = subscriptions[i].head;
+		while(s){
+			if (!bin_encode_r_subscription(&x,s)) goto error;
+			s = s->next;
+		}
+		subs_unlock(i);
+	}
+	bin_print(&x);
+	i = bin_dump(&x,pcscf_persistency_mode,pcscf_persistency_location,"psubscriptions");		
+	bin_free(&x);
+	return i;
+error:
+	return 0;
+}  
+
+/**
+ * Loads the subscriptions data from the last snapshot.
+ * @returns 1 on success or 0 on failure
+ */
+int load_snapshot_subscriptions()
+{
+	bin_data x;
+	r_subscription *s;
+	if (!bin_load(&x,pcscf_persistency_mode,pcscf_persistency_location,"psubscriptions")) goto error;
+	bin_print(&x);
+	x.max=0;
+	LOG(L_INFO,"INFO:"M_NAME":load_snapshot_subscriptions: max %d len %d\n",x.max,x.len);
+	while(x.max<x.len){
+		s = bin_decode_r_subscription(&x);
+		if (!s) return 0;
+		LOG(L_INFO,"INFO:"M_NAME":load_snapshot_subscriptions: Loaded r_subscription for <%.*s>\n",s->req_uri.len,s->req_uri.s);
+		subs_lock(s->hash);
+		s->prev = subscriptions[s->hash].tail;
+		s->next = 0;
+		if (subscriptions[s->hash].tail) subscriptions[s->hash].tail->next = s;
+		subscriptions[s->hash].tail = s;
+		if (!subscriptions[s->hash].head) subscriptions[s->hash].head = s;
+		subs_unlock(s->hash);
+	}
+	bin_free(&x);
+	return 1;
+error:
+	return 0;
+	
+}
+
+
+/**
+ * Timer callback for persistency dumps
+ * @param ticks - what's the time
+ * @param param - a given parameter to be called with
+ */
+void persistency_timer_subscriptions(unsigned int ticks, void* param)
+{
+	make_snapshot_subscriptions();	 	
+}
+

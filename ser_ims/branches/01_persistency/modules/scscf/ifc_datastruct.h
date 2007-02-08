@@ -66,7 +66,7 @@ typedef struct _ims_sip_header
 {
 	str header;				/**< name of the header to match	*/
 	str content;			/**< regex to match             	*/
-	int type;				/**< if known header, precalculated	*/
+	short type;				/**< if known header, precalculated	*/
 } ims_sip_header;
 
 
@@ -107,18 +107,18 @@ typedef struct _ims_session_desc
 /** Service Point Trigger Structure */
 typedef struct _ims_spt
 {
-	int condition_negated;				/**< if to negate entire condition	*/
+	char condition_negated;				/**< if to negate entire condition	*/
 	int group;			 			  	/**< group to which it belongs		*/
-	int type;							/**< type of condition				*/
+	char type;							/**< type of condition				*/
 	union
 	{
 		str request_uri;				/**< Request URI regex				*/
 		str method;						/**< the SIP method should be this	*/
 		ims_sip_header sip_header;		/**< match of a certain SIP header	*/
-		int session_case;				/**< session direction and case		*/
+		char session_case;				/**< session direction and case		*/
 		ims_session_desc session_desc;	/**< session description match 		*/
 	};									/**< union for SPT 					*/
-	int registration_type;				/**< set of registration types		*/
+	char registration_type;				/**< set of registration types		*/
 } ims_spt;
 
 /** Conjunctive Normal Format */
@@ -129,9 +129,9 @@ typedef struct _ims_spt
 /** Trigger Point Structure */
 typedef struct _ims_trigger_point
 {
-	int condition_type_cnf;	/**< if it's CNF or DNF     		*/
+	char condition_type_cnf;	/**< if it's CNF or DNF     		*/
 	ims_spt *spt;			/**< service point triggers 1..n 		*/
-	int spt_cnt;			/**< number of service point triggers 	*/
+	unsigned short spt_cnt;			/**< number of service point triggers 	*/
 } ims_trigger_point;
 
 /** No default handling */
@@ -145,13 +145,13 @@ typedef struct _ims_trigger_point
 typedef struct _ims_application_server
 {
 	str server_name;			/**< SIP URL of the app server                      */
-	int default_handling;		/**< enum SESSION_CONTINUED SESSION_TERMINATED 0..1 */
+	char default_handling;		/**< enum SESSION_CONTINUED SESSION_TERMINATED 0..1 */
 	str service_info;			/**< optional info to be sent to AS 0..1            */
 } ims_application_server;
 
 /** Public Identity Structure */
 typedef struct {
-	int barring;				/**< Barring state									*/
+	char barring;				/**< Barring state									*/
 	str public_identity;		/**< Public Identity string							*/
 } ims_public_identity;
 
@@ -161,7 +161,7 @@ typedef struct _ims_filter_criteria
 	int priority;								/**< checking priority, lower means more important */
 	ims_trigger_point *trigger_point;			/**< definition of trigger 0..1 */
 	ims_application_server application_server;	/**< target of the trigger   */
-	int *profile_part_indicator;				/**< profile part indicator 0..1 */	
+	char *profile_part_indicator;				/**< profile part indicator 0..1 */	
 } ims_filter_criteria;
 
 /** CoreNetwork Service Authorization */
@@ -173,22 +173,22 @@ typedef struct _ims_cn_service_auth
 /** Service Profile Structure */
 typedef struct {
 	ims_public_identity *public_identities;	/**< array of public identities		*/
-	int public_identities_cnt;				/**< number of public identities	*/
+	unsigned short public_identities_cnt;				/**< number of public identities	*/
 
 	ims_filter_criteria *filter_criteria;	/**< vector of filter criteria 0..n */
-	int filter_criteria_cnt;				/**< size of the vector above		*/
+	unsigned short filter_criteria_cnt;				/**< size of the vector above		*/
 
 	ims_cn_service_auth *cn_service_auth;	/**< core net. services auth. 0..1	*/
 
 	int *shared_ifc_set;					/**< shared ifc set ids 0..n 		*/
-	int shared_ifc_set_cnt;					/**< size of above vector 			*/	
+	unsigned short shared_ifc_set_cnt;					/**< size of above vector 			*/	
 } ims_service_profile;
 
 /** User Subscription Structure */ 
 typedef struct {	
 	str private_identity;					/**< private identity 				*/
 	ims_service_profile *service_profiles;	/**< array of service profiles		*/
-	int service_profiles_cnt;				/**< size of the array above		*/
+	unsigned short service_profiles_cnt;				/**< size of the array above		*/
 		
 	int ref_count;							/**< referenced count 				*/
 	gen_lock_t *lock;						/**< lock for operations on it 		*/

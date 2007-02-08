@@ -67,7 +67,7 @@ typedef struct _r_nat_dest{
 /** Registrar Public Identity Structure */
 typedef struct _r_public {
 	str aor;					/**< the public identity 				*/
-	int is_default;				/**< if this is the default id			*/			
+	char is_default;			/**< if this is the default id			*/			
 	
 	struct _r_public *next;		/**< next public identity for this contact */
 	struct _r_public *prev; 	/**< previous public identity for this contact */
@@ -87,8 +87,8 @@ typedef struct _r_ipsec {
 	int spi_us;					/**< SPI Server to use					*/	
 	int spi_pc;					/**< SPI Client to use					*/
 	int spi_ps;					/**< SPI Server to use					*/
-	int port_uc;				/**< Port UE Client						*/
-	int port_us;				/**< Port UE Server						*/
+	unsigned short port_uc;				/**< Port UE Client						*/
+	unsigned short port_us;				/**< Port UE Server						*/
 	
 	str ealg;					/**< Cypher Algorithm - ESP				*/
 	str ck;						/**< Cypher Key							*/
@@ -101,8 +101,8 @@ typedef struct _r_contact {
 	unsigned int hash;			/**< the hash value 					*/
 	
 	str host;					/**< host of the UE						*/
-	int port;					/**< port of the UE						*/
-	int transport;				/**< transport for the UE				*/
+	unsigned short port;					/**< port of the UE						*/
+	char transport;				/**< transport for the UE				*/
 	
 	r_ipsec *ipsec;				/**< IPSec SA information, if any		*/
 	
@@ -111,8 +111,8 @@ typedef struct _r_contact {
 	enum Reg_States reg_state;	/**< registration state					*/
 	time_t expires;				/**< time of expiration					*/
 	
+	unsigned short service_route_cnt;		/**< size of the above vector			*/
 	str *service_route;			/**< service route entries				*/
-	int service_route_cnt;		/**< size of the above vector			*/
 
 	r_nat_dest * pinhole;		/**< address of the receive				*/ 
 	

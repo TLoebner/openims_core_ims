@@ -201,7 +201,7 @@ static inline void space_trim_dup(str *dest, char *src)
  * @param x - input value
  * @returns int value
  */
-static inline int ifc_tBool2int(xmlChar *x)
+static inline char ifc_tBool2char(xmlChar *x)
 {
 	int r=0;	
 	while(x[r]){
@@ -223,9 +223,9 @@ static inline int ifc_tBool2int(xmlChar *x)
  * @param x - input value
  * @returns int value
  */
-static inline int ifc_tDefaultHandling2int(xmlChar *x)
+static inline char ifc_tDefaultHandling2char(xmlChar *x)
 {
-	int r;	
+	char r;	
 	r = strtol(x, (char **)NULL, 10);
 	if (errno==EINVAL){
 		while(x[0]){
@@ -235,7 +235,7 @@ static inline int ifc_tDefaultHandling2int(xmlChar *x)
 		}
 		return 0;
 	} 
-	else return r; 
+	else return (char)r; 
 }
 
 /**
@@ -246,7 +246,7 @@ static inline int ifc_tDefaultHandling2int(xmlChar *x)
  * @param x - input value
  * @returns int value
  */
-static inline int ifc_tDirectionOfRequest2int(xmlChar *x)
+static inline char ifc_tDirectionOfRequest2char(xmlChar *x)
 {
 	int r;	
 	r = strtol(x, (char **)NULL, 10);
@@ -259,7 +259,7 @@ static inline int ifc_tDirectionOfRequest2int(xmlChar *x)
 		}
 		return 0;
 	} 
-	else return r; 
+	else return (char)r; 
 }
 
 /**
@@ -270,7 +270,7 @@ static inline int ifc_tDirectionOfRequest2int(xmlChar *x)
  * @param x - input value
  * @returns int value
  */
-static inline int ifc_tProfilePartIndicator2int(xmlChar *x)
+static inline char ifc_tProfilePartIndicator2char(xmlChar *x)
 {
 	int r;	
 	if (x==0||x[0]==0) return -1;
@@ -283,7 +283,7 @@ static inline int ifc_tProfilePartIndicator2int(xmlChar *x)
 		}
 		return 0;
 	} 
-	else return r; 
+	else return (char)r; 
 }
 
 
@@ -311,7 +311,7 @@ static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_iden
 					break;
 				case 'B': case 'b':
 					x = xmlNodeListGetString(doc,child->xmlChildrenNode,1);
-					pi->barring = ifc_tBool2int(x);
+					pi->barring = ifc_tBool2char(x);
 					xmlFree(x);
 					break;				
 			}
@@ -340,7 +340,7 @@ static int parse_sip_header(xmlDocPtr doc,xmlNodePtr node,ims_sip_header *sh)
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
 					space_trim_dup(&(sh->header),x);
 					parse_hname2(sh->header.s,sh->header.s+sh->header.len,&hf);
-					sh->type=hf.type;
+					sh->type=(short)hf.type;
 					xmlFree(x);
 					break;
 				case 'C':case 'c':	//Content
@@ -391,7 +391,7 @@ static int parse_session_desc(xmlDocPtr doc,xmlNodePtr node,ims_session_desc *sd
  * @param spt_cnt - structure to fill with the spt count
  * @returns 1 on success, 0 on failure
  */
-static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,int *spt_cnt)
+static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,unsigned short *spt_cnt)
 {
 	xmlNodePtr child,saved=0;
 	xmlChar *x;
@@ -411,7 +411,7 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,int *spt_cnt)
 			switch (child->name[0]) {
 				case 'C':case 'c': //ConditionNegated
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					spt->condition_negated=ifc_tBool2int(x);
+					spt->condition_negated=ifc_tBool2char(x);
 					xmlFree(x);
 					break;
 				case 'G':case 'g': //Group
@@ -461,7 +461,7 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,int *spt_cnt)
 						case 'C':case 'c'://Session Case
 							spt->type=IFC_SESSION_CASE;
 							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							spt->session_case=ifc_tDirectionOfRequest2int(x);
+							spt->session_case=ifc_tDirectionOfRequest2char(x);
 							xmlFree(x);
 							break;
 						case 'D':case 'd'://Session Description
@@ -538,7 +538,8 @@ static int parse_trigger_point(xmlDocPtr doc,xmlNodePtr node,ims_trigger_point *
 {
 	xmlNodePtr child,child2;
 	xmlChar *x;
-	int spt_cnt=0,i,j;
+	unsigned short spt_cnt=0;
+	int i,j;
 	ims_spt spttemp;
 	tp->condition_type_cnf=IFC_DNF;//0
 	tp->spt=NULL;
@@ -549,7 +550,7 @@ static int parse_trigger_point(xmlDocPtr doc,xmlNodePtr node,ims_trigger_point *
 			switch (child->name[0]) {
 				case 'C':case 'c': //ConditionTypeCNF
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					tp->condition_type_cnf=ifc_tBool2int(x);
+					tp->condition_type_cnf=ifc_tBool2char(x);
 					xmlFree(x);
 					break;
 				case 'S':case 's': //SPT - Service Point Trigger
@@ -631,7 +632,7 @@ static int parse_application_server(xmlDocPtr doc,xmlNodePtr node,ims_applicatio
 				}
 				case 'D':case 'd': //DefaultHandling
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					as->default_handling=ifc_tDefaultHandling2int(x);
+					as->default_handling=ifc_tDefaultHandling2char(x);
 					xmlFree(x);
 					break;
 			}
@@ -651,7 +652,7 @@ static int parse_filter_criteria(xmlDocPtr doc,xmlNodePtr node,ims_filter_criter
 {
 	xmlNodePtr child;
 	xmlChar *x;
-	int k;
+	char k;
 	fc->priority=0;
 	fc->trigger_point=NULL;
 	fc->profile_part_indicator=NULL;
@@ -681,9 +682,9 @@ static int parse_filter_criteria(xmlDocPtr doc,xmlNodePtr node,ims_filter_criter
 					break;
 				case 'F':case 'f':	//ProfilePartIndicator
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					k = ifc_tProfilePartIndicator2int(x);
+					k = ifc_tProfilePartIndicator2char(x);
 					if (k<0) break;
-					fc->profile_part_indicator=shm_malloc(sizeof(int));
+					fc->profile_part_indicator=(char*)shm_malloc(sizeof(char));
 					if (!fc->profile_part_indicator){
 						LOG(L_ERR,"ERR:"M_NAME":parse_filter_criteria: Out of memory allocating %d bytes\n",sizeof(ims_trigger_point));
 						break;
@@ -733,7 +734,8 @@ static int parse_service_profile(xmlDocPtr doc, xmlNodePtr root, ims_service_pro
 {
 	xmlNodePtr child;
 	xmlChar *x;
-	int pi_cnt=0,ifc_cnt=0,sh_cnt=0,i,j;;
+	unsigned short pi_cnt=0,ifc_cnt=0,sh_cnt=0;
+	int i,j;
 	ims_filter_criteria fctemp;
 	
 	for(child=root->children;child;child=child->next)
@@ -820,7 +822,7 @@ static ims_subscription* parse_ims_subscription(xmlDocPtr doc, xmlNodePtr root)
 	xmlNodePtr child;
 	xmlChar *x;
 	ims_subscription *s;
-	int sp_cnt=0;
+	unsigned short sp_cnt=0;
 	
 	if (!root) return 0;
 	while(root->type!=XML_ELEMENT_NODE || strcasecmp(root->name,"IMSSubscription")!=0){

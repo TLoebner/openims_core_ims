@@ -128,21 +128,30 @@ inline int bin_expand(bin_data *x, int delta);
 inline void bin_free(bin_data *x);
 inline void bin_print(bin_data *x);
 
-inline int bin_encode_int1(bin_data *x,int k); 
-inline int bin_encode_int2(bin_data *x,int k);
-inline int bin_encode_int4(bin_data *x,int k);
-inline int bin_encode_str(bin_data *x,str *s);
+inline int bin_encode_char(bin_data *x,char k);
+inline int bin_decode_char(bin_data *x,char *c);
 
-inline int bin_decode_int1(bin_data *x,int *k);
-inline int bin_decode_int2(bin_data *x,int *k);
-inline int bin_decode_int4(bin_data *x,int *k);
+inline int bin_encode_uchar(bin_data *x,unsigned char k); 
+inline int bin_decode_uchar(bin_data *x,unsigned char *c);
+
+inline int bin_encode_short(bin_data *x,short k);
+inline int bin_decode_short(bin_data *x,short *c);
+
+inline int bin_encode_ushort(bin_data *x,unsigned short k); 
+inline int bin_decode_ushort(bin_data *x,unsigned short *c);
+
+inline int bin_encode_int(bin_data *x,int k);
+inline int bin_decode_int(bin_data *x,int *c);
+
+inline int bin_encode_uint(bin_data *x,unsigned int k); 
+inline int bin_decode_uint(bin_data *x,unsigned int *c);
+
+inline int bin_encode_time_t(bin_data *x,time_t k);
+inline int bin_decode_time_t(bin_data *x,time_t *c);
+
+inline int bin_encode_str(bin_data *x,str *s);
 inline int bin_decode_str(bin_data *x,str *s);
 
-
-/**
- *	simple print function 
- */
-void bin_print(bin_data *s);
 
 int bin_encode_dlg_t(bin_data *x,dlg_t *d);
 int bin_decode_dlg_t(bin_data *x,dlg_t **d);

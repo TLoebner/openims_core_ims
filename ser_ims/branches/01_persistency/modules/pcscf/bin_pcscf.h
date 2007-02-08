@@ -61,6 +61,7 @@
 #include "registrar_storage.h"
 #include "dlg_state.h"
 #include "registrar_subscribe.h"
+#include "../tm/tm_load.h"
 
 #define BIN_INITIAL_ALLOC_SIZE 256
 
@@ -69,5 +70,8 @@ r_contact* bin_decode_r_contact(bin_data *x);
 
 int bin_encode_p_dialog(bin_data *x,p_dialog *d);
 p_dialog* bin_decode_p_dialog(bin_data *x);
+
+int bin_encode_r_subscription(bin_data *x,r_subscription *s);
+r_subscription* bin_decode_r_subscription(bin_data *x);
 
 #endif

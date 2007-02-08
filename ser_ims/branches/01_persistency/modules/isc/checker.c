@@ -190,7 +190,7 @@ static int isc_check_session_desc(ims_spt *spt, struct sip_msg *msg)
  *	@param registration_type - if the message is initial/re/de registration
  *	@returns - 1 on success, 0 on failure
  */
-static int isc_check_spt(ims_spt *spt,struct sip_msg *msg,int direction,int registration_type)
+static int isc_check_spt(ims_spt *spt,struct sip_msg *msg,char direction,char registration_type)
 {
 	int r=FALSE;
 	switch(spt->type){
@@ -255,8 +255,8 @@ static int isc_check_spt(ims_spt *spt,struct sip_msg *msg,int direction,int regi
  *	@param registration_type - if the message is initial/re/de registration
  *	@returns - 1 on success, 0 on failure
  */
-static int isc_check_filter_criteria(ims_filter_criteria *fc,struct sip_msg *msg,int direction,
-		int registration_type)
+static int isc_check_filter_criteria(ims_filter_criteria *fc,struct sip_msg *msg,char direction,
+		char registration_type)
 {
 	int i,partial,total,inside,outside,group;
 	ims_trigger_point *t;
@@ -374,9 +374,10 @@ void isc_free_match(isc_match *m)
  * @param msg - the SIP initial request to check on 
  * @return - TRUE if found, FALSE if none found, end of search space 
  */
-isc_match* isc_checker_find(str uri,int direction,int skip,struct sip_msg *msg)
+isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 {
-	int registered,expires,registration_type;
+	int registered,expires;
+	char registration_type;
 	str domain={0,0};
 	int i,j,k,cnt,si,sj,next;
 	r_public *p;

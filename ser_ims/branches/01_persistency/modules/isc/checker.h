@@ -68,7 +68,7 @@
 /** ISC match structure */
 typedef struct {
 	str server_name;		/**< SIP URI of the AS to forward to */
-	int default_handling;	/**< handling to apply on failure to contact the AS */
+	char default_handling;	/**< handling to apply on failure to contact the AS */
 	str service_info;		/**< additional service information */
 	int index;				/**< index of the matching IFC */
 } isc_match;
@@ -76,7 +76,7 @@ typedef struct {
 
 void isc_free_match(isc_match *m);
 
-isc_match* isc_checker_find(str uri,int direction,int skip,struct sip_msg *msg);
+isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg);
 
 
 

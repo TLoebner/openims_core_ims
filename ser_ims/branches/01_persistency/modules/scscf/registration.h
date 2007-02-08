@@ -90,7 +90,7 @@ typedef struct _auth_vector {
 	str authorization; 	/**< expected response				*/
 	str ck;				/**< Cypher Key						*/
 	str ik;				/**< Integrity Key					*/
-	unsigned int expires;/**< expires in (after it is sent)	*/
+	time_t expires;/**< expires in (after it is sent)	*/
 	
 	enum auth_vector_status status;/**< current status		*/
 	struct _auth_vector *next;/**< next av in the list		*/
@@ -101,10 +101,10 @@ typedef struct _auth_vector {
 
 /** Set of auth_vectors used by a private id */
 typedef struct _auth_userdata{
+	unsigned int hash;		/**< hash of the auth data		*/
 	str private_identity;	/**< authorization username		*/
 	str public_identity;	/**< public identity linked to	*/
-	unsigned int hash;		/**< hash of the auth data		*/
-	unsigned int expires;	/**< expires in					*/
+	time_t expires;	/**< expires in					*/
 	
 	auth_vector *head;		/**< first auth vector in list	*/
 	auth_vector *tail;		/**< last auth vector in list	*/

@@ -54,7 +54,8 @@
 
 #include "bin_pcscf.h"
 
-/* structures reprezentation functions */
+
+extern struct tm_binds tmb;   		/**< Structure with pointers to tm funcs 		*/
 
 extern int r_hash_size;						/**< Size of S-CSCF registrar hash table		*/
 
@@ -81,30 +82,32 @@ static inline int str_shm_dup(str *dest,str *src)
  */
 int bin_encode_p_dialog(bin_data *x,p_dialog *d)
 {
-	int i,k;
+	int i;
+	char c;
 	
 	if (!bin_encode_str(x,&(d->call_id))) goto error;
 	
 	if (!bin_encode_str(x,&(d->host))) goto error;
-	k = d->port;
-	if (!bin_encode_int2(x,k)) goto error;
-	k = d->transport;
-	if (!bin_encode_int1(x,k)) goto error;
+	if (!bin_encode_ushort(x,d->port)) goto error;
+	
+	c = d->transport;
+	if (!bin_encode_uchar(x,c)) goto error;
 
-	if (!bin_encode_int2(x,d->routes_cnt)) goto error;
+	if (!bin_encode_ushort(x,d->routes_cnt)) goto error;
 	for(i=0;i<d->routes_cnt;i++)
 		if (!bin_encode_str(x,d->routes+i)) goto error;
-
-	k = d->method;
-	if (!bin_encode_int1(x,k)) goto error;
+	
+	c = d->method;
+	if (!bin_encode_uchar(x,c)) goto error;
 	if (!bin_encode_str(x,&(d->method_str))) goto error;
 	
-	if (!bin_encode_int4(x,d->first_cseq)) goto error;	
-	if (!bin_encode_int4(x,d->last_cseq)) goto error;	
+	if (!bin_encode_int(x,d->first_cseq)) goto error;	
+	if (!bin_encode_int(x,d->last_cseq)) goto error;	
 
-	if (!bin_encode_int1(x,d->state)) goto error;	
+	c = d->state;
+	if (!bin_encode_uchar(x,c)) goto error;	
 
-	if (!bin_encode_int4(x,d->expires)) goto error;		
+	if (!bin_encode_time_t(x,d->expires)) goto error;		
 	
 	return 1;
 error:
@@ -120,8 +123,9 @@ error:
 p_dialog* bin_decode_p_dialog(bin_data *x)
 {
 	p_dialog *d=0;
-	int len,k,i;
+	int len,i;
 	str s;
+	char c;
 	
 	len = sizeof(p_dialog);
 	d = (p_dialog*) shm_malloc(len);
@@ -134,13 +138,12 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->call_id),&s)) goto error;
 
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->host),&s)) goto error;
-	if (!bin_decode_int2(x,	&k)) goto error;
-	d->port = k;
-	if (!bin_decode_int1(x,	&k)) goto error;
-	d->transport = k;
+	if (!bin_decode_ushort(x,	&d->port)) goto error;
+	
+	if (!bin_decode_char(x,	&c)) goto error;
+	d->transport = c;
 
-	if (!bin_decode_int2(x,	&k)) goto error;
-	d->routes_cnt = k;
+	if (!bin_decode_ushort(x,	&d->routes_cnt)) goto error;
 
 	len = sizeof(str)*d->routes_cnt;
 	d->routes = (str*) shm_malloc(len);
@@ -152,20 +155,17 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	for(i=0;i<d->routes_cnt;i++)
 		if (!bin_decode_str(x,&s)||!str_shm_dup(d->routes+i,&s)) goto error;
 	
-	if (!bin_decode_int1(x,	&k)) goto error;
-	d->method = k;
+	if (!bin_decode_char(x,	&c)) goto error;
+	d->method = c;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->method_str),&s)) goto error;
 	
-	if (!bin_decode_int4(x,	&k)) goto error;
-	d->first_cseq = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	d->last_cseq = k;
+	if (!bin_decode_int(x,	&d->first_cseq)) goto error;
+	if (!bin_decode_int(x,	&d->last_cseq)) goto error;
 
-	if (!bin_decode_int1(x,	&k)) goto error;
-	d->state = k;
+	if (!bin_decode_char(x,	&c)) goto error;
+	d->state = c;
 	
-	if (!bin_decode_int4(x,	&k)) goto error;
-	d->expires = k;
+	if (!bin_decode_time_t(x,	&d->expires)) goto error;
 	
 	d->hash = get_p_dialog_hash(d->call_id);		
 	
@@ -204,18 +204,18 @@ error:
 int bin_encode_ipsec(bin_data *x,r_ipsec *ipsec)
 {
 	if (!ipsec){
-		if (!bin_encode_int1(x,0)) goto error;
+		if (!bin_encode_char(x,0)) goto error;
 		return 1;
 	}
 	
-	if (!bin_encode_int1(x,1)) goto error;
+	if (!bin_encode_char(x,1)) goto error;
 
-	if (!bin_encode_int4(x,ipsec->spi_uc)) goto error;
-	if (!bin_encode_int4(x,ipsec->spi_us)) goto error;
-	if (!bin_encode_int4(x,ipsec->spi_pc)) goto error;
-	if (!bin_encode_int4(x,ipsec->spi_ps)) goto error;
-	if (!bin_encode_int2(x,ipsec->port_uc)) goto error;
-	if (!bin_encode_int2(x,ipsec->port_us)) goto error;
+	if (!bin_encode_int(x,ipsec->spi_uc)) goto error;
+	if (!bin_encode_int(x,ipsec->spi_us)) goto error;
+	if (!bin_encode_int(x,ipsec->spi_pc)) goto error;
+	if (!bin_encode_int(x,ipsec->spi_ps)) goto error;
+	if (!bin_encode_ushort(x,ipsec->port_uc)) goto error;
+	if (!bin_encode_ushort(x,ipsec->port_us)) goto error;
 	
 	if (!bin_encode_str(x,&(ipsec->ealg))) goto error;
 	if (!bin_encode_str(x,&(ipsec->ck))) goto error;
@@ -236,12 +236,13 @@ error:
  */
 int bin_decode_ipsec(bin_data *x,r_ipsec **ipsec)
 {
-	int len,k;
+	int len;
 	str s;
+	char c;
 
-	if (!bin_decode_int1(x,	&k)) goto error;
+	if (!bin_decode_char(x,	&c)) goto error;
 	
-	if (k==0) {
+	if (c==0) {
 		*ipsec = 0;
 		return 1;
 	}
@@ -254,18 +255,12 @@ int bin_decode_ipsec(bin_data *x,r_ipsec **ipsec)
 	}
 	memset(*ipsec,0,len);
 
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*ipsec)->spi_uc = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*ipsec)->spi_us = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*ipsec)->spi_pc = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*ipsec)->spi_ps = k;
-	if (!bin_decode_int2(x,	&k)) goto error;
-	(*ipsec)->port_uc = k;
-	if (!bin_decode_int2(x,	&k)) goto error;
-	(*ipsec)->port_us = k;
+	if (!bin_decode_int(x,	&(*ipsec)->spi_uc)) goto error;
+	if (!bin_decode_int(x,	&(*ipsec)->spi_us)) goto error;
+	if (!bin_decode_int(x,	&(*ipsec)->spi_pc)) goto error;
+	if (!bin_decode_int(x,	&(*ipsec)->spi_ps)) goto error;
+	if (!bin_decode_ushort(x,	&(*ipsec)->port_uc)) goto error;
+	if (!bin_decode_ushort(x,	&(*ipsec)->port_us)) goto error;
 
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->ealg),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->ck),&s)) goto error;
@@ -297,20 +292,20 @@ error:
 int bin_encode_pinhole(bin_data *x,r_nat_dest *pinhole)
 {
 	if (!pinhole){
-		if (!bin_encode_int1(x,0)) goto error;
+		if (!bin_encode_char(x,0)) goto error;
 		return 1;
 	}
 	
-	if (!bin_encode_int1(x,1)) goto error;
+	if (!bin_encode_char(x,1)) goto error;
 
-	if (!bin_encode_int4(x,pinhole->nat_addr.af)) goto error;
-	if (!bin_encode_int1(x,pinhole->nat_addr.len)) goto error;
-	if (!bin_encode_int4(x,pinhole->nat_addr.u.addr32[0])) goto error;
-	if (!bin_encode_int4(x,pinhole->nat_addr.u.addr32[1])) goto error;
-	if (!bin_encode_int4(x,pinhole->nat_addr.u.addr32[2])) goto error;
-	if (!bin_encode_int4(x,pinhole->nat_addr.u.addr32[3])) goto error;
+	if (!bin_encode_uint(x,pinhole->nat_addr.af)) goto error;
+	if (!bin_encode_uint(x,pinhole->nat_addr.len)) goto error;
+	if (!bin_encode_uint(x,pinhole->nat_addr.u.addr32[0])) goto error;
+	if (!bin_encode_uint(x,pinhole->nat_addr.u.addr32[1])) goto error;
+	if (!bin_encode_uint(x,pinhole->nat_addr.u.addr32[2])) goto error;
+	if (!bin_encode_uint(x,pinhole->nat_addr.u.addr32[3])) goto error;
 	
-	if (!bin_encode_int1(x,pinhole->nat_port)) goto error;
+	if (!bin_encode_ushort(x,pinhole->nat_port)) goto error;
 	
 	return 1;
 error:
@@ -326,11 +321,12 @@ error:
  */
 int bin_decode_pinhole(bin_data *x,r_nat_dest **pinhole)
 {
-	int len,k;
+	int len;
+	char c;
 	
-	if (!bin_decode_int1(x,	&k)) goto error;
+	if (!bin_decode_char(x,	&c)) goto error;
 	
-	if (k==0) {
+	if (c==0) {
 		*pinhole = 0;
 		return 1;
 	}
@@ -343,19 +339,13 @@ int bin_decode_pinhole(bin_data *x,r_nat_dest **pinhole)
 	}
 	memset(*pinhole,0,len);
 
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*pinhole)->nat_addr.af = k;
-	if (!bin_decode_int1(x,	&k)) goto error;
-	(*pinhole)->nat_addr.len = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*pinhole)->nat_addr.u.addr32[0] = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*pinhole)->nat_addr.u.addr32[1] = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*pinhole)->nat_addr.u.addr32[2] = k;
-	if (!bin_decode_int4(x,	&k)) goto error;
-	(*pinhole)->nat_addr.u.addr32[3] = k;
-	
+	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.af)) goto error;
+	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.len)) goto error;
+	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[0])) goto error;
+	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[1])) goto error;
+	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[2])) goto error;
+	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[3])) goto error;
+
 	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_pinhole: Error while decoding (at %d (%04x)).\n",x->max,x->max);
@@ -376,8 +366,10 @@ error:
  */
 int bin_encode_r_public(bin_data *x,r_public *p)
 {
+	char c;
 	if (!bin_encode_str(x,&(p->aor))) goto error;
-	if (!bin_encode_int1(x,p->is_default)) goto error;
+	c = p->is_default;
+	if (!bin_encode_char(x,c)) goto error;
 	
 	return 1;
 error:
@@ -393,7 +385,8 @@ error:
 r_public* bin_decode_r_public(bin_data *x)
 {
 	str s;
-	int k,len;
+	int len;
+	char c;
 	r_public *p;
 
 	len = sizeof(r_public);
@@ -405,8 +398,8 @@ r_public* bin_decode_r_public(bin_data *x)
 	memset(p,0,len);
 	
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(p->aor),&s)) goto error;
-	if (!bin_decode_int1(x,	&k)) goto error;
-	p->is_default = k;
+	if (!bin_decode_char(x,	&c)) goto error;
+	p->is_default = c;
 	
 	return p;
 error:
@@ -436,35 +429,34 @@ error:
  */
 int bin_encode_r_contact(bin_data *x,r_contact *c)
 {
-	int k,i;
+	int i;
+	char k;
+	unsigned short us;
 	r_public *p=0;
 	
 	if (!bin_encode_str(x,&(c->host))) goto error;
-	k = c->port;
-	if (!bin_encode_int2(x,k)) goto error;
-	k = c->transport;
-	if (!bin_encode_int1(x,k)) goto error;
+	if (!bin_encode_ushort(x,c->port)) goto error;
+	if (!bin_encode_char(x,c->transport)) goto error;
 	
 	if (!bin_encode_ipsec(x,c->ipsec)) goto error;
 	
 	if (!bin_encode_str(x,&(c->uri))) goto error;
 	
-	k = c->reg_state+5;
-	if (!bin_encode_int1(x,k)) goto error;
+	k = c->reg_state;
+	if (!bin_encode_char(x,k)) goto error;
 
-	if (!bin_encode_int4(x,c->expires)) goto error;
-
-	k = c->service_route_cnt;
-	if (!bin_encode_int2(x,k)) goto error;
+	if (!bin_encode_time_t(x,c->expires)) goto error;
+	
+	if (!bin_encode_ushort(x,c->service_route_cnt)) goto error;
 	for(i=0;i<c->service_route_cnt;i++)
 		if (!bin_encode_str(x,c->service_route+i)) goto error;
 		
 	if (!bin_encode_pinhole(x,c->pinhole)) goto error;
 	
-	k=0;
+	us=0;
 	for(p=c->head;p;p=p->next)
-		k++;
-	if (!bin_encode_int2(x,k)) goto error;
+		us++;
+	if (!bin_encode_ushort(x,us)) goto error;
 	for(p=c->head;p;p=p->next)
 		if (!bin_encode_r_public(x,p)) goto error;	
 	
@@ -483,7 +475,9 @@ r_contact* bin_decode_r_contact(bin_data *x)
 {
 	r_contact *c=0;
 	r_public *p=0,*pn=0;
-	int len,k,i;
+	int len,i;
+	char k;
+	unsigned short us;
 	str st;
 	
 	len = sizeof(r_contact);
@@ -495,10 +489,8 @@ r_contact* bin_decode_r_contact(bin_data *x)
 	memset(c,0,len);
 	
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->host),&st)) goto error;
-	if (!bin_decode_int2(x,&k)) goto error;
-	c->port = k;
-	if (!bin_decode_int1(x,&k)) goto error;
-	c->transport = k;
+	if (!bin_decode_ushort(x,&c->port)) goto error;
+	if (!bin_decode_char(x,&c->transport)) goto error;
 
 	c->hash = get_contact_hash(c->host,c->port,c->transport,r_hash_size);
 	
@@ -506,14 +498,12 @@ r_contact* bin_decode_r_contact(bin_data *x)
 	
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->uri),&st)) goto error;
 	
-	if (!bin_decode_int1(x,&k)) goto error;
-	c->reg_state = k-5;
+	if (!bin_decode_char(x,&k)) goto error;
+	c->reg_state = k;
 
-	if (!bin_decode_int4(x,&k)) goto error;
-	c->expires = k;
+	if (!bin_decode_time_t(x,&c->expires)) goto error;
 	
-	if (!bin_decode_int2(x,	&k)) goto error;
-	c->service_route_cnt = k;
+	if (!bin_decode_ushort(x,	&c->service_route_cnt)) goto error;
 
 	len = sizeof(str)*c->service_route_cnt;
 	c->service_route = (str*) shm_malloc(len);
@@ -527,8 +517,8 @@ r_contact* bin_decode_r_contact(bin_data *x)
 	
 	if (!bin_decode_pinhole(x,&(c->pinhole ))) goto error;
 		
-	if (!bin_decode_int2(x,&k)) goto error;
-	for(i=0;i<k;i++){
+	if (!bin_decode_ushort(x,&us)) goto error;
+	for(i=0;i<us;i++){
 		p = bin_decode_r_public(x);
 		if (!p) goto error;
 		p->prev = c->tail;
@@ -558,134 +548,73 @@ error:
 
 
 
-//
-///**
-// * Encode a r_subscription into a binary form
-// * @param x - binary data to append to
-// * @param p - the r_subscription to encode
-// * @returns 1 on succcess or 0 on error
-// */
-//int bin_encode_r_subscription(bin_data *x,r_subscription *s)
-//{
-//	int k,i;
-//	
-//	if (!bin_encode_str(x,&(c->host))) goto error;
-//	k = c->port;
-//	if (!bin_encode_int2(x,k)) goto error;
-//	k = c->transport;
-//	if (!bin_encode_int1(x,k)) goto error;
-//	
-//	if (!bin_encode_ipsec(x,c->ipsec)) goto error;
-//	
-//	if (!bin_encode_str(x,&(c->uri))) goto error;
-//	
-//	k = c->reg_state+5;
-//	if (!bin_encode_int1(x,k)) goto error;
-//
-//	if (!bin_encode_int4(x,c->expires)) goto error;
-//
-//	k = c->service_route_cnt;
-//	if (!bin_encode_int2(x,k)) goto error;
-//	for(i=0;i<c->service_route_cnt;i++)
-//		if (!bin_encode_str(x,c->service_route+i)) goto error;
-//		
-//	if (!bin_encode_pinhole(x,c->pinhole)) goto error;
-//	
-//	k=0;
-//	for(p=c->head;p;p=p->next)
-//		k++;
-//	if (!bin_encode_int2(x,k)) goto error;
-//	for(p=c->head;p;p=p->next)
-//		if (!bin_encode_r_public(x,p)) goto error;	
-//	
-//	return 1;
-//error:
-//	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_subscription: Error while encoding.\n");
-//	return 0;		
-//}
-//
-///**
-// *	Decode a r_subscription from a binary data structure
-// * @param x - binary data to decode from
-// * @returns the r_subscription* where the data has been decoded
-// */
-//r_subscription* bin_decode_r_subscription(bin_data *x)
-//{
-//	r_subscription *c=0;
-//	r_public *p=0,*pn=0;
-//	int len,k,i;
-//	str st;
-//	
-//	len = sizeof(r_subscription);
-//	c = (r_subscription*) shm_malloc(len);
-//	if (!c) {
-//		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error allocating %d bytes.\n",len);
-//		goto error;
-//	}
-//	memset(c,0,len);
-//	
-//	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->host),&st)) goto error;
-//	if (!bin_decode_int2(x,&k)) goto error;
-//	c->port = k;
-//	if (!bin_decode_int1(x,&k)) goto error;
-//	c->transport = k;
-//
-//	c->hash = get_contact_hash(c->host,c->port,c->transport,r_hash_size);
-//	
-//	if (!bin_decode_ipsec(x,&(c->ipsec ))) goto error;
-//	
-//	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->uri),&st)) goto error;
-//	
-//	if (!bin_decode_int1(x,&k)) goto error;
-//	c->reg_state = k-5;
-//
-//	if (!bin_decode_int4(x,&k)) goto error;
-//	c->expires = k;
-//	
-//	if (!bin_decode_int2(x,	&k)) goto error;
-//	c->service_route_cnt = k;
-//
-//	len = sizeof(str)*c->service_route_cnt;
-//	c->service_route = (str*) shm_malloc(len);
-//	if (!c->service_route) {
-//		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error allocating %d bytes.\n",len);
-//		goto error;
-//	}
-//	memset(c->service_route,0,len);	
-//	for(i=0;i<c->service_route_cnt;i++)
-//		if (!bin_decode_str(x,&st)||!str_shm_dup(c->service_route+i,&st)) goto error;
-//	
-//	if (!bin_decode_pinhole(x,&(c->pinhole ))) goto error;
-//		
-//	if (!bin_decode_int2(x,&k)) goto error;
-//	for(i=0;i<k;i++){
-//		p = bin_decode_r_public(x);
-//		if (!p) goto error;
-//		p->prev = c->tail;
-//		p->next = 0;
-//		if (c->tail) c->tail->next = p;
-//		c->tail = p;
-//		if (!c->head) c->head = p;
-//	}
-//	return c;
-//error:
-//	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error while decoding (at %d (%04x)).\n",x->max,x->max);
-//	if (c) {
-//		if (c->host.s) shm_free(c->host.s);		
-//		if (c->ipsec) shm_free(c->ipsec);
-//		if (c->uri.s) shm_free(c->uri.s);
-//		if (c->pinhole) shm_free(c->pinhole);
-//		while(c->head){
-//			p = c->head;
-//			pn = p->next;
-//			free_r_public(p);
-//			c->head = pn;
-//		}
-//		shm_free(c);
-//	}
-//	return 0;
-//}
-//
-//
-//
-//
+
+/**
+ * Encode a r_subscription into a binary form
+ * @param x - binary data to append to
+ * @param p - the r_subscription to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_r_subscription(bin_data *x,r_subscription *s)
+{
+	char c;
+	
+	if (!bin_encode_str(x,&(s->req_uri))) goto error;
+	if (!bin_encode_int(x,s->duration)) goto error;
+	if (!bin_encode_time_t(x,s->expires)) goto error;
+	
+	c = s->attempts_left;
+	if (!bin_encode_char(x,c)) goto error;
+
+	if (!bin_encode_dlg_t(x,s->dialog)) goto error;	
+	
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_subscription: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode a r_subscription from a binary data structure
+ * @param x - binary data to decode from
+ * @returns the r_subscription* where the data has been decoded
+ */
+r_subscription* bin_decode_r_subscription(bin_data *x)
+{
+	r_subscription *s=0;
+	int len;
+	str st;
+	char c;
+	
+	len = sizeof(r_subscription);
+	s = (r_subscription*) shm_malloc(len);
+	if (!s) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(s,0,len);
+	
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(s->req_uri),&st)) goto error;
+	if (!bin_decode_int(x,&s->duration)) goto error;
+	if (!bin_decode_time_t(x,&s->expires)) goto error;	
+	if (!bin_decode_char(x,&c)) goto error;
+	s->attempts_left = c;
+	
+	if (!bin_decode_dlg_t(x,&(s->dialog))) goto error;
+	
+	s->hash = get_subscription_hash(s->req_uri);
+	
+	return s;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_subscription: Error while decoding (at %d (%04x)).\n",x->max,x->max);
+	if (s) {
+		if (s->req_uri.s) shm_free(s->req_uri.s);
+		if (s->dialog) tmb.free_dlg(s->dialog);		
+		shm_free(s);
+	}
+	return 0;
+}
+
+
+
+

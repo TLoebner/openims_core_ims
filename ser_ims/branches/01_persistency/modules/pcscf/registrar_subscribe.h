@@ -92,11 +92,10 @@ enum {
 typedef struct _r_subscription {
 	unsigned int hash;
 	str req_uri;			/**< public id of the user, same thing for To: 	*/
-//	str from;				/**< own uri									*/
 	int duration;			/**< duration of subscription					*/
-	int expires;			/**< time of expiration							*/
-	int attempts_left;		/**< number of unsuccesful attempts to subscribe*/
-//	str asserted_identity; 	/**< uri inserted into path					*/
+	time_t expires;			/**< time of expiration							*/
+	char attempts_left;		/**< number of unsuccesful attempts to subscribe*/
+
 	dlg_t *dialog; 
 		
 	struct _r_subscription *next, *prev;
@@ -109,8 +108,9 @@ typedef struct {
 	r_subscription *tail;	/**< last subscription in the list			*/ 
 } r_subscription_hash_slot;
 
-
- 
+void subs_lock(unsigned int hash);
+void subs_unlock(unsigned int hash);
+unsigned int get_subscription_hash(str uri);
 int r_subscription_init();
 void r_subscription_destroy();
 
