@@ -203,6 +203,7 @@ str cscf_get_public_identity(struct sip_msg *msg)
 {
 	str pu={0,0};
 	struct to_body *to;
+	int i;
 	
 	if (parse_headers(msg,HDR_TO_F,0)!=0) {
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity: Error parsing until header To: \n");
@@ -217,6 +218,12 @@ str cscf_get_public_identity(struct sip_msg *msg)
 	else to=(struct to_body *) msg->to->parsed;
 
 	pu = to->uri;
+	
+	/* truncate to sip:username@host or tel:number */
+	for(i=4;i<pu.len;i++)
+		if (pu.s[i]==';' || pu.s[i]=='?' ||pu.s[i]==':'){
+			pu.len = i;
+		}
 	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity: <%.*s> \n",
 		pu.len,pu.s);	
@@ -1090,6 +1097,7 @@ str cscf_get_realm_from_ruri(struct sip_msg *msg)
 	if (!msg->parsed_orig_ruri_ok)
 		if (parse_orig_ruri(msg) < 0) 
 			return realm;
+	
 	realm = msg->parsed_orig_ruri.host;
 	return realm;	
 }
@@ -1471,7 +1479,7 @@ str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h)
 	
 	*h=0;
 	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
-		LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity: Error parsing until header EOH: \n");
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_visited_network_id: Error parsing until header EOH: \n");
 		return vnid;
 	}
 	hdr = msg->headers;
@@ -1787,6 +1795,82 @@ str cscf_get_realm(struct sip_msg *msg)
 		return realm;
 	}
    	LOG(L_DBG, "DBG:"M_NAME":cscf_get_realm: realm <%.*s>.\n",realm.len,realm.s);
+	return realm;	
+}
+
+
+static str phone_context_s={";phone-context=",15};
+/**
+ * Extracts the realm from a SIP/TEL URI. 
+ * - SIP - the hostname
+ * - TEL - the phone-context parameter
+ * @param msg - the SIP message
+ * @returns the realm
+ */
+str cscf_get_realm_from_uri(str uri)
+{
+	str realm={0,0};
+	int i;
+	
+	if (uri.len<5) {
+		LOG(L_ERR, "ERR:"M_NAME":cscf_get_realm_from_uri: Error trying to extra realm from too short URI <%.*s>.\n",uri.len,uri.s);
+		return realm;
+	}
+   	//LOG(L_INFO, "DBG:"M_NAME":cscf_get_realm_from_uri: extracting realm from <%.*s>.\n",uri.len,uri.s);
+	if (strncasecmp(uri.s,"sip:",4)==0||
+		strncasecmp(uri.s,"sips:",5)==0) {
+		/* SIP URI */
+		realm = uri;
+		while(realm.s[0]!='@' && realm.len>0){
+			realm.s ++;
+			realm.len--;
+		}
+		for(i=0;i<realm.len;i++)
+			if (realm.s[i]==';'||realm.s[i]=='&') {
+				realm.len = i;
+				break;
+			}		
+	}else
+	if (strncasecmp(uri.s,"tel:",4)==0) {
+		/* TEL URI */
+		realm = uri;
+		while(realm.s[0]!=';' && realm.len>0){
+			realm.s ++;
+			realm.len--;
+		}		
+		if (realm.len<1) {realm.len=0;return realm;}
+		else{
+			while(realm.len>phone_context_s.len){
+				if (strncasecmp(realm.s,phone_context_s.s,phone_context_s.len)==0){
+					realm.s+=phone_context_s.len;
+					realm.len-=phone_context_s.len;
+					for(i=0;i<realm.len;i++)
+						if (realm.s[i]==';' || realm.s[i]=='&'){
+							realm.len = i;
+							break;
+						}
+					break;
+				}					
+				realm.s++;
+				realm.len--;
+			}
+		}		
+	}else{
+		/* unknown... just extract between @ and ;? */
+		realm = uri;
+		while(realm.s[0]!='@' && realm.len>0){
+			realm.s ++;
+			realm.len--;
+		}
+		if (!realm.len) realm = uri;
+		for(i=0;i<realm.len;i++)
+			if (realm.s[i]==';'||realm.s[i]=='&') {
+				realm.len = i;
+				break;
+			}		
+	}
+
+   	LOG(L_DBG, "DBG:"M_NAME":cscf_get_realm_from_uri: realm <%.*s>.\n",realm.len,realm.s);
 	return realm;	
 }
 

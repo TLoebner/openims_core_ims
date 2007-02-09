@@ -106,9 +106,8 @@ void registrar_timer(unsigned int ticks, void* param)
 	r_public *p,*pn;
 	r_contact *c,*cn;
 	r_subscriber *s,*sn;
-	int i,j,assignment_type,sar_res;
+	int i,assignment_type,sar_res;
 	r_hash_slot *r;
-	str realm;
 	
 	r = param;
 	
@@ -151,17 +150,7 @@ void registrar_timer(unsigned int ticks, void* param)
 							if (server_assignment_store_data) 
 								assignment_type = AVP_IMS_SAR_TIMEOUT_DEREGISTRATION_STORE_SERVER_NAME;
 							else assignment_type = AVP_IMS_SAR_TIMEOUT_DEREGISTRATION;
-							realm = p->aor;
-							while(realm.s[0]!='@' && realm.len>0){
-								realm.s ++;
-								realm.len--;
-							}
-							for(j=0;j<realm.len;j++)
-								if (realm.s[j]==';'||realm.s[j]=='&') {
-									realm.len = j;
-									break;
-								}
-							sar_res = SAR(0,realm,p->aor,p->s->private_identity,assignment_type,0);
+							sar_res = SAR(0,cscf_get_realm_from_uri(p->aor),p->aor,p->s->private_identity,assignment_type,0);
 							if (sar_res==1){
 								LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> deregistered.\n",
 									p->aor.len,p->aor.s);
@@ -378,6 +367,9 @@ int SAR(struct sip_msg *msg, str realm, str public_identity, str private_identit
 	int rc=-1,experimental_rc=-1;
 	str xml={0,0};
 		
+	if (realm.len==0){
+		realm = cscf_get_realm_from_uri(private_identity);
+	}		
 	saa = Cx_SAR(msg,public_identity,private_identity,scscf_name_str,realm,
 		assignment_type,data_available);
 	

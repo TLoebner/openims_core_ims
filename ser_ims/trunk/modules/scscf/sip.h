@@ -140,6 +140,7 @@ struct via_body* cscf_get_last_via(struct sip_msg *msg);
 struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port);
 
 str cscf_get_realm(struct sip_msg *msg);
+str cscf_get_realm_from_uri(str uri);
 
 int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt);
 int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id);
