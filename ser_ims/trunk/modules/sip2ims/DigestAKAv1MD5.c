@@ -118,7 +118,7 @@ typedef char RESHEX[RESHEXLEN];
 /** the result is a Authorization Syncrhonization */
 #define AKAV1MD5_AUTS 		1
 /** if to use Anonimity Key to decrypt/encrypt the SeQuence Number */
-#define HSS3G_USE_ANONIMITY_KEY 0
+#define HSS3G_USE_ANONIMITY_KEY 1
 
 /** base16 conversion constants */
 char hexa[16]="0123456789abcdef";
