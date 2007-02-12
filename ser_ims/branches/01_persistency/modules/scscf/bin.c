@@ -54,14 +54,23 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <stdlib.h>
+//#include "../../db/db.h"
 
 #include "bin.h"
+
+//It can't be here, this file is shared with pcscf module.
+//Moved to s_persistency.c
+//extern db_con_t* scscf_db; /**< Database connection handle */
+//extern db_func_t scscf_dbf;	/**< Structure with pointers to db functions */
+//extern int* auth_snapshot_version;
+//extern int* auth_step_version;
 
 /** 
  * Whether to print debug message while encoding/decoding 
@@ -613,6 +622,7 @@ int bin_dump_to_file(bin_data *x,char *location,char *prepend_fname)
 	else return 0;
 }
 
+
 /**
  * Reloads the snapshot from the link to the last time-stamped-file.
  * @param x - where to load
@@ -647,6 +657,7 @@ int bin_load_from_file(bin_data *x,char *location,char *prepend_fname)
  * Dump a binary data to certain location.
  * @param mode - where to dump it to
  * @param x - binary data to dump
+ * @param what - dump auth, dialog or registrar information
  * @returns 1 on success or 0 on failure
  */
 int bin_dump(bin_data *x,int mode,char *location,char* prepend_fname)
@@ -657,9 +668,11 @@ int bin_dump(bin_data *x,int mode,char *location,char* prepend_fname)
 			return 0;
 		case WITH_FILES:
 			return bin_dump_to_file(x,location,prepend_fname);
-		case WITH_DATABASE:
-			LOG(L_ERR,"ERR:"M_NAME":bin_dump: Snapshot done but WITH_DATABASE not implemented...\n");
-			return 0;
+		/*case WITH_DATABASE_BULK:
+			return bin_dump_to_db(x, prepend_fname);
+		case WITH_DATABASE_CACHE:
+			LOG(L_ERR,"ERR:"M_NAME":bin_dump: Snapshot done but WITH_DATABASE_CACHE not implemented...\n");
+			return 0;*/
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":bin_dump: Snapshot done but no such mode %d\n",mode);
 			return 0;
@@ -680,8 +693,11 @@ int bin_load(bin_data *x,int mode,char *location,char* prepend_fname)
 			return 0;
 		case WITH_FILES:
 			return bin_load_from_file(x,location,prepend_fname);		
-		case WITH_DATABASE:
-			LOG(L_ERR,"ERR:"M_NAME":bin_load: WITH_DATABASE not implemented...\n");
+		case WITH_DATABASE_BULK:
+			LOG(L_ERR,"ERR:"M_NAME":bin_load: WITH_DATABASE_BULK not implemented...\n");
+			return 0;
+		case WITH_DATABASE_CACHE:
+			LOG(L_ERR,"ERR:"M_NAME":bin_load: WITH_DATABASE_CACHE not implemented...\n");
 			return 0;
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":bin_load: Can't resume because no such mode %d\n",mode);

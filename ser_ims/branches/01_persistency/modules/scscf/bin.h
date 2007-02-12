@@ -160,7 +160,8 @@ int bin_decode_dlg_t(bin_data *x,dlg_t **d);
 typedef enum {
 	NO_PERSISTENCY=0,
 	WITH_FILES=1,
-	WITH_DATABASE=2
+	WITH_DATABASE_BULK=2,
+	WITH_DATABASE_CACHE=3
 } persistency_mode_t;
 
 /* Dumping functions */
