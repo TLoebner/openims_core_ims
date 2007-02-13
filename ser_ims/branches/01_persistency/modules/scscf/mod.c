@@ -122,8 +122,12 @@ int scscf_persistency_timer_authdata=60;							/**< interval to snapshot authori
 int scscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
 int scscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
 char* scscf_db_url="postgres://mario:mario@localhost/scscfdb";
-int* auth_snapshot_version;	/**< the version of the next snapshot on the db*/
-int* auth_step_version;	/**< the step version within the current snapshot version*/
+int* auth_snapshot_version;	/**< the version of the next auth snapshot on the db*/
+int* auth_step_version;	/**< the step version within the current auth snapshot version*/
+int* dialogs_snapshot_version; /**< the version of the next dialogs snapshot on the db*/
+int* dialogs_step_version; /**< the step version within the current dialogs snapshot version*/
+int* registrar_snapshot_version; /**< the version of the next registrar snapshot on the db*/
+int* registrar_step_version; /**< the step version within the current registrar snapshot version*/
 
 /* fixed parameter storage */
 str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
@@ -494,6 +498,8 @@ static int mod_init(void)
 		}
 	}
 	
+	/* snapshot and step versions */
+	
 	auth_snapshot_version=(int*)shm_malloc(sizeof(int));
 	if(!auth_snapshot_version){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: auth_snapshot_version, no memory left\n");
@@ -507,6 +513,34 @@ static int mod_init(void)
 		return -1;
 	}
 	*auth_step_version=0;
+	
+	dialogs_snapshot_version=(int*)shm_malloc(sizeof(int));
+	if(!dialogs_snapshot_version){
+		LOG(L_ERR, "ERR"M_NAME":mod_init: dialogs_snapshot_version, no memory left\n");
+		return -1;
+	}
+	*dialogs_snapshot_version=0;
+	
+	dialogs_step_version=(int*)shm_malloc(sizeof(int));
+	if(!dialogs_step_version){
+		LOG(L_ERR, "ERR"M_NAME":mod_init: dialogs_step_version, no memory left\n");
+		return -1;
+	}
+	*dialogs_step_version=0;
+	
+	registrar_snapshot_version=(int*)shm_malloc(sizeof(int));
+	if(!registrar_snapshot_version){
+		LOG(L_ERR, "ERR"M_NAME":mod_init: registrar_snapshot_version, no memory left\n");
+		return -1;
+	}
+	*registrar_snapshot_version=0;
+	
+	registrar_step_version=(int*)shm_malloc(sizeof(int));
+	if(!registrar_step_version){
+		LOG(L_ERR, "ERR"M_NAME":mod_init: registrar_step_version, no memory left\n");
+		return -1;
+	}
+	*registrar_step_version=0;
 	
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
