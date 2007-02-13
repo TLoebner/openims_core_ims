@@ -109,10 +109,19 @@
 #	endif
 #	ifdef VQ_MALLOC
 #		define pkg_status()  vqm_status(mem_block)
+#		ifdef DBG_QM_MALLOC
+#			define pkg_sums()  	 vqm_sums(mem_block)
+#		endif
 #	elif defined F_MALLOC
 #		define pkg_status()  fm_status(mem_block)
+#		ifdef DBG_F_MALLOC
+#			define pkg_sums()  	 fm_sums(mem_block)
+#		endif
 #	else
 #		define pkg_status()  qm_status(mem_block)
+#		ifdef DBG_QM_MALLOC
+#			define pkg_sums()  	 qm_sums(mem_block)
+#		endif
 #	endif
 #elif defined(SHM_MEM) && defined(USE_SHM_MEM)
 #	include "shm_mem.h"

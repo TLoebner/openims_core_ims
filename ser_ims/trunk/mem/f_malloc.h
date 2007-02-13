@@ -138,6 +138,9 @@ void*  fm_realloc(struct fm_block*, void* p, unsigned long size);
 
 void  fm_status(struct fm_block*);
 void  fm_info(struct fm_block*, struct mem_info*);
+#ifdef DBG_F_MALLOC
+void  fm_sums(struct fm_block* qm);
+#endif
 
 
 #endif

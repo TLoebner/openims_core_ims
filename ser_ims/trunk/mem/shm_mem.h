@@ -79,6 +79,9 @@
 #	define MY_MALLOC vqm_malloc
 #	define MY_FREE vqm_free
 #	define MY_STATUS vqm_status
+#	ifdef pkg_sums
+#		define MY_SUMS vqm_sums
+#	endif
 #	define  shm_malloc_init vqm_malloc_init
 #	warn "no proper vq_realloc implementation, try another memory allocator"
 #elif defined F_MALLOC
@@ -89,6 +92,9 @@
 #	define MY_REALLOC fm_realloc
 #	define MY_STATUS fm_status
 #	define MY_MEMINFO	fm_info
+#	ifdef pkg_sums
+#		define MY_SUMS fm_sums
+#	endif
 #	define  shm_malloc_init fm_malloc_init
 #else
 #	include "q_malloc.h"
@@ -98,6 +104,9 @@
 #	define MY_REALLOC qm_realloc
 #	define MY_STATUS qm_status
 #	define MY_MEMINFO	qm_info
+#	ifdef pkg_sums
+#		define MY_SUMS qm_sums
+#	endif
 #	define  shm_malloc_init qm_malloc_init
 #endif
 
@@ -240,6 +249,14 @@ do{\
 	shm_unlock(); \
 }while(0)
 
+#ifdef MY_SUMS
+	#define shm_sums() \
+	do { \
+			shm_lock(); \
+			MY_SUMS(shm_block); \
+			shm_unlock(); \
+	}while(0)
+#endif
 
 #endif
 

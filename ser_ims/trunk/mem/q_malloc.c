@@ -714,5 +714,80 @@ void qm_info(struct qm_block* qm, struct mem_info* info)
 }
 
 
+#ifdef DBG_QM_MALLOC
+
+	typedef struct _mem_counter{
+		const char *file;
+		const char *func;
+		unsigned long line;
+		
+		unsigned long size;
+		int count;
+		
+		struct _mem_counter *next;
+	} mem_counter;
+	
+	mem_counter* get_mem_counter(mem_counter **root,struct qm_frag* f)
+	{
+		mem_counter *x;
+		if (!*root) goto make_new;
+		for(x=*root;x;x=x->next)
+			if (x->file == f->file && x->func == f->func && x->line == f->line)
+				return x;
+	make_new:	
+		x = malloc(sizeof(mem_counter));
+		x->file = f->file;
+		x->func = f->func;
+		x->line = f->line;
+		x->count = 0;
+		x->size = 0;
+		x->next = *root;
+		*root = x;
+		return x;
+	}
+	
+	#include "../locking.h"
+	#include "../pt.h"
+	
+	extern gen_lock_t* process_lock;
+	extern struct process_table *pt;
+	extern int process_no;
+	
+	void qm_sums(struct qm_block* qm)
+	{
+		struct qm_frag* f;
+		int i;
+		int memlog=L_ERR;
+		mem_counter *root=0,*x;
+		lock_get(process_lock);
+		if (process_no!=0)
+			LOG(memlog, "qm_sums (%p): PKG[%s]\n", qm,pt[process_no].desc);
+		else 
+			LOG(memlog, "qm_sums (%p): PKG[0]/SHM \n",qm);
+		if (!qm) return;
+	
+		LOG(memlog, "summarizing all alloc'ed. fragments:\n");
+		
+		for (f=qm->first_frag, i=0;(char*)f<(char*)qm->last_frag_end;f=FRAG_NEXT(f),i++){
+			if (! f->u.is_free){
+				x = get_mem_counter(&root,f);
+				x->count++;
+				x->size+=f->size;
+			}
+		}
+		x = root;
+		while(x){
+			LOG(memlog, " count=%6d size=%10lu bytes from %s: %s(%ld)\n",
+				x->count,x->size,
+				x->file, x->func, x->line
+				);
+			root = x->next;
+			free(x);
+			x = root;
+		}
+		LOG(memlog, "-----------------------------\n");
+		lock_release(process_lock);
+	}
+#endif
 
 #endif
