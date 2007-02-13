@@ -91,31 +91,33 @@ extern struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSC
 static int isc_check_headers(ims_spt *spt, struct hdr_field *headers)
 {
 	struct hdr_field *i;
-	char c,c2,ch;
+	char c,ch;
+	char buf[256];
 	regex_t header_comp,content_comp;
 	i = headers;
 	/* compile the regex for header name */
-	c2=spt->sip_header.header.s[spt->sip_header.header.len];
-	spt->sip_header.header.s[spt->sip_header.header.len]=0;				
-	regcomp(&(header_comp),spt->sip_header.header.s,REG_ICASE|REG_EXTENDED);
-	spt->sip_header.header.s[spt->sip_header.header.len]=c2;
+	memcpy(buf,spt->sip_header.header.s,spt->sip_header.header.len);
+	buf[spt->sip_header.header.len]=0;
+	regcomp(&(header_comp),buf,REG_ICASE|REG_EXTENDED);
 	
 	/* compile the regex for content */
-	c2=spt->sip_header.content.s[spt->sip_header.content.len];
-	spt->sip_header.content.s[spt->sip_header.content.len]=0;				
-	regcomp(&(content_comp),spt->sip_header.content.s,REG_ICASE|REG_EXTENDED);
-	spt->sip_header.content.s[spt->sip_header.content.len]=c2;
-
+	memcpy(buf,spt->sip_header.content.s,spt->sip_header.content.len);
+	buf[spt->sip_header.content.len]=0;
+	regcomp(&(content_comp),buf,REG_ICASE|REG_EXTENDED);
+	
+	DBG("DEBUG:"M_NAME":ifc_check_headers:            Looking for Header[%.*s(%d)] %.*s \n",
+		spt->sip_header.header.len,spt->sip_header.header.s,spt->sip_header.type,
+		spt->sip_header.content.len,spt->sip_header.content.s);
 	while(i!=NULL){
 		ch = i->name.s[i->name.len];
 		i->name.s[i->name.len]=0;
-		if ((spt->type>0&&spt->type==i->type)|| //matches known type
-			(regexec(&(header_comp),i->name.s,0,NULL,0)==0)
-			)		//or matches the name
+		if ((spt->sip_header.type>0&&spt->sip_header.type==i->type)|| //matches known type
+			(regexec(&(header_comp),i->name.s,0,NULL,0)==0)//or matches the name
+		   )		
 		{
 			i->name.s[i->name.len]=ch;
-			DBG("DEBUG:"M_NAME":ifc_check_headers:            Found Header[%.*s] %.*s \n",
-					i->name.len,i->name.s,i->body.len,i->body.s);
+			DBG("DEBUG:"M_NAME":ifc_check_headers:            Found Header[%.*s(%d)] %.*s \n",
+					i->name.len,i->name.s,i->type,i->body.len,i->body.s);
 			//if the header should be absent but found it
 			if (spt->sip_header.content.s==NULL)
 				if (spt->condition_negated) return FALSE;
