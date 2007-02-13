@@ -961,7 +961,6 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE,i;
 	str uri,dst={0,0};
-	struct sip_uri puri;	
 	r_public *p=0;
 	r_contact *c=0;
 
@@ -973,35 +972,16 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_ERR,"ERR:"M_NAME":S_lookup: This message is not a request\n");
 		goto error;
 	}		
-
-	if (msg->new_uri.s) uri = msg->new_uri;
-	else uri = msg->first_line.u.request.uri;
 	
-	if (parse_uri(uri.s, uri.len, &puri) < 0) {
-		LOG(L_INFO,"INF:"M_NAME":S_lookup: Error parsing uri <%.*s>\n",
-			uri.len,uri.s);
-		goto error;
-	}
-	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
-	uri.s = pkg_malloc(uri.len);
-	if (!uri.s){
-		LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error allocating %d bytes\n",uri.len);
+	if (!cscf_get_terminating_identity(msg,&uri)){
+		LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error extracting terminating uri!!!\n");
 		return CSCF_RETURN_ERROR;
 	}
-	uri.len=0;
-	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
-	uri.len+=lookup_sip.len;
-	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
-	uri.len+=puri.user.len;
-	uri.s[uri.len++]='@';
-	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
-	uri.len+=puri.host.len;
-	
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_lookup: Looking for <%.*s>\n",uri.len,uri.s);
 	
 	p = get_r_public(uri);
-	pkg_free(uri.s);
+//	pkg_free(uri.s);
 	if (!p) return CSCF_RETURN_FALSE;
 	if (p->reg_state!=IMS_USER_REGISTERED){
 		r_unlock(p->hash);
@@ -1185,7 +1165,6 @@ int r_is_unregistered_id(str public_identity)
 int S_term_registered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
-	struct sip_uri puri;
 	str uri={0,0};	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_term_registered: Looking if registered\n");
@@ -1197,30 +1176,10 @@ int S_term_registered(struct sip_msg *msg,char *str1,char *str2)
 		goto error;
 	}		
 
-	
-	if (msg->new_uri.s) uri = msg->new_uri;
-	else uri = msg->first_line.u.request.uri;
-	
-	if (parse_uri(uri.s, uri.len, &puri) < 0) {
-		LOG(L_INFO,"INF:"M_NAME":S_term_registered: Error parsing uri <%.*s>\n",
-			uri.len,uri.s);
-		goto error;
-	}
-	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
-	uri.s = pkg_malloc(uri.len);
-	if (!uri.s){
-		LOG(L_ERR,"ERR:"M_NAME":S_term_registered: Error allocating %d bytes\n",uri.len);
+	if (!cscf_get_terminating_identity(msg,&uri)){
+		LOG(L_ERR,"ERR:"M_NAME":S_term_registered: Error extracting terminating uri!!!\n");
 		return CSCF_RETURN_ERROR;
-	}
-	uri.len=0;
-	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
-	uri.len+=lookup_sip.len;
-	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
-	uri.len+=puri.user.len;
-	uri.s[uri.len++]='@';
-	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
-	uri.len+=puri.host.len;
-	
+	}	
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_term_registered: Looking for <%.*s>\n",uri.len,uri.s);
 	
@@ -1229,10 +1188,8 @@ int S_term_registered(struct sip_msg *msg,char *str1,char *str2)
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
-	if (uri.s) pkg_free(uri.s);
 	return ret;
 error:
-	if (uri.s) pkg_free(uri.s);
 	ret=CSCF_RETURN_ERROR;
 	return ret;	
 }
@@ -1248,7 +1205,6 @@ error:
 int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
-	struct sip_uri puri;
 	str uri={0,0};	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking if registered\n");
@@ -1259,31 +1215,11 @@ int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: This message is not a request\n");
 		goto error;
 	}		
-
 	
-	if (msg->new_uri.s) uri = msg->new_uri;
-	else uri = msg->first_line.u.request.uri;
-	
-	if (parse_uri(uri.s, uri.len, &puri) < 0) {
-		LOG(L_INFO,"INF:"M_NAME":S_term_not_registered: Error parsing uri <%.*s>\n",
-			uri.len,uri.s);
-		goto error;
-	}
-	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
-	uri.s = pkg_malloc(uri.len);
-	if (!uri.s){
-		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: Error allocating %d bytes\n",uri.len);
+	if (!cscf_get_terminating_identity(msg,&uri)){
+		LOG(L_ERR,"ERR:"M_NAME":S_term_not_registered: Error extracting terminating uri!!!\n");
 		return CSCF_RETURN_ERROR;
-	}
-	uri.len=0;
-	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
-	uri.len+=lookup_sip.len;
-	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
-	uri.len+=puri.user.len;
-	uri.s[uri.len++]='@';
-	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
-	uri.len+=puri.host.len;
-	
+	}	
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_term_not_registered: Looking for <%.*s>\n",uri.len,uri.s);
 	
@@ -1292,10 +1228,8 @@ int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2)
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
-	if (uri.s) pkg_free(uri.s);	
 	return ret;
 error:
-	if (uri.s) pkg_free(uri.s);
 	ret=CSCF_RETURN_ERROR;
 	return ret;	
 }
@@ -1310,7 +1244,6 @@ error:
 int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
-	struct sip_uri puri;
 	str uri={0,0};	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_term_unregistered: Looking if registered\n");
@@ -1323,29 +1256,10 @@ int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2)
 	}		
 
 	
-	if (msg->new_uri.s) uri = msg->new_uri;
-	else uri = msg->first_line.u.request.uri;
-	
-	if (parse_uri(uri.s, uri.len, &puri) < 0) {
-		LOG(L_INFO,"INF:"M_NAME":S_term_unregistered: Error parsing uri <%.*s>\n",
-			uri.len,uri.s);
-		goto error;
-	}
-	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
-	uri.s = pkg_malloc(uri.len);
-	if (!uri.s){
-		LOG(L_ERR,"ERR:"M_NAME":S_term_unregistered: Error allocating %d bytes\n",uri.len);
+	if (!cscf_get_terminating_identity(msg,&uri)){
+		LOG(L_ERR,"ERR:"M_NAME":S_term_unregistered: Error extracting terminating uri!!!\n");
 		return CSCF_RETURN_ERROR;
 	}
-	uri.len=0;
-	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
-	uri.len+=lookup_sip.len;
-	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
-	uri.len+=puri.user.len;
-	uri.s[uri.len++]='@';
-	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
-	uri.len+=puri.host.len;
-	
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_term_unregistered: Looking for <%.*s>\n",uri.len,uri.s);
 	
@@ -1354,10 +1268,8 @@ int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2)
 	else 
 		ret = CSCF_RETURN_FALSE;
 			
-	if (uri.s) pkg_free(uri.s);	
 	return ret;
 error:
-	if (uri.s) pkg_free(uri.s);
 	ret=CSCF_RETURN_ERROR;
 	return ret;	
 }
@@ -1640,42 +1552,23 @@ error:
 int S_terminating_barred(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
-	struct sip_uri puri;	
 	str uri;	
 
-	LOG(L_DBG,"DBG:"M_NAME":S_originating_barred: Looking if barred\n");
+	LOG(L_DBG,"DBG:"M_NAME":S_terminating_barred: Looking if barred\n");
 //	print_r(L_INFO);
 	/* First check the parameters */
 	if (msg->first_line.type!=SIP_REQUEST)
 	{
-		LOG(L_ERR,"ERR:"M_NAME":S_originating_barred: This message is not a request\n");
+		LOG(L_ERR,"ERR:"M_NAME":S_terminating_barred: This message is not a request\n");
 		goto error;
 	}		
 
-	if (msg->new_uri.s) uri = msg->new_uri;
-	else uri = msg->first_line.u.request.uri;
-	
-	if (parse_uri(uri.s, uri.len, &puri) < 0) {
-		LOG(L_INFO,"INF:"M_NAME":S_is_not_registered: Error parsing uri <%.*s>\n",
-			uri.len,uri.s);
-		goto error;
-	}
-	uri.len = lookup_sip.len+puri.user.len+1+puri.host.len;
-	uri.s = pkg_malloc(uri.len);
-	if (!uri.s){
-		LOG(L_ERR,"ERR:"M_NAME":S_is_not_registered: Error allocating %d bytes\n",uri.len);
+	if (!cscf_get_terminating_identity(msg,&uri)){
+		LOG(L_ERR,"ERR:"M_NAME":S_terminating_barred: Error extracting terminating uri!!!\n");
 		return CSCF_RETURN_ERROR;
 	}
-	uri.len=0;
-	memcpy(uri.s,lookup_sip.s,lookup_sip.len);
-	uri.len+=lookup_sip.len;
-	memcpy(uri.s+uri.len,puri.user.s,puri.user.len);
-	uri.len+=puri.user.len;
-	uri.s[uri.len++]='@';
-	memcpy(uri.s+uri.len,puri.host.s,puri.host.len);
-	uri.len+=puri.host.len;
 	
-	LOG(L_DBG,"DBG:"M_NAME":S_originating_barred: Looking for <%.*s>\n",uri.len,uri.s);
+	LOG(L_DBG,"DBG:"M_NAME":S_terminating_barred: Looking for <%.*s>\n",uri.len,uri.s);
 	
 	if (S_is_barred(uri)) 
 		ret = CSCF_RETURN_TRUE;

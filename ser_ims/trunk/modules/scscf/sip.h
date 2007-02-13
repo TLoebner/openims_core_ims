@@ -161,5 +161,6 @@ str* cscf_get_service_route(struct sip_msg *msg,int *size);
 int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port);
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport);
 
+int cscf_get_terminating_identity(struct sip_msg *msg,str *uri);
 
 #endif /* PIS_CSCF_SIP_H */
