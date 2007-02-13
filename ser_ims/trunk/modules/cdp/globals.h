@@ -67,7 +67,7 @@
 
 #ifdef CDP_FOR_SER
 #else
-extern unsigned int shm_mem_size;
+extern unsigned long shm_mem_size;
 extern int memlog;
 #endif
 

@@ -105,7 +105,21 @@ void acceptor_process(dp_config *cfg)
 
 	for(i=0;listening_socks[i];i++)
 		close(listening_socks[i]);
-	dp_del_pid(getpid());	
+	
+	if (listening_socks) pkg_free(listening_socks);
+#ifdef CDP_FOR_SER
+#else
+#ifdef PKG_MALLOC
+	#ifdef PKG_MALLOC
+		LOG(memlog, "Acceptor Memory status (pkg):\n");
+		//pkg_status();
+		#ifdef pkg_sums
+			pkg_sums();
+		#endif 
+	#endif
+#endif
+		dp_del_pid(getpid());		
+#endif		
 done:		
 	LOG(L_INFO,"INFO:... Acceptor process finished\n");
 	exit(0);

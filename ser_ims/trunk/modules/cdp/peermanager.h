@@ -71,6 +71,8 @@ int peer_manager_init(dp_config *config);
 
 void peer_manager_destroy();
 
+void log_peer_list(int level);
+
 void add_peer(peer *p);
 
 void remove_peer(peer *p);
@@ -85,5 +87,6 @@ void peer_timer(time_t now,void *ptr);
 
 AAAMsgIdentifier next_hopbyhop();
 AAAMsgIdentifier next_endtoend();
+
 
 #endif

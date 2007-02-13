@@ -60,11 +60,12 @@
 #ifdef CDP_FOR_SER
 
 #else
-	unsigned int shm_mem_size = SHM_MEM_SIZE;
-	int memlog = L_NOTICE;
-	int debug = 9;
+	unsigned long shm_mem_size = SHM_MEM_SIZE;
+	int memlog = L_DBG;
+	int memdbg = L_MEM;
+	int debug = L_MEM;
 	int log_facility = 1;
-	int log_stderr = 2;
+	int log_stderr = 1;
 	int process_no=0;
 #endif
 

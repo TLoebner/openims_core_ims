@@ -409,22 +409,27 @@ void diameter_peer_destroy()
 	}
 	lock_destroy(handlers_lock);
 	lock_dealloc((void*)handlers_lock);
-	
-	
+	shm_free(handlers);
+		
 	free_dp_config(config);	
 	LOG(L_CRIT,"INFO:destroy_diameter_peer(): Bye Bye from C Diameter Peer test\n");
 
-	
 #ifndef CDP_FOR_SER
-	#ifdef SHM_MEM
-		LOG(memlog, "Memory status (shm):\n");
-		shm_status();
-		/* zero all shmem alloc vars that we still use */
-		shm_mem_destroy();
-	#endif
 	#ifdef PKG_MALLOC
 		LOG(memlog, "Memory status (pkg):\n");
-		pkg_status();
+		//pkg_status();
+		#ifdef pkg_sums
+			pkg_sums();
+		#endif 
+	#endif
+	#ifdef SHM_MEM
+		LOG(memlog, "Memory status (shm):\n");
+		//shm_status();
+		#ifdef shm_sums
+			shm_sums();
+		#endif 
+		/* zero all shmem alloc vars that we still use */
+		shm_mem_destroy();
 	#endif
 #endif	
 }

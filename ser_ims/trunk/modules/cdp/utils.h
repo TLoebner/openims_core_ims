@@ -69,12 +69,12 @@
 
 #else
 
-#include "chess/utils/config.h"
-#include "chess/utils/dprint.h"
-#include "chess/utils/str.h"
-#include "chess/utils/mem.h"
-#include "chess/utils/shm_mem.h"
-#include "chess/utils/locking.h"
+#include "../utils/config.h"
+#include "../utils/dprint.h"
+#include "../utils/str.h"
+#include "../utils/mem.h"
+#include "../utils/shm_mem.h"
+#include "../utils/locking.h"
 
 #endif
 
