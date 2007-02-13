@@ -65,6 +65,10 @@ extern db_con_t* scscf_db; /**< Database connection handle */
 extern db_func_t scscf_dbf;	/**< Structure with pointers to db functions */
 extern int* auth_snapshot_version;
 extern int* auth_step_version;
+extern int* dialogs_snapshot_version;
+extern int* dialogs_step_version;
+extern int* registrar_snapshot_version;
+extern int* registrar_step_version;
 
 int s_dump(bin_data* x, persistency_mode_t mode, char* location, char* prepend_fname);
 
@@ -118,6 +122,9 @@ int s_dump(bin_data* x, persistency_mode_t mode, char* location, char* prepend_f
 }  
 
 int bin_dump_auth_to_db(bin_data *x);
+int bin_dump_dialogs_to_db(bin_data *x);
+int bin_dump_registrar_to_db(bin_data *x);
+
 /**
  * Writes the binary data to a snapshot on the DB.
  * @param x - the binary data to write
@@ -127,13 +134,11 @@ int bin_dump_auth_to_db(bin_data *x);
 int bin_dump_to_db(bin_data *x, char* prepend_fname){
 	
 	if(!strncmp(prepend_fname,"sregistrar",10)){
-		LOG(L_ERR,"ERR:"M_NAME":bin_dump_to_db: Snapshot of REGISTRAR information to db not implemented...\n");
-		return 0;
+		return bin_dump_registrar_to_db(x);
 	}
 	else{
 		if(!strncmp(prepend_fname,"sdialogs",8)){
-			LOG(L_ERR,"ERR:"M_NAME":bin_dump_to_db: Snapshot of S_DIALOGS to db not implemented...\n");
-			return 0;
+			return bin_dump_dialogs_to_db(x);
 		}
 		else{
 			if(!strncmp(prepend_fname,"authdata",8)){
@@ -158,27 +163,15 @@ int bin_dump_auth_to_db(bin_data *x){
 
 	keys[0] = "snapshot_version";
 	keys[1] = "step_version";
-	//keys[2] = "private";
-	//keys[3] = "public";
 	keys[2] = "data";
 
 	vals[0].type = DB_INT;
 	vals[0].nul = 0;
-	vals[0].val.int_val=*auth_snapshot_version;//snapshot timer must increment it
+	vals[0].val.int_val=*auth_snapshot_version;//auth snapshot timer must increment it
 	
 	vals[1].type = DB_INT;
 	vals[1].nul = 0;
-	vals[1].val.int_val=*auth_step_version;//step timer must increment it
-	
-	/*vals[2].type = DB_STR;
-	vals[2].nul = 0;
-	vals[2].val.str_val.s=private.s;
-	vals[2].val.str_val.len=MIN(private.len, 128);
-	
-	vals[3].type = DB_STR;
-	vals[3].nul = 0;
-	vals[3].val.str_val.s=public.s;
-	vals[3].val.str_val.len=MIN(public.len, 128);*/
+	vals[1].val.int_val=*auth_step_version;//auth step timer must increment it
 
 	str d = {x->s, x->len};
 	vals[2].type = DB_BLOB;
@@ -193,6 +186,87 @@ int bin_dump_auth_to_db(bin_data *x){
 
 	if (scscf_dbf.insert(scscf_db, keys, vals, 3) < 0) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_dump_auth_to_db(): Error while inserting auth_userdata\n");
+		return 0;
+	}
+	
+	return 1;
+}
+
+/**
+ * Writes s_dialogs data to a snapshot on the DB.
+ * @param x - the binary data to write
+ * @returns 1 on success or 0 on failure
+ */
+int bin_dump_dialogs_to_db(bin_data *x){
+	db_key_t keys[3];
+	db_val_t vals[3];
+
+	keys[0] = "snapshot_version";
+	keys[1] = "step_version";
+	keys[2] = "data";
+
+	vals[0].type = DB_INT;
+	vals[0].nul = 0;
+	vals[0].val.int_val=*dialogs_snapshot_version;//dialogs snapshot timer must increment it
+	
+	vals[1].type = DB_INT;
+	vals[1].nul = 0;
+	vals[1].val.int_val=*dialogs_step_version;//dialogs step timer must increment it
+
+	str d = {x->s, x->len};
+	vals[2].type = DB_BLOB;
+	vals[2].nul = 0;
+	vals[2].val.blob_val = d;
+
+
+	if (scscf_dbf.use_table(scscf_db, "dialogs_bulk") < 0) {
+		LOG(L_ERR, "ERR:"M_NAME":bin_dump_dialogs_to_db(): Error in use_table\n");
+		return 0;
+	}
+
+	if (scscf_dbf.insert(scscf_db, keys, vals, 3) < 0) {
+		LOG(L_ERR, "ERR:"M_NAME":bin_dump_dialogs_to_db(): Error while inserting s_dialogs\n");
+		return 0;
+	}
+	
+	return 1;
+}
+
+/**
+ * Writes registrar data to a snapshot on the DB.
+ * @param x - the binary data to write
+ * @returns 1 on success or 0 on failure
+ */
+int bin_dump_registrar_to_db(bin_data *x){
+	
+	db_key_t keys[3];
+	db_val_t vals[3];
+
+	keys[0] = "snapshot_version";
+	keys[1] = "step_version";
+	keys[2] = "data";
+
+	vals[0].type = DB_INT;
+	vals[0].nul = 0;
+	vals[0].val.int_val=*registrar_snapshot_version;//registrar snapshot timer must increment it
+	
+	vals[1].type = DB_INT;
+	vals[1].nul = 0;
+	vals[1].val.int_val=*registrar_step_version;//registrar step timer must increment it
+
+	str d = {x->s, x->len};
+	vals[2].type = DB_BLOB;
+	vals[2].nul = 0;
+	vals[2].val.blob_val = d;
+
+
+	if (scscf_dbf.use_table(scscf_db, "registrar_bulk") < 0) {
+		LOG(L_ERR, "ERR:"M_NAME":bin_dump_registrar_to_db(): Error in use_table\n");
+		return 0;
+	}
+
+	if (scscf_dbf.insert(scscf_db, keys, vals, 3) < 0) {
+		LOG(L_ERR, "ERR:"M_NAME":bin_dump_registrar_to_db(): Error while inserting registrar information\n");
 		return 0;
 	}
 	
@@ -270,7 +344,8 @@ int make_snapshot_dialogs()
 		d_unlock(i);
 	}
 	bin_print(&x);
-	i = bin_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sdialogs");		
+	i=s_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sdialogs");
+	//i = bin_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sdialogs");		
 	bin_free(&x);
 	return i;
 error:
@@ -316,7 +391,9 @@ error:
  */
 void persistency_timer_dialogs(unsigned int ticks, void* param)
 {
-	make_snapshot_dialogs();	 	
+	make_snapshot_dialogs();
+	
+	(*dialogs_snapshot_version)++;	 	
 }
 
 
@@ -344,7 +421,8 @@ int make_snapshot_registrar()
 		r_unlock(i);
 	}
 	bin_print(&x);
-	i = bin_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sregistrar");		
+	i = s_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sregistrar");
+	//i = bin_dump(&x,scscf_persistency_mode,scscf_persistency_location,"sregistrar");		
 	bin_free(&x);
 	return i;
 error:
@@ -390,6 +468,8 @@ error:
  */
 void persistency_timer_registrar(unsigned int ticks, void* param)
 {
-	make_snapshot_registrar();	 	
+	make_snapshot_registrar();
+	
+	(*registrar_snapshot_version)++;
 }
 

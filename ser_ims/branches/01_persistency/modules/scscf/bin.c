@@ -54,23 +54,15 @@
 
 
 #include <stdio.h>
-#include <string.h>
 #include <time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <stdlib.h>
-//#include "../../db/db.h"
 
 #include "bin.h"
 
-//It can't be here, this file is shared with pcscf module.
-//Moved to s_persistency.c
-//extern db_con_t* scscf_db; /**< Database connection handle */
-//extern db_func_t scscf_dbf;	/**< Structure with pointers to db functions */
-//extern int* auth_snapshot_version;
-//extern int* auth_step_version;
 
 /** 
  * Whether to print debug message while encoding/decoding 
@@ -693,12 +685,12 @@ int bin_load(bin_data *x,int mode,char *location,char* prepend_fname)
 			return 0;
 		case WITH_FILES:
 			return bin_load_from_file(x,location,prepend_fname);		
-		case WITH_DATABASE_BULK:
+		/*case WITH_DATABASE_BULK:
 			LOG(L_ERR,"ERR:"M_NAME":bin_load: WITH_DATABASE_BULK not implemented...\n");
 			return 0;
 		case WITH_DATABASE_CACHE:
 			LOG(L_ERR,"ERR:"M_NAME":bin_load: WITH_DATABASE_CACHE not implemented...\n");
-			return 0;
+			return 0;*/
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":bin_load: Can't resume because no such mode %d\n",mode);
 			return 0;

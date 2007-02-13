@@ -13,3 +13,18 @@ CREATE TABLE auth_data_cache (
     data BYTEA NOT NULL,
     PRIMARY KEY (snapshot_version, step_version, private, public)
 );
+
+CREATE TABLE dialogs_bulk (
+    snapshot_version INTEGER NOT NULL,
+    step_version INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    PRIMARY KEY (snapshot_version, step_version)
+);
+
+CREATE TABLE registrar_bulk (
+    snapshot_version INTEGER NOT NULL,
+    step_version INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    PRIMARY KEY (snapshot_version, step_version)
+);
+
