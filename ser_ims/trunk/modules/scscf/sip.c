@@ -2217,3 +2217,37 @@ int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 	return 1;
 }
 
+/**
+ * Returns the terminating contact.
+ * @param msg sip message
+ * @param msg - the SIP message to look into
+ * @param host - the host string to be filled with the result
+ * @param port - the port number to be filled with the result 
+ * @param transport - the transport type to be filled with the result
+ * @returns 1 on success
+ */
+int cscf_get_terminating_identity(struct sip_msg *msg,str *uri)
+{
+	struct sip_msg *req;	
+	int i;
+	req = msg;	
+	if (!req){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_terminating_identity: NULL message!!!\n");
+		return 0;
+	}
+ 	if (req->first_line.type!=SIP_REQUEST){
+ 		req = cscf_get_request_from_reply(req);
+ 	}
+	
+	if (msg->new_uri.s) *uri = msg->new_uri;
+	else *uri = msg->first_line.u.request.uri;
+		
+	for(i=0;i<uri->len;i++)
+		if (uri->s[i]==';' || uri->s[i]=='?') {
+			uri->len = i;
+			break;
+		}
+	
+	LOG(L_INFO,"DBG:"M_NAME":cscf_get_terminating_identity: <%.*s> \n",uri->len,uri->s);	
+	return 1;
+}
