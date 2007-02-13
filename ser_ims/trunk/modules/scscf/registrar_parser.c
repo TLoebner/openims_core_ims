@@ -329,6 +329,8 @@ static int parse_sip_header(xmlDocPtr doc,xmlNodePtr node,ims_sip_header *sh)
 {
 	xmlNodePtr child;
 	xmlChar *x;
+	char c[256];
+	int len;
 	struct hdr_field hf;
 	sh->header.s=NULL;sh->header.len=0;
 	sh->content.s=NULL;sh->content.len=0;
@@ -338,9 +340,14 @@ static int parse_sip_header(xmlDocPtr doc,xmlNodePtr node,ims_sip_header *sh)
 			switch (child->name[0]) {
 				case 'H':case 'h':	//Header
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
+					len = strlen(x);		
+					memcpy(c,x,len);
+					c[len++]=':';
+					c[len]=0;
 					space_trim_dup(&(sh->header),x);
-					parse_hname2(sh->header.s,sh->header.s+sh->header.len,&hf);
+					parse_hname2(c,c+(len<4?4:len),&hf);
 					sh->type=hf.type;
+					//LOG(L_CRIT,"[%.*s(%d)]\n",sh->header.len,sh->header.s,sh->type);
 					xmlFree(x);
 					break;
 				case 'C':case 'c':	//Content
@@ -970,9 +977,10 @@ void print_user_data(int log_level,ims_subscription *s)
 								s->service_profiles[i].filter_criteria[j].trigger_point->spt[k].method.s);
 							break;
 						case 3:
-							LOG(log_level,"INF:"M_NAME":\t\t\t\t\t Hdr(%.*s) == <%.*s>\n",
+							LOG(log_level,"INF:"M_NAME":\t\t\t\t\t Hdr(%.*s(%d)) == <%.*s>\n",
 								s->service_profiles[i].filter_criteria[j].trigger_point->spt[k].sip_header.header.len,
 								s->service_profiles[i].filter_criteria[j].trigger_point->spt[k].sip_header.header.s,
+								s->service_profiles[i].filter_criteria[j].trigger_point->spt[k].sip_header.type,
 								s->service_profiles[i].filter_criteria[j].trigger_point->spt[k].sip_header.content.len,
 								s->service_profiles[i].filter_criteria[j].trigger_point->spt[k].sip_header.content.s);
 							break;
