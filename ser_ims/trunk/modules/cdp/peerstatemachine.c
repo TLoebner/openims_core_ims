@@ -113,6 +113,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 						R_Disc(p);
 						p->state = Closed;
 					}
+					log_peer_list(L_INFO);
 					break;
 				case Stop:
 					/* just ignore this state */
@@ -160,11 +161,12 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 				case I_Rcv_CEA:
 					result_code = Process_CEA(p,msg);
 					//if (result_code>=2000 && result_code<3000)
-						p->state = I_Open; 
+						p->state = I_Open; 												
 					//else {
 					//	Cleanup(p,p.I_comm);
 					//	p.state = Closed;
 					//}
+					log_peer_list(L_INFO);
 					break;
 				case R_Conn_CER:
 					R_Accept(p,sock);
@@ -285,10 +287,12 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					Snd_DPA(p,msg,AAA_SUCCESS,p->R_sock);
 					R_Disc(p);
 					p->state = Closed;
+					log_peer_list(L_INFO);
 					break;
 				case R_Peer_Disc:
 					R_Disc(p);
 					p->state = Closed;
+					log_peer_list(L_INFO);
 					break;
 				case R_Rcv_CER:
 					result_code = Process_CER(p,msg);
@@ -308,6 +312,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 						/*R_Disc(p);p.state = Closed;*/
 						p->state = R_Open; /* Or maybe I should disconnect it?*/
 					}
+					log_peer_list(L_INFO);
 					break;
 				default:
 					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
@@ -348,10 +353,12 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					Snd_DPA(p,msg,2001,p->I_sock);
 					R_Disc(p);
 					p->state = Closed;
+					log_peer_list(L_INFO);
 					break;
 				case I_Peer_Disc:
 					I_Disc(p);
 					p->state = Closed;
+					log_peer_list(L_INFO);
 					break;
 				case I_Rcv_CER:
 					result_code = Process_CER(p,msg);

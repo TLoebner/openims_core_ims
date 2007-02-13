@@ -157,9 +157,19 @@ void receiver_process(int sock)
 	/* remove pid from list of running processes */
 	dp_del_pid(getpid());
 	
-	#ifdef CDP_FOR_SER
-		drop_my_process();	
+#ifdef CDP_FOR_SER
+	drop_my_process();		
+#else
+#ifdef PKG_MALLOC
+	#ifdef PKG_MALLOC
+		LOG(memlog, "Receiver[%d] Memory status (pkg):\n",sock);
+		//pkg_status();
+		#ifdef pkg_sums
+			pkg_sums();
+		#endif 
 	#endif
+#endif
+#endif		
 		
 	LOG(L_INFO,"INFO:receiver_process(): [%d]... Receiver process finished.\n",sock);
 	exit(0);

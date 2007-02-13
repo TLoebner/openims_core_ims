@@ -103,8 +103,7 @@ static inline void cdp_lock_get(int sid)
 static inline void cdp_lock_release(int sid)
 {
 	if(/*(semctl(sid, 0, SETVAL, 1)*/
-	semop(sid, &cdp_sem_unlock, 1)
-	 == -1)
+	semop(sid, &cdp_sem_unlock, 1) == -1)
 	{
 		if (shutdownx&&(*shutdownx)) return;
     	LOG(L_ERR,"ERROR:cdp_lock_release(): Error on semop %s > %s Q[%2d/%2d]\n",
@@ -337,12 +336,15 @@ void worker_process(int id)
 	LOG(L_INFO,"INFO:[%d]... Worker process finished\n",id);	
 #ifdef CDP_FOR_SER
 #else
-#ifdef PKG_MALLOC
-	LOG(memlog, "Worker[%d] Memory status (pkg):\n",id);
-	pkg_status();
+	#ifdef PKG_MALLOC
+		LOG(memlog, "Worker[%d] Memory status (pkg):\n",id);
+		//pkg_status();
+		#ifdef pkg_sums
+			pkg_sums();
+		#endif 
+	#endif
+	dp_del_pid(getpid());	
 #endif
-#endif	
-	dp_del_pid(getpid());
 	exit(0);
 }
 
