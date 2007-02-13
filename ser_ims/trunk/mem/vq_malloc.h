@@ -149,6 +149,9 @@ void  vqm_free(struct vqm_block*, void* p);
 #endif
 
 void  vqm_status(struct vqm_block*);
+#ifdef DBG_QM_MALLOC
+void  vqm_sums(struct vqm_block* qm);
+#endif
 
 
 #endif

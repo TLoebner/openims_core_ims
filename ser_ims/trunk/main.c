@@ -272,7 +272,7 @@ int syn_branch = 1;
 /* debugging level for memory stats */
 int memlog = L_DBG;
 /* debugging level for the malloc debug messages */
-int memdbg = L_DBG;
+int memdbg = L_MEM;
 /* debugging level for timer debugging */
 int timerlog = L_WARN;
 /* should replies include extensive warnings? by default yes,
@@ -428,6 +428,9 @@ void cleanup(show_status)
 	if (show_status){
 		LOG(memlog, "Memory status (pkg):\n");
 		pkg_status();
+#ifdef pkg_sums		
+		pkg_sums();
+#endif		
 	}
 #endif
 #ifdef SHM_MEM
@@ -436,6 +439,9 @@ void cleanup(show_status)
 	if (show_status){
 			LOG(memlog, "Memory status (shm):\n");
 			shm_status();
+#ifdef shm_sums
+			shm_sums();
+#endif			
 	}
 	/* zero all shmem alloc vars that we still use */
 	shm_mem_destroy();
@@ -634,6 +640,9 @@ static void sig_usr(int signo)
 					#ifdef PKG_MALLOC
 					LOG(memlog, "Memory status (pkg):\n");
 					pkg_status();
+					#ifdef pkg_sums
+						pkg_sums();
+					#endif					
 					#endif
 					exit(0);
 					break;
