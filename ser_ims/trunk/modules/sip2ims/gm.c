@@ -110,8 +110,8 @@ int	Gw_MD5_to_AKA(struct sip_msg *msg,char *str1,char *str2)
 	} else goto error;
 
 	
-	LOG(L_INFO, "INF:"M_NAME":Gw_MD5_to_AKA: \n===\n%.*s\n---\n%.*s===\n",
-			auth.len,auth.s,new_auth.len,new_auth.s);
+	LOG(L_INFO, "INF:"M_NAME":Gw_MD5_to_AKA: \n======%s=========\n%.*s\n---\n%.*s============================\n",
+			is_authorized?"===Authorized":"NotAuthorized",auth.len,auth.s,new_auth.len,new_auth.s);
 				
 	return CSCF_RETURN_TRUE;		
 error:
@@ -148,7 +148,7 @@ int Gw_AKA_to_MD5(struct sip_msg *msg,char *str1,char *str2)
 				if (!sip2ims_del_header(msg,hdr)){
 					LOG(L_INFO,"INF:"M_NAME":Gw_AKA_to_MD5: Error dropping old authorization header.\n");		
 				}
-				LOG(L_INFO, "INF:"M_NAME":Gw_AKA_to_MD5: \n+++\n%.*s\n---\n%.*s+++\n",
+				LOG(L_INFO, "INF:"M_NAME":Gw_AKA_to_MD5: \n++++++++++++++++++++++++++++\n%.*s\n---\n%.*s++++++++++++++++++++++++++++\n",
 					auth.len,auth.s,new_auth.len,new_auth.s);				
 			}else{
 				LOG(L_ERR, "ERR:"M_NAME":Gw_AKA_to_MD5: Error adding new header\n");				

@@ -209,7 +209,7 @@ fallback:
 	if (pi.len>4&&strncasecmp(pi.s,"sip:",4)==0) {pi.s+=4;pi.len-=4;}
 
 done:	
-	LOG(L_INFO,"INF:"M_NAME":sip2ims_get_private_identity: <%.*s> \n",
+	LOG(L_DBG,"DBG:"M_NAME":sip2ims_get_private_identity: <%.*s> \n",
 		pi.len,pi.s);
 	return pi;	
 }
@@ -238,7 +238,7 @@ str sip2ims_get_public_identity(struct sip_msg *msg)
 
 	pu = to->uri;
 	
-	LOG(L_INFO,"INF:"M_NAME":sip2ims_get_public_identity: <%.*s> \n",
+	LOG(L_DBG,"DBG:"M_NAME":sip2ims_get_public_identity: <%.*s> \n",
 		pu.len,pu.s);	
 	return pu;
 }
