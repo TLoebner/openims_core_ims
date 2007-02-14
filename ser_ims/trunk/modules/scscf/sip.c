@@ -1821,10 +1821,13 @@ str cscf_get_realm_from_uri(str uri)
 		strncasecmp(uri.s,"sips:",5)==0) {
 		/* SIP URI */
 		realm = uri;
-		while(realm.s[0]!='@' && realm.len>0){
-			realm.s ++;
-			realm.len--;
-		}
+		for(i=0;i<realm.len;i++)
+			if (realm.s[i]=='@'){
+				realm.s = realm.s + i + 1;
+				realm.len = realm.len - i - 1;
+				break;
+			}
+		if (!realm.len) realm = uri;
 		for(i=0;i<realm.len;i++)
 			if (realm.s[i]==';'||realm.s[i]=='&') {
 				realm.len = i;
@@ -1835,7 +1838,7 @@ str cscf_get_realm_from_uri(str uri)
 		/* TEL URI */
 		realm = uri;
 		while(realm.s[0]!=';' && realm.len>0){
-			realm.s ++;
+			realm.s++;
 			realm.len--;
 		}		
 		if (realm.len<1) {realm.len=0;return realm;}
@@ -1858,10 +1861,12 @@ str cscf_get_realm_from_uri(str uri)
 	}else{
 		/* unknown... just extract between @ and ;? */
 		realm = uri;
-		while(realm.s[0]!='@' && realm.len>0){
-			realm.s ++;
-			realm.len--;
-		}
+		for(i=0;i<realm.len;i++)
+			if (realm.s[i]=='@'){
+				realm.s = realm.s + i + 1;
+				realm.len = realm.len - i - 1;
+				break;
+			}
 		if (!realm.len) realm = uri;
 		for(i=0;i<realm.len;i++)
 			if (realm.s[i]==';'||realm.s[i]=='&') {
