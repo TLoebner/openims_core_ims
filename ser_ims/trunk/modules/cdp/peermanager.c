@@ -177,7 +177,6 @@ void remove_peer(peer *p)
 {
 	peer *i;
 	if (!p) return;
-	lock_get(peer_list_lock);
 	i = peer_list->head;
 	while(i&&i!=p) i = i->next;
 	if (i){
@@ -186,7 +185,6 @@ void remove_peer(peer *p)
 		if (i->next) i->next->prev = i->prev;
 		else peer_list->tail = i->prev;
 	}
-	lock_release(peer_list_lock);
 }
 
 /**
