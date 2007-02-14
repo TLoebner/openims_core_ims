@@ -107,6 +107,7 @@ str translate_authorization(struct sip_msg *msg,str old_auth,int is_authorized)
 	str x={0,0};
 	str username={0,0},userpart={0,0};
 	str realm={0,0};
+	str opaque={0,0};
 	str nonce={0,0};
 	str uri={0,0};
 	str algorithm={0,0};int version=0;
@@ -141,46 +142,44 @@ str translate_authorization(struct sip_msg *msg,str old_auth,int is_authorized)
 		x.len+=realm_s.len+realm.len+realm_e.len;
 	}else{
 		/* Authorization header is present */
-		if (!is_authorized)
-			x.len+=old_auth.len;
-		else {
-			/* Compute the new response */
-			LOG(L_INFO,"INF:"M_NAME":translate_authorization: \n\n AUTHORIZED \n\n\n");
-			x.len+=digest.len;
-			/*username*/
-			username = sip2ims_get_public_identity(msg);
-			if (username.len>4&&strncasecmp(username.s,"sip:",4)==0){
-				username.s+=4;
-				username.len-=4;
+		/* Compute the new response */
+		
+		x.len+=digest.len;
+		/*username*/
+		username = sip2ims_get_public_identity(msg);
+		if (username.len>4&&strncasecmp(username.s,"sip:",4)==0){
+			username.s+=4;
+			username.len-=4;
+		}
+		x.len+=username_s.len+username.len+username_e.len;
+		/*realm*/
+		realm = sip2ims_get_realm(msg);
+		x.len+=realm_s.len+realm.len+realm_e.len;
+		/*nonce*/
+		opaque = sip2ims_get_opaque(msg);
+		nonce = opaque;
+		algorithm = akav1;
+		for(i=0;i<opaque.len;i++)
+			if (opaque.s[i]=='|'){
+				algorithm.s = opaque.s;
+				algorithm.len = i;
+				nonce.s = opaque.s+i+1;
+				nonce.len = opaque.len-i-1;
 			}
-			x.len+=username_s.len+username.len+username_e.len;
-			/*realm*/
-			realm = sip2ims_get_realm(msg);
-			x.len+=realm_s.len+realm.len+realm_e.len;
-			/*nonce*/
-			nonce = sip2ims_get_opaque(msg);			
-			x.len+=nonce_s.len+nonce.len+nonce_e.len;
-			/*uri*/
-			uri = sip2ims_get_digest_uri(msg,realm);
-			x.len+=uri_s.len+uri.len+uri_e.len;
-			/* algorithm */			
-			if (nonce.len>=akav1.len && strncasecmp(nonce.s,akav1.s,akav1.len)==0){
-				algorithm = akav1;
-				nonce.s+=akav1.len;
-				nonce.len-=akav1.len;
-			}else if (nonce.len>=akav2.len && strncasecmp(nonce.s,akav2.s,akav2.len)==0){
-				algorithm = akav2;
-				nonce.s+=akav2.len;
-				nonce.len-=akav2.len;
-			}								
-			x.len+=algorithm_s.len+algorithm.len+algorithm_e.len;
-			if (algorithm.len==akav1.len && strncasecmp(algorithm.s,akav1.s,akav1.len)==0){
-				version = 1;
-			}else if (algorithm.len==akav2.len && strncasecmp(algorithm.s,akav2.s,akav2.len)==0){
-				version = 2;
-			}else
-				version = 0;			
-			/* response AKA */
+		x.len+=nonce_s.len+nonce.len+nonce_e.len;
+		/*uri*/
+		uri = sip2ims_get_digest_uri(msg,realm);
+		x.len+=uri_s.len+uri.len+uri_e.len;
+		/* algorithm */			
+		x.len+=algorithm_s.len+algorithm.len+algorithm_e.len;
+		if (algorithm.len==akav1.len && strncasecmp(algorithm.s,akav1.s,akav1.len)==0){
+			version = 1;
+		}else if (algorithm.len==akav2.len && strncasecmp(algorithm.s,akav2.s,akav2.len)==0){
+			version = 2;
+		}else
+			version = 0;			
+		/* response AKA */
+		if (is_authorized){
 			userpart=username;
 			userpart.len=0;
 			while(userpart.len<username.len && userpart.s[userpart.len]!='@')
@@ -193,9 +192,11 @@ str translate_authorization(struct sip_msg *msg,str old_auth,int is_authorized)
 				/* response AKA MD5 */
 				responseMD5 = MD5(msg,response,username,realm,nonce,uri);
 				pkg_free(response.s);				
-			}
-			x.len+=response_s.len+responseMD5.len+response_e.len;
+			}		
+		}else{
+			responseMD5.s=0;responseMD5.len=0;
 		}
+		x.len+=response_s.len+responseMD5.len+response_e.len;
 	}
 	
 	x.s = pkg_malloc(x.len);
@@ -219,30 +220,25 @@ str translate_authorization(struct sip_msg *msg,str old_auth,int is_authorized)
 		STR_APPEND(x,realm_e);
 	}else{
 		/* Authorization header is present */
-		if (!is_authorized) {
-			STR_APPEND(x,old_auth);
-		}
-		else {
-			STR_APPEND(x,digest);
-			STR_APPEND(x,username_s);
-			STR_APPEND(x,username);
-			STR_APPEND(x,username_e);
-			STR_APPEND(x,realm_s);
-			STR_APPEND(x,realm);
-			STR_APPEND(x,realm_e);
-			STR_APPEND(x,nonce_s);
-			STR_APPEND(x,nonce);
-			STR_APPEND(x,nonce_e);
-			STR_APPEND(x,uri_s);
-			STR_APPEND(x,uri);
-			STR_APPEND(x,uri_e);
-			STR_APPEND(x,response_s);
-			STR_APPEND(x,responseMD5);
-			STR_APPEND(x,response_e);
-			STR_APPEND(x,algorithm_s);
-			STR_APPEND(x,algorithm);
-			STR_APPEND(x,algorithm_e);
-		}
+		STR_APPEND(x,digest);
+		STR_APPEND(x,username_s);
+		STR_APPEND(x,username);
+		STR_APPEND(x,username_e);
+		STR_APPEND(x,realm_s);
+		STR_APPEND(x,realm);
+		STR_APPEND(x,realm_e);
+		STR_APPEND(x,nonce_s);
+		STR_APPEND(x,nonce);
+		STR_APPEND(x,nonce_e);
+		STR_APPEND(x,uri_s);
+		STR_APPEND(x,uri);
+		STR_APPEND(x,uri_e);
+		STR_APPEND(x,response_s);
+		STR_APPEND(x,responseMD5);
+		STR_APPEND(x,response_e);
+		STR_APPEND(x,algorithm_s);
+		STR_APPEND(x,algorithm);
+		STR_APPEND(x,algorithm_e);
 	}
 
 	STR_APPEND(x,authorization_e);
@@ -300,7 +296,7 @@ str translate_challenge(struct sip_msg *msg,str old_auth)
 	algorithm = sip2ims_get_algorithm(msg,realm);
 	/*opaque = AKAalg||AKAnonce*/
 	opaque = sip2ims_get_nonce(msg,realm);
-	x.len+=opaque_s.len+algorithm.len+opaque.len+opaque_e.len;
+	x.len+=opaque_s.len+algorithm.len+1+opaque.len+opaque_e.len;
 
 	/* the new MD5 challenge */	
 	challenge.s = build_auth_hf(0,0,&realm,&(challenge.len),0);	
@@ -328,6 +324,7 @@ str translate_challenge(struct sip_msg *msg,str old_auth)
 	STR_APPEND(x,realm_e);
 	STR_APPEND(x,opaque_s);
 	STR_APPEND(x,algorithm);
+	x.s[x.len++]='|';
 	STR_APPEND(x,opaque);
 	STR_APPEND(x,opaque_e);
 	STR_APPEND(x,challenge);
