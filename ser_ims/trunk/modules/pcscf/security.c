@@ -161,7 +161,7 @@ static str s_null_out={"null",4};
 static str s_md5_in={"hmac-md5-96",11};
 static str s_md5_out={"hmac-md5",8};
 static str s_sha_in={"hmac-sha-1-96",13};
-static str s_sha_out={"hmac-sha",8};
+static str s_sha_out={"hmac-sha1",9};
 
 extern time_t time_now;
 
