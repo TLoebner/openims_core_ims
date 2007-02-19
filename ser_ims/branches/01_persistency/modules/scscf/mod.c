@@ -129,6 +129,8 @@ int* dialogs_step_version; /**< the step version within the current dialogs snap
 int* registrar_snapshot_version; /**< the version of the next registrar snapshot on the db*/
 int* registrar_step_version; /**< the step version within the current registrar snapshot version*/
 
+gen_lock_t* db_lock; /**< lock for db access*/
+
 /* fixed parameter storage */
 str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
 str scscf_record_route_mo;				/**< the record route header for Mobile Originating 	*/
@@ -445,6 +447,14 @@ static inline int build_record_service_route()
 	return 1;
 }
 
+db_con_t* create_scscf_db_connection()
+{
+	if (scscf_persistency_mode!=WITH_DATABASE_BULK && scscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
+	if (!scscf_dbf.init) return NULL;
+
+	return scscf_dbf.init(scscf_db_url);
+}
+
 /**
  * Initializes the module.
  */
@@ -483,7 +493,7 @@ static int mod_init(void)
 
 	if(scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE){
 		if (!scscf_db_url) {
-			LOG(L_ERR, "ERR"M_NAME":mod_init: no db_url specified but DB has to be used "
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: no db_url specified but DB has to be used "
 				"(scscf_persistency_mode=%d\n", scscf_persistency_mode);
 			return -1;
 		}
@@ -493,54 +503,69 @@ static int mod_init(void)
 		}
 
 		if (!DB_CAPABILITY(scscf_dbf, DB_CAP_ALL)) {
-			LOG(L_ERR, "ERR"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
 			return -1;
 		}
-	}
+		
+		scscf_db = create_scscf_db_connection();
+		if (!scscf_db) {
+			LOG(L_ERR, "ERR:"M_NAME": mod_init: Error while connecting database\n");
+			return -1;
+		}
+		
+		/* db lock */
+		db_lock = (gen_lock_t*)lock_alloc();
+		if(!db_lock){
+	    	LOG(L_ERR, "ERR:"M_NAME": mod_init: No memory left\n");
+			return -1;
+		}
+		lock_init(db_lock);
 	
-	/* snapshot and step versions */
+		/* snapshot and step versions */
 	
-	auth_snapshot_version=(int*)shm_malloc(sizeof(int));
-	if(!auth_snapshot_version){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: auth_snapshot_version, no memory left\n");
-		return -1;
-	}
-	*auth_snapshot_version=0;
+		auth_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!auth_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: auth_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*auth_snapshot_version=0;
 	
-	auth_step_version=(int*)shm_malloc(sizeof(int));
-	if(!auth_step_version){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: auth_step_version, no memory left\n");
-		return -1;
-	}
-	*auth_step_version=0;
+		auth_step_version=(int*)shm_malloc(sizeof(int));
+		if(!auth_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: auth_step_version, no memory left\n");
+			return -1;
+		}
+		*auth_step_version=0;
 	
-	dialogs_snapshot_version=(int*)shm_malloc(sizeof(int));
-	if(!dialogs_snapshot_version){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: dialogs_snapshot_version, no memory left\n");
-		return -1;
-	}
-	*dialogs_snapshot_version=0;
+		dialogs_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!dialogs_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: dialogs_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*dialogs_snapshot_version=0;
 	
-	dialogs_step_version=(int*)shm_malloc(sizeof(int));
-	if(!dialogs_step_version){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: dialogs_step_version, no memory left\n");
-		return -1;
-	}
-	*dialogs_step_version=0;
+		dialogs_step_version=(int*)shm_malloc(sizeof(int));
+		if(!dialogs_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: dialogs_step_version, no memory left\n");
+			return -1;
+		}
+		*dialogs_step_version=0;
 	
-	registrar_snapshot_version=(int*)shm_malloc(sizeof(int));
-	if(!registrar_snapshot_version){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: registrar_snapshot_version, no memory left\n");
-		return -1;
-	}
-	*registrar_snapshot_version=0;
+		registrar_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!registrar_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: registrar_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*registrar_snapshot_version=0;
 	
-	registrar_step_version=(int*)shm_malloc(sizeof(int));
-	if(!registrar_step_version){
-		LOG(L_ERR, "ERR"M_NAME":mod_init: registrar_step_version, no memory left\n");
-		return -1;
+		registrar_step_version=(int*)shm_malloc(sizeof(int));
+		if(!registrar_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: registrar_step_version, no memory left\n");
+			return -1;
+		}
+		*registrar_step_version=0;
+		
 	}
-	*registrar_step_version=0;
 	
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
@@ -621,14 +646,6 @@ error:
 
 extern gen_lock_t* process_lock;		/* lock on the process table */
 
-/* can be called after mod_init and creates new SCSCF DB connection */
-db_con_t* create_scscf_db_connection()
-{
-	if (scscf_persistency_mode!=WITH_DATABASE_BULK && scscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
-	if (!scscf_dbf.init) return NULL;
-
-	return scscf_dbf.init(scscf_db_url);
-}
 
 void close_scscf_db_connection(db_con_t* db)
 {
@@ -652,14 +669,14 @@ static int mod_child_init(int rank)
 //		scscf_db_scscf_table,
 //		scscf_db_capabilities_table);
 	
-	if (scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) { 
+	/*if (scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) { 
 		scscf_db = create_scscf_db_connection();
 		if (!scscf_db) {
-			LOG(L_ERR, "ERROR: mod_child_init(%d): "
+			LOG(L_ERR, "ERR:"M_NAME":mod_child_init(%d): "
 					"Error while connecting database\n", rank);
 			return -1;
 		}
-	}
+	}*/
 	
 	/* init the diameter callback - must be done just once */
 	lock_get(process_lock);
