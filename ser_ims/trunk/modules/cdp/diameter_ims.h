@@ -180,6 +180,8 @@ enum {
 	AVP_IMS_Feature_List_ID								= 629,
 	AVP_IMS_Feature_List								= 630,
 	AVP_IMS_Supported_Applications						= 631,
+	AVP_IMS_Associated_Identities						= 632,
+	AVP_IMS_Originating_Request							= 633,
 /** 700 to 799 reserved for TS29.329											*/
 	AVP_IMS_User_Identity								= 700,
 	AVP_IMS_MSISDN										= 701,
@@ -225,6 +227,11 @@ enum {
 	AVP_IMS_UAR_REGISTRATION							= 0,
 	AVP_IMS_UAR_DE_REGISTRATION							= 1,
 	AVP_IMS_UAR_REGISTRATION_AND_CAPABILITIES			= 2
+};
+
+/** Originating-Request Enumerated AVP */
+enum {
+	AVP_IMS_LIR_ORIGINATING_REQUEST						= 0	
 };
 
 /** Data-Reference AVP */
