@@ -407,6 +407,7 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 	int r = CSCF_RETURN_FALSE;
 	str auth,x={0,0};
 	struct hdr_field *hdr;	
+	int inString = 0;
 	int mlen,i;
 	auth = cscf_get_authenticate(msg,&hdr);
 	if (!auth.len){
@@ -432,7 +433,10 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 	STR_APPEND(x,authenticate_s);
 	i=0;
 	while(i<auth.len){
-		if (i<mlen && strncasecmp(auth.s+i,ck.s,ck.len)==0){
+		if ((auth.s[i] == '\"') &&(i==0||auth.s[i-1]!='\\'))
+			inString = !inString;
+
+		if (!inString && i<mlen && strncasecmp(auth.s+i,ck.s,ck.len)==0){
 			while(x.len>0 && (x.s[x.len-1]==' '||x.s[x.len-1]==','||x.s[x.len-1]=='\t')){
 				x.len--;
 			}
@@ -444,7 +448,7 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 			 i++;
 			continue;  
 		}	
-		if (i<mlen && strncasecmp(auth.s+i,ik.s,ik.len)==0){
+		if (!inString && i<mlen && strncasecmp(auth.s+i,ik.s,ik.len)==0){
 			while(x.len>0 && (x.s[x.len-1]==' '||x.s[x.len-1]==','||x.s[x.len-1]=='\t')){
 				x.len--;
 			}
