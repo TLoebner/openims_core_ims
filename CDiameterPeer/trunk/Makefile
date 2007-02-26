@@ -1,4 +1,4 @@
-# $Id: Makefile 98 2007-02-20 19:55:25Z dvi $ Makefile $Date: 2007-02-20 20:55:25 +0100 (Tue, 20 Feb 2007) $ $Author: dvi $ dvi Dragos Vingarzan
+# $Id$ Makefile $Date$ $Author$ dvi Dragos Vingarzan
 # 
 # Makefile for the CDiameterPeer - standalone compilation
 #

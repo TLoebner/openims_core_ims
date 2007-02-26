@@ -1,4 +1,4 @@
-/* $Id: vq_malloc.c 98 2007-02-20 19:55:25Z dvi $
+/* $Id$
  *
  * Copyright (C) 2001-2003 FhG Fokus
  *

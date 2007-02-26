@@ -1,5 +1,5 @@
 /*
- * $Id: str.h 98 2007-02-20 19:55:25Z dvi $
+ * $Id$
  *
  * 2003-02-10 created by bogdan
  *

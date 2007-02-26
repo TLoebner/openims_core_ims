@@ -1,5 +1,5 @@
 /*
- * $Id: dprint.c 98 2007-02-20 19:55:25Z dvi $
+ * $Id$
  *
  * 2003-02-03 added by bogdan; created by andrei
  *
