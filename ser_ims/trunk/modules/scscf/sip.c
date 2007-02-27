@@ -2258,12 +2258,17 @@ int cscf_get_terminating_identity(struct sip_msg *msg,str *uri)
 }
 
 
-extern str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
-extern str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
-extern str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
-extern str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
-extern unsigned int* cscf_icid_value_count;		/**< to keep the number of generated icid-values 	*/
-extern gen_lock_t* cscf_icid_value_count_lock;		/**< to lock acces on the above counter				*/
+char* cscf_icid_value_prefix="abcd";		/**< hexadecimal prefix for the icid-value - must be unique on each node */
+unsigned int* cscf_icid_value_count=0;		/**< to keep the number of generated icid-values 	*/
+gen_lock_t* cscf_icid_value_count_lock=0;	/**< to lock acces on the above counter				*/
+char* cscf_icid_gen_addr="127.0.0.1";		/**< address of the generator of the icid-value 	*/
+char* cscf_orig_ioi="open-ims.test";		/**< name of the Originating network 				*/
+char* cscf_term_ioi="open-ims.test";		/**< name of the Terminating network 				*/
+
+str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
+str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
+str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
+str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
 
 static str p_charging_vector_s={"P-Charging-Vector: icid-value=\"",31};
 static str p_charging_vector_1={"\"; icid-generated-at=\"",22};
