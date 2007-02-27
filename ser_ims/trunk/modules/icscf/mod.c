@@ -71,6 +71,7 @@
 #include "registration.h"
 #include "location.h"
 #include "cx.h"
+#include "sip.h"
 
 #include "thig_ims_enc.h"
 #include "thig.h"
@@ -98,6 +99,14 @@ char* icscf_aaa_peer="hss.open-ims.test";					/**< Diameter Peer FQDN (HSS) */
 
 int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists */
 
+/* P-Charging-Vector parameters */
+char* cscf_icid_value_prefix="abcd";		/**< hexadecimal prefix for the icid-value - must be unique on each node */
+unsigned int* cscf_icid_value_count=0;		/**< to keep the number of generated icid-values 	*/
+gen_lock_t* cscf_icid_value_count_lock=0;	/**< to lock acces on the above counter				*/
+char* cscf_icid_gen_addr="127.0.0.1";		/**< address of the generator of the icid-value 	*/
+char* cscf_orig_ioi="open-ims.test";		/**< name of the Originating network 				*/
+char* cscf_term_ioi="open-ims.test";		/**< name of the Terminating network 				*/
+
 /* fixed parameter storage */
 str icscf_name_str;			/**< fixed name of the I-CSCF */
 str icscf_thig_name_str;	/**< fixed name of the I-CSCF for THIG */
@@ -107,6 +116,11 @@ str icscf_thig_param_str;	/**< fixed THIG parameter name */
 str icscf_thig_path_str;	/**< fixed Path header */
 str icscf_thig_rr_str;		/**< fixed Record-route header */
 str aaa_peer;				/**< fixed Diameter Peer FQDN (HSS) */
+
+str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
+str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
+str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
+str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
 
 /* twofish encryption variables (THIG) **/
 keyInstance    ki;			/**< key information, including tables */
@@ -129,7 +143,12 @@ cipherInstance ci;			/**< keeps mode (ECB, CBC) and IV */
  * - I_THIG_encrypt_header() - encrypt a specific header for THIG 
  * - I_THIG_encrypt_all_headers() - encrypt all sensitive headers for THIG 
  * - I_THIG_decrypt_header() - decrypt a specific header for THIG 
- * - I_THIG_decrypt_all_headers() - decrypt all sensitive headers for THIG 
+ * - I_THIG_decrypt_all_headers() - decrypt all sensitive headers for THIG
+ * <p>
+ * - icid_value_prefix - prefix for the ICID in the P-Charging-Vector header
+ * - icid_gen_addr - ICID Gen Addr. in the P-Charging-Vector header
+ * - orig_ioi - Originating IOI in the P-Charging-Vector header
+ * - term_ioi - Terminating IOI in the P-Charging-Vector header
  */
 static cmd_export_t icscf_cmds[]={
 	{"I_NDS_check_trusted", 		I_NDS_check_trusted, 		0, 0, REQUEST_ROUTE}, 
@@ -148,6 +167,9 @@ static cmd_export_t icscf_cmds[]={
 	{"I_THIG_encrypt_all_headers",	I_THIG_encrypt_all_headers,	0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"I_THIG_decrypt_header", 		I_THIG_decrypt_header,		1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"I_THIG_decrypt_all_headers", 	I_THIG_decrypt_all_headers,	0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	
+	{"I_add_p_charging_vector",		I_add_p_charging_vector, 	0, 0, REQUEST_ROUTE},
+	
 	{0, 0, 0, 0, 0}
 };
 
@@ -177,6 +199,11 @@ static param_export_t icscf_params[]={
 	{"thig_host", 				STR_PARAM, &icscf_thig_host},
 	{"thig_port", 				INT_PARAM, &icscf_thig_port},
 	{"thig_param",				STR_PARAM, &icscf_thig_param},
+
+	{"icid_value_prefix",		STR_PARAM, &cscf_icid_value_prefix},
+	{"icid_gen_addr",			STR_PARAM, &cscf_icid_gen_addr},
+	{"orig_ioi",				STR_PARAM, &cscf_orig_ioi},
+	{"term_ioi",				STR_PARAM, &cscf_term_ioi},
 
 	{0,0,0} 
 };
@@ -256,6 +283,18 @@ static int fix_parameters()
 				
 	aaa_peer.s = icscf_aaa_peer;
 	aaa_peer.len = strlen(icscf_aaa_peer);
+
+	cscf_icid_value_prefix_str.s = cscf_icid_value_prefix;
+	cscf_icid_value_prefix_str.len = strlen(cscf_icid_value_prefix);
+
+	cscf_icid_gen_addr_str.s = cscf_icid_gen_addr;
+	cscf_icid_gen_addr_str.len = strlen(cscf_icid_gen_addr);
+	
+	cscf_orig_ioi_str.s = cscf_orig_ioi;
+	cscf_orig_ioi_str.len = strlen(cscf_orig_ioi);
+	
+	cscf_term_ioi_str.s = cscf_term_ioi;
+	cscf_term_ioi_str.len = strlen(cscf_term_ioi);
 	
 	return 1;
 }
@@ -267,6 +306,11 @@ static int icscf_mod_init(void)
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
+
+	cscf_icid_value_count = shm_malloc(sizeof(unsigned int));
+	*cscf_icid_value_count = 0;
+	cscf_icid_value_count_lock = lock_alloc();
+	cscf_icid_value_count_lock = lock_init(cscf_icid_value_count_lock);
 		
 	/* load the send_reply function from sl module */
     sl_reply = find_export("sl_send_reply", 2, 0);
@@ -343,3 +387,16 @@ static void icscf_mod_destroy(void)
 
 
 
+
+/**
+ * Inserts the P-Charging-Vector header
+ * P-Charging-Vector:
+ * @param msg - the SIP message to add to
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_FALSE on error
+ */
+int I_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
+{
+	return cscf_add_p_charging_vector(msg);
+}
