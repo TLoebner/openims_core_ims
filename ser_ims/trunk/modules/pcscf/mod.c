@@ -95,12 +95,12 @@ char* pcscf_name="sip:pcscf.open-ims.test:4060";	/**< SIP URI of this P-CSCF */
 
 
 /* P-Charging-Vector parameters */
-char* pcscf_icid_value_prefix="abcd";		/**< hexadecimal prefix for the icid-value - must be unique on each node */
-unsigned int* pcscf_icid_value_count=0;		/**< to keep the number of generated icid-values 	*/
-gen_lock_t* pcscf_icid_value_count_lock=0;	/**< to lock acces on the above counter				*/
-char* pcscf_icid_gen_addr="127.0.0.1";		/**< address of the generator of the icid-value 	*/
-char* pcscf_orig_ioi="open-ims.test";		/**< name of the Originating network 				*/
-char* pcscf_term_ioi="open-ims.test";		/**< name of the Terminating network 				*/
+char* cscf_icid_value_prefix="abcd";		/**< hexadecimal prefix for the icid-value - must be unique on each node */
+unsigned int* cscf_icid_value_count=0;		/**< to keep the number of generated icid-values 	*/
+gen_lock_t* cscf_icid_value_count_lock=0;	/**< to lock acces on the above counter				*/
+char* cscf_icid_gen_addr="127.0.0.1";		/**< address of the generator of the icid-value 	*/
+char* cscf_orig_ioi="open-ims.test";		/**< name of the Originating network 				*/
+char* cscf_term_ioi="open-ims.test";		/**< name of the Terminating network 				*/
 
 int   pcscf_use_ipsec=0;					/**< whether to use or not ipsec 					*/
 char* pcscf_ipsec_host="127.0.0.1";			/**< IP for protected server 						*/
@@ -152,10 +152,10 @@ str pcscf_record_route_mt;					/**< Record-route for terminating case 				*/
 str pcscf_record_route_mt_uri;				/**< URI for Record-route terminating				*/
 
 
-str pcscf_icid_value_prefix_str;			/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
-str pcscf_icid_gen_addr_str;				/**< fixed address of the generator of the icid-value */
-str pcscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
-str pcscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
+str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
+str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
+str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
+str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
 
 
 str pcscf_sip2ims_via_host;					/**< fixed Via host of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
@@ -294,6 +294,11 @@ static cmd_export_t pcscf_cmds[]={
  * - subscribe_retries - how many times to attempt SUBSCRIBE to reg on failure
  * <p>
  * - sip2ims_via - Via address of the SIP2IMS gateway \todo - remove when we would have a full B2B gateway
+ * <p>
+ * - icid_value_prefix - prefix for the ICID in the P-Charging-Vector header
+ * - icid_gen_addr - ICID Gen Addr. in the P-Charging-Vector header
+ * - orig_ioi - Originating IOI in the P-Charging-Vector header
+ * - term_ioi - Terminating IOI in the P-Charging-Vector header
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -331,10 +336,10 @@ static param_export_t pcscf_params[]={
 	
 	{"sip2ims_via", 			STR_PARAM, 		&pcscf_sip2ims_via},
 
-	{"icid_value_prefix",		STR_PARAM,		&pcscf_icid_value_prefix},
-	{"icid_gen_addr",			STR_PARAM,		&pcscf_icid_gen_addr},
-	{"orig_ioi",				STR_PARAM,		&pcscf_orig_ioi},
-	{"term_ioi",				STR_PARAM,		&pcscf_term_ioi},
+	{"icid_value_prefix",		STR_PARAM,		&cscf_icid_value_prefix},
+	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
+	{"orig_ioi",				STR_PARAM,		&cscf_orig_ioi},
+	{"term_ioi",				STR_PARAM,		&cscf_term_ioi},
 	
 	{0,0,0} 
 };
@@ -417,17 +422,17 @@ int fix_parameters()
 	STR_APPEND(pcscf_path_hdr_str,pcscf_path_str);
 	STR_APPEND(pcscf_path_hdr_str,path_str_e);
 		
-	pcscf_icid_value_prefix_str.s = pcscf_icid_value_prefix;
-	pcscf_icid_value_prefix_str.len = strlen(pcscf_icid_value_prefix);
+	cscf_icid_value_prefix_str.s = cscf_icid_value_prefix;
+	cscf_icid_value_prefix_str.len = strlen(cscf_icid_value_prefix);
 
-	pcscf_icid_gen_addr_str.s = pcscf_icid_gen_addr;
-	pcscf_icid_gen_addr_str.len = strlen(pcscf_icid_gen_addr);
+	cscf_icid_gen_addr_str.s = cscf_icid_gen_addr;
+	cscf_icid_gen_addr_str.len = strlen(cscf_icid_gen_addr);
 	
-	pcscf_orig_ioi_str.s = pcscf_orig_ioi;
-	pcscf_orig_ioi_str.len = strlen(pcscf_orig_ioi);
+	cscf_orig_ioi_str.s = cscf_orig_ioi;
+	cscf_orig_ioi_str.len = strlen(cscf_orig_ioi);
 	
-	pcscf_term_ioi_str.s = pcscf_term_ioi;
-	pcscf_term_ioi_str.len = strlen(pcscf_term_ioi);
+	cscf_term_ioi_str.s = cscf_term_ioi;
+	cscf_term_ioi_str.len = strlen(cscf_term_ioi);
 
 
 	/* Record-routes */
@@ -504,10 +509,10 @@ static int mod_init(void)
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
 	
-	pcscf_icid_value_count = shm_malloc(sizeof(unsigned int));
-	*pcscf_icid_value_count = 0;
-	pcscf_icid_value_count_lock = lock_alloc();
-	pcscf_icid_value_count_lock = lock_init(pcscf_icid_value_count_lock);
+	cscf_icid_value_count = shm_malloc(sizeof(unsigned int));
+	*cscf_icid_value_count = 0;
+	cscf_icid_value_count_lock = lock_alloc();
+	cscf_icid_value_count_lock = lock_init(cscf_icid_value_count_lock);
 	
 	/* load the send_reply function from sl module */
     sl_reply = find_export("sl_send_reply", 2, 0);

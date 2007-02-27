@@ -133,11 +133,6 @@ int P_add_require(struct sip_msg *msg,char *str1,char*str2)
 }
 
 
-static str p_charging_vector_s={"P-Charging-Vector: icid-value=\"",31};
-static str p_charging_vector_1={"\"; icid-generated-at=\"",22};
-static str p_charging_vector_2={"\"; orig-ioi=\"",13};
-static str p_charging_vector_e={"\"\r\n",3};
-static char hex_chars[16]="0123456789abcdef";
 /**
  * Inserts the P-Charging-Vector header
  * P-Charging-Vector:
@@ -148,65 +143,7 @@ static char hex_chars[16]="0123456789abcdef";
  */
 int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
 {
-	int r = CSCF_RETURN_FALSE;
-	str x={0,0};
-	int i;
-	time_t t;
-	unsigned int cnt;
-	
-	x.len = p_charging_vector_s.len+
-		pcscf_icid_value_prefix_str.len+
-		sizeof(time_t)*2+
-		sizeof(unsigned int)*2+
-		p_charging_vector_1.len+
-		pcscf_icid_gen_addr_str.len+
-		p_charging_vector_2.len+		
-		pcscf_orig_ioi_str.len+
-		p_charging_vector_e.len;
-	x.s = pkg_malloc(x.len);
-	if (!x.s){
-		LOG(L_ERR, "ERR"M_NAME":P_add_p_charging_vector: Error allocating %d bytes\n",
-			x.len);
-		x.len=0;
-		goto error;		
-	}
-	x.len=0;
-	STR_APPEND(x,p_charging_vector_s);
-	STR_APPEND(x,pcscf_icid_value_prefix_str);
-	
-	time(&t);
-	LOG(L_DBG,"DBG:"M_NAME":P_add_p_charging_vector: time is %ud\n",(unsigned int)t);
-	for(i=sizeof(time_t)*2-1;i>=0;i--){
-		x.s[x.len+i]= hex_chars[t & 0x0F];
-		t >>= 4;
-	}
-	x.len+=sizeof(time_t)*2;
-
-	lock_get(pcscf_icid_value_count_lock);
-	 cnt = *pcscf_icid_value_count;
-	 *pcscf_icid_value_count = cnt+1;
-	lock_release(pcscf_icid_value_count_lock);
-	LOG(L_DBG,"DBG:"M_NAME":P_add_p_charging_vector: count is %ud\n",cnt);
-	for(i=sizeof(unsigned int)*2-1;i>=0;i--){
-		x.s[x.len+i]= hex_chars[cnt & 0x0F];
-		cnt >>= 4;
-	}
-	x.len+=sizeof(unsigned int)*2;
-	
-	STR_APPEND(x,p_charging_vector_1);
-	STR_APPEND(x,pcscf_icid_gen_addr_str);
-	STR_APPEND(x,p_charging_vector_2);
-	STR_APPEND(x,pcscf_orig_ioi_str);
-	STR_APPEND(x,p_charging_vector_e);
-	
-	if (cscf_add_header(msg,&x,HDR_OTHER_T)) r = CSCF_RETURN_TRUE;
-	else goto error;
-
-	return r;
-error:
-	r = CSCF_RETURN_ERROR;
-	if (x.s) pkg_free(x.s);
-	return r;
+	return cscf_add_p_charging_vector(msg);
 }
 
 

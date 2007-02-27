@@ -163,4 +163,6 @@ int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 
 int cscf_get_terminating_identity(struct sip_msg *msg,str *uri);
 
+int cscf_add_p_charging_vector(struct sip_msg *msg);
+
 #endif /* PIS_CSCF_SIP_H */

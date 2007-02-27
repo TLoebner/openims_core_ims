@@ -116,6 +116,7 @@
 
 #define M_NAME "I-CSCF"
 
+#include "../../sr_module.h"
 
 /** Return and break the execution of routng script */
 #define CSCF_RETURN_BREAK	0 
@@ -154,7 +155,7 @@
 
 
 
-
+int I_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2);
 
 
 #endif /* I_CSCF_MOD_H */
