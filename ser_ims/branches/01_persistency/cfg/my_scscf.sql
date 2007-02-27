@@ -21,9 +21,26 @@ CREATE TABLE dialogs_bulk (
     PRIMARY KEY (snapshot_version, step_version)
 );
 
+CREATE TABLE dialogs_cache (
+    snapshot_version INT NOT NULL,
+    step_version INT NOT NULL,
+    call_id VARCHAR(256) NOT NULL,
+    aor VARCHAR(128) NOT NULL,
+    data BLOB NOT NULL,
+    PRIMARY KEY (snapshot_version, step_version, call_id, aor)
+);
+
 CREATE TABLE registrar_bulk (
     snapshot_version INT NOT NULL,
     step_version INT NOT NULL,
     data BLOB,
     PRIMARY KEY (snapshot_version, step_version)
+);
+
+CREATE TABLE registrar_cache (
+    snapshot_version INT NOT NULL,
+    step_version INT NOT NULL,
+    aor VARCHAR(128) NOT NULL,
+    data BLOB NOT NULL,
+    PRIMARY KEY (snapshot_version, step_version, aor)
 );
