@@ -100,12 +100,12 @@ char* icscf_aaa_peer="hss.open-ims.test";					/**< Diameter Peer FQDN (HSS) */
 int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists */
 
 /* P-Charging-Vector parameters */
-char* cscf_icid_value_prefix="abcd";		/**< hexadecimal prefix for the icid-value - must be unique on each node */
-unsigned int* cscf_icid_value_count=0;		/**< to keep the number of generated icid-values 	*/
-gen_lock_t* cscf_icid_value_count_lock=0;	/**< to lock acces on the above counter				*/
-char* cscf_icid_gen_addr="127.0.0.1";		/**< address of the generator of the icid-value 	*/
-char* cscf_orig_ioi="open-ims.test";		/**< name of the Originating network 				*/
-char* cscf_term_ioi="open-ims.test";		/**< name of the Terminating network 				*/
+extern char* cscf_icid_value_prefix;			/**< hexadecimal prefix for the icid-value - must be unique on each node */
+extern unsigned int* cscf_icid_value_count;		/**< to keep the number of generated icid-values 	*/
+extern gen_lock_t* cscf_icid_value_count_lock;	/**< to lock acces on the above counter				*/
+extern char* cscf_icid_gen_addr;				/**< address of the generator of the icid-value 	*/
+extern char* cscf_orig_ioi;						/**< name of the Originating network 				*/
+extern char* cscf_term_ioi;						/**< name of the Terminating network 				*/
 
 /* fixed parameter storage */
 str icscf_name_str;			/**< fixed name of the I-CSCF */
@@ -117,10 +117,10 @@ str icscf_thig_path_str;	/**< fixed Path header */
 str icscf_thig_rr_str;		/**< fixed Record-route header */
 str aaa_peer;				/**< fixed Diameter Peer FQDN (HSS) */
 
-str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
-str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
-str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
-str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
+extern str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
+extern str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
+extern str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
+extern str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
 
 /* twofish encryption variables (THIG) **/
 keyInstance    ki;			/**< key information, including tables */
