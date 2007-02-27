@@ -68,7 +68,7 @@ int cscf_add_contact(struct sip_msg *msg,str uri,int expires);
 str cscf_get_private_identity(struct sip_msg *msg, str realm);
 str cscf_get_public_identity(struct sip_msg *msg);
 int cscf_get_expires_hdr(struct sip_msg *msg);
-int cscf_get_expires(struct sip_msg *msg);
+int cscf_get_max_expires(struct sip_msg *msg);
 str cscf_get_public_identity_from_requri(struct sip_msg *msg);
 
 struct sip_msg *cscf_get_request(unsigned int hash,unsigned int label);

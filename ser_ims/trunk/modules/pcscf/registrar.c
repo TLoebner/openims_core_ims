@@ -162,11 +162,9 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
 {
 	unsigned int r;
 	if (expires_hdr>=0) r = expires_hdr;
-	else {
-		if (!c || str2int(&(c->expires->body), (unsigned int*)&r) < 0) {
-			r = 0;
-		}
-	}
+	if (c) 
+		str2int(&(c->expires->body), (unsigned int*)&r);
+		
 	return local_time_now+r;
 }
 
@@ -183,7 +181,7 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
  * @param pinhole - NAT pinhole 
  * @returns the maximum expiration time, -1 on error
  */
-static inline int update_contact(contact_t *c,unsigned char is_star,int expires_hdr,
+static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int expires_hdr,
 	str *public_id,int public_id_cnt,str *service_route,int service_route_cnt, r_nat_dest ** pinhole)
 {
 	r_contact *rc;
@@ -193,6 +191,8 @@ static inline int update_contact(contact_t *c,unsigned char is_star,int expires_
 	struct sip_uri puri;
 	int max_expires=-1;
 	int local_time_now;
+	struct hdr_field *h;
+	contact_t *c;
 	
 	
 	r_act_time();
@@ -202,47 +202,47 @@ static inline int update_contact(contact_t *c,unsigned char is_star,int expires_
 		 * then, we will update on NOTIFY */
 		return 0;
 	}	
-	while(c){
-		LOG(L_DBG,"DBG:"M_NAME":update_contact: <%.*s>\n",c->uri.len,c->uri.s);
-		
-		expires = r_calc_expires(c,expires_hdr,local_time_now);
-		
-		if (parse_uri(c->uri.s,c->uri.len,&puri)<0){
-			LOG(L_DBG,"DBG:"M_NAME":update_contact: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
-			goto next;			
-		}
-		if (puri.port_no==0) puri.port_no=5060;
-		LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
-			puri.proto, puri.host.len,puri.host.s,puri.port_no);
-		
-		if (expires>local_time_now) {		
-			rc = update_r_contact(puri.host,puri.port_no,puri.proto,
-				&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, pinhole);
-			if (expires-time_now>max_expires) max_expires=expires-time_now;
-		}
-		else {
-			reg_state = DEREGISTERED;
-			expires = local_time_now+30;
-			rc = update_r_contact(puri.host,puri.port_no,puri.proto,
-					0,&reg_state,&expires,0,0,0);
-			if (rc) r_unlock(rc->hash);
-			max_expires = 0;
-			rc = 0;
-		}
-		
-		/** Add the public identities */
-		if (rc){
-			is_default=1;
-			if (public_id_cnt){
-				update_r_public(rc,public_id[0],&is_default);
-				is_default=0;
-				for(i=1;i<public_id_cnt;i++)
-					update_r_public(rc,public_id[i],&is_default);
+	for(h=msg->contact;h;h=h->next)
+		if (h->type==HDR_CONTACT_T && h->parsed)
+		 for(c=((contact_body_t*)h->parsed)->contacts;c;c=c->next){
+			LOG(L_DBG,"DBG:"M_NAME":update_contact: <%.*s>\n",c->uri.len,c->uri.s);
+			
+			expires = r_calc_expires(c,expires_hdr,local_time_now);
+			
+			if (parse_uri(c->uri.s,c->uri.len,&puri)<0){
+				LOG(L_DBG,"DBG:"M_NAME":update_contact: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
+				continue;			
 			}
-			r_unlock(rc->hash);
-		}
-next:		
-		c = c->next;
+			if (puri.port_no==0) puri.port_no=5060;
+			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
+				puri.proto, puri.host.len,puri.host.s,puri.port_no);
+			
+			if (expires>local_time_now) {		
+				rc = update_r_contact(puri.host,puri.port_no,puri.proto,
+					&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, pinhole);
+				if (expires-time_now>max_expires) max_expires=expires-time_now;
+			}
+			else {
+				reg_state = DEREGISTERED;
+				expires = local_time_now+30;
+				rc = update_r_contact(puri.host,puri.port_no,puri.proto,
+						0,&reg_state,&expires,0,0,0);
+				if (rc) r_unlock(rc->hash);
+				if (0>max_expires) max_expires = 0;
+				rc = 0;
+			}
+			
+			/** Add the public identities */
+			if (rc){
+				is_default=1;
+				if (public_id_cnt){
+					update_r_public(rc,public_id[0],&is_default);
+					is_default=0;
+					for(i=1;i<public_id_cnt;i++)
+						update_r_public(rc,public_id[i],&is_default);
+				}
+				r_unlock(rc->hash);
+			}
 	}
 	return max_expires;
 }
@@ -260,7 +260,6 @@ next:
 int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 {
 	struct sip_msg *req;
-	contact_t* c=0;
 	contact_body_t* b=0;	
 	str realm;
 	int expires_hdr=0;
@@ -294,8 +293,6 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 		return 0;
 	}
 	
-	if (b) c = b->contacts;
-			
 	realm = cscf_get_realm(req);
 	
 	cscf_get_p_associated_uri(rpl,&public_id,&public_id_cnt);
@@ -310,7 +307,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 //		LOG(L_ERR, "**************************\n");
 //	else LOG(L_ERR, "***************************%d**********************\n",pcscf_nat_pingall); 
 		
-	if ((expires=update_contact(c,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,&pinhole))<0) 
+	if ((expires=update_contacts(rpl,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,&pinhole))<0) 
 		goto error;
 
 	//print_r(L_ERR);
