@@ -272,32 +272,27 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
  * @param msg - the SIP message
  * @returns the value of the expire or the default 3600 if none found
  */
-int cscf_get_expires(struct sip_msg *msg)
+int cscf_get_max_expires(struct sip_msg *msg)
 {
-	int expires = 3600,i;
+	unsigned int exp;
+	int max_expires = -1;
+	struct hdr_field *h;
 	contact_t *c;
-	param_t *param;
-	contact_body_t *cbody; 
 	/*first search in Expires header */
-	expires = cscf_get_expires_hdr(msg);
+	max_expires = cscf_get_expires_hdr(msg);
+	
 	cscf_parse_contacts(msg);
-	if (msg->contact && msg->contact->parsed) {
-		cbody = (contact_body_t *) msg->contact->parsed;
-		c = cbody->contacts;
-		//TODO - make this function specific per contact !!!
-		if (c){
-			param = c->expires;
-			if(param&&param->name.s){
-				expires = 0;
-				for(i=0;i<param->name.len;i++)
-				 if (param->body.s[i]>='0' &&
-				 	 param->body.s[i]<='9')
-				 	expires=(expires*10)+param->body.s[i]-'0';
+	for(h=msg->contact;h;h=h->next){
+		if (h->type==HDR_CONTACT_T && h->parsed) {
+			for(c=((contact_body_t *) h->parsed)->contacts;c;c=c->next){
+				if(c->expires){
+					if (!str2int(&(c->expires->body), (unsigned int*)&exp) && (int)exp>max_expires) max_expires = exp;
+				}
 			}
-		}
-	}	
-	LOG(L_DBG,"DBG:"M_NAME":cscf_get_expires: <%d> \n",expires);
-	return expires;
+		}	
+	}
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_max_expires: <%d> \n",max_expires);
+	return max_expires;
 }
 
 /**
@@ -687,7 +682,7 @@ contact_body_t *cscf_parse_contacts(struct sip_msg *msg)
 		ptr = msg->contact;
 		while(ptr) {
 			if (ptr->type == HDR_CONTACT_T) {
-				if (msg->contact->parsed==0){
+				if (ptr->parsed==0){
 					if (parse_contact(ptr)<0){
 							LOG(L_ERR,"ERR:"M_NAME":cscf_parse_contacts: error parsing contacts [%.*s]\n",
 								ptr->body.len,ptr->body.s);							
@@ -2343,3 +2338,5 @@ error:
 	if (x.s) pkg_free(x.s);
 	return r;
 }
+
+

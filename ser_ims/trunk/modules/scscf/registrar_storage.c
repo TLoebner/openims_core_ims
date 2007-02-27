@@ -315,8 +315,8 @@ r_subscriber* update_r_subscriber(r_public *p,str subscriber,int event,int* expi
 		else return 0;
 	}else{
 		if (expires) s->expires = *expires;
+		if (s->dialog && s->dialog!=dialog) tmb.free_dlg(s->dialog);
 		s->dialog = dialog;
-		
 		return s;
 	}
 }
@@ -335,6 +335,8 @@ void del_r_subscriber(r_public *p,r_subscriber *s)
 	else s->prev->next = s->next;
 	if (p->stail == s) p->stail = s->prev;
 	else s->next->prev = s->prev;
+	if (s->dialog) tmb.free_dlg(s->dialog);
+	
 	free_r_subscriber(s);
 }
 

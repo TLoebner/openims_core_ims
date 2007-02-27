@@ -885,9 +885,6 @@ void send_notification(r_notification *n)
 	else 
 		tmb.t_request_within(&method, &h, 0, n->dialog, uac_request_cb, 0);		
 	if (h.s) pkg_free(h.s);
-	if (n->subscription_state.len==subs_terminated.len &&
-		memcmp(n->subscription_state.s,subs_terminated.s,subs_terminated.len)==0 &&
-		n->dialog) tmb.free_dlg(n->dialog);
 }
 
 
