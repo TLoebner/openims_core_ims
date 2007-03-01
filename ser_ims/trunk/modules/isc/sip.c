@@ -413,6 +413,35 @@ int cscf_get_expires_hdr(struct sip_msg *msg) {
 	
 	return -1;
 }
+/**
+ * Returns the expires value from the message.
+ * First it searches into the Expires header and if not found it also looks 
+ * into the expires parameter in the contact header
+ * @param msg - the SIP message
+ * @returns the value of the expire or the default 3600 if none found
+ */
+int cscf_get_max_expires(struct sip_msg *msg)
+{
+	unsigned int exp;
+	int max_expires = -1;
+	struct hdr_field *h;
+	contact_t *c;
+	/*first search in Expires header */
+	max_expires = cscf_get_expires_hdr(msg);
+	
+	cscf_parse_contacts(msg);
+	for(h=msg->contact;h;h=h->next){
+		if (h->type==HDR_CONTACT_T && h->parsed) {
+			for(c=((contact_body_t *) h->parsed)->contacts;c;c=c->next){
+				if(c->expires){
+					if (!str2int(&(c->expires->body), (unsigned int*)&exp) && (int)exp>max_expires) max_expires = exp;
+				}
+			}
+		}	
+	}
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_max_expires: <%d> \n",max_expires);
+	return max_expires;
+}
 
 /**
  * Parses all the contact headers.
