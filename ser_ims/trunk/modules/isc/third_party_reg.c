@@ -84,7 +84,8 @@ extern struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSC
 int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 {
 	r_third_party_registration *r;
-	int expires_hdr=0,expires=0;
+//	int expires_hdr=0;
+	int expires=0;
 	str req_uri ={0,0};
 	str to ={0,0};
 	str pani ={0,0};
@@ -112,15 +113,21 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 //	}
 
 	/* Get Expires from registrar */
-	expires_hdr = cscf_get_expires_hdr(msg);
-	if (expires_hdr==0) expires = 0;
-	else {
-		expires = isc_scscfb.get_r_public_expires(to);
-		if (expires==-999){
-			expires = expires_hdr;
-		}
-	}	
+//	expires_hdr = cscf_get_expires_hdr(msg);
+//	if (expires_hdr==0) expires = 0;
+//	else {
+//		expires = isc_scscfb.get_r_public_expires(to);
+//		if (expires==-999){
+//			expires = expires_hdr;
+//		}
+//	}	
 
+	/*TODO - check if the min/max expires is in the acceptable limits
+	 * this does not work correctly if the user has multiple contacts
+	 * and register/deregisters them individually!!!
+	 */
+	expires = cscf_get_max_expires(msg);
+	
 	/* Get P-Access-Network-Info header */
 	pani = cscf_get_access_network_info(msg, &hdr);
 	

@@ -87,6 +87,7 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply);
 
 // from scscf
 int cscf_get_expires_hdr(struct sip_msg *msg);
+int cscf_get_max_expires(struct sip_msg *msg);
 contact_body_t *cscf_parse_contacts(struct sip_msg *msg);
 str cscf_get_public_identity(struct sip_msg *msg);
 
