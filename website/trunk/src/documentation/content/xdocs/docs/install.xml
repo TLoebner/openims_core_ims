@@ -87,7 +87,7 @@
       		<ul>
       			<li>A current Linux desktop class machine should be enough</li>
       			<li>Inter-domain NAT is not something we are interested in, so a public IP address would be great</li>
-      			<li>Controllable DNS server if you don’t want to have one on your Linux box</li>
+      			<li>Controllable DNS server if you don't want to have one on your Linux box</li>
       		</ul>      		
       	</li>
       	<li>Software requirements
@@ -95,7 +95,7 @@
       			<li>~100 MBytes of disk space to be on the safe side</li>
 				<li>GCC3/4, JDK1.5, ant</li>
 				<li>MySQL installed and started (or other DBMS if you can deal with it)</li>
-				<li>libxml2, libmysql – both with development</li>
+				<li>libxml2, libmysql - both with development</li>
 				<li>Linux kernel 2.6 and ipsec-tools (setkey) if you want to use IPSec SAs</li>
 				<li>bind installed and running (or other name server if you can deal with it)</li>
 				<li>Browser on the box or that can connect to the box (for user provisioning)</li>
@@ -141,10 +141,15 @@ svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS</
       <ul>
       	<li>ser_ims
       		<ul>
+      			<li><strong> New!!! </strong> Do "make -f Makefile.ser install" in ser_ims/lib
+      				<source>cd ser_ims/lib
+make -f Makefile.ser install
+cd ../..</source>
+				</li>
       			<li>Do "make all" in ser_ims
       				<source>cd ser_ims
 make all
-cd..</source>
+cd ..</source>
 				</li>
       			<li>If something breaks, you probably don't have all the prerequisites.</li>
       		</ul>
@@ -179,7 +184,7 @@ cd..</source>
       	<li>Notes:
       		<ul>
       			<li>All the installation examples configured to work only on the local loopback 
-      			and the default domain configured as “open-ims.test”. </li>
+      			and the default domain configured as "open-ims.test". </li>
 				<li>The MySQL access rights are set only for local access</li>
 				<li>We recommend that you try it first like this and then do your changes:
 					<ul>
@@ -196,17 +201,17 @@ cd..</source>
 				<li>Copy it to your bind configuration directory</li>
 				<li>Edit named.conf and insert the file there (Would be great to also add reverse DNS entries)</li>
 				<li>Restart the name server</li>
-				<li>Test that the names are resolvable (don’t forget about /etc/resolv.conf pointing to your new DNS server!)</li>
+				<li>Test that the names are resolvable (don't forget about /etc/resolv.conf pointing to your new DNS server!)</li>
 			</ul>
 		</li>
 		<li>MySQL
 			<ul>
-				<li>Run the SQL dumps (mysql –u root –p –h localhost &lt; dump.sql):
-					<source>mysql –u root –p –h localhost &lt; ser_ims/cfg/icscf.sql
-mysql –u root –p –h localhost &lt; ser_ims/cfg/sip2ims.sql
+				<li>Run the SQL dumps (mysql -u root -p -h localhost &lt; dump.sql):
+					<source>mysql -u root -p -h localhost &lt; ser_ims/cfg/icscf.sql
+mysql -u root -p -h localhost &lt; ser_ims/cfg/sip2ims.sql
 
-mysql –u root –p –h localhost &lt; FHoSS/scripts/hssdb.sql
-mysql –u root –p –h localhost &lt; FHoSS/scripts/userdata.sql
+mysql -u root -p -h localhost &lt; FHoSS/scripts/hssdb.sql
+mysql -u root -p -h localhost &lt; FHoSS/scripts/userdata.sql
 </source>
 				</li>				
 				<li>Check if the databases are in there and accessible</li>
@@ -236,7 +241,7 @@ cp ser_ims/cfg/*.sh .
 				<li>Take a look at the configuration files in FHoSS/deploy/ (available after Step 3 completes)</li>
 			</ul>
 		</li>
-		<li>Edit these files to your own preferences (don’t forget to update the DNS zone file accordingly and restart the name server)</li>
+		<li>Edit these files to your own preferences (don't forget to update the DNS zone file accordingly and restart the name server)</li>
       </ul>
     </section>
     <section id="step6">
@@ -304,8 +309,8 @@ cp ser_ims/cfg/*.sh .
 					<ul>
 						<li>Private Identity: alice@open-ims.test</li>
 						<li>Secret Key: alice</li>
-						<li>OP: 0x00…0</li>
-						<li>AMF: 0x00..0</li>
+						<li>OP: 0x00...0</li>
+						<li>AMF: 0x00...0</li>
 						<li>Anonimity Key: disabled</li>
 						<li>Public Identity: sip:alice@open-ims.test</li>
 						<li>Realm: open-ims.test</li>
@@ -336,7 +341,7 @@ cp ser_ims/cfg/*.sh .
       <ul>
       	<li>This is the last step. You should have all installed and configured by now</li>
 		<li>Registration uses all components and as such, it is a good test if all is up &amp; running</li>
-		<li>Use Wireshark to see what’s going on:
+		<li>Use Wireshark to see what's going on:
 			<ul>
 				<li>Monitor ports 4060, 5060 and 6060 for SIP traffic</li>
 				<li>Monitor ports 3868, 3869 and 3870 for Diameter traffic</li>
