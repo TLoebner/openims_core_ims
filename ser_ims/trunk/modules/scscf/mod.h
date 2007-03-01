@@ -124,6 +124,8 @@
 #define S_CSCF_MOD_H
 
 #include "../../sr_module.h"
+#include "../../mem/shm_mem.h"
+#include "../../mem/mem.h"
 
 #define M_NAME "S-CSCF"
 
@@ -143,7 +145,7 @@ int S_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 {\
 	(dest).s = shm_malloc((src).len);\
 	if (!(dest).s){\
-		LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+		LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
 	}\
 	(dest).len = (src).len;\
 	memcpy((dest).s,(src).s,(src).len);\

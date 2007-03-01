@@ -58,11 +58,13 @@
 
 #include "mod.h"
 
+#include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "../cdp/cdp_load.h"
+#include "../dialog/dlg_mod.h"
 
 #include "registration.h"
 #include "registrar.h"
@@ -72,6 +74,7 @@
 #include "cx.h"
 #include "scscf_load.h"
 #include "dlg_state.h"
+#include "s_persistency.h"
 
 MODULE_VERSION
 
@@ -83,12 +86,12 @@ static void mod_destroy(void);
 /* parameters storage */
 char* scscf_name="sip:scscf.open-ims.test:6060";	/**< name of the S-CSCF */
 
-char* scscf_aaa_peer="hss.open-ims.test";/**< FQDN of the Diameter Peer (HSS) 			*/
+char* scscf_aaa_peer="hss.open-ims.test";/**< FQDN of the Diameter Peer (HSS) */
 
 char *scscf_user_data_dtd=0; 			/* Path to "CxDataType.dtd" 	 							*/
 char *scscf_user_data_xsd=0; 			/* Path to "CxDataType_Rel6.xsd" or "CxDataType_Rel7.xsd"	*/
 
-int auth_data_hash_size=1024;			/**< the size of the hash table 				*/
+int auth_data_hash_size=1024;			/**< the size of the hash table 							*/
 int auth_vector_timeout=60;				/**< timeout for a sent auth vector to expire in sec 		*/
 int auth_data_timeout=60;				/**< timeout for a hash entry to expire when empty in sec 	*/
 int av_request_at_once=1;				/**< how many auth vectors to request in a MAR 				*/
@@ -100,8 +103,8 @@ int registrar_hash_size=1024;			/**< the size of the hash table					*/
 int registration_default_expires=3600;	/**< the default value for expires if none found*/
 int registration_min_expires=10;		/**< minimum registration expiration time 		*/
 int registration_max_expires=1000000;	/**< maximum registration expiration time 		*/
-char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)	*/
-str registration_default_algorithm_s={0,0};	/**< fixed default algorithm for registration (if none present)	*/
+char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)*/
+str registration_default_algorithm_s={0,0};	/**< fixed default algorithm for registration (if none present)	 */
 
 int subscription_default_expires=3600;	/**< the default value for expires if none found*/
 int subscription_min_expires=10;		/**< minimum subscription expiration time 		*/
@@ -113,19 +116,35 @@ int append_branches=1;					/**< if to append branches						*/
 int scscf_dialogs_hash_size=256;		/**< size of the dialog hash table 				*/
 int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs		*/
 
-/* fixed parameter storage */
-str scscf_name_str;						/**< fixed name of the S-CSCF 					*/
-str scscf_record_route_mo;				/**< the record route header for Mobile Originating */
-str scscf_record_route_mt;				/**< the record route header for Mobile Terminating */
-str scscf_record_route_mo_uri;			/**< just the record route uri for Mobile Originating */
-str scscf_record_route_mt_uri;			/**< just the record route uri for Mobile Terminating */
-str scscf_service_route;				/**< the service route header					*/
-str scscf_service_route_uri;			/**< just the service route uri 				*/
-str scscf_registration_min_expires;		/**< fixed minimum registration expiration time */
-str scscf_subscription_min_expires;		/**< fixed minimum subscription expiration time */
-str scscf_aaa_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 		*/
+persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
+char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
+int scscf_persistency_timer_authdata=60;							/**< interval to snapshot authorization data*/ 
+int scscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
+int scscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
+char* scscf_db_url="postgres://mario:mario@localhost/scscfdb";
+int* auth_snapshot_version=0;	/**< the version of the next auth snapshot on the db*/
+int* auth_step_version=0;	/**< the step version within the current auth snapshot version*/
+int* dialogs_snapshot_version=0; /**< the version of the next dialogs snapshot on the db*/
+int* dialogs_step_version=0; /**< the step version within the current dialogs snapshot version*/
+int* registrar_snapshot_version=0; /**< the version of the next registrar snapshot on the db*/
+int* registrar_step_version=0; /**< the step version within the current registrar snapshot version*/
 
-int * callback_singleton;				/**< Cx callback singleton 						*/
+gen_lock_t* db_lock; /**< lock for db access*/
+
+/* fixed parameter storage */
+str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
+str scscf_record_route_mo;				/**< the record route header for Mobile Originating 	*/
+str scscf_record_route_mt;				/**< the record route header for Mobile Terminating 	*/
+str scscf_record_route_mo_uri;			/**< just the record route uri for Mobile Originating 	*/
+str scscf_record_route_mt_uri;			/**< just the record route uri for Mobile Terminating 	*/
+str scscf_service_route;				/**< the service route header							*/
+str scscf_service_route_uri;			/**< just the service route uri 						*/
+str scscf_registration_min_expires;		/**< fixed minimum registration expiration time 		*/
+str scscf_subscription_min_expires;		/**< fixed minimum subscription expiration time 		*/
+str scscf_aaa_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 				*/
+
+int * callback_singleton;				/**< Cx callback singleton 								*/
+int * shutdown_singleton;				/**< Shutdown singleton 								*/
 
 /** 
  * Exported functions.
@@ -241,7 +260,13 @@ static cmd_export_t scscf_cmds[]={
  * - append-branches - if to fork the requests on multiple contacts
  * <p>
  * - dialogs_hash_size - size of the dialogs hash table 
- * - dialogs_expiration_time - default dialogs expiration time 
+ * - dialogs_expiration_time - default dialogs expiration time
+ * <p>
+ * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
+ * - persistency_location - where to dump/load the persistency data to/from
+ * - persistency_timer_authdata - interval to make authorization data snapshots at
+ * - persistency_timer_dialogs - interval to make dialogs data snapshots at
+ * - persistency_timer_registrar - interval to make registrar snapshots at
  */	
 static param_export_t scscf_params[]={ 
 	{"name", 							STR_PARAM, &scscf_name},
@@ -274,6 +299,12 @@ static param_export_t scscf_params[]={
 	{"dialogs_hash_size", 				INT_PARAM, &scscf_dialogs_hash_size},
 	{"dialogs_expiration_time", 		INT_PARAM, &scscf_dialogs_expiration_time},
 	
+	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
+	{"persistency_location", 			STR_PARAM, &scscf_persistency_location},
+	{"persistency_timer_authdata",		INT_PARAM, &scscf_persistency_timer_authdata},
+	{"persistency_timer_dialogs",		INT_PARAM, &scscf_persistency_timer_dialogs},
+	{"persistency_timer_registrar",		INT_PARAM, &scscf_persistency_timer_registrar},
+	{"scscf_db_url",					STR_PARAM, &scscf_db_url},
 	{0,0,0} 
 };
 
@@ -298,13 +329,17 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 
 struct tm_binds tmb;							/**< Structure with pointers to tm funcs 				*/
 struct cdp_binds cdpb;							/**< Structure with pointers to cdp funcs				*/
+dlg_func_t dialogb;								/**< Structure with pointers to dialog funcs			*/
 
-extern auth_data *Auth_data;					/**< authentication vectors hast table 					*/
+extern auth_hash_slot_t *auth_data;				/**< authentication vectors hast table 					*/
 extern r_hash_slot *registrar;					/**< the S-CSCF registrar								*/
 extern r_notification_list *notification_list; 	/**< list of notifications for reg to be sent			*/
 
 extern s_dialog_hash_slot *s_dialogs;			/**< the dialogs hash table								*/
 
+/** database */
+db_con_t* scscf_db = NULL; /**< Database connection handle */
+db_func_t scscf_dbf;	/**< Structure with pointers to db functions */
 
 static str s_service_route = {"Service-Route: <",16};
 static str s_orig = {"sip:orig@",9};
@@ -412,6 +447,14 @@ static inline int build_record_service_route()
 	return 1;
 }
 
+db_con_t* create_scscf_db_connection()
+{
+	if (scscf_persistency_mode!=WITH_DATABASE_BULK && scscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
+	if (!scscf_dbf.init) return NULL;
+
+	return scscf_dbf.init(scscf_db_url);
+}
+
 /**
  * Initializes the module.
  */
@@ -419,8 +462,13 @@ static int mod_init(void)
 {
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
+	bind_dlg_mod_f load_dlg;
+	
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
+	shutdown_singleton=shm_malloc(sizeof(int));
+	*shutdown_singleton=0;
+	
 		
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	/* fix the parameters */
@@ -442,6 +490,82 @@ static int mod_init(void)
 	
 //	/* bind to the db module */
 //	if ( cscf_db_bind( scscf_db_url ) < 0 ) goto error;
+
+	if(scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE){
+		if (!scscf_db_url) {
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: no db_url specified but DB has to be used "
+				"(scscf_persistency_mode=%d\n", scscf_persistency_mode);
+			return -1;
+		}
+		if (bind_dbmod(scscf_db_url, &scscf_dbf) < 0) { /* Find database module */
+			LOG(L_ERR, "ERR"M_NAME":mod_init: Can't bind database module via url %s\n", scscf_db_url);
+			return -1;
+		}
+
+		if (!DB_CAPABILITY(scscf_dbf, DB_CAP_ALL)) {
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
+			return -1;
+		}
+		
+		scscf_db = create_scscf_db_connection();
+		if (!scscf_db) {
+			LOG(L_ERR, "ERR:"M_NAME": mod_init: Error while connecting database\n");
+			return -1;
+		}
+		
+		/* db lock */
+		db_lock = (gen_lock_t*)lock_alloc();
+		if(!db_lock){
+	    	LOG(L_ERR, "ERR:"M_NAME": mod_init: No memory left\n");
+			return -1;
+		}
+		lock_init(db_lock);
+	
+		/* snapshot and step versions */
+	
+		auth_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!auth_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: auth_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*auth_snapshot_version=0;
+	
+		auth_step_version=(int*)shm_malloc(sizeof(int));
+		if(!auth_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: auth_step_version, no memory left\n");
+			return -1;
+		}
+		*auth_step_version=0;
+	
+		dialogs_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!dialogs_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: dialogs_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*dialogs_snapshot_version=0;
+	
+		dialogs_step_version=(int*)shm_malloc(sizeof(int));
+		if(!dialogs_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: dialogs_step_version, no memory left\n");
+			return -1;
+		}
+		*dialogs_step_version=0;
+	
+		registrar_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!registrar_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: registrar_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*registrar_snapshot_version=0;
+	
+		registrar_step_version=(int*)shm_malloc(sizeof(int));
+		if(!registrar_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: registrar_step_version, no memory left\n");
+			return -1;
+		}
+		*registrar_step_version=0;
+		
+	}
 	
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
@@ -457,16 +581,35 @@ static int mod_init(void)
 	}
 	if (load_cdp(&cdpb) == -1)
 		goto error;
+
+	/* bind to the dialog module */
+	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
+	if (!load_dlg) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
+		return -1;
+	}
+	if (load_dlg(&dialogb) != 0) {
+		return -1;
+	}
 	
 	
 	/* Init the authorization data storage */
-	if (!auth_data_init(auth_data_hash_size)) goto error;
+	if (!auth_data_init(auth_data_hash_size)) goto error;	
+	if (scscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_authdata();
+		if (register_timer(persistency_timer_authdata,0,scscf_persistency_timer_authdata)<0) goto error;
+	}
+	
 
 	/* register the authentication vectors timer */
-	if (register_timer(reg_await_timer,Auth_data,5)<0) goto error;
+	if (register_timer(reg_await_timer,auth_data,10)<0) goto error;
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
+	if (scscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_registrar();
+		if (register_timer(persistency_timer_registrar,0,scscf_persistency_timer_registrar)<0) goto error;
+	}
 
 	/* register the registrar timer */
 	if (register_timer(registrar_timer,registrar,10)<0) goto error;
@@ -482,6 +625,10 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
+	if (scscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_dialogs();
+		if (register_timer(persistency_timer_dialogs,0,scscf_persistency_timer_dialogs)<0) goto error;
+	}
 
 	/* register the dialog timer */
 	if (register_timer(dialog_timer,s_dialogs,60)<0) goto error;
@@ -499,6 +646,12 @@ error:
 
 extern gen_lock_t* process_lock;		/* lock on the process table */
 
+
+void close_scscf_db_connection(db_con_t* db)
+{
+	if (db && scscf_dbf.close) scscf_dbf.close(db);
+}
+
 /**
  * Initializes the module in child.
  */
@@ -515,12 +668,22 @@ static int mod_child_init(int rank)
 //		scscf_db_nds_table,
 //		scscf_db_scscf_table,
 //		scscf_db_capabilities_table);
+	
+	/*if (scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) { 
+		scscf_db = create_scscf_db_connection();
+		if (!scscf_db) {
+			LOG(L_ERR, "ERR:"M_NAME":mod_child_init(%d): "
+					"Error while connecting database\n", rank);
+			return -1;
+		}
+	}*/
+	
 	/* init the diameter callback - must be done just once */
 	lock_get(process_lock);
-	if((*callback_singleton)==0){
-		*callback_singleton=1;
-		cdpb.AAAAddRequestHandler(CxRequestHandler,NULL);
-	}
+		if((*callback_singleton)==0){
+			*callback_singleton=1;
+			cdpb.AAAAddRequestHandler(CxRequestHandler,NULL);
+		}
 	lock_release(process_lock);
 	/* Init the user data parser */
 	if (!parser_init(scscf_user_data_dtd,scscf_user_data_xsd)) return -1;
@@ -533,13 +696,35 @@ static int mod_child_init(int rank)
  */
 static void mod_destroy(void)
 {
+	int do_destroy=0;
 	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
-	auth_data_destroy();
-	parser_destroy();
-	r_notify_destroy();	
-	r_storage_destroy();
-	s_dialogs_destroy();	
-	pkg_free(scscf_service_route.s);
+	lock_get(process_lock);
+		if((*shutdown_singleton)==0){
+			*shutdown_singleton=1;
+			do_destroy=1;
+		}
+	lock_release(process_lock);
+	if (do_destroy){
+		if (scscf_persistency_mode!=NO_PERSISTENCY){
+			/* First let's snapshot everything */
+			make_snapshot_authdata();
+			make_snapshot_dialogs();
+			make_snapshot_registrar();
+		}
+		/* Then nuke it all */
+		auth_data_destroy();
+		parser_destroy();
+		r_notify_destroy();	
+		r_storage_destroy();
+		s_dialogs_destroy();	
+		pkg_free(scscf_service_route.s);
+	}
+	
+	if ( (scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) && scscf_db) {
+		DBG("INFO:"M_NAME": ... closing db connection\n");
+		close_scscf_db_connection(scscf_db);
+	}
+	scscf_db = NULL;
 }
 
 

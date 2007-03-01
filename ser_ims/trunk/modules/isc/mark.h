@@ -78,8 +78,8 @@
 /** ISC marking structure */
 typedef struct _isc_mark{
 	int skip;		/**< how many IFCs to skip */
-	int handling;	/**< handling to apply on failure to contact the AS */
-	int direction;	/**< session case: orig,term,term unreg */
+	char handling;	/**< handling to apply on failure to contact the AS */
+	char direction;	/**< session case: orig,term,term unreg */
 } isc_mark;
 
 

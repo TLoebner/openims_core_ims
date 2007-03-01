@@ -90,7 +90,7 @@ typedef struct _auth_vector {
 	str authorization; 	/**< expected response				*/
 	str ck;				/**< Cypher Key						*/
 	str ik;				/**< Integrity Key					*/
-	unsigned int expires;/**< expires in (after it is sent)	*/
+	time_t expires;/**< expires in (after it is sent)	*/
 	
 	enum auth_vector_status status;/**< current status		*/
 	struct _auth_vector *next;/**< next av in the list		*/
@@ -101,32 +101,25 @@ typedef struct _auth_vector {
 
 /** Set of auth_vectors used by a private id */
 typedef struct _auth_userdata{
+	unsigned int hash;		/**< hash of the auth data		*/
 	str private_identity;	/**< authorization username		*/
 	str public_identity;	/**< public identity linked to	*/
-	unsigned int hash;		/**< hash of the auth data		*/
-	unsigned int expires;	/**< expires in					*/
+	time_t expires;	/**< expires in					*/
 	
 	auth_vector *head;		/**< first auth vector in list	*/
 	auth_vector *tail;		/**< last auth vector in list	*/
+	
 	struct _auth_userdata *next;/**< next element in list	*/
 	struct _auth_userdata *prev;/**< previous element in list*/
 } auth_userdata;
 
 /** Authorization user data hash slot */
 typedef struct {
-	void *head;				/**< first in the slot			*/ 
-	void *tail;				/**< last in the slot			*/
-} hash_slot_t;
+	auth_userdata *head;				/**< first in the slot			*/ 
+	auth_userdata *tail;				/**< last in the slot			*/
+	gen_lock_t *lock;			/**< slot lock 							*/	
+} auth_hash_slot_t;
 
-/** User data hash table 
- * \todo move lock in auth_userdata to improve performance of registration
- */
-typedef struct _auth_data{
-	hash_slot_t *table;		/**< hash table 				*/
-	int size;				/**< size of the hash table		*/
-	
-	gen_lock_t *lock;		/**< lock for operations		*/
-} auth_data;
 
 
 
@@ -141,6 +134,9 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 /*
  * Storage of authentication vectors
  */
+
+inline void auth_data_lock(unsigned int hash);
+inline void auth_data_unlock(unsigned int hash);
  
 int auth_data_init(int size);
 
@@ -153,8 +149,10 @@ void free_auth_vector(auth_vector *av);
 auth_userdata *new_auth_userdata(str private_identity,str public_identity);
 void free_auth_userdata(auth_userdata *aud);					
 
+inline unsigned int get_hash_auth(str private_identity,str public_identity);
+
 int add_auth_vector(str private_identity,str public_identity,auth_vector *av);
-auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce);
+auth_vector* get_auth_vector(str private_identity,str public_identity,int status,str *nonce,unsigned int *hash);
 
 int drop_auth_userdata(str private_identity,str public_identity);
 

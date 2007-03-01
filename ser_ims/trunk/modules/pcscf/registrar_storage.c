@@ -113,7 +113,7 @@ inline int r_reg_contact(r_contact *c)
  * @param hash_size - size of the hash, to % with
  * @returns the hash for the contact
  */
-static inline unsigned int get_contact_hash(str aor,int port,int transport,int hash_size)
+inline unsigned int get_contact_hash(str aor,int port,int transport,int hash_size)
 {
 #define h_inc h+=v^(v>>3)
    char* p;

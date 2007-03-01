@@ -12,8 +12,8 @@ auto_gen=
 NAME=scscf.so
 
 
-DEFS += -I/usr/include/libxml2
-LIBS += -lxml2
+DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
+LIBS += -lxml2 -L../../lib/cds -l_ser_cds
 
 include ../../Makefile.modules
 

@@ -376,20 +376,20 @@ static inline int get_contact_uri(struct sip_msg* _m, struct sip_uri *uri, conta
 	return 0;
 }
 
-/**
- * Checks if the contact in the message is a 1918 address
- * @param msg - the SIP message
- * @returns 1 if it is, 0 if not, -1 on not found
- */
-static int contact_1918(struct sip_msg * msg) {
-	struct sip_uri uri;
-	contact_t * c;
-	
-	if(get_contact_uri(msg, &uri, &c) == -1)
-		return -1;
-	
-	return (is1918addr(&(uri.host)) == 1)?1:0; 
-}
+///**
+// * Checks if the contact in the message is a 1918 address
+// * @param msg - the SIP message
+// * @returns 1 if it is, 0 if not, -1 on not found
+// */
+//static int contact_1918(struct sip_msg * msg) {
+//	struct sip_uri uri;
+//	contact_t * c;
+//	
+//	if(get_contact_uri(msg, &uri, &c) == -1)
+//		return -1;
+//	
+//	return (is1918addr(&(uri.host)) == 1)?1:0; 
+//}
 
 /**
  * Checks if the first Via in the message is a 1918 address

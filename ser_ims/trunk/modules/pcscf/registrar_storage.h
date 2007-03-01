@@ -64,17 +64,10 @@ typedef struct _r_nat_dest{
 	unsigned short nat_port;	/**< port of the pin hole in the NAT 	*/
 }r_nat_dest;
 
-/** Registrar Slot Structure */
-typedef struct {
-	void *head;					/**< first contact in the slot			*/
-	void *tail;					/**< last contact in the slot			*/
-	gen_lock_t *lock;			/**< slot lock 							*/
-} r_hash_slot;
-
 /** Registrar Public Identity Structure */
 typedef struct _r_public {
 	str aor;					/**< the public identity 				*/
-	int is_default;				/**< if this is the default id			*/			
+	char is_default;			/**< if this is the default id			*/			
 	
 	struct _r_public *next;		/**< next public identity for this contact */
 	struct _r_public *prev; 	/**< previous public identity for this contact */
@@ -94,8 +87,8 @@ typedef struct _r_ipsec {
 	int spi_us;					/**< SPI Server to use					*/	
 	int spi_pc;					/**< SPI Client to use					*/
 	int spi_ps;					/**< SPI Server to use					*/
-	int port_uc;				/**< Port UE Client						*/
-	int port_us;				/**< Port UE Server						*/
+	unsigned short port_uc;				/**< Port UE Client						*/
+	unsigned short port_us;				/**< Port UE Server						*/
 	
 	str ealg;					/**< Cypher Algorithm - ESP				*/
 	str ck;						/**< Cypher Key							*/
@@ -108,8 +101,8 @@ typedef struct _r_contact {
 	unsigned int hash;			/**< the hash value 					*/
 	
 	str host;					/**< host of the UE						*/
-	int port;					/**< port of the UE						*/
-	int transport;				/**< transport for the UE				*/
+	unsigned short port;					/**< port of the UE						*/
+	char transport;				/**< transport for the UE				*/
 	
 	r_ipsec *ipsec;				/**< IPSec SA information, if any		*/
 	
@@ -118,8 +111,8 @@ typedef struct _r_contact {
 	enum Reg_States reg_state;	/**< registration state					*/
 	time_t expires;				/**< time of expiration					*/
 	
+	unsigned short service_route_cnt;		/**< size of the above vector			*/
 	str *service_route;			/**< service route entries				*/
-	int service_route_cnt;		/**< size of the above vector			*/
 
 	r_nat_dest * pinhole;		/**< address of the receive				*/ 
 	
@@ -130,6 +123,12 @@ typedef struct _r_contact {
 	struct _r_contact *prev;	/**< previous contact in this hash slot	*/
 } r_contact;
 
+/** Registrar Slot Structure */
+typedef struct {
+	r_contact *head;					/**< first contact in the slot			*/
+	r_contact *tail;					/**< last contact in the slot			*/
+	gen_lock_t *lock;			/**< slot lock 							*/
+} r_hash_slot;
 
 
 void r_act_time();
@@ -142,6 +141,8 @@ void r_storage_destroy();
 
 inline void r_lock(unsigned int hash);
 inline void r_unlock(unsigned int hash);
+
+unsigned int get_contact_hash(str aor,int port,int transport,int hash_size);
 
 r_public* new_r_public(str aor, int is_default);
 r_public* get_r_public(r_contact *c, str aor);

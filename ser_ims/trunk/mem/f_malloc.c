@@ -643,8 +643,7 @@ void fm_info(struct fm_block* qm, struct mem_info* info)
 	void fm_sums(struct fm_block* qm)
 	{
 		struct fm_frag* f;
-		int i;
-		int memlog=L_ERR;
+		int i;		
 		mem_counter *root=0,*x;
 		lock_get(process_lock);
 		if (process_no!=0)
