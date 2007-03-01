@@ -71,6 +71,7 @@
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
+#include "../dialog/dlg_mod.h"
 
 //#include "db.h"
 #include "registration.h"
@@ -81,6 +82,7 @@
 #include "security.h"
 #include "dlg_state.h"
 #include "sdp_util.h"
+#include "p_persistency.h"
 
 
 MODULE_VERSION
@@ -118,6 +120,8 @@ int registrar_hash_size=1024;				/**< the size of the hash table for registrar		
 
 char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/pcscf/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
 int pcscf_subscribe_retries = 1;			/**< times to retry subscribe to reg on failure 	*/
+
+int subscriptions_hash_size=1024;			/**< the size of the hash table for subscriptions	*/
 
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
 int pcscf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
@@ -160,6 +164,17 @@ extern str cscf_term_ioi_str;						/**< fixed name of the Terminating network 		
 
 str pcscf_sip2ims_via_host;					/**< fixed Via host of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
 int pcscf_sip2ims_via_port;					/**< fixed Via port of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
+
+
+persistency_mode_t pcscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
+char* pcscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
+int pcscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
+int pcscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
+int pcscf_persistency_timer_subscriptions=60;						/**< interval to snapshot subscriptions data*/ 
+
+
+int * shutdown_singleton;				/**< Shutdown singleton 								*/
+
 
 /** 
  * Exported functions.
@@ -266,6 +281,7 @@ static cmd_export_t pcscf_cmds[]={
  * <p>  
  * - registrar_hash_size - size of the registrar hash table
  * - reginfo_dtd - DTD file for checking the reginfo/xml in the NOTIFY to reg event
+ * - subscriptions_hash_size - size of the subscriptions hash table
  * <p>
  * - dialogs_hash_size - size of the dialog hash table
  * - dialogs_expiration_time - time-out for dialog expiration
@@ -299,12 +315,19 @@ static cmd_export_t pcscf_cmds[]={
  * - icid_gen_addr - ICID Gen Addr. in the P-Charging-Vector header
  * - orig_ioi - Originating IOI in the P-Charging-Vector header
  * - term_ioi - Terminating IOI in the P-Charging-Vector header
+ * <p>
+ * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
+ * - persistency_location - where to dump/load the persistency data to/from
+ * - persistency_timer_dialogs - interval to make dialogs data snapshots at
+ * - persistency_timer_registrar - interval to make registrar snapshots at
+ * - persistency_timer_subscriptions - interval to make subscriptions snapshots at
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
 
 	{"registrar_hash_size",		INT_PARAM, &registrar_hash_size},
 	{"reginfo_dtd", 			STR_PARAM, &pcscf_reginfo_dtd},
+	{"subscriptions_hash_size",	INT_PARAM, &subscriptions_hash_size},
 
 	{"dialogs_hash_size",		INT_PARAM, &pcscf_dialogs_hash_size},
 	{"dialogs_expiration_time",	INT_PARAM, &pcscf_dialogs_expiration_time},
@@ -340,6 +363,12 @@ static param_export_t pcscf_params[]={
 	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM,		&cscf_orig_ioi},
 	{"term_ioi",				STR_PARAM,		&cscf_term_ioi},
+
+	{"persistency_mode",	 			INT_PARAM, &pcscf_persistency_mode},	
+	{"persistency_location", 			STR_PARAM, &pcscf_persistency_location},
+	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
+	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
+	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
 	
 	{0,0,0} 
 };
@@ -364,6 +393,7 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 										/**< link to the stateless reply function in sl module */
 
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
+dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -505,7 +535,13 @@ int fix_parameters()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
+	bind_dlg_mod_f load_dlg;
+			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	shutdown_singleton=shm_malloc(sizeof(int));
+	*shutdown_singleton=0;
+	
+	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
 	
@@ -528,24 +564,46 @@ static int mod_init(void)
 	}
 	if (load_tm(&tmb) == -1)
 		goto error;
+
+	/* bind to the dialog module */
+	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
+	if (!load_dlg) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
+		return -1;
+	}
+	if (load_dlg(&dialogb) != 0) {
+		return -1;
+	}
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
+	if (pcscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_registrar();
+		if (register_timer(persistency_timer_registrar,0,pcscf_persistency_timer_registrar)<0) goto error;
+	}
 
 	/* register the registrar timer */
 	if (register_timer(registrar_timer,registrar,10)<0) goto error;
 	
 	/* init the registrar subscriptions */
 	if (!r_subscription_init()) goto error;
+	if (pcscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_subscriptions();
+		if (register_timer(persistency_timer_subscriptions,0,pcscf_persistency_timer_subscriptions)<0) goto error;
+	}
 
 	/* register the subscription timer */
-	if (register_timer(subscription_timer,registrar,5)<0) goto error;
+	if (register_timer(subscription_timer,registrar,10)<0) goto error;
 	
 	/* init the dialog storage */
 	if (!p_dialogs_init(pcscf_dialogs_hash_size)){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
+	if (pcscf_persistency_mode!=NO_PERSISTENCY){
+		load_snapshot_dialogs();
+		if (register_timer(persistency_timer_dialogs,0,pcscf_persistency_timer_dialogs)<0) goto error;
+	}
 
 	/* register the dialog timer */
 	if (register_timer(dialog_timer,p_dialogs,60)<0) goto error;
@@ -562,6 +620,8 @@ static int mod_init(void)
 error:
 	return -1;
 }
+
+extern gen_lock_t* process_lock;		/* lock on the process table */
 
 /**
  * Initializes the module in child.
@@ -590,11 +650,27 @@ static int mod_child_init(int rank)
  */
 static void mod_destroy(void)
 {
-	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");	
-	parser_destroy();
-	r_subscription_destroy();
-	r_storage_destroy();
-	p_dialogs_destroy();
+	int do_destroy=0;
+	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
+	lock_get(process_lock);
+		if((*shutdown_singleton)==0){
+			*shutdown_singleton=1;
+			do_destroy=1;
+		}
+	lock_release(process_lock);
+	if (do_destroy){
+		if (pcscf_persistency_mode!=NO_PERSISTENCY){		
+			/* First let's snapshot everything */
+			make_snapshot_dialogs();
+			make_snapshot_registrar();
+			make_snapshot_subscriptions();
+		}
+		/* Then nuke it all */		
+		parser_destroy();
+		r_subscription_destroy();
+		r_storage_destroy();
+		p_dialogs_destroy();
+	}
 }
 
 

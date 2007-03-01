@@ -66,9 +66,11 @@
 #include "../../parser/parse_uri.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
+#include "../dialog/dlg_mod.h"
 #include "sip.h"
 
 extern struct tm_binds tmb;   		/**< Structure with pointers to tm funcs 		*/
+extern dlg_func_t dialogb;			/**< Structure with pointers to dialog funcs			*/
 
 extern str pcscf_name_str;			/**< fixed SIP URI of this P-CSCF 				*/
 extern str pcscf_path_str;			/**< fixed Path URI  							*/
@@ -80,20 +82,74 @@ extern int r_hash_size;				/**< number of hash slots in the registrar		*/
 
 extern int pcscf_subscribe_retries;	/**< times to retry subscribe to reg on failure */
 
-r_subscription_list *subscription_list=0;/**< list of subscriptions					*/
+r_subscription_hash_slot *subscriptions=0;/**< list of subscriptions					*/
+extern int subscriptions_hash_size;	/**< the size of the hash table for subscriptions	*/
 
+
+/**
+ * Computes the hash for a contact.
+ * @param aor - the string of the contact
+ * @param port - the port of the contact
+ * @param transport - transport for the contact - ignored for now
+ * @param hash_size - size of the hash, to % with
+ * @returns the hash for the contact
+ */
+inline unsigned int get_subscription_hash(str uri)
+{
+#define h_inc h+=v^(v>>3)
+   char* p;
+   register unsigned v;
+   register unsigned h;
+   h=0;
+   for (p=uri.s; p<=(uri.s+uri.len-4); p+=4){
+       v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
+       h_inc;
+   }
+   v=0;
+   for (;p<(uri.s+uri.len); p++) {
+       v<<=8;
+       v+=*p;
+   }
+   h_inc;
+   h=((h)+(h>>11))+((h>>13)+(h>>23));
+   return (h)%subscriptions_hash_size;
+#undef h_inc 
+}
+
+/**
+ * Lock a subscription hash slot.
+ * @param hash - index to lock
+ */
+inline void subs_lock(unsigned int hash)
+{
+//	LOG(L_CRIT,"GET %d\n",hash);
+	lock_get(subscriptions[hash].lock);
+//	LOG(L_CRIT,"GOT %d\n",hash);
+}
+/**
+ * UnLock a subscriptions hash slot.
+ * @param hash - index to unlock
+ */
+inline void subs_unlock(unsigned int hash)
+{
+//	LOG(L_CRIT,"REL %d\n",hash);	
+	lock_release(subscriptions[hash].lock);
+}
 /**
  * Initialize the subscription list.
  * @returns 1 if ok, 0 on error
  */
 int r_subscription_init()
 {
-	subscription_list = shm_malloc(sizeof(r_subscription_list));
-	if (!subscription_list) return 0;
-	memset(subscription_list,0,sizeof(r_subscription_list));
-	subscription_list->lock = lock_alloc();
-	if (!subscription_list->lock) return 0;
-	subscription_list->lock = lock_init(subscription_list->lock);
+	int i;
+	subscriptions = shm_malloc(sizeof(r_subscription_hash_slot)*subscriptions_hash_size);
+	if (!subscriptions) return 0;
+	memset(subscriptions,0,sizeof(r_subscription_hash_slot)*subscriptions_hash_size);
+	for(i=0;i<subscriptions_hash_size;i++){
+		subscriptions[i].lock = lock_alloc();
+		if (!subscriptions[i].lock) return 0;
+		subscriptions[i].lock = lock_init(subscriptions[i].lock);
+	}
 	return 1;
 }
 
@@ -102,18 +158,21 @@ int r_subscription_init()
  */
 void r_subscription_destroy()
 {
+	int i;
 	r_subscription *s,*ns;
-	lock_get(subscription_list->lock);
-	s = subscription_list->head;
-	while(s){
-		ns = s->next;
-		//TODO send out unSUBSCRIBE
-		free_r_subscription(s);
-		s = ns;
-	}
-	lock_destroy(subscription_list->lock);
-	lock_dealloc(subscription_list->lock);	
-	shm_free(subscription_list);
+	for(i=0;i<subscriptions_hash_size;i++){
+		subs_lock(i);
+		s = subscriptions[i].head;
+		while(s){
+			ns = s->next;
+			//TODO send out unSUBSCRIBE
+			free_r_subscription(s);
+			s = ns;
+		}
+		lock_destroy(subscriptions[i].lock);
+		lock_dealloc(subscriptions[i].lock);
+	}	
+	shm_free(subscriptions);
 }
 
 
@@ -183,18 +242,22 @@ int P_subscribe(struct sip_msg *rpl, char* str1, char* str2)
 int r_subscribe(str uri,int duration)
 {
 	r_subscription *s;
-	str asserted_id={0,0};
-	asserted_id.s = pcscf_path_str.s;
-	asserted_id.len = pcscf_path_str.len;
 	/* first we try to update. if not found, add it */
-	if (!is_r_subscription(uri)){			
-		s = new_r_subscription(uri,pcscf_name_str,duration,asserted_id);
+	s = get_r_subscription(uri);	
+	if (s){
+		s->duration = duration;
+		s->attempts_left=pcscf_subscribe_retries;
+		subs_unlock(s->hash);
+	}else{			
+		s = new_r_subscription(uri,duration);
 		if (!s){
 			LOG(L_ERR,"ERR:"M_NAME":r_subscribe: Error creating new subscription\n");
 			return 0;
 		}
 		add_r_subscription(s);
+		s->attempts_left=pcscf_subscribe_retries;
 	}
+		
 	return 1;
 }
 
@@ -228,8 +291,8 @@ int r_send_subscribe(r_subscription *s,int duration)
 	h.len += expires_s.len + 12 + expires_e.len;
 
 	h.len += contact_s.len + pcscf_name_str.len + contact_e.len;
-	if (s->asserted_identity.len) h.len += p_asserted_identity_s.len + 
-		p_asserted_identity_e.len + s->asserted_identity.len;
+	if (pcscf_path_str.len) h.len += p_asserted_identity_s.len + 
+		p_asserted_identity_e.len + pcscf_path_str.len;
 
 	h.s = pkg_malloc(h.len);
 	if (!h.s){
@@ -253,19 +316,29 @@ int r_send_subscribe(r_subscription *s,int duration)
 	STR_APPEND(h,pcscf_name_str);
 	STR_APPEND(h,contact_e);
 	
-	if (s->asserted_identity.len) {
+	if (pcscf_path_str.len) {
 		STR_APPEND(h,p_asserted_identity_s);
-		STR_APPEND(h,s->asserted_identity);
+		STR_APPEND(h,pcscf_path_str);
 		STR_APPEND(h,p_asserted_identity_e);
 	}
 	
-	if (tmb.t_request(&method, &(s->req_uri), &(s->req_uri), &(s->from), &h, 0, 0,
-		 r_subscribe_response, &(s->req_uri))<0)
-	{
-		LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error sending in transaction\n");
-		goto error;
+	if (!s->dialog){
+		/* this is the first request in the dialog */
+		if (tmb.new_dlg_uac(0,0,1,&pcscf_name_str,&s->req_uri,&s->dialog)<0){
+			LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error creating a dialog for SUBSCRIBE\n");
+			goto error;
+		}
+		if (dialogb.request_outside(&method, &h, 0, s->dialog, r_subscribe_response,  &(s->req_uri)) < 0){
+			LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error sending initial request in a SUBSCRIBE dialog\n");
+			goto error;
+		}		
+	}else{
+		/* this is a subsequent subscribe */
+		if (dialogb.request_inside(&method, &h, 0, s->dialog, r_subscribe_response,  &(s->req_uri)) < 0){
+			LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error sending subsequent request in a SUBSCRIBE dialog\n");
+			goto error;
+		}				
 	}
-
 
 	if (h.s) pkg_free(h.s);
 	return 1;
@@ -282,24 +355,31 @@ void r_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 {
 	str req_uri;
 	int expires;
+	r_subscription *s=0;
 	LOG(L_DBG,"DBG:"M_NAME":r_subscribe_response: code %d\n",ps->code);
 	if (!ps->rpl) {
 		LOG(L_ERR,"INF:"M_NAME":r_subscribe_response: No reply\n");
 		return;	
 	}
+	req_uri = *((str*) *(ps->param));		
+	s = get_r_subscription(req_uri);
+	if (!s){
+		LOG(L_ERR,"INF:"M_NAME":r_subscribe_response: received a SUBSCRIBE response but no subscription for <%.*s>\n",
+			req_uri.len,req_uri.s);
+		return;
+	}
 	if (ps->code>=200 && ps->code<300){
-		if (ps->rpl)
-			expires = cscf_get_expires_hdr(ps->rpl);
-		else 
-			return;	
-		req_uri = *((str*) *(ps->param));
-		update_r_subscription(req_uri,expires);
+		expires = cscf_get_expires_hdr(ps->rpl);
+		update_r_subscription(s,expires);
+		tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
 	}else
-	if (ps->code==404){
-		update_r_subscription(req_uri,-1);			
-	}else{
-		LOG(L_INFO,"INF:"M_NAME":r_subscribe_response: code %d\n",ps->code);				
-	}	
+		if (ps->code==404){
+			update_r_subscription(s,0);			
+			//tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
+		}else{
+			LOG(L_INFO,"INF:"M_NAME":r_subscribe_response: SUBSCRIRE response code %d ignored\n",ps->code);				
+		}	
+	if (s) subs_unlock(s->hash);		
 }
 
 /**
@@ -310,44 +390,49 @@ void r_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 void subscription_timer(unsigned int ticks, void* param)
 {
 	r_subscription *s,*ns;
-	lock_get(subscription_list->lock);
-	s = subscription_list->head;
-	r_act_time();
-	while(s){
-		ns = s->next;
-		/* send initial subscribe */
-		if (s->expires == 0){
-			if (s->attempts>=pcscf_subscribe_retries){
+	int i;
+	for(i=0;i<subscriptions_hash_size;i++){
+		subs_lock(i);
+		s = subscriptions[i].head;
+		r_act_time();
+		while(s){
+			ns = s->next;			
+			if (s->attempts_left > 0 ){
+				/* attempt to send a subscribe */
+				if (!r_send_subscribe(s,s->duration)){
+					LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on SUBSCRIBE (%d times)... droping\n",
+						pcscf_subscribe_retries);
+					del_r_subscription_nolock(s);
+				}else{
+					s->attempts_left--;
+				}
+			}else if (s->attempts_left==0) {
+				/* we failed to many times, drop the subscription */
 				LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on SUBSCRIBE for %d times... aborting\n",pcscf_subscribe_retries);
-				del_r_subscription_nolock(s);			
-			}else
-			if (!r_send_subscribe(s,s->duration)){
-				LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on initial SUBSCRIBE... droping\n");
-				del_r_subscription_nolock(s);
+				del_r_subscription_nolock(s);										
 			}else{
-				s->attempts ++;
+				/* we are subscribed already */
+				/* if expired, drop it */
+				if (s->expires<time_now) 
+					del_r_subscription_nolock(s);
+				/* if not expired, check for renewal */
+//		Commented as the S-CSCF should adjust the subscription time accordingly				
+//				if ((s->duration<1200 && s->expires-time_now<s->duration/2)||
+//					(s->duration>=1200 && s->expires-time_now<600))
+//				{
+//					/* if we need a resubscribe, we mark it as such and try to subscribe again */					
+//					s->attempts_left = pcscf_subscribe_retries;
+//					ns = s;
+//				}
 			}
-		}else
-		if ((s->duration<1200 && s->expires-time_now<s->duration/2)||
-			(s->duration>=1200 && s->expires-time_now<600))
-		{
-			if (s->attempts>=3){
-				LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on SUBSCRIBE for 3 times... aborting\n");
-				del_r_subscription_nolock(s);			
-			}else
-			if (!r_send_subscribe(s,s->duration)){
-				LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on initial SUBSCRIBE... droping\n");
-				del_r_subscription_nolock(s);
-			}else{
-				del_r_subscription_nolock(s);			
-				s->attempts++;
-			}
-		}
-
-		s = ns;
-	}	
-	lock_release(subscription_list->lock);
+			s = ns;
+		}	
+		subs_unlock(i);
+	}
+	print_subs(L_INFO);
 }
+
+
 
 
 
@@ -359,7 +444,7 @@ void subscription_timer(unsigned int ticks, void* param)
  * @param asserted_identity - P-Asserted-Identity-Header to use
  * @returns the r_notification or NULL on error
  */
-r_subscription* new_r_subscription(str req_uri,str from,int duration,str asserted_identity)
+r_subscription* new_r_subscription(str req_uri,int duration)
 {
 	r_subscription *s=0;
 	
@@ -373,22 +458,13 @@ r_subscription* new_r_subscription(str req_uri,str from,int duration,str asserte
 	
 	STR_SHM_DUP(s->req_uri,req_uri,"new_r_subscription");
 	if (!s->req_uri.s) goto error;
-	
-	STR_SHM_DUP(s->from,from,"new_r_subscription");
-	if (!s->from.s) goto error;
-	
+		
 	s->duration = duration;
 	s->expires = 0;
-	
-	STR_SHM_DUP(s->asserted_identity,asserted_identity,"new_r_subscription");
-	if (!s->asserted_identity.s) goto error;
-	
 	
 	return s;
 error:
 	if (s->req_uri.s) shm_free(s->req_uri.s);
-	if (s->from.s) shm_free(s->from.s);
-	if (s->asserted_identity.s) shm_free(s->asserted_identity.s);
 	if (s) shm_free(s);	
 	return 0;
 }
@@ -400,16 +476,14 @@ error:
 void add_r_subscription(r_subscription *s)
 {
 	if (!s) return;
-	lock_get(subscription_list->lock);
-	s->next = 0;
-	s->prev = subscription_list->tail;
-	if (subscription_list->tail) {
-		subscription_list->tail->next = s;
-		subscription_list->tail = s;
-	}
-	else subscription_list->tail = s;
-	if (!subscription_list->head) subscription_list->head = s;		
-	lock_release(subscription_list->lock);
+	s->hash = get_subscription_hash(s->req_uri);
+	subs_lock(s->hash);
+		s->next = 0;
+		s->prev = subscriptions[s->hash].tail;
+		if (subscriptions[s->hash].tail) subscriptions[s->hash].tail->next = s;			
+		subscriptions[s->hash].tail = s;
+		if (!subscriptions[s->hash].head) subscriptions[s->hash].head = s;		
+	subs_unlock(s->hash);
 }
 
 /**
@@ -419,54 +493,62 @@ void add_r_subscription(r_subscription *s)
  * @param expires - new expiration time
  * @returns 1 if found, 0 if not
  */
-int update_r_subscription(str aor,int expires)
+int update_r_subscription(r_subscription *s,int expires)
+{
+	LOG(L_DBG,"DBG:"M_NAME":update_r_subscription: refreshing subscription for <%.*s> [%d]\n",
+		s->req_uri.len,s->req_uri.s,expires);
+	s->attempts_left = -1;
+	if (expires == 0) del_r_subscription_nolock(s);
+	else s->expires = expires+time_now;;
+	subs_unlock(s->hash);	
+	return 1;
+}
+
+/**
+ * Returns a subscription if it exists
+ * \note - this returns with a lock on the subscriptions[s->hash] if found. Don't forget to unlock when done!!!
+ * @param aor - AOR to look for
+ * @returns 1 if found, 0 if not
+ */
+r_subscription* get_r_subscription(str aor)
 {
 	r_subscription *s;
-	lock_get(subscription_list->lock);
-	s = subscription_list->head;
-	r_act_time();
-	while(s){
-		if (s->req_uri.len == aor.len &&
-			strncasecmp(s->req_uri.s,aor.s,aor.len)==0)
-		{
-			LOG(L_DBG,"DBG:"M_NAME":update_r_subscription: refreshing subscription for <%.*s> [%d]\n",
-				aor.len,aor.s,expires);
-			s->attempts = 0;
-			if (expires == 0){
-				del_r_subscription_nolock(s);
-			}else{
-				s->expires = expires+time_now;;
+	unsigned int hash = get_subscription_hash(aor);
+	subs_lock(hash);
+		s = subscriptions[hash].head;
+		while(s){
+			if (s->req_uri.len == aor.len &&
+				strncasecmp(s->req_uri.s,aor.s,aor.len)==0)
+			{
+				return s;
 			}
-			lock_release(subscription_list->lock);	
-			return 1;
+			s = s->next;
 		}
-		s = s->next;
-	}
-	lock_release(subscription_list->lock);	
+	subs_unlock(hash);	
 	return 0;
 }
 
 /**
  * Finds out if a subscription exists
- * \todo Maybe we should use a hash here to index it as this is called for every notification
  * @param aor - AOR to look for
  * @returns 1 if found, 0 if not
  */
 int is_r_subscription(str aor)
 {
 	r_subscription *s;
-	lock_get(subscription_list->lock);
-	s = subscription_list->head;
-	while(s){
-		if (s->req_uri.len == aor.len &&
-			strncasecmp(s->req_uri.s,aor.s,aor.len)==0)
-		{
-			lock_release(subscription_list->lock);	
-			return 1;
+	unsigned int hash = get_subscription_hash(aor);
+	subs_lock(hash);
+		s = subscriptions[hash].head;
+		while(s){
+			if (s->req_uri.len == aor.len &&
+				strncasecmp(s->req_uri.s,aor.s,aor.len)==0)
+			{
+				subs_unlock(hash);	
+				return 1;
+			}
+			s = s->next;
 		}
-		s = s->next;
-	}
-	lock_release(subscription_list->lock);	
+	subs_unlock(hash);	
 	return 0;
 }
 
@@ -477,12 +559,12 @@ int is_r_subscription(str aor)
 void del_r_subscription(r_subscription *s)
 {
 	if (!s) return;
-	lock_get(subscription_list->lock);
-	if (subscription_list->head == s) subscription_list->head = s->next;
-	else s->prev->next = s->next;
-	if (subscription_list->tail == s) subscription_list->tail = s->prev;
-	else s->next->prev = s->prev;
-	lock_release(subscription_list->lock);
+	subs_lock(s->hash);
+		if (subscriptions[s->hash].head == s) subscriptions[s->hash].head = s->next;
+		else s->prev->next = s->next;
+		if (subscriptions[s->hash].tail == s) subscriptions[s->hash].tail = s->prev;
+		else s->next->prev = s->prev;
+	subs_unlock(s->hash);
 	free_r_subscription(s);
 }
 
@@ -494,9 +576,9 @@ void del_r_subscription(r_subscription *s)
 void del_r_subscription_nolock(r_subscription *s)
 {
 	if (!s) return;
-	if (subscription_list->head == s) subscription_list->head = s->next;
+	if (subscriptions[s->hash].head == s) subscriptions[s->hash].head = s->next;
 	else s->prev->next = s->next;
-	if (subscription_list->tail == s) subscription_list->tail = s->prev;
+	if (subscriptions[s->hash].tail == s) subscriptions[s->hash].tail = s->prev;
 	else s->next->prev = s->prev;
 	free_r_subscription(s);
 }
@@ -509,13 +591,29 @@ void free_r_subscription(r_subscription *s)
 {
 	if (s){
 		if (s->req_uri.s) shm_free(s->req_uri.s);
-		if (s->from.s) shm_free(s->from.s);
-		if (s->asserted_identity.s) shm_free(s->asserted_identity.s);
+		if (s->dialog) tmb.free_dlg(s->dialog);
 		shm_free(s);
 	}
 }
 
-
+void print_subs(int log_level)
+{
+	r_subscription *s;
+	int i;
+	LOG(log_level,ANSI_GREEN"INF:"M_NAME":----------  Subscription list begin ---------\n");
+	for(i=0;i<subscriptions_hash_size;i++){
+		subs_lock(i);
+		s = subscriptions[i].head;
+		r_act_time();
+		while(s){
+			LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4u]\tP: <"ANSI_BLUE"%.*s"ANSI_GREEN"> D:["ANSI_CYAN"%5d"ANSI_GREEN"] E:["ANSI_MAGENTA"%5d"ANSI_GREEN"] Att:[%2d]\n",
+				s->hash,s->req_uri.len,s->req_uri.s,s->duration,(int)(s->expires-time_now),s->attempts_left);
+			s = s->next;			
+		}
+		subs_unlock(i);
+	}
+	LOG(log_level,ANSI_GREEN"INF:"M_NAME":----------  Subscription list end -----------\n");	
+}
 
 
 
@@ -782,6 +880,7 @@ int r_notification_process(r_notification *n,int expires)
 	struct sip_uri puri;
 	enum Reg_States reg_state;
 	int expires2;
+	r_subscription *s=0;
 	
 	r_notification_print(n);	
 	if (!n) return 0;
@@ -823,8 +922,11 @@ int r_notification_process(r_notification *n,int expires)
 next:				
 			rc = rc->next;	
 		}
-		
-		update_r_subscription(r->aor,expires);
+		s = get_r_subscription(r->aor);
+		if (s){
+			update_r_subscription(s,expires);
+			subs_unlock(s->hash);
+		}
 		r = r->next;
 	}
 
@@ -841,14 +943,14 @@ void r_notification_print(r_notification *n)
 	r_regcontact *c;
 	
 	if (!n) return;
-	LOG(L_DBG,"DBG:"M_NAME":r_notification_process: State %d\n",n->state);
+	LOG(L_DBG,"DBG:"M_NAME":r_notification_print: State %d\n",n->state);
 	r = n->registration;
 	while(r){
-		LOG(L_DBG,"DBG:"M_NAME":r_notification_process: \tR [%d] ID<%.*s> AOR<%.*s>\n",r->state,
+		LOG(L_DBG,"DBG:"M_NAME":r_notification_print: \tR [%d] ID<%.*s> AOR<%.*s>\n",r->state,
 			r->id.len,r->id.s,r->aor.len,r->aor.s);
 		c = r->contact;
 		while(c){
-			LOG(L_DBG,"DBG:"M_NAME":r_notification_process: \t\tC [%d]>[%d] ID<%.*s> URI<%.*s>\n",c->state,
+			LOG(L_DBG,"DBG:"M_NAME":r_notification_print: \t\tC [%d]>[%d] ID<%.*s> URI<%.*s>\n",c->state,
 				c->event,c->id.len,c->id.s,c->uri.len,c->uri.s);
 			c = c->next;
 		}

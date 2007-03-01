@@ -312,24 +312,24 @@ static int extract_mediaip(str *body, str *mediaip, int *pf)
 
 
 
-static int sdp_1918(struct sip_msg* msg)
-{
-	str body, ip;
-	int pf;
-
-	if (extract_body(msg, &body) == -1) {
-		LOG(L_ERR,"ERROR: sdp_1918: cannot extract body from msg!\n");
-		return 0;
-	}
-	if (extract_mediaip(&body, &ip, &pf) == -1) {
-		LOG(L_ERR, "ERROR: sdp_1918: can't extract media IP from the SDP\n");
-		return 0;
-	}
-	if (pf != AF_INET || isnulladdr(&ip, pf))
-		return 0;
-
-	return (is1918addr(&ip) == 1) ? 1 : 0;
-}
+//static int sdp_1918(struct sip_msg* msg)
+//{
+//	str body, ip;
+//	int pf;
+//
+//	if (extract_body(msg, &body) == -1) {
+//		LOG(L_ERR,"ERROR: sdp_1918: cannot extract body from msg!\n");
+//		return 0;
+//	}
+//	if (extract_mediaip(&body, &ip, &pf) == -1) {
+//		LOG(L_ERR, "ERROR: sdp_1918: can't extract media IP from the SDP\n");
+//		return 0;
+//	}
+//	if (pf != AF_INET || isnulladdr(&ip, pf))
+//		return 0;
+//
+//	return (is1918addr(&ip) == 1) ? 1 : 0;
+//}
 
 static int alter_mediaip(struct sip_msg *msg, str *body, str *oldip, int oldpf,
   			str *newip, int newpf, int preserve)

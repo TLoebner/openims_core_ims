@@ -756,8 +756,7 @@ void qm_info(struct qm_block* qm, struct mem_info* info)
 	void qm_sums(struct qm_block* qm)
 	{
 		struct qm_frag* f;
-		int i;
-		int memlog=L_ERR;
+		int i;		
 		mem_counter *root=0,*x;
 		lock_get(process_lock);
 		if (process_no!=0)
