@@ -24,11 +24,13 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program; if not, write to the Free Software 
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-/* History:
+ *
+ * History:
  * --------
  *  2003-03-11  converted to the new locking interface: locking.h --
  *               major changes (andrei)
+ *  2005-05-02  flags field added to node stucture -better sync between timer
+ *              and worker processes; some races eliminated (bogdan)
  */
 
 
@@ -37,6 +39,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+//#include <arpa/inet.h>
 
 #include "../../mem/shm_mem.h"
 #include "../../locking.h"
@@ -68,14 +71,14 @@ void print_timer_list(struct list_link *head)
 }
 
 
-#define _test
 int pike_check_req(struct sip_msg *msg, char *foo, char *bar)
 {
 	struct ip_node *node;
 	struct ip_node *father;
 	unsigned char flags;
 	struct ip_addr* ip;
-
+	int update_timer;
+	
 
 #ifdef _test
 	/* get the ip address from second via */
@@ -91,7 +94,7 @@ int pike_check_req(struct sip_msg *msg, char *foo, char *bar)
 	ip = &(msg->rcv.src_ip);
 #endif
 
-
+	update_timer=(int)(long)foo;
 	/* first lock the proper tree branch and mark the IP with one more hit*/
 	lock_tree_branch( ip->u.addr[0] );
 	node = mark_node( ip->u.addr, ip->len, &father, &flags);
@@ -101,10 +104,12 @@ int pike_check_req(struct sip_msg *msg, char *foo, char *bar)
 		return 1;
 	}
 
-	DBG("DEBUG:pike_check_req: src IP [%s]; hits=[%d,%d],[%d,%d] flags=%d\n",
-		ip_addr2a( ip ),
+	DBG("DEBUG:pike_check_req: src IP [%s],node=%p; hits=[%d,%d],[%d,%d] "
+		"node_flags=%d func_flags=%d\n",
+		ip_addr2a( ip ), node,
 		node->hits[PREV_POS],node->hits[CURR_POS],
-		node->leaf_hits[PREV_POS],node->leaf_hits[CURR_POS], flags);
+		node->leaf_hits[PREV_POS],node->leaf_hits[CURR_POS],
+		node->flags, flags);
 
 	/* update the timer */
 	lock_get(timer_lock);
@@ -112,28 +117,48 @@ int pike_check_req(struct sip_msg *msg, char *foo, char *bar)
 		/* put this node into the timer list and remove its
 		   father only if this has one kid and is not a LEAF_NODE*/
 		node->expires =  get_ticks() + timeout;
+		DBG("DEBUG:pike:pike_check_req: expires: %d, get_ticks: %d, timeout: %d", node->expires, node->expires-timeout, timeout);
 		append_to_timer( timer, &(node->timer_ll) );
-		if (father)
-		DBG("DEBUG:pike_check_req: father: leaf_hits=%d kids->next=%p\n",
-			father->leaf_hits[CURR_POS],father->kids->next);
-		if (father && father->leaf_hits[CURR_POS]==0 && father->kids->next==0){
-			assert( has_timer_set(&(father->timer_ll)) ); /* debug */
-			remove_from_timer( timer, &(father->timer_ll) );
+		node->flags |= NODE_INTIMER_FLAG;
+		if (father) {
+			DBG("DEBUG:pike_check_req: father %p: flags=%d kids->next=%p\n",
+				father,father->flags,father->kids->next);
+			if (!(father->flags&NODE_IPLEAF_FLAG) && !father->kids->next){
+				/* debug */
+				assert( has_timer_set(&(father->timer_ll))
+					&& (father->flags&(NODE_EXPIRED_FLAG|NODE_INTIMER_FLAG)) );
+				/* if the node is maked as expired by timer, let the timer
+				 * to finish and remove the node */
+				if ( !(father->flags&NODE_EXPIRED_FLAG) ) {
+					remove_from_timer( timer, &(father->timer_ll) );
+					father->flags &= ~NODE_INTIMER_FLAG;
+				} else {
+					father->flags &= ~NODE_EXPIRED_FLAG;
+				}
+			}
 		}
 	} else {
 		/* update the timer -> in timer can be only nodes
 		 * as IP-leaf(complete address) or tree-leaf */
-		if (node->leaf_hits[CURR_POS] || node->kids==0) {
+		if (node->flags&NODE_IPLEAF_FLAG || node->kids==0) {
 			/* tree leafs which are not potential red nodes are not update in
 			 * order to make them to expire */
-			assert( has_timer_set(&(node->timer_ll)) ); /* debug */
-			if ( !(flags&NO_UPDATE) ) {
+			/* debug */
+			assert( has_timer_set(&(node->timer_ll)) 
+				&& (node->flags&(NODE_EXPIRED_FLAG|NODE_INTIMER_FLAG)) );
+			/* if node exprired, ignore the current hit and let is
+			 * expire in timer process */
+			if (!update_timer && !(flags&NO_UPDATE) &&
+							!(node->flags&NODE_EXPIRED_FLAG) ) {
 				node->expires = get_ticks() + timeout;
 				update_in_timer( timer, &(node->timer_ll) );
 			}
 		} else {
-			assert( !has_timer_set(&(node->timer_ll)) ); /* debug */
-			assert( node->hits[CURR_POS] && node->kids ); /* debug */
+			/* debug */
+			assert( !has_timer_set(&(node->timer_ll)) 
+				&& !(node->flags&(NODE_INTIMER_FLAG|NODE_EXPIRED_FLAG)) );
+			/* debug */
+			assert( !(node->flags&NODE_IPLEAF_FLAG) && node->kids );
 		}
 	}
 	/*print_timer_list( timer );*/ /* debug*/
@@ -164,11 +189,15 @@ void clean_routine(unsigned int ticks , void *param)
 	/* DBG("DEBUG:pike:clean_routine:  entering (%d)\n",ticks); */
 	/* before locking check first if the list is not empty and if can
 	 * be at least one element removed */
-	if ( is_list_empty( timer ) || ll2ipnode(timer->next)->expires>ticks )
-		return;
+	if ( is_list_empty( timer )) return; /* quick exit */
 
 	/* get the expired elements */
 	lock_get( timer_lock );
+	/* check again for empty list */
+	if (is_list_empty(timer) || (ll2ipnode(timer->next)->expires>ticks )){
+		lock_release( timer_lock );
+		return;
+	}
 	check_and_split_timer( timer, ticks, &head, mask);
 	/*print_timer_list(timer);*/ /* debug */
 	lock_release( timer_lock );
@@ -198,6 +227,10 @@ void clean_routine(unsigned int ticks , void *param)
 			ll->prev = ll->prev->prev;
 			node->expires = 0;
 			node->timer_ll.prev = node->timer_ll.next = 0;
+			if ( node->flags&NODE_EXPIRED_FLAG )
+				node->flags &= ~NODE_EXPIRED_FLAG;
+			else
+				continue;
 
 			/* process the node */
 			DBG("DEBUG:pike:clean_routine: clean node %p (kids=%p;"
@@ -208,7 +241,8 @@ void clean_routine(unsigned int ticks , void *param)
 			 * ipv6 address -> just remove it from timer it will be deleted
 			 * only when all its kids will be deleted also */
 			if (node->kids) {
-				assert( node->leaf_hits[CURR_POS] );
+				assert( node->flags&NODE_IPLEAF_FLAG );
+				node->flags &= ~NODE_IPLEAF_FLAG;
 				node->leaf_hits[CURR_POS] = 0;
 			} else {
 				/* if the node has no prev, means its a top branch node -> just
@@ -221,11 +255,12 @@ void clean_routine(unsigned int ticks , void *param)
 						dad = node->prev;
 						/* put it in the list only if it's not an IP leaf
 						 * (in this case, it's already there) */
-						if (dad->leaf_hits[CURR_POS]==0) {
+						if ( !(dad->flags&NODE_IPLEAF_FLAG) ) {
 							lock_get(timer_lock);
 							dad->expires = get_ticks() + timeout;
 							assert( !has_timer_set(&(dad->timer_ll)) );
 							append_to_timer( timer, &(dad->timer_ll));
+							dad->flags |= NODE_INTIMER_FLAG;
 							lock_release(timer_lock);
 						} else {
 							assert( has_timer_set(&(dad->timer_ll)) );
@@ -270,7 +305,8 @@ void swap_routine( unsigned int ticks, void *param)
 		node = get_tree_branch(i);
 		if (node) {
 			lock_tree_branch( i );
-			refresh_node( node );
+			node = get_tree_branch(i); /* again, to avoid races */
+			if (node) refresh_node( node );
 			unlock_tree_branch( i );
 		}
 	}

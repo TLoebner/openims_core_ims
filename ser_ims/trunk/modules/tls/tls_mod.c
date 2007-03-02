@@ -36,6 +36,8 @@
  * 2003-04-06: db connection closed in mod_init (janakj)
  * 2004-06-06  updated to the new DB api, cleanup: static dbf & handler,
  *              calls to domain_db_{bind,init,close,ver} (andrei)
+ * 2007-02-09  updated to the new tls_hooks api and renamed tls hooks hanlder
+ *              functions to avoid conflicts: s/tls_/tls_h_/   (andrei)
  */
 
 #include <sys/types.h>
@@ -45,8 +47,10 @@
 #include "../../sr_module.h"
 #include "../../ip_addr.h"
 #include "../../trim.h"
-#include "../../transport.h"
 #include "../../globals.h"
+#include "../../timer_ticks.h"
+#include "../../timer.h" /* ticks_t */
+#include "../../tls_hooks.h"
 #include "tls_init.h"
 #include "tls_server.h"
 #include "tls_domain.h"
@@ -54,6 +58,20 @@
 #include "tls_config.h"
 #include "tls_rpc.h"
 #include "tls_mod.h"
+
+#ifndef TLS_HOOKS
+	#error "TLS_HOOKS must be defined, or the tls module won't work"
+#endif
+#ifdef CORE_TLS
+	#error "conflict: CORE_TLS must _not_ be defined"
+#endif
+
+
+/* maximum accepted lifetime (maximum possible is  ~ MAXINT/2)
+ *  (it should be kept in sync w/ MAX_TCP_CON_LIFETIME from tcp_main.c:
+ *   MAX_TLS_CON_LIFETIME <= MAX_TCP_CON_LIFETIME )*/
+#define MAX_TLS_CON_LIFETIME	(1U<<(sizeof(ticks_t)*8-1))
+
 
 
 /*
@@ -73,6 +91,7 @@
  * Module management function prototypes
  */
 static int mod_init(void);
+static int mod_child(int rank);
 static void destroy(void);
 
 MODULE_VERSION
@@ -146,7 +165,7 @@ static str tls_method = STR_STATIC_INIT("TLSv1");
 
 int tls_handshake_timeout = 120;
 int tls_send_timeout = 120;
-int tls_conn_timeout = 600;
+int tls_con_lifetime = 600; /* this value will be adjusted to ticks later */
 int tls_log = 3;
 int tls_session_cache = 0;
 str tls_session_id = STR_STATIC_INIT("ser-tls-0.9.0");
@@ -182,11 +201,15 @@ static param_export_t params[] = {
 	{"cipher_list",         PARAM_STRING, &mod_params.cipher_list },
 	{"handshake_timeout",   PARAM_INT,    &tls_handshake_timeout  },
 	{"send_timeout",        PARAM_INT,    &tls_send_timeout       },
-	{"connection_timeout",  PARAM_INT,    &tls_conn_timeout       },
+	{"connection_timeout",  PARAM_INT,    &tls_con_lifetime       },
 	{"tls_log",             PARAM_INT,    &tls_log                },
 	{"session_cache",       PARAM_INT,    &tls_session_cache      },
 	{"session_id",          PARAM_STR,    &tls_session_id         },
 	{"config",              PARAM_STR,    &tls_cfg_file           },
+	{"tls_disable_compression", PARAM_INT,&tls_disable_compression},
+	{"tls_force_run",       PARAM_INT,    &tls_force_run},
+	{"low_mem_threshold1",       PARAM_INT,    &openssl_mem_threshold1},
+	{"low_mem_threshold2",       PARAM_INT,    &openssl_mem_threshold2},
 	{0, 0, 0}
 };
 
@@ -203,29 +226,26 @@ struct module_exports exports = {
 	0,          /* response function*/
 	destroy,    /* destroy function */
 	0,          /* cancel function */
-	0           /* per-child init function */
+	mod_child   /* per-child init function */
 };
 
 
 
-transport_t tls_transport = {
-	PROTO_TLS,
-	STR_STATIC_INIT("TLS"),
-	TRANSPORT_SECURE | TRANSPORT_STREAM,
-	{ 
-		.tcp = {
-			tls_tcpconn_init,
-			tls_tcpconn_clean,
-			tls_close,
-			tls_blocking_write,
-			tls_read,
-			tls_fix_read_conn,
-		}
-	},
-	0
+static struct tls_hooks tls_h = {
+	tls_h_read,
+	tls_h_blocking_write,
+	tls_h_tcpconn_init,
+	tls_h_tcpconn_clean,
+	tls_h_close,
+	tls_h_fix_read_conn,
+	tls_h_init_si,
+	init_tls_h,
+	destroy_tls_h
 };
 
 
+
+#if 0
 /*
  * Create TLS configuration from modparams
  */
@@ -238,12 +258,18 @@ static tls_cfg_t* tls_use_modparams(void)
 
 	
 }
+#endif
 
 
 static int mod_init(void)
 {
 	int method;
 
+	if (tls_disable){
+		LOG(L_WARN, "WARNING: tls: mod_init: tls support is disabled "
+				"(set enable_tls=1 in the config to enable it)\n");
+		return 0;
+	}
 	     /* Convert tls_method parameter to integer */
 	method = tls_parse_method(&tls_method);
 	if (method < 0) {
@@ -259,10 +285,10 @@ static int mod_init(void)
 	}
 	*tls_cfg = NULL;
 
-	tls = &tls_transport;
+	register_tls_hooks(&tls_h);
 	register_select_table(tls_sel);
 
-	if (init_tls() < 0) return -1;
+	 /* if (init_tls() < 0) return -1; */
 	
 	tls_cfg_lock = lock_alloc();
 	if (tls_cfg_lock == 0) {
@@ -278,36 +304,54 @@ static int mod_init(void)
 	if (tls_cfg_file.s) {
 		*tls_cfg = tls_load_config(&tls_cfg_file);
 		if (!(*tls_cfg)) return -1;
-		if (tls_fix_cfg(*tls_cfg, &srv_defaults, &cli_defaults) < 0) return -1;
 	} else {
 		*tls_cfg = tls_new_cfg();
 		if (!(*tls_cfg)) return -1;
-		if (tls_fix_cfg(*tls_cfg, &mod_params, &mod_params) < 0) return -1;
 	}
 
 	if (tls_check_sockets(*tls_cfg) < 0) return -1;
 
+	/* fix the timeouts from s to ticks */
+	if (tls_con_lifetime<0){
+		/* set to max value (~ 1/2 MAX_INT) */
+		tls_con_lifetime=MAX_TLS_CON_LIFETIME;
+	}else{
+		if ((unsigned)tls_con_lifetime > 
+				(unsigned)TICKS_TO_S(MAX_TLS_CON_LIFETIME)){
+			LOG(L_WARN, "tls: mod_init: tls_con_lifetime too big (%u s), "
+					" the maximum value is %u\n", tls_con_lifetime,
+					TICKS_TO_S(MAX_TLS_CON_LIFETIME));
+			tls_con_lifetime=MAX_TLS_CON_LIFETIME;
+		}else{
+			tls_con_lifetime=S_TO_TICKS(tls_con_lifetime);
+		}
+	}
+	
+
+
+	return 0;
+}
+
+
+static int mod_child(int rank)
+{
+	if (tls_disable || (tls_cfg==0))
+		return 0;
+	/* fix tls config only from the main proc., when we know 
+	 * the exact process number */
+	if (rank == PROC_MAIN){
+		if (tls_cfg_file.s){
+			if (tls_fix_cfg(*tls_cfg, &srv_defaults, &cli_defaults) < 0) 
+				return -1;
+		}else{
+			if (tls_fix_cfg(*tls_cfg, &mod_params, &mod_params) < 0) 
+				return -1;
+		}
+	}
 	return 0;
 }
 
 
 static void destroy(void)
 {
-	tls_cfg_t* ptr;
-
-	if (tls_cfg_lock) {
-		lock_destroy(tls_cfg_lock);
-		lock_dealloc(tls_cfg_lock);
-	}
-
-	if (tls_cfg) {
-		while(*tls_cfg) {
-			ptr = *tls_cfg;
-			*tls_cfg = (*tls_cfg)->next;
-			tls_free_cfg(ptr);
-		}
-		
-		shm_free(tls_cfg);
-	}
-	destroy_tls();
 }

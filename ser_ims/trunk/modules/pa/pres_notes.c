@@ -15,37 +15,37 @@ static int db_add_pres_note(presentity_t *p, pa_presence_note_t *n)
 	
 	/* set data */
 	
-	cols[n_updates] = "dbid";
+	cols[n_updates] = col_dbid;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = n->dbid;
 	n_updates++;
 	
-	cols[n_updates] = "pres_id";
+	cols[n_updates] = col_pres_id;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = p->pres_id;
 	n_updates++;
 	
-	cols[n_updates] = "etag";
+	cols[n_updates] = col_etag;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = n->etag;
 	n_updates++;
 
-	cols[n_updates] = "note";
+	cols[n_updates] = col_note;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = n->data.value;
 	n_updates++;
 	
-	cols[n_updates] = "lang";
+	cols[n_updates] = col_lang;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = n->data.lang;
 	n_updates++;
 	
-	cols[n_updates] = "expires";
+	cols[n_updates] = col_expires;
 	vals[n_updates].type = DB_DATETIME;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.time_val = n->expires;
@@ -54,12 +54,12 @@ static int db_add_pres_note(presentity_t *p, pa_presence_note_t *n)
 	/* run update */
 	
 	if (pa_dbf.use_table(pa_db, presentity_notes_table) < 0) {
-		LOG(L_ERR, "db_add_pres_note: Error in use_table\n");
+		ERR("Error in use_table\n");
 		return -1;
 	}
 
 	if (pa_dbf.insert(pa_db, cols, vals, n_updates) < 0) {
-		LOG(L_ERR, "db_add_pres_note: Can't insert record\n");
+		ERR("Can't insert record\n");
 		return -1;
 	}
 	
@@ -72,7 +72,7 @@ int db_update_pres_note(presentity_t *p, pa_presence_note_t *n)
 	db_val_t vals[20];
 	int n_updates = 0;
 	
-	db_key_t keys[] = { "pres_id", "etag", "dbid" };
+	db_key_t keys[] = { col_pres_id, col_etag, col_dbid };
 	db_op_t ops[] = { OP_EQ, OP_EQ, OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = p->pres_id } },
 		{ DB_STR, 0, { .str_val = n->etag } },
@@ -81,26 +81,26 @@ int db_update_pres_note(presentity_t *p, pa_presence_note_t *n)
 	
 	if (!use_db) return 0;
 	
-	cols[n_updates] = "note";
+	cols[n_updates] = col_note;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = n->data.value;
 	n_updates++;
 	
-	cols[n_updates] = "lang";
+	cols[n_updates] = col_lang;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = n->data.lang;
 	n_updates++;
 	
-	cols[n_updates] = "expires";
+	cols[n_updates] = col_expires;
 	vals[n_updates].type = DB_DATETIME;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.time_val = n->expires;
 	n_updates++;	
 
 	if (pa_dbf.use_table(pa_db, presentity_notes_table) < 0) {
-		LOG(L_ERR, "db_remove_pres_note: Error in use_table\n");
+		ERR("Error in use_table\n");
 		return -1;
 	}
 	
@@ -115,7 +115,7 @@ int db_update_pres_note(presentity_t *p, pa_presence_note_t *n)
 
 static int db_remove_pres_note(presentity_t *p, pa_presence_note_t *n)
 {
-	db_key_t keys[] = { "pres_id", "etag", "dbid" };
+	db_key_t keys[] = { col_pres_id, col_etag, col_dbid };
 	db_op_t ops[] = { OP_EQ, OP_EQ, OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = p->pres_id } },
 		{ DB_STR, 0, { .str_val = n->etag } },
@@ -125,12 +125,12 @@ static int db_remove_pres_note(presentity_t *p, pa_presence_note_t *n)
 	if (!use_db) return 0;
 
 	if (pa_dbf.use_table(pa_db, presentity_notes_table) < 0) {
-		LOG(L_ERR, "db_remove_pres_note: Error in use_table\n");
+		ERR("Error in use_table\n");
 		return -1;
 	}
 
 	if (pa_dbf.delete(pa_db, keys, ops, k_vals, 3) < 0) {
-		LOG(L_ERR, "db_remove_pres_note: Can't delete record\n");
+		ERR("Can't delete record\n");
 		return -1;
 	}
 	
@@ -139,28 +139,28 @@ static int db_remove_pres_note(presentity_t *p, pa_presence_note_t *n)
 
 int db_read_notes(presentity_t *p, db_con_t* db)
 {
-	db_key_t keys[] = { "pres_id" };
+	db_key_t keys[] = { col_pres_id };
 	db_op_t ops[] = { OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = p->pres_id } } };
 
 	int i;
 	int r = 0;
 	db_res_t *res = NULL;
-	db_key_t result_cols[] = { "dbid", "etag", 
-		"note", "lang", "expires"
+	db_key_t result_cols[] = { col_dbid, col_etag, 
+		col_note, col_lang, col_expires
 	};
 	
 	if (!use_db) return 0;
 
 	if (pa_dbf.use_table(db, presentity_notes_table) < 0) {
-		LOG(L_ERR, "db_read_notes: Error in use_table\n");
+		ERR("Error in use_table\n");
 		return -1;
 	}
 	
 	if (pa_dbf.query (db, keys, ops, k_vals,
 			result_cols, 1, sizeof(result_cols) / sizeof(db_key_t), 
 			0, &res) < 0) {
-		LOG(L_ERR, "db_read_notes(): Error while querying presence notes\n");
+		ERR("Error while querying presence notes\n");
 		return -1;
 	}
 

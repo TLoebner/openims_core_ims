@@ -42,6 +42,8 @@
  *  2005-12-19  select framework (mma)
  *  2006-04-12  updated *_send() calls to use a struct dest_info (andrei)
  *  2006-07-27  dns cache and dns based send address failover support (andrei)
+ *  2006-12-06  on popular request last_retcode set also by module functions
+ *              (andrei)
  */
 
 
@@ -681,6 +683,7 @@ int do_action(struct action* a, struct sip_msg* msg)
 					(char*)a->val[3].u.data
 				);
 				if (ret==0) run_flags|=EXIT_R_F;
+				last_retcode=ret;
 			} else {
 				LOG(L_CRIT,"BUG: do_action: bad module call\n");
 			}
@@ -884,11 +887,12 @@ error_fwd_uri:
 int run_actions(struct action* a, struct sip_msg* msg)
 {
 	struct action* t;
-	int ret=E_UNSPEC;
+	int ret;
 	static int rec_lev=0;
 	static jmp_buf jmp_env;
 	struct sr_module *mod;
 
+	ret=E_UNSPEC;
 	rec_lev++;
 	if (rec_lev>ROUTE_MAX_REC_LEV){
 		LOG(L_ERR, "WARNING: too many recursive routing table lookups (%d)"

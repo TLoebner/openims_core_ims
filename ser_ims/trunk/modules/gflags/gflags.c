@@ -37,6 +37,8 @@
  * History:
  * --------
  *  2004-09-09  initial module created (jiri)
+ *  2006-12-04  added xmlrpc command global.reload for reloading of global_attrs
+ *              db table (vlada)
  *
  * TODO
  * - flag range checking
@@ -66,6 +68,7 @@ static int flush_gflags(struct sip_msg*, char*, char*);
 static int mod_init(void);
 static void mod_destroy(void);
 static int child_init(int rank);
+static int reload_global_attributes(void);
 
 static int initial = 0;
 static unsigned int *gflags;
@@ -81,7 +84,9 @@ static char* attr_flags = "flags";
 static db_con_t* con = 0;
 static db_func_t db;
 
-static avp_list_t global_avps;
+static avp_list_t* active_global_avps;
+static avp_list_t avps_1;
+static avp_list_t avps_2;
 static rpc_export_t rpc_methods[];
 
 static cmd_export_t cmds[]={
@@ -121,7 +126,13 @@ static int set_gflag(struct sip_msg *bar, char *flag_par, char *foo)
 {
 	unsigned long int flag;
 
-	flag=*((unsigned long int*)flag_par);
+	if (!flag_par || ((fparam_t*)flag_par)->type != FPARAM_INT) {
+	  LOG(L_ERR, "gflags:set_gflag: Invalid parameter\n");
+	  return -1;
+	}
+	
+	flag=((fparam_t*)flag_par)->v.i; 
+
 	(*gflags) |= 1 << flag;
 	return 1;
 }
@@ -130,7 +141,12 @@ static int reset_gflag(struct sip_msg *bar, char *flag_par, char *foo)
 {
 	unsigned long int flag;
 
-	flag=*((unsigned long int*)flag_par);
+	if (!flag_par || ((fparam_t*)flag_par)->type != FPARAM_INT) {
+	  LOG(L_ERR, "gflags:reset_gflag: Invalid parameter\n");
+	  return -1;
+	}
+	
+	flag=((fparam_t*)flag_par)->v.i; 
 	(*gflags) &= ~ (1 << flag);
 	return 1;
 }
@@ -139,15 +155,20 @@ static int is_gflag(struct sip_msg *bar, char *flag_par, char *foo)
 {
 	unsigned long int flag;
 
-	flag=*((unsigned long int*)flag_par);
+	if (!flag_par || ((fparam_t*)flag_par)->type != FPARAM_INT) {
+	  LOG(L_ERR, "gflags:is_gflag: Invalid parameter\n");
+	  return -1;
+	}
+	
+	flag=((fparam_t*)flag_par)->v.i; 
 	return ( (*gflags) & (1<<flag)) ? 1 : -1;
 }
 
 
 /*
- * Load attributes from domain_attrs table
+ * Load attributes from global_attrs table
  */
-static int load_attrs(void)
+static int load_attrs(avp_list_t* global_avps)
 {
 	int_str name, v;
 
@@ -221,7 +242,7 @@ static int load_attrs(void)
 			}
 		}
 
-		if (add_avp_list(&global_avps, flags, name, v) < 0) {
+		if (add_avp_list(global_avps, flags, name, v) < 0) {
 			LOG(L_ERR, "gflags:load_attrs: Error while adding global attribute %.*s, skipping\n",
 			    avp_name.len, ZSW(avp_name.s));
 			continue;
@@ -242,29 +263,32 @@ static int mod_init(void)
 	}
 	*gflags=initial;
 
-	global_avps = 0;
-	if (bind_dbmod(db_url, &db) < 0) { /* Find database module */
-		LOG(L_ERR, "gflags:mod_init: Can't bind database module\n");
-		return -1;
-	}
-	if (!DB_CAPABILITY(db, DB_CAP_ALL)) {
-		LOG(L_ERR, "gflags:mod_init: Database module does not implement"
-		    " all functions needed by the module\n");
-		return -1;
-	}
+	avps_1 = 0;
+	avps_2 = 0;
+	active_global_avps = &avps_1;
+	
 	if (load_global_attrs) {
+		if (bind_dbmod(db_url, &db) < 0) { /* Find database module */
+			LOG(L_ERR, "gflags:mod_init: Can't bind database module\n");
+			return -1;
+		}
+		if (!DB_CAPABILITY(db, DB_CAP_ALL)) {
+			LOG(L_ERR, "gflags:mod_init: Database module does not implement"
+			    " all functions needed by the module\n");
+			return -1;
+		}
 		con = db.init(db_url); /* Get a new database connection */
 		if (!con) {
 			LOG(L_ERR, "gflags:mod_init: Error while connecting database\n");
 			return -1;
 		}
 
-		if (load_attrs() < 0) {
+		if (load_attrs(active_global_avps) < 0) {
 			db.close(con);
 			return -1;
 		}
 
-		set_avp_list(AVP_CLASS_GLOBAL, &global_avps);
+		set_avp_list(AVP_CLASS_GLOBAL, active_global_avps);
 
 		db.close(con);
 	}
@@ -274,10 +298,14 @@ static int mod_init(void)
 
 static int child_init(int rank)
 {
-	con = db.init(db_url);
-	if (!con) {
-		LOG(L_ERR, "gflags:mod_init: Error while connecting database\n");
-		return -1;
+	if (load_global_attrs) {
+		if (rank==PROC_MAIN || rank==PROC_TCP_MAIN)
+			return 0; /* do nothing for the main or tcp_main processes */
+		con = db.init(db_url);
+		if (!con) {
+			LOG(L_ERR, "gflags:mod_init: Error while connecting database\n");
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -285,7 +313,13 @@ static int child_init(int rank)
 
 static void mod_destroy(void)
 {
-	destroy_avp_list(&global_avps);
+	if (avps_1 != 0) {
+		destroy_avp_list(&avps_1);
+	}
+	if (avps_2 != 0) {
+		destroy_avp_list(&avps_2);
+	}
+	active_global_avps = 0;
 }
 
 
@@ -342,6 +376,32 @@ int save_gflags(unsigned int flags)
 	return 0;
 }
 
+static int reload_global_attributes(void)
+{
+	avp_list_t*  new_global_avps;
+  
+  /* Choose new global AVP list and free its old contents */
+  if (active_global_avps == &avps_1) {
+  	destroy_avp_list(&avps_2);
+		new_global_avps = &avps_2;
+	} 
+	else {
+		destroy_avp_list(&avps_1);
+		new_global_avps = &avps_1;
+	}
+    
+  if (load_attrs(new_global_avps) < 0) {
+  	goto error;
+  }
+  
+  active_global_avps = new_global_avps;
+
+  return 0;
+    
+error:
+	destroy_avp_list(new_global_avps);
+  return -1;
+}
 
 /*
  * Flush the state of global flags into database
@@ -439,6 +499,25 @@ static void rpc_dump(rpc_t* rpc, void* c)
 	}
 }
 
+static const char* rpc_reload_doc[2] = {
+	"Reload global attributes from database",
+	0
+};
+
+/*
+ * Fifo function to reload domain table
+ */
+static void rpc_reload(rpc_t* rpc, void* ctx)
+{
+	if (reload_global_attributes() < 0) {
+		LOG(L_ERR, "ERROR: Reloading of global_attrs table has failed\n");
+		rpc->fault(ctx, 400, "Reloading of global attributes failed");
+	}
+	else {
+		/* reload is successful */
+		LOG(L_INFO, "INFO: global_attrs table reloaded\n");
+	}
+}
 
 /*
  * RPC Methods exported by this module
@@ -449,5 +528,6 @@ static rpc_export_t rpc_methods[] = {
 	{"gflags.reset",  rpc_reset,  rpc_reset_doc,  0},
 	{"gflags.flush",  rpc_flush,  rpc_flush_doc,  0},
 	{"gflags.dump",   rpc_dump,   rpc_dump_doc,   0},
+	{"global.reload", rpc_reload, rpc_reload_doc, 0},
 	{0, 0, 0, 0}
 };

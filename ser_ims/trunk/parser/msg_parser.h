@@ -39,11 +39,13 @@
  *  2004-11-08  added force_send_socket (andrei)
  *  2005-02-25  uri types added (sip, sips & tel)  (andrei)
  *  2006-04-20  uri comp member (only if USE_COMP is defined) (andrei)
+ *  2006-11-10  check_transaction_quadruple inlined (andrei)
  */
 
 
 #ifndef msg_parser_h
 #define msg_parser_h
+
 
 #include "../comp_defs.h"
 #include "../str.h"
@@ -58,6 +60,7 @@
 #include "parse_via.h"
 #include "parse_fline.h"
 #include "hf.h"
+#include "../error.h"
 
 
 /* convenience short-cut macros */
@@ -80,6 +83,7 @@ enum request_method { METHOD_UNDEF=0, METHOD_INVITE=1, METHOD_CANCEL=2, METHOD_A
                                (for failure route use) */
 #define FL_REPLIED     64  /* message branch received at least one reply
                                 (for failure route use) */
+#define FL_HASH_INDEX  128 /* msg->hash_index contains a valid value (tm use)*/
 
 
 #define IFISMETHOD(methodname,firstchar)                                  \
@@ -96,6 +100,11 @@ if (  (*tmp==(firstchar) || *tmp==((firstchar) | 32)) &&                  \
     ((req)->first_line.u.request.version.len >= HTTP_VERSION_LEN && \
     !strncasecmp((req)->first_line.u.request.version.s,             \
 		HTTP_VERSION, HTTP_VERSION_LEN))
+
+#define IS_SIP(req)                                                \
+    ((req)->first_line.u.request.version.len >= SIP_VERSION_LEN && \
+    !strncasecmp((req)->first_line.u.request.version.s,             \
+		SIP_VERSION, SIP_VERSION_LEN))
 
 /*
  * Return a URI to which the message should be really sent (not what should
@@ -134,6 +143,11 @@ struct sip_uri {
 
 enum _uri_type{ERROR_URI_T=0, SIP_URI_T, SIPS_URI_T, TEL_URI_T, TELS_URI_T};
 typedef enum _uri_type uri_type;
+enum _uri_flags{
+	URI_USER_NORMALIZE=1,
+	URI_SIP_USER_PHONE=2
+}; /* bit fields */
+typedef enum _uri_flags uri_flags;
 
 struct sip_uri {
 	str user;     /* Username */
@@ -145,9 +159,7 @@ struct sip_uri {
 	unsigned short port_no;
 	unsigned short proto; /* from transport */
 	uri_type type; /* uri scheme */
-#ifdef USE_COMP
-	unsigned short comp;
-#endif
+	uri_flags flags;
 	/* parameters */
 	str transport;
 	str ttl;
@@ -164,6 +176,9 @@ struct sip_uri {
 	str method_val;
 	str lr_val; /* lr value placeholder for lr=on a.s.o*/
 	str r2_val;
+#ifdef USE_COMP
+	unsigned short comp;
+#endif
 };
 
 
@@ -286,7 +301,22 @@ void free_sip_msg(struct sip_msg* msg);
    parsed; return 0 if those HFs can't be found
  */
 
-int check_transaction_quadruple( struct sip_msg* msg );
+
+/* make sure all HFs needed for transaction identification have been
+   parsed; return 0 if those HFs can't be found
+*/
+inline static int check_transaction_quadruple( struct sip_msg* msg )
+{
+	if ( parse_headers(msg, HDR_FROM_F|HDR_TO_F|HDR_CALLID_F|HDR_CSEQ_F,0)!=-1
+		&& msg->from && msg->to && msg->callid && msg->cseq ) {
+		return 1;
+	} else {
+		ser_error=E_BAD_TUPEL;
+		return 0;
+	}
+}
+
+
 
 /* calculate characteristic value of a message -- this value
    is used to identify a transaction during the process of

@@ -114,6 +114,8 @@
 #include "t_cancel.h"
 #include "t_fifo.h"
 #include "timer.h"
+#include "t_msgbuilder.h"
+#include "select.h"
 
 MODULE_VERSION
 
@@ -191,8 +193,10 @@ static int t_any_replied(struct sip_msg* msg, char*, char*);
 static int t_is_canceled(struct sip_msg* msg, char*, char*);
 
 
-static char *fr_timer_param = FR_TIMER_AVP;
-static char *fr_inv_timer_param = FR_INV_TIMER_AVP;
+/* by default the fr timers avps are not set, so that the avps won't be
+ * searched for nothing each time a new transaction is created */
+static char *fr_timer_param = 0 /*FR_TIMER_AVP*/;
+static char *fr_inv_timer_param = 0 /*FR_INV_TIMER_AVP*/;
 
 static rpc_export_t tm_rpc[];
 
@@ -296,12 +300,18 @@ static cmd_export_t cmds[]={
 	{"new_dlg_uac",        (cmd_function)new_dlg_uac,       NO_SCRIPT,   0, 0},
 	{"dlg_response_uac",   (cmd_function)dlg_response_uac,  NO_SCRIPT,   0, 0},
 	{"new_dlg_uas",        (cmd_function)new_dlg_uas,       NO_SCRIPT,   0, 0},
+	{"update_dlg_uas",     (cmd_function)update_dlg_uas,    NO_SCRIPT,   0, 0},
 	{"dlg_request_uas",    (cmd_function)dlg_request_uas,   NO_SCRIPT,   0, 0},
+	{"set_dlg_target",     (cmd_function)set_dlg_target,    NO_SCRIPT,   0, 0},
 	{"free_dlg",           (cmd_function)free_dlg,          NO_SCRIPT,   0, 0},
 	{"print_dlg",          (cmd_function)print_dlg,         NO_SCRIPT,   0, 0},
 	{T_GETT,               (cmd_function)get_t,             NO_SCRIPT,   0, 0},
 	{"calculate_hooks",    (cmd_function)w_calculate_hooks, NO_SCRIPT,   0, 0},
 	{"t_uac",              (cmd_function)t_uac,             NO_SCRIPT,   0, 0},
+	{"t_uac_with_ids",     (cmd_function)t_uac_with_ids,    NO_SCRIPT,   0, 0},
+	{"t_unref",            (cmd_function)t_unref,           NO_SCRIPT,   0, 0},
+	{"run_failure_handlers", (cmd_function)run_failure_handlers, NO_SCRIPT,   0, 0},
+	{"cancel_uacs",        (cmd_function)cancel_uacs,       NO_SCRIPT,   0, 0},
 	{0,0,0,0,0}
 };
 
@@ -329,7 +339,6 @@ static param_export_t params[]={
 	{"default_reason",      PARAM_STR, &default_reason                       },
 	{0,0,0}
 };
-
 
 #ifdef STATIC_TM
 struct module_exports tm_exports = {
@@ -522,6 +531,11 @@ static int mod_init(void)
 	/* init static hidden values */
 	init_t();
 
+	if (tm_init_selects()==-1) {
+		LOG(L_ERR, "ERROR: mod_init: select init failed\n");
+		return -1;
+	}
+	
 	if (tm_init_timers()==-1) {
 		LOG(L_ERR, "ERROR: mod_init: timer init failed\n");
 		return -1;
@@ -658,18 +672,16 @@ inline static int w_t_lookup_cancel(struct sip_msg* msg, char* str, char* str2)
 {
 	struct cell *ret;
 	if (msg->REQ_METHOD==METHOD_CANCEL) {
-		if (t_check( msg , 0 )==-1) {
-			LOG(L_WARN, "WARNING: t_lookup_cancel() failed to find transaction\n");
-			return -1;
-		}
 		ret = t_lookupOriginalT( msg );
 		DBG("lookup_original: t_lookupOriginalT returned: %p\n", ret);
 		if (ret != T_NULL_CELL) {
 			/* The cell is reffed by t_lookupOriginalT, but T is not set.
 			So we must unref it before returning. */
 			UNREF(ret);
+			set_t(T_UNDEFINED);
 			return 1;
 		}
+		set_t(T_UNDEFINED);
 	} else {
 		LOG(L_WARN, "WARNING: script error t_lookup_cancel() called for non-CANCEL request\n");
 	}
@@ -900,10 +912,15 @@ inline static int w_t_reply(struct sip_msg* msg, char* p1, char* p2)
 inline static int w_t_release(struct sip_msg* msg, char* str, char* str2)
 {
 	struct cell *t;
+	int ret;
+	
 	if (t_check( msg  , 0  )==-1) return -1;
 	t=get_t();
-	if ( t && t!=T_UNDEFINED )
-		return t_release_transaction( t );
+	if ( t && t!=T_UNDEFINED ) {
+		ret = t_release_transaction( t );
+		t_unref(msg);
+		return ret;
+	}
 	return 1;
 }
 
@@ -934,7 +951,7 @@ inline static int w_t_newtran( struct sip_msg* p_msg, char* foo, char* bar )
 	int ret;
 	ret = t_newtran( p_msg );
 	if (ret==E_SCRIPT) {
-		LOG(L_DBG, "ERROR: t_newtran: "
+		LOG(L_ERR, "ERROR: t_newtran: "
 			"transaction already in process %p\n", get_t() );
 	}
 	return ret;

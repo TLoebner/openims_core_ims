@@ -211,7 +211,7 @@ static int generate_avps(db_res_t* result, unsigned int row)
 	value.len = strlen(value.s);
 	ivalue.s = value;
 	
-	if (add_avp(AVP_NAME_STR | AVP_VAL_STR, iname, ivalue) < 0) {
+	if (add_avp(AVP_NAME_STR | AVP_VAL_STR | AVP_CLASS_USER, iname, ivalue) < 0) {
 	    LOG(L_ERR, "auth_db:generate_avps: Error while creating AVPs\n");
 	    return -1;
 	}
@@ -247,6 +247,7 @@ static inline int authenticate(struct sip_msg* msg, str* realm, str* table, hdr_
     
     switch(auth_api.pre_auth(msg, realm, hftype, &h)) {
     case ERROR:
+    case BAD_CREDENTIALS:
 	ret = -3;
 	goto end;
 	
@@ -264,13 +265,21 @@ static inline int authenticate(struct sip_msg* msg, str* realm, str* table, hdr_
     
     cred = (auth_body_t*)h->parsed;
 
-    if (msg->REQ_METHOD == METHOD_REGISTER) {
-	ret = get_to_did(&did, msg);
+    if (use_did) {
+	if (msg->REQ_METHOD == METHOD_REGISTER) {
+	    ret = get_to_did(&did, msg);
+	} else {
+	    ret = get_from_did(&did, msg);
+	}
+	if (ret == 0) {
+	    did.s = DEFAULT_DID;
+	    did.len = sizeof(DEFAULT_DID) - 1;
+	}
     } else {
-	ret = get_from_did(&did, msg);
+	did.len = 0;
+	did.s = 0;
     }
-    if (ret != 1) did = default_did;
-    
+
     res = get_ha1(&cred->digest.username, &did, realm, table, ha1, &result, &row);
     if (res < 0) {
 	ret = -2;
@@ -285,7 +294,8 @@ static inline int authenticate(struct sip_msg* msg, str* realm, str* table, hdr_
 	 /* Recalculate response, it must be same to authorize successfully */
     if (!check_response(&(cred->digest), &msg->first_line.u.request.method, ha1)) {
 	switch(auth_api.post_auth(msg, h)) {
-	case ERROR: 
+	case ERROR:
+	case BAD_CREDENTIALS:
 	    ret = -2; 
 	    break;
 	    

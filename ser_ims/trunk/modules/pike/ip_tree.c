@@ -119,7 +119,7 @@ static gen_lock_set_t* init_lock_set(int *size)
 
 
 /* Builds and Inits a new IP tree */
-int init_ip_tree(int maximum_hits)
+int init_ip_tree(unsigned int maximum_hits)
 {
 	int size;
 	int i;
@@ -143,8 +143,8 @@ int init_ip_tree(int maximum_hits)
 	for(i=0;i<MAX_IP_BRANCHES;i++) {
 		root->entries[i].node = 0;
 		root->entries[i].lock_idx = i % size;
-		DBG("DEBUG:pike:pike_ip_tree: branch %d takes lock index %d\n",
-			i, root->entries[i].lock_idx);
+		/*DBG("DEBUG:pike:pike_ip_tree: branch %d takes lock index %d\n",
+			i, root->entries[i].lock_idx);*/
 	}
 
 	root->max_hits = maximum_hits;
@@ -156,7 +156,7 @@ error:
 	return -1;
 }
 
-
+unsigned int get_max_hits() { return root != 0 ? root->max_hits : -1; }
 
 /* destroy an ip_node and all nodes under it; the nodes must be first removed
  * from any other lists/timers */
@@ -263,8 +263,19 @@ struct ip_node *split_node(struct ip_node* dad, unsigned char byte)
 	( (_node)->hits[CURR_POS]>=root->max_hits>>2 )
 
 #define MAX_TYPE_VAL(_x) \
-	(( (1<<(8*sizeof(_x)-1))-1 )|( (1<<(8*sizeof(_x)-1)) ))
+	(( (1U<<(8*sizeof(_x)-1))-1 )|( (1U<<(8*sizeof(_x)-1)) ))
 
+char *node_status_array[] = {"", "WARM", "HOT", "ALL"};
+node_status_t node_status(struct ip_node *node)
+{
+	if ( is_hot_leaf(node) )
+		return NODE_STATUS_HOT;
+
+	if ( is_warm_leaf(node) )
+		return NODE_STATUS_WARM;
+
+	return NODE_STATUS_OK;
+}
 
 /* mark with one more hit the given IP address - */
 struct ip_node* mark_node(unsigned char *ip,int ip_len,
@@ -298,7 +309,7 @@ struct ip_node* mark_node(unsigned char *ip,int ip_len,
 	/* what have we found? */
 	if (byte_pos==ip_len) {
 		/* we found the entire address */
-		*flag = LEAF_NODE;
+		node->flags |= NODE_IPLEAF_FLAG;
 		/* increment it, but be careful not to overflow the value */
 		if(node->leaf_hits[CURR_POS]<MAX_TYPE_VAL(node->leaf_hits[CURR_POS])-1)
 			node->leaf_hits[CURR_POS]++;
@@ -373,13 +384,15 @@ void print_node(struct ip_node *node,int sp, FILE *f)
 
 	/* print current node */
 	if (!f) {
-		DBG("[l%d] node %p; brh=%d byte=%d , hits={%d,%d} , "
-			"leaf_hits={%d,%d]\n",sp, node, node->branch, node->byte,
+		DBG("[l%d] node %p; brh=%d byte=%d flags=%d, hits={%d,%d} , "
+			"leaf_hits={%d,%d]\n",
+			sp, node, node->branch, node->byte, node->flags,
 			node->hits[PREV_POS],node->hits[CURR_POS],
 			node->leaf_hits[PREV_POS],node->leaf_hits[CURR_POS]);
 	} else {
-		fprintf(f,"[l%d] node %p; brh=%d byte=%d , hits={%d,%d} , "
-			"leaf_hits={%d,%d]\n",sp, node, node->branch, node->byte,
+		fprintf(f,"[l%d] node %p; brh=%d byte=%d flags=%d, hits={%d,%d} , "
+			"leaf_hits={%d,%d]\n",
+			sp, node, node->branch, node->byte, node->flags,
 			node->hits[PREV_POS],node->hits[CURR_POS],
 			node->leaf_hits[PREV_POS],node->leaf_hits[CURR_POS]);
 	}

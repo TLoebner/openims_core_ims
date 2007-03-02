@@ -68,7 +68,7 @@ CREATE TABLE missed_calls (
 INSERT INTO version (table_name, table_version) values ('credentials','7');
 CREATE TABLE credentials (
     auth_username VARCHAR(64) NOT NULL,
-    did VARCHAR(64) NOT NULL DEFAULT '_none',
+    did VARCHAR(64) NOT NULL DEFAULT '_default',
     realm VARCHAR(64) NOT NULL,
     password VARCHAR(28) NOT NULL DEFAULT '',
     flags INT NOT NULL DEFAULT '0',
@@ -79,7 +79,7 @@ CREATE TABLE credentials (
     KEY uid (uid)
 );
 
-INSERT INTO version (table_name, table_version) values ('attr_types','3');
+INSERT INTO version (table_name, table_version) values ('attr_types','4');
 CREATE TABLE attr_types (
     name VARCHAR(32) NOT NULL,
     rich_type VARCHAR(32) NOT NULL DEFAULT 'string',
@@ -91,6 +91,7 @@ CREATE TABLE attr_types (
     priority INT NOT NULL DEFAULT '0',
     access INT NOT NULL DEFAULT '0',
     ordering INT NOT NULL DEFAULT '0',
+    grp VARCHAR(32) NOT NULL DEFAULT 'other',
     UNIQUE KEY upt_idx1 (name)
 );
 
@@ -124,7 +125,7 @@ CREATE TABLE user_attrs (
     UNIQUE KEY userattrs_idx (uid, name, value)
 );
 
-INSERT INTO version (table_name, table_version) values ('uri_attrs','1');
+INSERT INTO version (table_name, table_version) values ('uri_attrs','2');
 CREATE TABLE uri_attrs (
     username VARCHAR(64) NOT NULL,
     did VARCHAR(64) NOT NULL,
@@ -132,8 +133,8 @@ CREATE TABLE uri_attrs (
     value VARCHAR(255),
     type INT NOT NULL DEFAULT '0',
     flags INT UNSIGNED NOT NULL DEFAULT '0',
-    scheme INT NOT NULL DEFAULT '0',
-    UNIQUE KEY uriattrs_idx (username, did, name, value)
+    scheme VARCHAR(8) NOT NULL DEFAULT 'sip',
+    UNIQUE KEY uriattrs_idx (username, did, name, value, scheme)
 );
 
 INSERT INTO version (table_name, table_version) values ('domain','2');
@@ -171,6 +172,17 @@ CREATE TABLE location (
     instance VARCHAR(255),
     UNIQUE KEY location_key (uid, contact),
     KEY location_contact (contact)
+);
+
+INSERT INTO version (table_name, table_version) values ('contact_attrs','1');
+CREATE TABLE contact_attrs (
+    uid VARCHAR(64) NOT NULL,
+    contact VARCHAR(255) NOT NULL,
+    name VARCHAR(32) NOT NULL,
+    value VARCHAR(255),
+    type INT NOT NULL DEFAULT '0',
+    flags INT UNSIGNED NOT NULL DEFAULT '0',
+    UNIQUE KEY contactattrs_idx (uid, contact, name)
 );
 
 INSERT INTO version (table_name, table_version) values ('trusted','1');
@@ -253,14 +265,14 @@ CREATE TABLE silo (
     UNIQUE KEY silo_idx1 (mid)
 );
 
-INSERT INTO version (table_name, table_version) values ('uri','2');
+INSERT INTO version (table_name, table_version) values ('uri','3');
 CREATE TABLE uri (
     uid VARCHAR(64) NOT NULL,
     did VARCHAR(64) NOT NULL,
     username VARCHAR(64) NOT NULL,
     flags INT UNSIGNED NOT NULL DEFAULT '0',
-    scheme INT NOT NULL DEFAULT '0',
-    KEY uri_idx1 (username, did),
+    scheme VARCHAR(8) NOT NULL DEFAULT 'sip',
+    KEY uri_idx1 (username, did, scheme),
     KEY uri_uid (uid)
 );
 
@@ -286,20 +298,20 @@ CREATE TABLE sd_attrs (
     UNIQUE KEY sd_idx (id, name, value)
 );
 
-INSERT INTO version (table_name, table_version) values ('presentity','1');
+INSERT INTO version (table_name, table_version) values ('presentity','5');
 CREATE TABLE presentity (
-    presid INT(10) UNSIGNED AUTO_INCREMENT NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     uri VARCHAR(255) NOT NULL,
     uid VARCHAR(64) NOT NULL,
     pdomain VARCHAR(128) NOT NULL,
-    UNIQUE KEY presentity_key (presid),
-    KEY presentity_key2 (uri)
+    xcap_params BLOB NOT NULL,
+    UNIQUE KEY presentity_key (pres_id)
 );
 
-INSERT INTO version (table_name, table_version) values ('presentity_notes','1');
+INSERT INTO version (table_name, table_version) values ('presentity_notes','5');
 CREATE TABLE presentity_notes (
     dbid VARCHAR(64) NOT NULL,
-    presid INT(10) UNSIGNED NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     etag VARCHAR(64) NOT NULL,
     note VARCHAR(128) NOT NULL,
     lang VARCHAR(64) NOT NULL,
@@ -307,67 +319,63 @@ CREATE TABLE presentity_notes (
     UNIQUE KEY pnotes_idx1 (dbid)
 );
 
-INSERT INTO version (table_name, table_version) values ('presentity_persons','1');
-CREATE TABLE presentity_persons (
+INSERT INTO version (table_name, table_version) values ('presentity_extensions','5');
+CREATE TABLE presentity_extensions (
     dbid VARCHAR(64) NOT NULL,
-    presid INT(10) UNSIGNED NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     etag VARCHAR(64) NOT NULL,
-    person_element BLOB NOT NULL,
-    id VARCHAR(128) NOT NULL,
+    element BLOB NOT NULL,
     expires DATETIME NOT NULL DEFAULT '2005-12-07 08:13:15',
-    UNIQUE KEY prespersons_idx1 (dbid)
+    UNIQUE KEY presextensions_idx1 (dbid)
 );
 
-INSERT INTO version (table_name, table_version) values ('presentity_contact','1');
+INSERT INTO version (table_name, table_version) values ('presentity_contact','5');
 CREATE TABLE presentity_contact (
-    contactid INT(10) UNSIGNED AUTO_INCREMENT NOT NULL,
-    presid INT(10) UNSIGNED NOT NULL,
-    basic VARCHAR(32) NOT NULL DEFAULT 'offline',
-    status VARCHAR(32) NOT NULL,
-    location VARCHAR(128) NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
+    basic INT(3) NOT NULL,
     expires DATETIME NOT NULL DEFAULT '2004-05-28 21:32:15',
-    placeid INT(10),
     priority FLOAT NOT NULL DEFAULT '0.5',
     contact VARCHAR(255),
     tupleid VARCHAR(64) NOT NULL,
-    prescaps INT(10) NOT NULL,
     etag VARCHAR(64) NOT NULL,
     published_id VARCHAR(64) NOT NULL,
-    UNIQUE KEY pc_idx1 (contactid),
-    KEY presid_index (presid),
-    KEY location_index (location),
-    KEY placeid_index (placeid)
+    UNIQUE KEY presid_index (pres_id, tupleid)
 );
 
-INSERT INTO version (table_name, table_version) values ('watcherinfo','1');
+INSERT INTO version (table_name, table_version) values ('watcherinfo','5');
 CREATE TABLE watcherinfo (
-    r_uri VARCHAR(255) NOT NULL,
     w_uri VARCHAR(255) NOT NULL,
     display_name VARCHAR(128) NOT NULL,
     s_id VARCHAR(64) NOT NULL,
     package VARCHAR(32) NOT NULL DEFAULT 'presence',
     status VARCHAR(32) NOT NULL DEFAULT 'pending',
     event VARCHAR(32) NOT NULL,
-    expires INT NOT NULL,
+    expires DATETIME NOT NULL DEFAULT '2005-12-07 08:13:15',
     accepts INT NOT NULL,
-    presid INT(10) UNSIGNED NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     server_contact VARCHAR(255) NOT NULL,
     dialog BLOB NOT NULL,
     doc_index INT NOT NULL,
-    UNIQUE KEY wi_idx1 (s_id),
-    KEY wi_ruri_idx (r_uri),
-    KEY wi_wuri_idx (w_uri)
+    UNIQUE KEY wi_idx1 (s_id)
 );
 
-INSERT INTO version (table_name, table_version) values ('tuple_notes','1');
+INSERT INTO version (table_name, table_version) values ('tuple_notes','5');
 CREATE TABLE tuple_notes (
-    presid INT(10) UNSIGNED NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     tupleid VARCHAR(64) NOT NULL,
     note VARCHAR(128) NOT NULL,
     lang VARCHAR(64) NOT NULL
 );
 
-INSERT INTO version (table_name, table_version) values ('offline_winfo','1');
+INSERT INTO version (table_name, table_version) values ('tuple_extensions','5');
+CREATE TABLE tuple_extensions (
+    pres_id VARCHAR(64) NOT NULL,
+    tupleid VARCHAR(64) NOT NULL,
+    element BLOB NOT NULL,
+    status_extension INT(1) NOT NULL
+);
+
+INSERT INTO version (table_name, table_version) values ('offline_winfo','5');
 CREATE TABLE offline_winfo (
     uid VARCHAR(64) NOT NULL,
     watcher VARCHAR(255) NOT NULL,

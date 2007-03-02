@@ -28,11 +28,21 @@
  * along with this program; if not, write to the Free Software 
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+/*
+ * History:
+ * --------
+ *  2007-01-26  openssl kerberos malloc bug detection/workaround (andrei)
+ *  2007-02-23  openssl low memory bugs workaround (andrei)
+ */
 
 #include <stdio.h>
+#include <sys/types.h>
+#include <netinet/in_systm.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <unistd.h>
+#include <string.h>
 #include <openssl/ssl.h>
  
 #include "../../dprint.h"
@@ -45,6 +55,7 @@
 #include "tls_util.h"
 #include "tls_mod.h"
 #include "tls_init.h"
+#include "tls_locking.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000L
 #    warning ""
@@ -57,21 +68,191 @@
 
 #if OPENSSL_VERSION_NUMBER >= 0x00908000L  /* 0.9.8*/
 #    ifndef OPENSSL_NO_COMP
-#        warning "openssl zlib compression not supported, replacing with our version"
-/*       #define TLS_DISABLE_COMPRESSION */
-#        define TLS_FIX_ZLIB_COMPRESSION
-#        include "fixed_c_zlib.h"
+#        warning "openssl zlib compression bug workaround enabled"
 #    endif
+#    define TLS_FIX_ZLIB_COMPRESSION
+#    include "fixed_c_zlib.h"
+#endif
+
+#ifdef TLS_KSSL_WORKARROUND
+#if OPENSSL_VERSION_NUMBER < 0x00908050L
+#	warning "openssl lib compiled with kerberos support which introduces a bug\
+ (wrong malloc/free used in kssl.c) -- attempting workaround"
+#	warning "NOTE: if you don't link libssl staticaly don't try running the \
+compiled code on a system with a differently compiled openssl (it's safer \
+to compile on the  _target_ system)"
+#endif /* OPENSSL_VERSION_NUMBER */
+#endif /* TLS_KSSL_WORKARROUND */
+
+
+
+#ifndef OPENSSL_NO_COMP
+#define TLS_COMP_SUPPORT
+#else
+#undef TLS_COMP_SUPPORT
+#endif
+
+#ifndef OPENSSL_NO_KRB5
+#define TLS_KERBEROS_SUPPORT
+#else
+#undef TLS_KERBEROS_SUPPORT
 #endif
 
 
-SSL_METHOD* ssl_methods[TLS_USE_SSLv23 + 1];
+#ifdef TLS_KSSL_WORKARROUND
+int openssl_kssl_malloc_bug=0; /* is openssl bug #1467 present ? */
+#endif
+int openssl_mem_threshold1=-1; /* low memory threshold for connect/accept */
+int openssl_mem_threshold2=-1; /* like above but for other tsl operations */
+int tls_disable_compression = 0; /* by default enabled */
+int tls_force_run = 0; /* ignore some start-up sanity checks, use it
+						  at your own risk */
 
+const SSL_METHOD* ssl_methods[TLS_USE_SSLv23 + 1];
 
+#undef TLS_MALLOC_DBG /* extra malloc debug info from openssl */
 /*
  * Wrappers around SER shared memory functions
  * (which can be macros)
  */
+#ifdef TLS_MALLOC_DBG
+#include <execinfo.h>
+
+/*
+#define RAND_NULL_MALLOC (1024)
+#define NULL_GRACE_PERIOD 10U
+*/
+
+
+inline static char* buf_append(char* buf, char* end, char* str, int str_len)
+{
+	if ( (buf+str_len)<end){
+		memcpy(buf, str, str_len);
+		return buf+str_len;
+	}
+	return 0;
+}
+
+
+inline static int backtrace2str(char* buf, int size)
+{
+	void* bt[32];
+	int bt_size, i;
+	char** bt_strs;
+	char* p;
+	char* end;
+	char* next;
+	char* s;
+	char* e;
+	
+	p=buf; end=buf+size;
+	bt_size=backtrace(bt, sizeof(bt)/sizeof(bt[0]));
+	bt_strs=backtrace_symbols(bt, bt_size);
+	if (bt_strs){
+		p=buf; end=buf+size;
+		/*if (bt_size>16) bt_size=16;*/ /* go up only 12 entries */
+		for (i=3; i< bt_size; i++){
+			/* try to isolate only the function name*/
+			s=strchr(bt_strs[i], '(');
+			if (s && ((e=strchr(s, ')'))!=0)){
+				s++;
+			}else if ((s=strchr(bt_strs[i], '['))!=0){
+				e=s+strlen(s);
+			}else{
+				s=bt_strs[i]; e=s+strlen(s); /* add thw whole string */
+			}
+			next=buf_append(p, end, s, (int)(long)(e-s));
+			if (next==0) break;
+			else p=next;
+			if (p<end){
+				*p=':'; /* separator */
+				p++;
+			}else break;
+		}
+		if (p==buf){
+			*p=0;
+			p++;
+		}else
+			*(p-1)=0;
+		free(bt_strs);
+	}
+	return (int)(long)(p-buf);
+}
+
+static void* ser_malloc(size_t size, const char* file, int line)
+{
+	void  *p;
+	char bt_buf[1024];
+	int s;
+#ifdef RAND_NULL_MALLOC
+	static ticks_t st=0;
+
+	/* start random null returns only after 
+	 * NULL_GRACE_PERIOD from first call */
+	if (st==0) st=get_ticks();
+	if (((get_ticks()-st)<NULL_GRACE_PERIOD) || (random()%RAND_NULL_MALLOC)){
+#endif
+		s=backtrace2str(bt_buf, sizeof(bt_buf));
+		/* ugly hack: keep the bt inside the alloc'ed fragment */
+		p=_shm_malloc(size+s, file, "via ser_malloc", line);
+		if (p==0){
+			LOG(L_CRIT, "tsl: ser_malloc(%d)[%s:%d]==null, bt: %s\n", 
+						size, file, line, bt_buf);
+		}else{
+			memcpy(p+size, bt_buf, s);
+			((struct qm_frag*)((char*)p-sizeof(struct qm_frag)))->func=
+				p+size;
+		}
+#ifdef RAND_NULL_MALLOC
+	}else{
+		p=0;
+		backtrace2str(bt_buf, sizeof(bt_buf));
+		LOG(L_CRIT, "tsl: random ser_malloc(%d)[%s:%d]"
+				" returning null - bt: %s\n",
+				size, file, line, bt_buf);
+	}
+#endif
+	return p;
+}
+
+
+static void* ser_realloc(void *ptr, size_t size, const char* file, int line)
+{
+	void  *p;
+	char bt_buf[1024];
+	int s;
+#ifdef RAND_NULL_MALLOC
+	static ticks_t st=0;
+
+	/* start random null returns only after 
+	 * NULL_GRACE_PERIOD from first call */
+	if (st==0) st=get_ticks();
+	if (((get_ticks()-st)<NULL_GRACE_PERIOD) || (random()%RAND_NULL_MALLOC)){
+#endif
+		s=backtrace2str(bt_buf, sizeof(bt_buf));
+		p=_shm_realloc(ptr, size+s, file, "via ser_realloc", line);
+		if (p==0){
+			LOG(L_CRIT, "tsl: ser_realloc(%p, %d)[%s:%d]==null, bt: %s\n",
+					ptr, size, file, line, bt_buf);
+		}else{
+			memcpy(p+size, bt_buf, s);
+			((struct qm_frag*)((char*)p-sizeof(struct qm_frag)))->func=
+				p+size;
+		}
+#ifdef RAND_NULL_MALLOC
+	}else{
+		p=0;
+		backtrace2str(bt_buf, sizeof(bt_buf));
+		LOG(L_CRIT, "tsl: random ser_realloc(%p, %d)[%s:%d]"
+					" returning null - bt: %s\n", ptr, size, file, line,
+					bt_buf);
+	}
+#endif
+	return p;
+}
+
+#else /*TLS_MALLOC_DBG */
+
 static void* ser_malloc(size_t size)
 {
 	return shm_malloc(size);
@@ -80,9 +261,10 @@ static void* ser_malloc(size_t size)
 
 static void* ser_realloc(void *ptr, size_t size)
 {
-	return shm_realloc(ptr, size);
+		return shm_realloc(ptr, size);
 }
 
+#endif
 
 static void ser_free(void *ptr)
 {
@@ -93,7 +275,7 @@ static void ser_free(void *ptr)
 /*
  * Initialize TLS socket
  */
-int tls_init(struct socket_info *si)
+int tls_h_init_si(struct socket_info *si)
 {
 	int ret;
 	     /*
@@ -147,57 +329,90 @@ static void init_ssl_methods(void)
  */
 static int init_tls_compression(void)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x00908000L
 	int n, r;
-#if defined(TLS_DISABLE_COMPRESSION) || defined(TLS_FIX_ZLIB_COMPRESSION)
 	STACK_OF(SSL_COMP)* comp_methods;
-#    ifdef TLS_FIX_ZLIB_COMPRESSION
 	SSL_COMP* zlib_comp;
-#    endif
-#endif
-
-	     /* disabling compression */
-#if defined(TLS_DISABLE_COMPRESSION) || defined(TLS_FIX_ZLIB_COMPRESSION)
-#    ifndef SSL_COMP_ZLIB_IDX
-#        define SSL_COMP_ZLIB_IDX 1 /* openssl/ssl/ssl_ciph.c:84 */
-#    endif 
-	LOG(L_INFO, "init_tls: fixing compression problems...\n");
+	long ssl_version;
+	
+	/* disabling compression */
+#	ifndef SSL_COMP_ZLIB_IDX
+#		define SSL_COMP_ZLIB_IDX 1 /* openssl/ssl/ssl_ciph.c:84 */
+#	endif 
 	comp_methods = SSL_COMP_get_compression_methods();
 	if (comp_methods == 0) {
-		LOG(L_CRIT, "init_tls: BUG: null openssl compression methods\n");
-	} else {
-#ifdef TLS_DISABLE_COMPRESSION
-		LOG(L_INFO, "init_tls: disabling compression...\n");
+		LOG(L_INFO, "tls: init_tls: compression support disabled in the"
+					" openssl lib\n");
+		goto end; /* nothing to do, exit */
+	} else if (tls_disable_compression){
+		LOG(L_INFO, "tls: init_tls: disabling compression...\n");
 		sk_SSL_COMP_zero(comp_methods);
-#else
-		LOG(L_INFO, "init_tls: fixing zlib compression...\n");
-		if (fixed_c_zlib_init() != 0) {
-			LOG(L_CRIT, "init_tls: BUG: failed to initialize zlib compression"
-			    " fix\n");
-			sk_SSL_COMP_zero(comp_methods); /* delete compression */
-		} else {
-			     /* the above SSL_COMP_get_compression_methods() call has the side
-			      * effect of initializing the compression stack (if not already
-			      * initialized) => after it zlib is initialized and in the stack */
-			     /* find zlib_comp (cannot use ssl3_comp_find, not exported) */
+	}else{
+		ssl_version=SSLeay();
+		/* replace openssl zlib compression with our version if necessary
+		 * (the openssl zlib compression uses the wrong malloc, see
+		 *  openssl #1468): 0.9.8-dev < version  <0.9.8e-beta1 */
+		if ((ssl_version >= 0x00908000L) && (ssl_version < 0x00908051L)){
+			/* the above SSL_COMP_get_compression_methods() call has the side
+			 * effect of initializing the compression stack (if not already
+			 * initialized) => after it zlib is initialized and in the stack */
+			/* find zlib_comp (cannot use ssl3_comp_find, not exported) */
 			n = sk_SSL_COMP_num(comp_methods);
 			zlib_comp = 0;
 			for (r = 0; r < n; r++) {
 				zlib_comp = sk_SSL_COMP_value(comp_methods, r);
+				DBG("tls: init_tls: found compression method %p id %d\n",
+						zlib_comp, zlib_comp->id);
 				if (zlib_comp->id == SSL_COMP_ZLIB_IDX) {
+					DBG("tls: init_tls: found zlib compression (%d)\n", 
+							SSL_COMP_ZLIB_IDX);
 					break /* found */;
 				} else {
 					zlib_comp = 0;
 				}
 			}
 			if (zlib_comp == 0) {
-				LOG(L_INFO, "init_tls: no openssl zlib compression found\n");
+				LOG(L_INFO, "tls: init_tls: no openssl zlib compression "
+							"found\n");
+			}else{
+				LOG(L_WARN, "tls: init_tls: detected openssl lib with "
+							"known zlib compression bug: \"%s\" (0x%08lx)\n",
+							SSLeay_version(SSLEAY_VERSION), ssl_version);
+#	ifdef TLS_FIX_ZLIB_COMPRESSION
+				LOG(L_WARN, "tls: init_tls: enabling openssl zlib compression "
+							"bug workaround (replacing zlib COMP method with "
+							"our own version)\n");
+				/* hack: make sure that the CRYPTO_EX_INDEX_COMP class is empty
+				 * and it does not contain any free_ex_data from the 
+				 * built-in zlib. This can happen if the current openssl
+				 * zlib malloc fix patch is used (CRYPTO_get_ex_new_index() in
+				 * COMP_zlib()). Unfortunately the only way
+				 * to do this it to cleanup all the ex_data stuff.
+				 * It should be safe if this is executed before SSL_init()
+				 * (only the COMP class is initialized before).
+				 */
+				CRYPTO_cleanup_all_ex_data();
+				
+				if (fixed_c_zlib_init() != 0) {
+					LOG(L_CRIT, "tls: init_tls: BUG: failed to initialize zlib"
+							" compression fix, disabling compression...\n");
+					sk_SSL_COMP_zero(comp_methods); /* delete compression */
+					goto end;
+				}
+				/* "fix" it */
+				zlib_comp->method = &zlib_method;
+#	else
+				LOG(L_WARN, "tls: init_tls: disabling openssl zlib "
+							"compression \n");
+				zlib_comp=sk_SSL_COMP_delete(comp_methods, r);
+				if (zlib_comp)
+					OPENSSL_free(zlib_comp);
+#	endif
 			}
-			     /* "fix" it */
-			zlib_comp->method = &zlib_method;
 		}
-#endif
 	}
-#endif
+end:
+#endif /* OPENSSL_VERSION_NUMBER >= 0.9.8 */
 	return 0;
 }
 
@@ -205,31 +420,155 @@ static int init_tls_compression(void)
 /*
  * First step of TLS initialization
  */
-int init_tls(void)
+int init_tls_h(void)
 {
-	struct socket_info* si;
+	/*struct socket_info* si;*/
+	long ssl_version;
+	int lib_kerberos;
+	int lib_zlib;
+	int kerberos_support;
+	int comp_support;
+	const char* lib_cflags;
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000L
 	WARN("You are using an old version of OpenSSL (< 0.9.7). Upgrade!\n");
 #endif
-
+	ssl_version=SSLeay();
+	/* check if version have the same major minor and fix level
+	 * (e.g. 0.9.8a & 0.9.8c are ok, but 0.9.8 and 0.9.9x are not) */
+	if ((ssl_version>>8)!=(OPENSSL_VERSION_NUMBER>>8)){
+		LOG(L_CRIT, "ERROR: tls: init_tls_h: installed openssl library "
+				"version is too different from the library the ser tls module "
+				"was compiled with: installed \"%s\" (0x%08lx), compiled "
+				"\"%s\" (0x%08lx).\n"
+				" Please make sure a compatible version is used"
+				" (tls_force_run in ser.cfg will override this check)\n",
+				SSLeay_version(SSLEAY_VERSION), ssl_version,
+				OPENSSL_VERSION_TEXT, (long)OPENSSL_VERSION_NUMBER);
+		if (tls_force_run)
+			LOG(L_WARN, "tls: init_tls_h: tls_force_run turned on, ignoring "
+						" openssl version mismatch\n");
+		else
+			return -1; /* safer to exit */
+	}
+#ifdef TLS_KERBEROS_SUPPORT
+	kerberos_support=1;
+#else
+	kerberos_support=0;
+#endif
+#ifdef TLS_COMP_SUPPORT
+	comp_support=1;
+#else
+	comp_support=0;
+#endif
+	/* attempt to guess if the library was compiled with kerberos or
+	 * compression support from the cflags */
+	lib_cflags=SSLeay_version(SSLEAY_CFLAGS);
+	lib_kerberos=0;
+	lib_zlib=0;
+	if ((lib_cflags==0) || strstr(lib_cflags, "not available")){ 
+		lib_kerberos=-1;
+		lib_zlib=-1;
+	}else{
+		if (strstr(lib_cflags, "-DZLIB"))
+			lib_zlib=1;
+		if (strstr(lib_cflags, "-DKRB5_"))
+			lib_kerberos=1;
+	}
+	LOG(L_INFO, "tls: _init_tls_h:  compiled  with  openssl  version " 
+				"\"%s\" (0x%08lx), kerberos support: %s, compression: %s\n",
+				OPENSSL_VERSION_TEXT, (long)OPENSSL_VERSION_NUMBER,
+				kerberos_support?"on":"off", comp_support?"on":"off");
+	LOG(L_INFO, "tls: init_tls_h: installed openssl library version "
+				"\"%s\" (0x%08lx), kerberos support: %s, "
+				" zlib compression: %s"
+				"\n %s\n",
+				SSLeay_version(SSLEAY_VERSION), ssl_version,
+				(lib_kerberos==1)?"on":(lib_kerberos==0)?"off":"unkown",
+				(lib_zlib==1)?"on":(lib_zlib==0)?"off":"unkown",
+				SSLeay_version(SSLEAY_CFLAGS));
+	if (lib_kerberos!=kerberos_support){
+		if (lib_kerberos!=-1){
+			LOG(L_CRIT, "ERROR: tls: init_tls_h: openssl compile options"
+						" mismatch: library has kerberos support"
+						" %s and ser tls %s (unstable configuration)\n"
+						" (tls_force_run in ser.cfg will override this"
+						" check)\n",
+						lib_kerberos?"enabled":"disabled",
+						kerberos_support?"enabled":"disabled"
+				);
+			if (tls_force_run)
+				LOG(L_WARN, "tls: init_tls_h: tls_force_run turned on, "
+						"ignoring kerberos support mismatch\n");
+			else
+				return -1; /* exit, is safer */
+		}else{
+			LOG(L_WARN, "WARNING: tls: init_tls_h: openssl  compile options"
+						" missing -- cannot detect if kerberos support is"
+						" enabled. Possible unstable configuration\n");
+		}
+	}
 	     /*
 	      * this has to be called before any function calling CRYPTO_malloc,
 	      * CRYPTO_malloc will set allow_customize in openssl to 0 
 	      */
+#ifdef TLS_MALLOC_DBG
+	if (!CRYPTO_set_mem_ex_functions(ser_malloc, ser_realloc, ser_free)) {
+#else
 	if (!CRYPTO_set_mem_functions(ser_malloc, ser_realloc, ser_free)) {
+#endif
 		ERR("Unable to set the memory allocation functions\n");
 		return -1;
 	}
-
+	if (tls_init_locks()<0)
+		return -1;
 	init_tls_compression();
+	#ifdef TLS_KSSL_WORKARROUND
+	/* if openssl compiled with kerberos support, and openssl < 0.9.8e-dev
+	 * or openssl between 0.9.9-dev and 0.9.9-beta1 apply workaround for
+	 * openssl bug #1467 */
+	if (ssl_version < 0x00908050L || 
+			(ssl_version >= 0x00909000L && ssl_version < 0x00909001L)){
+		openssl_kssl_malloc_bug=1;
+		LOG(L_WARN, "tls: init_tls_h: openssl kerberos malloc bug detected, "
+			" kerberos support will be disabled...\n");
+	}
+	#endif
+	 /* set free memory threshold for openssl bug #1491 workaround */
+	if (openssl_mem_threshold1<0){
+		/* default */
+		openssl_mem_threshold1=512*1024*get_max_procs();
+	}else
+		openssl_mem_threshold1*=1024; /* KB */
+	if (openssl_mem_threshold2<0){
+		/* default */
+		openssl_mem_threshold2=256*1024*get_max_procs();
+	}else
+		openssl_mem_threshold2*=1024; /* KB */
+	if ((openssl_mem_threshold1==0) || (openssl_mem_threshold2==0))
+		LOG(L_WARN, "tls: openssl bug #1491 (crash/mem leaks on low memory)"
+					" workarround disabled\n");
+	else
+		LOG(L_WARN, "tls: openssl bug #1491 (crash/mem leaks on low memory)"
+				" workaround enabled (on low memory tls operations will fail"
+				" preemptively) with free memory thresholds %d and %d bytes\n",
+				openssl_mem_threshold1, openssl_mem_threshold2);
+	
+	if (shm_available()==(unsigned long)(-1)){
+		LOG(L_WARN, "tls: ser compiled without MALLOC_STATS support:"
+				" the workaround for low mem. openssl bugs will _not_ "
+				"work\n");
+		openssl_mem_threshold1=0;
+		openssl_mem_threshold2=0;
+	}
 	SSL_library_init();
 	SSL_load_error_strings();
 	init_ssl_methods();
-
+#if 0
+	/* OBSOLETE: we are using the tls_h_init_si callback */
 	     /* Now initialize TLS sockets */
 	for(si = tls_listen; si; si = si->next) {
-		if (tls_init(si) < 0)  return -1;
+		if (tls_h_init_si(si) < 0)  return -1;
 		     /* get first ipv4/ipv6 socket*/
 		if ((si->address.af == AF_INET) &&
 		    ((sendipv4_tls == 0) || (sendipv4_tls->flags & SI_IS_LO))) {
@@ -241,6 +580,7 @@ int init_tls(void)
 		}
 #endif
 	}
+#endif
 
 	return 0;
 }
@@ -271,7 +611,11 @@ int tls_check_sockets(tls_cfg_t* cfg)
 /*
  * TLS cleanup when SER exits
  */
-void destroy_tls(void)
+void destroy_tls_h(void)
 {
+	DBG("tls module final tls destroy\n");
 	ERR_free_strings();
+	/* TODO: free all the ctx'es */
+	tls_destroy_cfg();
+	tls_destroy_locks();
 }

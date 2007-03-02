@@ -221,81 +221,75 @@ static int set_watcher_db_data(presentity_t *_p, watcher_t *watcher,
 		return -1;
 	}
 	
-	cols[n_cols] = "r_uri";
-	vals[n_cols].type = DB_STR;
-	vals[n_cols].nul = 0;
-	vals[n_cols].val.str_val = _p->data.uri;
-	n_cols++;
-
-	cols[n_cols] = "w_uri";
+	cols[n_cols] = col_w_uri;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val = watcher->uri;
 	n_cols++;
 
-	cols[n_cols] = "package";
+	cols[n_cols] = col_package;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val.s = package;
 	vals[n_cols].val.str_val.len = strlen(package);
 	n_cols++;
 
-	cols[n_cols] = "s_id";
+	cols[n_cols] = col_s_id;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val = watcher->id;
 	n_cols++;
 
-	cols[n_cols] = "status";
+	cols[n_cols] = col_status;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val = watcher_status_names[watcher->status];
 	n_cols++;
 
-	cols[n_cols] = "event";
+	cols[n_cols] = col_event;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val = watcher_event_names[watcher->event];
 	n_cols++;
 
-	cols[n_cols] = "display_name";
+	cols[n_cols] = col_display_name;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val.s = watcher->display_name.s;
 	vals[n_cols].val.str_val.len = watcher->display_name.len;
 	n_cols++;
 	
-	cols[n_cols] = "accepts";
+	cols[n_cols] = col_accepts;
 	vals[n_cols].type = DB_INT;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.int_val = watcher->preferred_mimetype;
 	n_cols++;
 
-	cols[n_cols] = "expires";
-	vals[n_cols].type = DB_INT;
+	cols[n_cols] = col_expires;
+	vals[n_cols].type = DB_DATETIME;
 	vals[n_cols].nul = 0;
-	vals[n_cols].val.int_val = watcher->expires;
+	vals[n_cols].val.time_val = watcher->expires;
 	n_cols++;
 
-	cols[n_cols] = "dialog";
+	cols[n_cols] = col_dialog;
 	vals[n_cols].type = DB_BLOB;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.blob_val = dialog;
 	n_cols++;
 	
-	cols[n_cols] = "server_contact";
+	cols[n_cols] = col_server_contact;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val = watcher->server_contact;
 	n_cols++;
 	
-	cols[n_cols] = "pres_id";
+	cols[n_cols] = col_pres_id;
 	vals[n_cols].type = DB_STR;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.str_val = _p->pres_id;
 	n_cols++;
 
-	cols[n_cols] = "doc_index";
+	cols[n_cols] = col_doc_index;
 	vals[n_cols].type = DB_INT;
 	vals[n_cols].nul = 0;
 	vals[n_cols].val.int_val = watcher->document_index;
@@ -349,7 +343,7 @@ int db_update_watcher(presentity_t *_p, watcher_t *watcher)
 	db_val_t query_vals[20];
 	int n_query_cols = 0;
 	
-	db_key_t keys[] = { "s_id" };
+	db_key_t keys[] = { col_s_id };
 	db_op_t ops[] = { OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = watcher->id } } };
 
@@ -381,7 +375,7 @@ int db_update_watcher(presentity_t *_p, watcher_t *watcher)
 
 static inline int db_remove_watcher(struct presentity *_p, watcher_t *w)
 {
-	db_key_t keys[] = { "s_id" };
+	db_key_t keys[] = { col_s_id };
 	db_op_t ops[] = { OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = w->id } } };
 
@@ -423,23 +417,23 @@ int db_read_watcherinfo(presentity_t *_p, db_con_t* db)
 	if (!use_db) return 0;
 	
 /*	LOG(L_ERR, "db_read_watcherinfo starting\n");*/
-	query_cols[0] = "pres_id";
+	query_cols[0] = col_pres_id;
 	query_ops[0] = OP_EQ;
 	query_vals[0].type = DB_STR;
 	query_vals[0].nul = 0;
 	query_vals[0].val.str_val = _p->pres_id;
 
-	result_cols[w_uri_col = n_result_cols++] = "w_uri";
-	result_cols[s_id_col = n_result_cols++] = "s_id";
-	result_cols[event_package_col = n_result_cols++] = "package";
-	result_cols[status_col = n_result_cols++] = "status";
-	result_cols[display_name_col = n_result_cols++] = "display_name";
-	result_cols[accepts_col = n_result_cols++] = "accepts";
-	result_cols[expires_col = n_result_cols++] = "expires";
-	result_cols[watcher_event_col = n_result_cols++] = "event";
-	result_cols[dialog_col = n_result_cols++] = "dialog";
-	result_cols[server_contact_col = n_result_cols++] = "server_contact";
-	result_cols[doc_index_col = n_result_cols++] = "doc_index";
+	result_cols[w_uri_col = n_result_cols++] = col_w_uri;
+	result_cols[s_id_col = n_result_cols++] = col_s_id;
+	result_cols[event_package_col = n_result_cols++] = col_package;
+	result_cols[status_col = n_result_cols++] = col_status;
+	result_cols[display_name_col = n_result_cols++] = col_display_name;
+	result_cols[accepts_col = n_result_cols++] = col_accepts;
+	result_cols[expires_col = n_result_cols++] = col_expires;
+	result_cols[watcher_event_col = n_result_cols++] = col_event;
+	result_cols[dialog_col = n_result_cols++] = col_dialog;
+	result_cols[server_contact_col = n_result_cols++] = col_server_contact;
+	result_cols[doc_index_col = n_result_cols++] = col_doc_index;
 		
 	if (pa_dbf.use_table(db, watcherinfo_table) < 0) {
 		ERR("Error in use_table\n");
@@ -467,7 +461,7 @@ int db_read_watcherinfo(presentity_t *_p, db_con_t* db)
 			str watcher_event_str = STR_NULL;
 			watcher_event_t watcher_event = WE_SUBSCRIBE;
 			int accepts = row_vals[accepts_col].val.int_val;
-			int expires = row_vals[expires_col].val.int_val;
+			time_t expires = row_vals[expires_col].val.time_val;
 			int doc_index = row_vals[doc_index_col].val.int_val;
 			str status = STR_NULL;
 			str display_name = STR_NULL;
@@ -620,67 +614,6 @@ void set_watcher_terminated_status(watcher_t *w)
 			break;
 	}
 }
-
-#if 0
-/* Remove a watcher from the list */
-static inline int _remove_watcher(presentity_t* _p, watcher_t* _w)
-{
-	watcher_t* watcher, *prev;
-
-	watcher = _p->watchers;
-	prev = 0;
-			
-	LOG(L_DBG, "removing watcher %p (pres %p)\n", _w, _p);
-	
-	while(watcher) {
-		if (watcher == _w) {
-			if (prev) {
-				prev->next = watcher->next;
-			} else {
-				_p->watchers = watcher->next;
-			}
-			LOG(L_DBG, "removed watcher %p (pres %p)\n", _w, _p);
-			return 0;
-		}
-
-		prev = watcher;
-		watcher = watcher->next;
-	}
-	
-	     /* Not found */
-	DBG("remove_watcher(): Watcher not found in the list\n");
-	return 1;
-}
-
-/*
- * Remove a watcher from the list
- */
-int _remove_winfo_watcher(presentity_t* _p, watcher_t* _w)
-{
-	watcher_t* watcher, *prev;
-
-	watcher = _p->winfo_watchers;
-	prev = 0;
-	
-	while(watcher) {
-		if (watcher == _w) {
-			if (prev) {
-				prev->next = watcher->next;
-			} else {
-				_p->winfo_watchers = watcher->next;
-			}
-			return 0;
-		}
-
-		prev = watcher;
-		watcher = watcher->next;
-	}
-	
-	     /* Not found */
-	DBG("remove_winfo_watcher(): Watcher not found in the list\n");
-	return 1;
-}
-#endif
 
 int append_watcher(presentity_t *_p, watcher_t *_w, int add_to_db)
 {

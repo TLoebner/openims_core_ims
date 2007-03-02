@@ -36,6 +36,7 @@
  * 2005-07-05  migrated to the new io_wait code (andrei)
  * 2006-02-03  use tsend_stream instead of send_all (andrei)
  * 2006-10-13  added STUN support - state machine for TCP (vlada)
+ * 2007-02-20  fixed timeout calc. bug (andrei)
  */
 
 #ifdef USE_TCP
@@ -61,8 +62,10 @@
 #include "receive.h"
 #include "timer.h"
 #include "ut.h"
-#ifdef USE_TLS
+#ifdef CORE_TLS
 #include "tls/tls_server.h"
+#else
+#include "tls_hooks.h"
 #endif
 
 #define HANDLE_IO_INLINE
@@ -687,7 +690,7 @@ void tcp_receive_loop(int unix_sock)
 	fd_set sel_set;
 	int maxfd;
 	struct timeval timeout;
-	int ticks;
+	ticks_t ticks;
 	
 	
 	/* init */
@@ -747,14 +750,14 @@ void tcp_receive_loop(int unix_sock)
 					release_tcpconn(con, resp, unix_sock);
 					goto skip;
 				}
-				con->timeout=get_ticks()+TCP_CHILD_TIMEOUT;
+				con->timeout=get_ticks_raw()+S_TO_TICKS(TCP_CHILD_TIMEOUT);
 				FD_SET(s, &master_set);
 				if (maxfd<s) maxfd=s;
 				if (con==list){
 					LOG(L_CRIT, "BUG: tcp_receive_loop: duplicate"
 							" connection received: %p, id %d, fd %d, refcnt %d"
 							" state %d (n=%d)\n", con, con->id, con->fd,
-							con->refcnt, con->state, n);
+							atomic_get(&con->refcnt), con->state, n);
 					resp=CONN_ERROR;
 					release_tcpconn(con, resp, unix_sock);
 					goto skip; /* try to recover */
@@ -762,12 +765,13 @@ void tcp_receive_loop(int unix_sock)
 				tcpconn_listadd(list, con, c_next, c_prev);
 			}
 skip:
-			ticks=get_ticks();
+			ticks=get_ticks_raw();
 			for (con=list; con ; con=c_next){
 				c_next=con->c_next; /* safe for removing*/
 #ifdef EXTRA_DEBUG
 				DBG("tcp receive: list fd=%d, id=%d, timeout=%d, refcnt=%d\n",
-						con->fd, con->id, con->timeout, con->refcnt);
+						con->fd, con->id, con->timeout,
+						atomic_get(&con->refcnt));
 #endif
 				if (con->state<0){
 					/* S_CONN_BAD or S_CONN_ERROR, remove it */
@@ -796,7 +800,7 @@ skip:
 					}
 				}else{
 					/* timeout */
-					if (con->timeout<=ticks){
+					if ((s_ticks_t)(ticks-con->timeout)>=0){
 						/* expired, return to "tcp main" */
 						DBG("tcp_receive_loop: %p expired (%d, %d)\n",
 								con, con->timeout, ticks);
@@ -853,11 +857,11 @@ again:
 			}
 			if (n==0){
 				LOG(L_ERR, "WARNING: tcp_receive: handle_io: 0 bytes read\n");
-				break;
+				goto error;
 			}
 			if (con==0){
 					LOG(L_CRIT, "BUG: tcp_receive: handle_io null pointer\n");
-					break;
+					goto error;
 			}
 			con->fd=s;
 			if (s==-1) {
@@ -869,7 +873,7 @@ again:
 				LOG(L_CRIT, "BUG: tcp_receive: handle_io: duplicate"
 							" connection received: %p, id %d, fd %d, refcnt %d"
 							" state %d (n=%d)\n", con, con->id, con->fd,
-							con->refcnt, con->state, n);
+							atomic_get(&con->refcnt), con->state, n);
 				release_tcpconn(con, CONN_ERROR, tcpmain_sock);
 				break; /* try to recover */
 			}
@@ -878,7 +882,7 @@ again:
 			 * handle_io might decide to del. the new connection =>
 			 * must be in the list */
 			tcpconn_listadd(tcp_conn_lst, con, c_next, c_prev);
-			con->timeout=get_ticks()+TCP_CHILD_TIMEOUT;
+			con->timeout=get_ticks_raw()+S_TO_TICKS(TCP_CHILD_TIMEOUT);
 			if (io_watch_add(&io_w, s, F_TCPCONN, con)<0){
 				LOG(L_CRIT, "ERROR: tcp_receive: handle_io: failed to add"
 						" new socket to the fd list\n");
@@ -897,7 +901,7 @@ again:
 				release_tcpconn(con, resp, tcpmain_sock);
 			}else{
 				/* update timeout */
-				con->timeout=get_ticks()+TCP_CHILD_TIMEOUT;
+				con->timeout=get_ticks_raw()+S_TO_TICKS(TCP_CHILD_TIMEOUT);
 			}
 			break;
 		case F_NONE:
@@ -926,9 +930,9 @@ static inline void tcp_receive_timeout()
 {
 	struct tcp_connection* con;
 	struct tcp_connection* next;
-	int ticks;
+	ticks_t ticks;
 	
-	ticks=get_ticks();
+	ticks=get_ticks_raw();
 	for (con=tcp_conn_lst; con; con=next){
 		next=con->c_next; /* safe for removing */
 		if (con->state<0){   /* kill bad connections */ 
@@ -940,7 +944,7 @@ static inline void tcp_receive_timeout()
 			release_tcpconn(con, CONN_ERROR, tcpmain_sock);
 			continue;
 		}
-		if (con->timeout<=ticks){
+		if ((s_ticks_t)(ticks-con->timeout)>=0){
 			/* expired, return to "tcp main" */
 			DBG("tcp_receive_loop: %p expired (%d, %d)\n",
 					con, con->timeout, ticks);

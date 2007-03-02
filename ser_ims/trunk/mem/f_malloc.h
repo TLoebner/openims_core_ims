@@ -142,5 +142,6 @@ void  fm_info(struct fm_block*, struct mem_info*);
 void  fm_sums(struct fm_block* qm);
 #endif
 
+unsigned long fm_available(struct fm_block*);
 
 #endif

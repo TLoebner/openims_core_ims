@@ -71,7 +71,7 @@ Chapter 1. User's Guide
 
    Meaning of the parameters is as follows:
 
-     * username - Username string.
+     * username - Username string or AVP.
 
    Example 1-1. is_user usage
 ...
@@ -121,8 +121,6 @@ Chapter 3. Frequently Asked Questions
    <serusers@iptel.org> and e-mail regarding development versions
    or CVS snapshots should be send to <serdev@iptel.org>.
 
-   If you want to keep the mail private, send it to
-   <serhelp@iptel.org>.
 
    3.3. How can I report a bug?
 

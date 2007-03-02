@@ -84,6 +84,10 @@
  *             if the searched transaction was pre-canceled (andrei)
  * 2006-10-16  401 & 407 replies are completely parsed if tm_aggregate_auth is
  *              set (andrei)
+ * 2006-11-10  a valid msg->hash_index is now marked by FL_HASH_INDEX in 
+ *              msg_flags
+ *             t_lookupOriginalT computes the hash_index by itself  if 
+*               needed (andrei)
  */
 
 #include "defs.h"
@@ -416,8 +420,10 @@ int t_lookup_request( struct sip_msg* p_msg , int leave_new_locked,
 	}
 
 	/* start searching into the table */
-	if (!p_msg->hash_index)
-		p_msg->hash_index=hash( p_msg->callid->body , get_cseq(p_msg)->number ) ;
+	if (!(p_msg->msg_flags & FL_HASH_INDEX)){
+		p_msg->hash_index=hash( p_msg->callid->body , get_cseq(p_msg)->number);
+		p_msg->msg_flags|=FL_HASH_INDEX;
+	}
 	isACK = p_msg->REQ_METHOD==METHOD_ACK;
 	DBG("t_lookup_request: start searching: hash=%d, isACK=%d\n",
 		p_msg->hash_index,isACK);
@@ -606,6 +612,18 @@ struct cell* t_lookupOriginalT(  struct sip_msg* p_msg )
 
 
 	/* start searching in the table */
+	if (!(p_msg->msg_flags & FL_HASH_INDEX)){
+		/* parse all*/
+		if (check_transaction_quadruple(p_msg)==0)
+		{
+			LOG(L_ERR, "ERROR: TM module: t_lookupOriginalT:"
+					" too few headers\n");
+			/* stop processing */
+			return 0;
+		}
+		p_msg->hash_index=hash( p_msg->callid->body , get_cseq(p_msg)->number);
+		p_msg->msg_flags|=FL_HASH_INDEX;
+	}
 	hash_index = p_msg->hash_index;
 	DBG("DEBUG: t_lookupOriginalT: searching on hash entry %d\n",hash_index );
 
@@ -616,7 +634,6 @@ struct cell* t_lookupOriginalT(  struct sip_msg* p_msg )
 	 */
 	if (!p_msg->via1) {
 		LOG(L_ERR, "ERROR: t_lookupOriginalT: no via\n");
-		set_t(0);
 		return 0;
 	}
 	branch=p_msg->via1->branch;
@@ -1273,7 +1290,7 @@ int t_get_trans_ident(struct sip_msg* p_msg, unsigned int* hash_index, unsigned 
 {
     struct cell* t;
     if(t_check(p_msg,0) != 1){
-	LOG(L_DBG,"ERROR: t_get_trans_ident: no transaction found\n");
+	LOG(L_ERR,"ERROR: t_get_trans_ident: no transaction found\n");
 	return -1;
     }
     t = get_t();

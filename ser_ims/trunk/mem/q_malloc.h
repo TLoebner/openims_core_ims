@@ -150,9 +150,10 @@ void* qm_realloc(struct qm_block*, void* p, unsigned long size);
 void  qm_status(struct qm_block*);
 void  qm_info(struct qm_block*, struct mem_info*);
 
+unsigned long qm_available(struct qm_block* qm);
+
 #ifdef DBG_QM_MALLOC
 void  qm_sums(struct qm_block* qm);
 #endif
-
 
 #endif

@@ -27,6 +27,7 @@
  * History
  * --------
  *  2006-10-13  created (vlada)
+ *  2006-12-14  fixed calculation of body length (vlada) 
  */
 
 #ifdef USE_STUN 
@@ -103,7 +104,6 @@ int stun_process_msg(char* buf, unsigned len, struct receive_info* ri)
 	struct dest_info			dst;
 	struct stun_unknown_att*	unknown;
 	USHORT_T					error_code;
-	int ii;
 	 
 	memset(&msg_req, 0, sizeof(msg_req));
 	memset(&msg_res, 0, sizeof(msg_res));
@@ -133,8 +133,6 @@ int stun_process_msg(char* buf, unsigned len, struct receive_info* ri)
 #ifdef EXTRA_DEBUG	
 	struct ip_addr ip;
 	su2ip_addr(&ip, &dst.to);
-	char *ipp = ip_addr2a(&ip);
-	int porttt = su_getport(&dst.to);
 	LOG(L_DBG, "DEBUG: stun_process_msg: decoded request from (%s:%d)\n", ip_addr2a(&ip), 
 		su_getport(&dst.to));
 #endif
@@ -234,30 +232,16 @@ int stun_parse_body(
 	fp_present = 0;
 	
 	/* 
-	 * the message length is different for rfc and rfc bis 
-	 * the bis version contains fingerprint that is not included in 
-	 * length of body which is listed in header of message
+	 * Mark the body lenght as unparsed.
 	 */
 	not_parsed = req->msg.buf.len - sizeof(struct stun_hdr);
 	
-	if (req->old) {
-		if (not_parsed != req->hdr.len) {
+	if (not_parsed != req->hdr.len) {
 #ifdef EXTRA_DEBUG
-			LOG(L_DBG, "DEBUG: stun_parse_body: body too short to be valid\n");
+		LOG(L_DBG, "DEBUG: stun_parse_body: body too short to be valid\n");
 #endif
-			*error_code = BAD_REQUEST_ERR;
-			return 0;
-		} 
-	}
-	else {
-		if (not_parsed != 
-		    req->hdr.len + SHA_DIGEST_LENGTH + sizeof(struct stun_attr)) {
-#ifdef EXTRA_DEBUG
-			LOG(L_DBG, "DEBUG: stun_parse_body: body too short to be valid\n");
-#endif
-			*error_code = BAD_REQUEST_ERR;
-			return 0;
-		}
+		*error_code = BAD_REQUEST_ERR;
+		return 0; 
 	}
 	
 	tmp_unknown = *unknown;
@@ -290,7 +274,7 @@ int stun_parse_body(
 		}
 		
 		/* check if the attribute is known to the server */
-		switch (htons(attr.type)) {			
+		switch (ntohs(attr.type)) {			
 			case REALM_ATTR:
 			case NONCE_ATTR:
 			case MAPPED_ADDRESS_ATTR:
@@ -303,6 +287,9 @@ int stun_parse_body(
 			case CHANGE_REQUEST_ATTR:
 			case CHANGED_ADDRESS_ATTR:
 				padded_len = ntohs(attr.len);
+#ifdef EXTRA_DEBUG
+				LOG(L_DBG, "DEBUG: stun_parse_body: known attributes\n");
+#endif
 				break;
 			
 			/* following attributes must be padded to 4 bytes */
@@ -312,6 +299,9 @@ int stun_parse_body(
 			case UNKNOWN_ATTRIBUTES_ATTR:
 			case SERVER_ATTR:
 				padded_len = PADDED_TO_FOUR(ntohs(attr.len));
+#ifdef EXTRA_DEBUG
+				LOG(L_DBG, "DEBUG: stun_parse_body: padded to four\n");
+#endif
 				break;
 
 			/* MESSAGE_INTEGRITY must be padded to sixty four bytes*/
@@ -361,9 +351,13 @@ int stun_parse_body(
 				 * let see if it's necessary to generate error response 
 				 */
 #ifdef EXTRA_DEBUG
-				LOG(L_DBG, "DEBUG: stun_parse_body: unknown attribute found\n");
+				LOG(L_DBG, "DEBUG: low endian: attr - 0x%x   const - 0x%x\n", ntohs(attr.type), MANDATORY_ATTR);
+		    LOG(L_DBG, "DEBUG: big endian: attr - 0x%x   const - 0x%x\n", attr.type, htons(MANDATORY_ATTR));
 #endif
-				if (attr.type <= htons(MANDATORY_ATTR)) {
+				if (ntohs(attr.type) <= MANDATORY_ATTR) {
+#ifdef EXTRA_DEBUG
+				LOG(L_DBG, "DEBUG: stun_parse_body: mandatory unknown attribute found - 0x%x\n", ntohs(attr.type));
+#endif		
 					tmp_unknown = stun_alloc_unknown_attr(attr.type);
 					if (tmp_unknown == NULL) {
 						return FATAL_ERROR;
@@ -376,6 +370,11 @@ int stun_parse_body(
 						body = body->next;
 					}
 				}
+#ifdef EXTRA_DEBUG
+        else {
+				  LOG(L_DBG, "DEBUG: stun_parse_body: optional unknown attribute found - 0x%x\n", ntohs(attr.type));
+        }
+#endif
 				padded_len = ntohs(attr.len);
 				break;
 		}
@@ -426,6 +425,7 @@ int stun_create_response(
 						struct stun_unknown_att* unknown, 
 						UINT_T error_code)
 {
+	UINT_T msg_len;
 	/*
 	 * Alloc some space for response.
 	 * Optimalization? - maybe it would be better to use biggish static array.
@@ -524,30 +524,40 @@ int stun_create_response(
 		} 
 	}
 	
-	/* count length of body except header and fingerprint
-	 * and copy message length at the beginning of buffer
-	 */
-	res->hdr.len = htons(res->msg.buf.len - sizeof(struct stun_hdr));
-	memcpy(&res->msg.buf.s[sizeof(USHORT_T)], (void *) &res->hdr.len,
-		sizeof(USHORT_T));
-	
 	if (req->old == 0) {
-		/* add optional information about server */
+		/* 
+		 * add optional information about server; attribute SERVER is not a part of 
+		 * rfc3489.txt 
+		 * */
 		if (stun_add_common_text_attr(res, SERVER_ATTR, SERVER_HDR, PAD4)!=0) {
 #ifdef EXTRA_DEBUG
 			LOG(L_DBG, "DEBUG: stun_create_response: failed to add common text attribute\n");
 #endif
 			return FATAL_ERROR;
 		}
-		
-		if (stun_allow_fp) {	
-			if (add_fingerprint(&res->msg) != 0) {
+	}	
+	
+	if (req->old == 0 && stun_allow_fp) {
+		/* count length of body except header and fingerprint
+	 	 * and copy message length at the beginning of buffer
+	   */
+	  msg_len = res->msg.buf.len - sizeof(struct stun_hdr);
+	  msg_len += SHA_DIGEST_LENGTH + sizeof(struct stun_attr);
+		res->hdr.len = htons(msg_len);
+		memcpy(&res->msg.buf.s[sizeof(USHORT_T)], (void *) &res->hdr.len,
+	  	sizeof(USHORT_T));
+	  		
+		if (add_fingerprint(&res->msg) != 0) {
 #ifdef EXTRA_DEBUG
-				LOG(L_DBG, "DEBUG: stun_create_response: failed to add fingerprint\n");
+			LOG(L_DBG, "DEBUG: stun_create_response: failed to add fingerprint\n");
 #endif
-				return FATAL_ERROR;
-			}
+			return FATAL_ERROR;
 		}
+	}
+	else {
+		res->hdr.len = htons(res->msg.buf.len - sizeof(struct stun_hdr));
+		memcpy(&res->msg.buf.s[sizeof(USHORT_T)], (void *) &res->hdr.len,
+	  	sizeof(USHORT_T));
 	}
 	
 	return 0;
@@ -958,7 +968,8 @@ int validate_fingerprint(struct stun_msg* req, USHORT_T* error_code)
 	UCHAR_T	msg_digest[SHA_DIGEST_LENGTH];
 	UINT_T	buf_len; 
 	
-	buf_len = req->hdr.len+sizeof(struct stun_hdr);
+	buf_len = req->hdr.len + sizeof(struct stun_hdr);
+	buf_len -= SHA_DIGEST_LENGTH + sizeof(struct stun_attr);
 	
 	if (SHA1((UCHAR_T *) req->msg.buf.s, buf_len, msg_digest) == 0) {
 		LOG(L_ERR, "ERROR: STUN: SHA-1 algorithm failed.\n");
