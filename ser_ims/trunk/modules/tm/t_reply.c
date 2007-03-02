@@ -676,8 +676,8 @@ void inline static free_faked_req(struct sip_msg *faked_req, struct cell *t)
 
 
 /* return 1 if a failure_route processes */
-static inline int run_failure_handlers(struct cell *t, struct sip_msg *rpl,
-											int code, int extra_flags)
+int run_failure_handlers(struct cell *t, struct sip_msg *rpl,
+					int code, int extra_flags)
 {
 	static struct sip_msg faked_req;
 	struct sip_msg *shmem_msg = t->uas.request;
@@ -1630,7 +1630,7 @@ int reply_received( struct sip_msg  *p_msg )
 		backup_domain_from = set_avp_list(AVP_TRACK_FROM | AVP_CLASS_DOMAIN, &t->domain_avps_from );
 		backup_domain_to = set_avp_list(AVP_TRACK_TO | AVP_CLASS_DOMAIN, &t->domain_avps_to );
 		if (run_actions(onreply_rt.rlist[t->on_reply], p_msg)<0)
-			LOG(L_INFO, "ERROR: on_reply processing failed\n");
+			LOG(L_ERR, "ERROR: on_reply processing failed\n");
 		/* transfer current message context back to t */
 		if (t->uas.request) t->uas.request->flags=p_msg->flags;
 		/* restore original avp list */
@@ -1740,6 +1740,8 @@ int t_reply_with_body( struct cell *trans, unsigned int code,
 	s_to_tag.s = to_tag;
 	if(to_tag)
 		s_to_tag.len = strlen(to_tag);
+	else
+		s_to_tag.len = 0;
 
 	/* mark the transaction as replied */
 	if (code>=200) set_kr(REQ_RPLD);

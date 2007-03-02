@@ -66,10 +66,10 @@ tls_domain_t* tls_new_domain(int type, struct ip_addr *ip, unsigned short port)
 	d->verify_depth = -1;
 	d->require_cert = -1;
 	return d;
-
+/*
  error:
 	shm_free(d);
-	return 0;
+	return 0; */
 }
 
 
@@ -117,6 +117,29 @@ void tls_free_cfg(tls_cfg_t* cfg)
 	if (cfg->srv_default) tls_free_domain(cfg->srv_default);
 	if (cfg->cli_default) tls_free_domain(cfg->cli_default);
 }
+
+
+
+void tls_destroy_cfg(void)
+{
+	tls_cfg_t* ptr;
+
+	if (tls_cfg_lock) {
+		lock_destroy(tls_cfg_lock);
+		lock_dealloc(tls_cfg_lock);
+	}
+
+	if (tls_cfg) {
+		while(*tls_cfg) {
+			ptr = *tls_cfg;
+			*tls_cfg = (*tls_cfg)->next;
+			tls_free_cfg(ptr);
+		}
+		
+		shm_free(tls_cfg);
+	}
+}
+
 
 
 /*
@@ -314,16 +337,41 @@ static int set_ssl_options(tls_domain_t* d)
 {
 	int i;
 	int procs_no;
+	long options;
+#if OPENSSL_VERSION_NUMBER >= 0x00908000L
+	long ssl_version;
+	STACK_OF(SSL_COMP)* comp_methods;
+#endif
 	
 	procs_no=get_max_procs();
-	for(i = 0; i < procs_no; i++) {
-#if OPENSSL_VERSION_NUMBER >= 0x000907000
-		SSL_CTX_set_options(d->ctx[i], 
-				    SSL_OP_ALL | SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION | SSL_OP_CIPHER_SERVER_PREFERENCE);
-#else
-		SSL_CTX_set_options(d->ctx[i], 
-				    SSL_OP_ALL);
+	options=SSL_OP_ALL; /* all the bug workarrounds by default */
+#if OPENSSL_VERSION_NUMBER >= 0x00907000L
+	options|=SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION |
+				SSL_OP_CIPHER_SERVER_PREFERENCE;
+#if		OPENSSL_VERSION_NUMBER >= 0x00908000L
+	ssl_version=SSLeay();
+	if ((ssl_version >= 0x0090800L) && (ssl_version < 0x0090803fL)){
+		/* if 0.9.8 <= openssl version < 0.9.8c and compression support is
+		 * enabled disable SSL_OP_TLS_BLOCK_PADDING_BUG (set by SSL_OP_ALL),
+		 * see openssl #1204 http://rt.openssl.org/Ticket/Display.html?id=1204
+		 */
+		
+		comp_methods=SSL_COMP_get_compression_methods();
+		if (comp_methods && (sk_SSL_COMP_num(comp_methods) > 0)){
+			options &= ~SSL_OP_TLS_BLOCK_PADDING_BUG;
+			LOG(L_WARN, "tls: set_ssl_options: openssl "
+					"SSL_OP_TLS_BLOCK_PADDING bug workaround enabled "
+					"(openssl version %lx)\n", ssl_version);
+		}else{
+			LOG(L_INFO, "tls: set_ssl_options: detected openssl version (%lx) "
+					" has the SSL_OP_TLS_BLOCK_PADDING bug, but compression "
+					" is disabled so no workaround is needed\n", ssl_version);
+		}
+	}
+#	endif
 #endif
+	for(i = 0; i < procs_no; i++) {
+		SSL_CTX_set_options(d->ctx[i], options);
 	}
 	return 0;
 }
@@ -371,7 +419,7 @@ static int fix_domain(tls_domain_t* d, tls_domain_t* def)
 	}
 	memset(d->ctx, 0, sizeof(SSL_CTX*) * procs_no);
 	for(i = 0; i < procs_no; i++) {
-		d->ctx[i] = SSL_CTX_new(ssl_methods[d->method - 1]);
+		d->ctx[i] = SSL_CTX_new((SSL_METHOD*)ssl_methods[d->method - 1]);
 		if (d->ctx[i] == NULL) {
 			ERR("%s: Cannot create SSL context\n", tls_domain_str(d));
 			return -1;
@@ -599,8 +647,6 @@ static int domain_exists(tls_cfg_t* cfg, tls_domain_t* d)
  */
 int tls_add_domain(tls_cfg_t* cfg, tls_domain_t* d)
 {
-	tls_domain_t* p;
-
 	if (!cfg) {
 		ERR("TLS configuration structure missing\n");
 		return -1;

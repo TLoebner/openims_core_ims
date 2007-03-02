@@ -81,6 +81,7 @@ static int lookup_user_fixup(void** param, int param_no);
 #define DID_COL      "did"
 #define USERNAME_COL "username"
 #define FLAGS_COL    "flags"
+#define SCHEME_COL   "scheme"
 
 #define CANONICAL_AVP "ruri_canonical"
 #define CANONICAL_AVP_VAL "1"
@@ -94,6 +95,7 @@ str uid_col      = STR_STATIC_INIT(UID_COL);
 str did_col      = STR_STATIC_INIT(DID_COL);
 str username_col = STR_STATIC_INIT(USERNAME_COL);
 str flags_col    = STR_STATIC_INIT(FLAGS_COL);
+str scheme_col   = STR_STATIC_INIT(SCHEME_COL);
 str canonical_avp = STR_STATIC_INIT(CANONICAL_AVP);
 str canonical_avp_val = STR_STATIC_INIT(CANONICAL_AVP_VAL);
 
@@ -101,6 +103,9 @@ db_con_t* con = 0;
 db_func_t db;
 
 static domain_get_did_t dm_get_did = NULL;
+
+/* default did value */
+str default_did	= STR_STATIC_INIT("_default");
 
 /*
  * Exported functions
@@ -123,6 +128,7 @@ static param_export_t params[] = {
 	{"did_column",      PARAM_STR, &did_col      },
 	{"username_column", PARAM_STR, &username_col },
 	{"flags_column",    PARAM_STR, &flags_col    },
+	{"scheme_column",   PARAM_STR, &scheme_col   },
 	{0, 0, 0}
 };
 
@@ -148,6 +154,8 @@ struct module_exports exports = {
  */
 static int child_init(int rank)
 {
+	if (rank==PROC_MAIN || rank==PROC_TCP_MAIN)
+		return 0; /* do nothing for the main or tcp_main processes */
 	con = db.init(db_url.s);
 	if (con == 0) {
 		LOG(L_ERR, "uri_db:child_init: Unable to connect to the database\n");
@@ -214,7 +222,6 @@ static void destroy(void)
 	}
 }
 
-
 /*
  * Lookup UID from uri table. If store parameter is non-zero then
  * store the UID in an attribute.
@@ -225,8 +232,8 @@ static int lookup_uid(struct sip_msg* msg, long id, int store)
 	struct to_body* from, *to;
 	struct sip_uri puri;
 	str did, uid;
-	db_key_t keys[2], cols[2];
-	db_val_t vals[2], *val;
+	db_key_t keys[3], cols[2];
+	db_val_t vals[3], *val;
 	db_res_t* res;
 	int flag, i, ret;
 
@@ -235,11 +242,15 @@ static int lookup_uid(struct sip_msg* msg, long id, int store)
 
 	keys[0] = username_col.s;
 	keys[1] = did_col.s;
+	keys[2] = scheme_col.s;
 	cols[0] = uid_col.s;
 	cols[1] = flags_col.s;
 
 	vals[0].type = DB_STR;
 	vals[0].nul = 0;
+
+	vals[2].type = DB_STR;
+	vals[2].nul = 0;
 
 	did.s = 0; did.len = 0;
 
@@ -261,8 +272,15 @@ static int lookup_uid(struct sip_msg* msg, long id, int store)
 			return -1;
 		}
 		vals[0].val.str_val = puri.user;
+		uri_type_to_str(puri.type, &(vals[2].val.str_val));
 	} else if (id == USE_TO) {
 		get_to_did(&did, msg);
+		if (!msg->to) {
+			if (parse_headers( msg, HDR_TO_F, 0 )==-1) {
+				ERR("unable to parse To header\n");
+				return -1;
+			}
+		}
 		to = get_to(msg);
 		if (!to) {
 			LOG(L_ERR, "uri_db:lookup_uid: Unable to get To username\n");
@@ -273,6 +291,7 @@ static int lookup_uid(struct sip_msg* msg, long id, int store)
 			return -1;
 		}
 		vals[0].val.str_val = puri.user;
+		uri_type_to_str(puri.type, &(vals[2].val.str_val));
 		flag = DB_IS_TO;
 	} else {
 		get_to_did(&did, msg);
@@ -280,14 +299,16 @@ static int lookup_uid(struct sip_msg* msg, long id, int store)
 
 		if (parse_sip_msg_uri(msg) < 0) return -1;
 		vals[0].val.str_val = msg->parsed_uri.user;
+		uri_type_to_str(msg->parsed_uri.type, &(vals[2].val.str_val));
 	}
 
 	vals[1].type = DB_STR;
+	vals[1].nul = 0;
 	if (did.s && did.len) {
-		vals[1].nul = 0;
 		vals[1].val.str_val = did;
 	} else {
-		vals[1].nul = 1;
+		LOG(L_DBG, "uri_db:lookup_uid: DID not found, using default value\n");
+		vals[1].val.str_val = default_did;
 	}
 
 	if (db.use_table(con, uri_table.s) < 0) {
@@ -295,7 +316,7 @@ static int lookup_uid(struct sip_msg* msg, long id, int store)
 		return -1;
 	}
 
-	if (db.query(con, keys, 0, vals, cols, 2, 2, 0, &res) < 0) {
+	if (db.query(con, keys, 0, vals, cols, 3, 2, 0, &res) < 0) {
 		LOG(L_ERR, "uri_db:lookup_uid: Error in db_query\n");
 		return -1;
 	}
@@ -356,8 +377,8 @@ static int lookup_user(struct sip_msg* msg, char* s1, char* s2)
 
 static int lookup_user_2(struct sip_msg* msg, char* attr, char* select)
 {
-    db_key_t keys[2], cols[2];
-    db_val_t vals[2], *val;
+    db_key_t keys[3], cols[2];
+    db_val_t vals[3], *val;
     db_res_t* res;
     str uri, did, uid;
     struct sip_uri puri;
@@ -388,13 +409,21 @@ static int lookup_user_2(struct sip_msg* msg, char* attr, char* select)
 	return -1;
     }
 
-    if (dm_get_did(&did, &puri.host) < 0) {
-	DBG("Cannot lookup DID for domain '%.*s'\n", puri.host.len, ZSW(puri.host.s));
-	return -1;
+    if (puri.host.len) {
+	/* domain name is present */
+	if (dm_get_did(&did, &puri.host) < 0) {
+		DBG("Cannot lookup DID for domain '%.*s', using default value\n", puri.host.len, ZSW(puri.host.s));
+		did = default_did;
+	}
+    } else {
+	/* domain name is missing -- can be caused by Tel: URI */
+	DBG("There is no domain name, using default value\n");
+	did = default_did;
     }
 
     keys[0] = username_col.s;
     keys[1] = did_col.s;
+    keys[2] = scheme_col.s;
     cols[0] = uid_col.s;
     cols[1] = flags_col.s;
     
@@ -406,12 +435,16 @@ static int lookup_user_2(struct sip_msg* msg, char* attr, char* select)
     vals[1].nul = 0;
     vals[1].val.str_val = did;
 
+    vals[2].type = DB_STR;
+    vals[2].nul = 0;
+    uri_type_to_str(puri.type, &(vals[2].val.str_val));
+
     if (db.use_table(con, uri_table.s) < 0) {
 	LOG(L_ERR, "lookup_user: Error in use_table\n");
 	return -1;
     }
 
-    if (db.query(con, keys, 0, vals, cols, 2, 2, 0, &res) < 0) {
+    if (db.query(con, keys, 0, vals, cols, 3, 2, 0, &res) < 0) {
 	LOG(L_ERR, "lookup_user: Error in db_query\n");
 	return -1;
     }
@@ -491,7 +524,7 @@ static int lookup_user_fixup(void** param, int param_no)
 	    return -1;
 	}
 	return 0;
-    } else if (param_no == 2) {
+    } else {
 	return fixup_var_str_12(param, 2);
     }
 }

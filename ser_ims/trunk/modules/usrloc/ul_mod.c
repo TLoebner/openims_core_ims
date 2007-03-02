@@ -186,6 +186,11 @@ static int mod_init(void)
 {
 	DBG("usrloc - initializing\n");
 
+	if ((db_mode < 0) || (db_mode >= UL_DB_MAX)) {
+	    ERR("Invalid database mode '%d'\n", db_mode);
+	    return -1;
+	}
+
 	     /* Register cache timer */
 	register_timer(timer, 0, timer_interval);
 
@@ -196,7 +201,7 @@ static int mod_init(void)
 	}
 
 	/* Shall we use database ? */
-	if (db_mode != NO_DB && db_mode != READONLY) { /* Yes */
+	if (db_mode != NO_DB) { /* Yes */
 		if (bind_dbmod(db_url.s, &ul_dbf) < 0) { /* Find database module */
 			LOG(L_ERR, "ERROR: mod_init(): Can't bind database module\n");
 			return -1;
@@ -216,8 +221,10 @@ static int mod_init(void)
 
 static int child_init(int _rank)
 {
- 	     /* Shall we use database ? */
-	if (db_mode != NO_DB) { /* Yes */
+	if (_rank==PROC_MAIN || _rank==PROC_TCP_MAIN)
+		return 0; /* do nothing for the main or tcp_main processes */
+	     /* Shall we use database ? */
+	if ( db_mode != NO_DB) { /* Yes */
 		ul_dbh = ul_dbf.init(db_url.s); /* Get a new database connection */
 		if (!ul_dbh) {
 			LOG(L_ERR, "ERROR: child_init(%d): "

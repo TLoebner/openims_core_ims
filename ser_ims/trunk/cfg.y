@@ -76,6 +76,8 @@
  *              options (andrei)
  * 2006-10-13  added STUN_ALLOW_STUN, STUN_ALLOW_FP, STUN_REFRESH_INTERVAL
  *              (vlada)
+ * 2007-02-09  separated command needed for tls-in-core and for tls in general
+ *              (andrei)
  */
 
 %{
@@ -104,7 +106,7 @@
 #include "flags.h"
 
 #include "config.h"
-#ifdef USE_TLS
+#ifdef CORE_TLS
 #include "tls/tls_config.h"
 #endif
 
@@ -138,6 +140,12 @@
 	#define IF_DST_BLACKLIST(x) x
 #else
 	#define IF_DST_BLACKLIST(x) warn("dst blacklist support not compiled in")
+#endif
+
+#ifdef USE_STUN
+	#define IF_STUN(x) x
+#else 
+	#define IF_STUN(x) warn("stun support not compiled in")
 #endif
 
 
@@ -299,6 +307,7 @@ static struct socket_id* mk_listen_id(char*, int, int);
 %token TCP_POLL_METHOD
 %token TCP_MAX_CONNECTIONS
 %token DISABLE_TLS
+%token ENABLE_TLS
 %token TLSLOG
 %token TLS_PORT_NO
 %token TLS_METHOD
@@ -320,6 +329,7 @@ static struct socket_id* mk_listen_id(char*, int, int);
 %token MCAST_LOOPBACK
 %token MCAST_TTL
 %token TOS
+%token KILL_TIMEOUT
 
 %token FLAGS_DECL
 %token AVPFLAGS_DECL
@@ -706,11 +716,19 @@ assign_stm:
 		#endif
 	}
 	| DISABLE_TLS EQUAL error { yyerror("boolean value expected"); }
-	| TLSLOG EQUAL NUMBER {
+	| ENABLE_TLS EQUAL NUMBER {
 		#ifdef USE_TLS
-			tls_log=$3;
+			tls_disable=!($3);
 		#else
 			warn("tls support not compiled in");
+		#endif
+	}
+	| ENABLE_TLS EQUAL error { yyerror("boolean value expected"); }
+	| TLSLOG EQUAL NUMBER {
+		#ifdef CORE_TLS
+			tls_log=$3;
+		#else
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLSLOG EQUAL error { yyerror("int value expected"); }
@@ -723,93 +741,93 @@ assign_stm:
 	}
 	| TLS_PORT_NO EQUAL error { yyerror("number expected"); }
 	| TLS_METHOD EQUAL SSLv23 {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_method=TLS_USE_SSLv23;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_METHOD EQUAL SSLv2 {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_method=TLS_USE_SSLv2;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_METHOD EQUAL SSLv3 {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_method=TLS_USE_SSLv3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_METHOD EQUAL TLSv1 {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_method=TLS_USE_TLSv1;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_METHOD EQUAL error {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			yyerror("SSLv23, SSLv2, SSLv3 or TLSv1 expected");
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_VERIFY EQUAL NUMBER {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_verify_cert=$3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_VERIFY EQUAL error { yyerror("boolean value expected"); }
 	| TLS_REQUIRE_CERTIFICATE EQUAL NUMBER {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_require_cert=$3;
 		#else
-			warn( "tls support not compiled in");
+			warn( "tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_REQUIRE_CERTIFICATE EQUAL error { yyerror("boolean value expected"); }
 	| TLS_CERTIFICATE EQUAL STRING {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_cert_file=$3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_CERTIFICATE EQUAL error { yyerror("string value expected"); }
 	| TLS_PRIVATE_KEY EQUAL STRING {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_pkey_file=$3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_PRIVATE_KEY EQUAL error { yyerror("string value expected"); }
 	| TLS_CA_LIST EQUAL STRING {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_ca_file=$3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_CA_LIST EQUAL error { yyerror("string value expected"); }
 	| TLS_HANDSHAKE_TIMEOUT EQUAL NUMBER {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_handshake_timeout=$3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_HANDSHAKE_TIMEOUT EQUAL error { yyerror("number expected"); }
 	| TLS_SEND_TIMEOUT EQUAL NUMBER {
-		#ifdef USE_TLS
+		#ifdef CORE_TLS
 			tls_send_timeout=$3;
 		#else
-			warn("tls support not compiled in");
+			warn("tls-in-core support not compiled in");
 		#endif
 	}
 	| TLS_SEND_TIMEOUT EQUAL error { yyerror("number expected"); }
@@ -869,23 +887,13 @@ assign_stm:
 	| MCAST_TTL EQUAL error { yyerror("number expected"); }
 	| TOS EQUAL NUMBER { tos=$3; }
 	| TOS EQUAL error { yyerror("number expected"); }
-	| STUN_REFRESH_INTERVAL EQUAL NUMBER { 
-		#ifdef USE_STUN
-			stun_refresh_interval=$3;
-		#endif
-		}
+	| KILL_TIMEOUT EQUAL NUMBER { ser_kill_timeout=$3; }
+	| KILL_TIMEOUT EQUAL error { yyerror("number expected"); }
+	| STUN_REFRESH_INTERVAL EQUAL NUMBER { IF_STUN(stun_refresh_interval=$3); }
 	| STUN_REFRESH_INTERVAL EQUAL error{ yyerror("number expected"); }
-	| STUN_ALLOW_STUN EQUAL NUMBER { 
-		#ifdef USE_STUN
-			stun_allow_stun=$3;
-		#endif
-		}
+	| STUN_ALLOW_STUN EQUAL NUMBER { IF_STUN(stun_allow_stun=$3); }
 	| STUN_ALLOW_STUN EQUAL error{ yyerror("number expected"); }
-	| STUN_ALLOW_FP EQUAL NUMBER { 
-		#ifdef USE_STUN
-			stun_allow_fp=$3;
-		#endif
-		}
+	| STUN_ALLOW_FP EQUAL NUMBER { IF_STUN(stun_allow_fp=$3) ; }
 	| STUN_ALLOW_FP EQUAL error{ yyerror("number expected"); }
 	| error EQUAL { yyerror("unknown config variable"); }
 	;

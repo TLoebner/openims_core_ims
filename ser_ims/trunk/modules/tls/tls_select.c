@@ -37,6 +37,7 @@
 #include "../../ut.h"
 #include "tls_server.h"
 #include "tls_select.h"
+#include "tls_mod.h"
 
 enum {
 	CERT_LOCAL = 1,   /* Select local certificate */
@@ -70,7 +71,7 @@ struct tcp_connection* get_cur_connection(struct sip_msg* msg)
 		return 0;
 	}
 
-	c = tcpconn_get(msg->rcv.proto_reserved1, 0, 0, tcp_con_lifetime);
+	c = tcpconn_get(msg->rcv.proto_reserved1, 0, 0, tls_con_lifetime);
 	if (c && c->type != PROTO_TLS) {
 		ERR("Connection found but is not TLS\n");
 		tcpconn_put(c);
@@ -315,11 +316,13 @@ static int check_cert(str* res, select_t* s, struct sip_msg* msg)
 		goto err;
 	} else {
 		if ((cert = SSL_get_peer_certificate(ssl)) && SSL_get_verify_result(ssl) == err) {
-			res = &succ;
+			*res = succ;
 			ret = 0; /* Verified certificate */
 		} else {
-			res = &fail;
-			ret = 1; /* Certificate missing or not verified */
+			*res = fail;
+			/* I is better to return 0, because the select function
+			call is successful, only the result is false (Miklos) */
+			ret = 0; /* Certificate missing or not verified */
 		}
 	}
 
@@ -430,9 +433,10 @@ static int sel_comp(str* res, select_t* s, struct sip_msg* msg)
 	ASN1_STRING* asn1;
 	int nid = NID_commonName, index, my = 0, issuer = 0, i;
 	char* elem;
-	str text;
+	unsigned char* text_s;
+	int text_len;
 	       
-	text.s = 0;
+	text_s = 0;
 
 	for(i = 1; i <= s->n - 1; i++) {
 		switch(s->params[i].v.i) {
@@ -463,13 +467,13 @@ static int sel_comp(str* res, select_t* s, struct sip_msg* msg)
 	index = X509_NAME_get_index_by_NID(name, nid, -1);
 	if (index == -1) {
 		switch(nid) {
-		case COMP_CN: elem = "CommonName";              break;
-		case COMP_O:  elem = "OrganizationName";        break;
-		case COMP_OU: elem = "OrganizationalUnitUname"; break;
-		case COMP_C:  elem = "CountryName";             break;
-		case COMP_ST: elem = "StateOrProvinceName";     break;
-		case COMP_L:  elem = "LocalityName";            break;
-		default:      elem = "Unknown";                 break;
+		case NID_commonName:             elem = "CommonName";              break;
+		case NID_organizationName:       elem = "OrganizationName";        break;
+		case NID_organizationalUnitName: elem = "OrganizationalUnitUname"; break;
+		case NID_countryName:            elem = "CountryName";             break;
+		case NID_stateOrProvinceName:    elem = "StateOrProvinceName";     break;
+		case NID_localityName:           elem = "LocalityName";            break;
+		default:                         elem = "Unknown";                 break;
 		}
 		DBG("Element %s not found in certificate subject/issuer\n", elem);
 		goto err;
@@ -477,22 +481,22 @@ static int sel_comp(str* res, select_t* s, struct sip_msg* msg)
 
 	e = X509_NAME_get_entry(name, index);
 	asn1 = X509_NAME_ENTRY_get_data(e);
-	text.len = ASN1_STRING_to_UTF8((unsigned char**)&text.s, asn1);
-	if (text.len < 0 || text.len >= 1024) {
+	text_len = ASN1_STRING_to_UTF8(&text_s, asn1);
+	if (text_len < 0 || text_len >= 1024) {
 		ERR("Error converting ASN1 string\n");
 		goto err;
 	}
-	memcpy(buf, text.s, text.len);
+	memcpy(buf, text_s, text_len);
 	res->s = buf;
-	res->len = text.len;
+	res->len = text_len;
 
-	OPENSSL_free(text.s);
+	OPENSSL_free(text_s);
 	if (!my) X509_free(cert);
 	tcpconn_put(c);
 	return 0;
 
  err:
-	if (text.s) OPENSSL_free(text.s);
+	if (text_s) OPENSSL_free(text_s);
 	if (!my) X509_free(cert);
 	tcpconn_put(c);
 	return -1;

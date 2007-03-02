@@ -76,6 +76,7 @@ extern struct socket_info* sendipv6_tls; /* same as above for ipv6 */
 extern unsigned int maxbuffer;
 extern int children_no;
 #ifdef USE_TCP
+extern int tcp_main_pid;
 extern int tcp_children_no;
 extern int tcp_disable;
 extern int tcp_accept_aliases;
@@ -145,6 +146,7 @@ extern int process_no;
 extern int reply_to_via;
 
 extern int is_main;
+extern int fixup_complete;
 
 /* debugging level for dumping memory status */
 extern int memlog;
@@ -165,6 +167,9 @@ extern char **my_argv;
 extern str default_global_address;
 /* pre-ser ports */
 extern str default_global_port;
+
+/* how much time to allow for shutdown, before killing everything */
+int ser_kill_timeout;
 
 /* core dump and file limits */
 extern int disable_core_dump;

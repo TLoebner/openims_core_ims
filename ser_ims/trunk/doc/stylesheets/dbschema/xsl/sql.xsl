@@ -103,15 +103,15 @@
 	</xsl:if>
 
 	<xsl:choose>
-	    <xsl:when test="db:default">
+	    <xsl:when test="default[@db=$db]">
 		<xsl:text> DEFAULT </xsl:text>
 		<xsl:choose>
-		    <xsl:when test="db:default/null">
+		    <xsl:when test="default[@db=$db]/null">
 			<xsl:text>NULL</xsl:text>
 		    </xsl:when>
 		    <xsl:otherwise>
 			<xsl:text>'</xsl:text>
-			<xsl:value-of select="db:default"/>
+			<xsl:value-of select="default[@db=$db]"/>
 			<xsl:text>'</xsl:text>
 		    </xsl:otherwise>
 		</xsl:choose>

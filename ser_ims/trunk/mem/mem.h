@@ -33,6 +33,7 @@
  *               (andrei)
  *  2003-03-07  split init_malloc into init_pkg_mallocs & init_shm_mallocs 
  *               (andrei)
+ *  2007-02-23   added pkg_info() and pkg_available() (andrei)
  */
 
 
@@ -113,12 +114,16 @@
 #			define pkg_sums()  	 vqm_sums(mem_block)
 #		endif
 #	elif defined F_MALLOC
-#		define pkg_status()  fm_status(mem_block)
+#		define pkg_status()    fm_status(mem_block)
+#		define pkg_info(mi)    fm_info(mem_block, mi)
+#		define pkg_available() fm_available(mem_block)
 #		ifdef DBG_F_MALLOC
 #			define pkg_sums()  	 fm_sums(mem_block)
 #		endif
 #	else
-#		define pkg_status()  qm_status(mem_block)
+#		define pkg_status()    qm_status(mem_block)
+#		define pkg_info(mi)    qm_info(mem_block, mi)
+#		define pkg_available() qm_available(mem_block)
 #		ifdef DBG_QM_MALLOC
 #			define pkg_sums()  	 qm_sums(mem_block)
 #		endif
@@ -132,9 +137,13 @@
 #	include <stdlib.h>
 #	include "memdbg.h"
 #	define pkg_malloc(s) \
-	(  { void *v; v=malloc((s)); \
-	   MDBG("malloc %p size %d end %p\n", v, s, (char*)v+(s));\
-	   v; } )
+	(  { void *____v123; ____v123=malloc((s)); \
+	   MDBG("malloc %p size %lu end %p\n", ____v123, (unsigned long)(s), (char*)____v123+(s));\
+	   ____v123; } )
+#	define pkg_realloc(p, s) \
+	(  { void *____v123; ____v123=realloc(p, s); \
+	   MDBG("realloc %p size %lu end %p\n", ____v123, (unsigned long)(s), (char*)____v123+(s));\
+	    ____v123; } )
 #	define pkg_free(p)  do{ MDBG("free %p\n", (p)); free((p)); }while(0);
 #	define pkg_status()
 #endif

@@ -51,6 +51,8 @@
 #  2006-03-31  armv6 & mips64 support added
 #              mips and arm set to NOSMP by default (andrei)
 #  2006-07-10  added -DPROFILING (hscholz)
+#  2007-02-09  added TLS_HOOKS and CORE_TLS support, obsoleted TLS=1
+#              added TLS_EXTRA_LIBS (andrei)
 
 
 # check if already included/exported
@@ -64,10 +66,10 @@ export makefile_defs
 MAIN_NAME=ser
 
 #version number
-VERSION = 0
-PATCHLEVEL = 10
-SUBLEVEL =   99
-EXTRAVERSION = -dev53-tm_fixes
+VERSION = 2
+PATCHLEVEL = 1
+SUBLEVEL =  0
+EXTRAVERSION = -dev1-OpenIMSCore
 
 SER_VER = $(shell expr $(VERSION) \* 1000000 + $(PATCHLEVEL) \* 1000 + \
 			$(SUBLEVEL) )
@@ -102,10 +104,18 @@ OSREL_N= $(shell echo $(OSREL) | sed -e 's/^[^0-9]*//' \
 		[ -n "$$C" ] && R=`expr $$R \* 1000 + $$C`; echo $$R ) )
 
 # TLS support
-TLS ?= 
-ifneq ($(TLS),)
+CORE_TLS ?= 
+# by default compile with tls hooks support (so that no ser recompile is
+#  needed before the tls module can be used)
+TLS_HOOKS=1
+ifeq ($(CORE_TLS), 1)
 	RELEASE:=$(RELEASE)-tls
+	TLS_HOOKS:=0
 endif
+ifeq ($(TLS_HOOKS), 1)
+#	RELEASE:=$(RELEASE)-tls
+endif
+
 # extra CC command line options (e.g  -march=athlon-mp)
 CC_EXTRA_OPTS ?=
 
@@ -327,8 +337,21 @@ endif
 # -DDISABLE_NAGLE
 #		disable the tcp Nagle algorithm (lower delay)
 # -DUSE_TLS
-#		compiles in tls support, requires -DUSE_TCP. Please use
-#		make TLS=1 instead. (tls support is highly experimental for now)
+#		compiles in tls support, requires -DUSE_TCP. Note: this is only 
+#		generic support (parsing a.s.o.), it does not include the actual
+#		"tls engine". If you really want tls you need also either
+#		-DCORE_TLS and a tls/ subdir with the tls code or -DTLS_HOOKS and
+#		the tls module loaded.
+# -DCORE_TLS
+#		compiles tls in-core support. Requires -DUSE_TLS, conflicts 
+#		-DTLS_HOOKS. Please use make CORE_TLS=1 instead  (it will set all the
+#		needed defines automatically and extra libraries needed for linking).
+# -DTLS_HOOKS
+#		compile tls module support (support for having the "tls engine" in a
+#		module). Requires -DUSE_TLS, conflicts -DCORE_TLS.
+#		Please use make TLS_HOOKS=1 (or TLS_HOOKS=0 to for disabling) instead
+#		of setting -DTLS_HOOKS (it will set all the needed defines 
+#		automatically)
 # -DHAVE_RESOLV_RES
 #		support for changing some of the resolver parameters present
 #		 (_res structure in <resolv.h>)
@@ -353,6 +376,9 @@ endif
 #		Don't forget to set PROFILE (see below)
 # -DUSE_STUN
 #		compiles in stun support
+# -DNO_SIG_DEBUG
+#        turns off debugging messages in signal handlers (which might be 
+#         unsafe)
 
 # Sometimes is needes correct non-quoted $OS. HACK: gcc translates known OS to number ('linux'), so there is added underscore
 
@@ -384,7 +410,8 @@ DEFS+= $(extra_defs) \
 	 #-DUSE_SHM_MEM \
 	 #-DSTATS \
 	 #-DNO_LOG \
-	 #-DPROFILING
+	 #-DPROFILING \
+	 #-DNO_SIG_DEBUG
 
 #PROFILE=  -pg	# set this if you want profiling
 				# you may also want to set -DPROFILING
@@ -393,8 +420,11 @@ DEFS+= $(extra_defs) \
 # use make mode=debug all instead. Anyway no by default ser is  compiled w/ 
 # debugging symbols in all cases (-g). --andrei
 
-ifneq ($(TLS),)
-	DEFS+= -DUSE_TLS
+ifeq ($(CORE_TLS), 1)
+	DEFS+= -DUSE_TLS -DCORE_TLS
+endif
+ifeq ($(TLS_HOOKS), 1)
+	DEFS+= -DUSE_TLS -DTLS_HOOKS
 endif
 
 ifneq ($(STUN),)
@@ -534,8 +564,7 @@ ifeq	($(ARCH), i386)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS=-g -O9 -funroll-loops  -Wcast-align $(PROFILE) \
-					-Wall  
+				CFLAGS=-g -O9 -funroll-loops  -Wcast-align $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CPU ?= athlon64
@@ -596,8 +625,7 @@ ifeq	($(ARCH), x86_64)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS=-g -O9 -funroll-loops  -Wcast-align $(PROFILE) \
-					-Wall 
+				CFLAGS=-g -O9 -funroll-loops  -Wcast-align $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CPU ?= opteron
@@ -659,7 +687,6 @@ ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM -DSPARC64_MODE
 				#common stuff
 				CFLAGS=-m64 -g -O9 -funroll-loops  $(PROFILE) \
-					-Wall\
 					#-Wcast-align \
 					#-Wmissing-prototypes 
 				# use -m64 to force 64 bit (but add it also to LDFLAGS and
@@ -737,7 +764,6 @@ ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
 				CFLAGS=-g -O9 -funroll-loops  $(PROFILE) \
-					-Wall\
 					#-Wcast-align \
 					#-Wmissing-prototypes 
 				#if gcc 4.x
@@ -794,8 +820,7 @@ ifeq	($(ARCH), arm)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS=-O9 -funroll-loops $(PROFILE) \
-					-Wall   
+				CFLAGS=-O9 -funroll-loops $(PROFILE)
 			#if gcc 4.x+
 ifeq			($(CC_SHORTVER), 4.x)
 					CFLAGS+= -ftree-vectorize
@@ -838,7 +863,7 @@ ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
 				CFLAGS=-march=armv6 -O9 -funroll-loops \
-						$(PROFILE) -Wall   
+						$(PROFILE)
 			#if gcc 4.x+
 ifeq			($(CC_SHORTVER), 4.x)
 					CFLAGS+= -ftree-vectorize
@@ -879,8 +904,7 @@ ifeq	($(ARCH), mips)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS=-O9 -funroll-loops  $(PROFILE) \
-					-Wall 
+				CFLAGS=-O9 -funroll-loops  $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CFLAGS+=-march=r3000 -minline-all-stringops \
@@ -921,8 +945,7 @@ ifeq	($(ARCH), mips2)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS= -mips2 -O9 -funroll-loops $(PROFILE) \
-					-Wall 
+				CFLAGS= -mips2 -O9 -funroll-loops $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CFLAGS+=-minline-all-stringops -ftree-vectorize
@@ -961,8 +984,7 @@ ifeq	($(ARCH), mips64)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS= -mips64 -O9 -funroll-loops $(PROFILE) \
-					-Wall 
+				CFLAGS= -mips64 -O9 -funroll-loops $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CFLAGS+=-minline-all-stringops -ftree-vectorize
@@ -1001,7 +1023,7 @@ ifeq	($(ARCH), alpha)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS= -O9 -funroll-loops $(PROFILE)  -Wall 
+				CFLAGS= -O9 -funroll-loops $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CFLAGS+= 
@@ -1041,7 +1063,7 @@ ifeq	($(ARCH), ppc)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS= -O9 -funroll-loops $(PROFILE)  -Wall 
+				CFLAGS= -O9 -funroll-loops $(PROFILE)
 			#if gcc 4.0+
 ifeq			($(CC_SHORTVER), 4.x)
 					CPU ?= powerpc
@@ -1082,7 +1104,7 @@ ifeq	($(ARCH), ppc64)
 ifeq		($(CC_NAME), gcc)
 				DEFS+=-DCC_GCC_LIKE_ASM
 				#common stuff
-				CFLAGS= -O9 -funroll-loops $(PROFILE)  -Wall 
+				CFLAGS= -O9 -funroll-loops $(PROFILE)
 ifeq			($(CC_SHORTVER), 4.x)
 					CPU ?= powerpc64
 					CFLAGS+=-ftree-vectorize \
@@ -1116,6 +1138,7 @@ $(error 			Unsupported compiler ($(CC):$(CC_NAME)), try gcc)
 endif		#CC_NAME, gcc
 endif	#ARCH, ppc 
 
+CFLAGS+= $(CC_EXTRA_OPTS)
 
 
 # setting LDFLAGS
@@ -1175,7 +1198,20 @@ endif
 
 endif #mode=release
 
-CFLAGS+= $(CC_EXTRA_OPTS)
+
+# set pedantic compiler options
+ifeq ($(CC_NAME), gcc)
+		CFLAGS+= -Wall
+else # no gcc
+ifeq ($(CC_NAME), icc)
+		CFLAGS+= -Wall
+else # no icc
+ifeq ($(CC_NAME), suncc)
+		# FIXME: is the default (-Xa ?) enough?
+endif # CC_NAME=suncc
+endif # CC_NAME=icc
+endif # CC_NAME=gcc
+
 
 #*FLAGS used for compiling the modules
 ifeq	($(CC_NAME), gcc)
@@ -1207,6 +1243,13 @@ ifeq ($(OS), linux)
 	ifneq ($(found_lock_method), yes)
 		DEFS+= -DUSE_SYSV_SEM  # try posix sems
 		found_lock_method=yes
+	else
+		ifneq (,$(findstring -DUSE_POSIX_SEM, $(DEFS)))
+			LIBS+=-lpthread
+		endif
+		ifneq (,$(findstring -DUSE_PTHREAD_MUTEX, $(DEFS)))
+			LIBS+=-lpthread
+		endif
 	endif
 	# check for >= 2.5.44
 	ifeq ($(shell [ $(OSREL_N) -ge 2005044 ] && echo has_epoll), has_epoll)
@@ -1275,7 +1318,7 @@ ifeq ($(OS), freebsd)
 	ifneq ($(found_lock_method), yes)
 		DEFS+= -DUSE_PTHREAD_MUTEX  # try pthread sems
 		found_lock_method=yes
-		LIBS= -pthread   #dlopen is in libc
+		LIBS+= -pthread   #dlopen is in libc
 	else
 		LIBS=   #dlopen is in libc
 	endif
@@ -1390,9 +1433,13 @@ ifneq (,$(findstring CYGWIN, $(OS)))
 endif
 
 #add libssl if needed
-ifneq ($(TLS),)
+ifeq ($(CORE_TLS), 1)
 DEFS+= -I$(LOCALBASE)/ssl/include
-LIBS+= -L$(LOCALBASE)/lib -L$(LOCALBASE)/ssl/lib -lssl  -lcrypto
+LIBS+= -L$(LOCALBASE)/lib -L$(LOCALBASE)/ssl/lib -lssl -lcrypto \
+		$(TLS_EXTRA_LIBS)
+# NOTE: depending on the way in which libssl was compiled you might
+#       have to add -lz -lkrb5   (zlib and kerberos5).
+#       E.g.: make CORE_TLS=1 EXTRA_TLS_LIBS="-lz -lkrb5"
 endif
 
 ifneq ($(STUN),)

@@ -42,6 +42,7 @@
 #include "../../error.h"
 #include "../../dprint.h"
 #include "../../mem/mem.h"
+#include "../../config.h"
 #include "authrad_mod.h"
 #include "authorize.h"
 
@@ -60,6 +61,8 @@ void *rh;
 auth_api_t auth_api;
 
 static int mod_init(void);                        /* Module initialization function */
+
+int use_did = 1;
 
 
 /*
@@ -87,6 +90,7 @@ static cmd_export_t cmds[] = {
 static param_export_t params[] = {
 	{"radius_config",    PARAM_STRING, &radius_config },
 	{"service_type",     PARAM_INT,   &service_type   },
+	{"use_did",          PARAM_INT,   &use_did },
 	{0, 0, 0}
 };
 
@@ -139,12 +143,18 @@ static int mod_init(void)
 
 	     /* SER-specific */
 	attrs[A_SER_URI_USER].n			= "SER-Uri-User";
-	attrs[A_SER_ATTRS].n	                = "SER-Attrs";
+	attrs[A_SER_ATTR].n	                = "SER-Attr";
+	attrs[A_SER_UID].n                      = "SER-UID";
+	attrs[A_SER_SERVICE_TYPE].n             = "SER-Service-Type";
+
+	     /* SER-Service-Type */
+	vals[V_DIGEST_AUTHENTICATION].n         = "Digest-Authentication";
 
 	attrs[A_CISCO_AVPAIR].n			= "Cisco-AVPair";
 
 	     /* draft-schulzrinne-sipping-radius-accounting-00 */
 	vals[V_SIP_SESSION].n			= "Sip-Session";
+
 
 	if ((rh = rc_read_config(radius_config)) == NULL) {
 		LOG(L_ERR, "auth_radius: Error opening configuration file \n");
@@ -162,6 +172,13 @@ static int mod_init(void)
 			   "dictionary\n");
 		attrs[A_CISCO_AVPAIR].n = NULL;
 	}
+	
+	vend = rc_dict_findvend(rh, "iptelorg");
+	if (vend == NULL) {
+		ERR("RADIUS dictionary is missing required vendor 'iptelorg'\n");
+		return -1;
+	}
+
 
         bind_auth = (bind_auth_t)find_export("bind_auth", 0, 0);
         if (!bind_auth) {

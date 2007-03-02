@@ -87,30 +87,29 @@ int new_presence_tuple(str* _contact, time_t expires,
 
 int db_read_tuples(presentity_t *_p, db_con_t* db)
 {
-	db_key_t keys[] = { "pres_id" };
+	db_key_t keys[] = { col_pres_id };
 	db_op_t ops[] = { OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = _p->pres_id } } };
 
 	int i;
 	int r = 0;
 	db_res_t *res = NULL;
-	db_key_t result_cols[] = { "contactid", "basic", "status", 
-		"location", "expires", "placeid", 
-		"priority", "contact", "tupleid",
-		"etag", "published_id"
+	db_key_t result_cols[] = { col_basic, col_expires, col_priority, 
+		col_contact, col_tupleid, col_etag, 
+		col_published_id
 	} ;
 	
 	if (!use_db) return 0;
 
 	if (pa_dbf.use_table(db, presentity_contact_table) < 0) {
-		LOG(L_ERR, "db_read_tuples: Error in use_table\n");
+		ERR("Error in use_table\n");
 		return -1;
 	}
 	
 	if (pa_dbf.query (db, keys, ops, k_vals,
 			result_cols, 1, sizeof(result_cols) / sizeof(db_key_t), 
 			0, &res) < 0) {
-		LOG(L_ERR, "db_read_tuples(): Error while querying watcherinfo\n");
+		ERR("Error while querying DB\n");
 		return -1;
 	}
 
@@ -122,29 +121,23 @@ int db_read_tuples(presentity_t *_p, db_con_t* db)
 		db_val_t *row_vals = ROW_VALUES(row);
 		str contact = STR_NULL;
 		basic_tuple_status_t basic = presence_tuple_undefined_status;
-		str status = STR_NULL; 
-		str location = STR_NULL; 
 		str id = STR_NULL; 
 		str etag = STR_NULL;
 		str published_id = STR_NULL;
 		
-		/* int contactid = row_vals[0].val.int_val; */
 		time_t expires = 0;
-		/* int placeid = row_vals[5].val.int_val; */
-		double priority = row_vals[6].val.double_val;
+		double priority = row_vals[2].val.double_val;
 		
 #define get_str_val(i,dst)	do{if(!row_vals[i].nul){dst.s=(char*)row_vals[i].val.string_val;dst.len=strlen(dst.s);}}while(0)
 #define get_int_val(i,dst)	do{if(!row_vals[i].nul){dst=row_vals[i].val.int_val;}}while(0)
 #define get_time_val(i,dst)	do{if(!row_vals[i].nul){dst=row_vals[i].val.time_val;}}while(0)
 
-		get_int_val(1, basic);
-		get_str_val(2, status);
-		get_str_val(3, location);
-		get_time_val(4, expires);
-		get_str_val(7, contact);
-		get_str_val(8, id);
-		get_str_val(9, etag);
-		get_str_val(10, published_id);
+		get_int_val(0, basic);
+		get_time_val(1, expires);
+		get_str_val(3, contact);
+		get_str_val(4, id);
+		get_str_val(5, etag);
+		get_str_val(6, published_id);
 		
 #undef get_str_val		
 #undef get_time_val		
@@ -157,6 +150,7 @@ int db_read_tuples(presentity_t *_p, db_con_t* db)
 			tuple->data.priority = priority;
 
 			db_read_tuple_notes(_p, tuple, db);
+			db_read_tuple_extensions(_p, tuple, db);
 			
 			add_presence_tuple_no_wb(_p, tuple);
 		}
@@ -172,51 +166,51 @@ static int set_tuple_db_data(presentity_t *_p, presence_tuple_t *tuple,
 {
 	int n_updates = 0;
 
-	cols[n_updates] = "tupleid";
+	cols[n_updates] = col_tupleid;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = tuple->data.id;
 	n_updates++;
 	
-	cols[n_updates] = "pres_id";
+	cols[n_updates] = col_pres_id;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = _p->pres_id;
 	n_updates++;
 	
-	cols[n_updates] = "basic";
+	cols[n_updates] = col_basic;
 	vals[n_updates].type = DB_INT;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.int_val = tuple->data.status.basic;
 	n_updates++;
 
-	cols[n_updates] = "contact";
+	cols[n_updates] = col_contact;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = tuple->data.contact;
 	n_updates++;	
 	
-	cols[n_updates] = "etag";
+	cols[n_updates] = col_etag;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = tuple->etag;
 	n_updates++;	
 
-	cols[n_updates] = "published_id";
+	cols[n_updates] = col_published_id;
 	vals[n_updates].type = DB_STR;
 	vals[n_updates].nul = 0;
 	vals[n_updates].val.str_val = tuple->published_id;
 	n_updates++;	
 
 	if (tuple->data.priority != 0.0) {
-		cols[n_updates] = "priority";
+		cols[n_updates] = col_priority;
 		vals[n_updates].type = DB_DOUBLE;
 		vals[n_updates].nul = 0;
 		vals[n_updates].val.double_val = tuple->data.priority;
 		n_updates++;
 	}
 	if (tuple->expires != 0) {
-		cols[n_updates] = "expires";
+		cols[n_updates] = col_expires;
 		vals[n_updates].type = DB_DATETIME;
 		vals[n_updates].nul = 0;
 		vals[n_updates].val.time_val = tuple->expires;
@@ -231,6 +225,7 @@ static int db_add_presence_tuple(presentity_t *_p, presence_tuple_t *t)
 	db_key_t query_cols[20];
 	db_val_t query_vals[20];
 	int n_query_cols = 0;
+	int res;
 
 	if (!use_db) return 0;
 	if (!t->is_published) return 0; /* store only published tuples */
@@ -250,12 +245,22 @@ static int db_add_presence_tuple(presentity_t *_p, presence_tuple_t *t)
 		return -1;
 	}
 		
-	return db_add_tuple_notes(_p, t);
+	res = 0;
+	if (db_add_tuple_notes(_p, t) < 0) {
+		res = -2;
+		ERR("can't add tuple notes into DB\n");
+	}
+	if (db_add_tuple_extensions(_p, t) < 0) {
+		res = -3;
+		ERR("can't add tuple extensions into DB\n");
+	}
+
+	return res;
 }
 
 static int db_remove_presence_tuple(presentity_t *_p, presence_tuple_t *t)
 {
-	db_key_t keys[] = { "pres_id", "tupleid" };
+	db_key_t keys[] = { col_pres_id, col_tupleid };
 	db_op_t ops[] = { OP_EQ, OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = _p->pres_id } },
 		{ DB_STR, 0, { .str_val = t->data.id } } };
@@ -264,6 +269,7 @@ static int db_remove_presence_tuple(presentity_t *_p, presence_tuple_t *t)
 	if (!t->is_published) return 0; /* store only published tuples */
 
 	db_remove_tuple_notes(_p, t);
+	db_remove_tuple_extensions(_p, t);
 	
 	if (pa_dbf.use_table(pa_db, presentity_contact_table) < 0) {
 		LOG(L_ERR, "db_remove_presence_tuple: Error in use_table\n");
@@ -278,9 +284,9 @@ static int db_remove_presence_tuple(presentity_t *_p, presence_tuple_t *t)
 	return 0;
 }
 
-int db_update_presence_tuple(presentity_t *_p, presence_tuple_t *t, int update_notes)
+int db_update_presence_tuple(presentity_t *_p, presence_tuple_t *t, int update_notes_and_ext)
 {
-	db_key_t keys[] = { "pres_id", "tupleid" };
+	db_key_t keys[] = { col_pres_id, col_tupleid };
 	db_op_t ops[] = { OP_EQ, OP_EQ };
 	db_val_t k_vals[] = { { DB_STR, 0, { .str_val = _p->pres_id } },
 		{ DB_STR, 0, { .str_val = t->data.id } } };
@@ -308,7 +314,10 @@ int db_update_presence_tuple(presentity_t *_p, presence_tuple_t *t, int update_n
 		return -1;
 	}
 
-	if (update_notes) db_update_tuple_notes(_p, t);
+	if (update_notes_and_ext) {
+		db_update_tuple_notes(_p, t);
+		db_update_tuple_extensions(_p, t);
+	}
 	
 	return 0;
 }
@@ -338,6 +347,8 @@ void remove_presence_tuple(presentity_t *_p, presence_tuple_t *_t)
 void free_presence_tuple(presence_tuple_t * _t)
 {
 	if (_t) {
+		free_tuple_notes(_t);
+		free_tuple_extensions(_t);
 		if (_t->is_published) {
 			/* Warning: not-published tuples have contact allocated
 			 * together with other data => contact can't change! */

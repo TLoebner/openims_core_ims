@@ -63,7 +63,15 @@
  *  2005-07-25  use sigaction for setting the signal handlers (andrei)
  *  2006-07-13  added dns cache/failover init. (andrei)
  *  2006-10-13  added global variables stun_refresh_interval, stun_allow_stun
- *              and stun_allow_fp (vlada)
+ *               and stun_allow_fp (vlada)
+ *  2006-10-25  don't log messages from signal handlers if NO_SIG_DEBUG is
+ *               defined; improved exit kill timeout (andrei)
+ *              init_childs(PROC_MAIN) before starting tcp_main, to allow
+ *               tcp usage for module started processes (andrei)
+ * 2007-01-18  children shutdown procedure moved into shutdown_children;
+ *               safer shutdown on start-up error (andrei)
+ * 2007-02-09  TLS support split into tls-in-core (CORE_TLS) and generic TLS 
+ *             (USE_TLS)  (andrei)
  */
 
 
@@ -119,15 +127,20 @@
 #include "hash_func.h"
 #include "pt.h"
 #include "script_cb.h"
+#include "nonsip_hooks.h"
 #include "ut.h"
 #include "signals.h"
 #ifdef USE_TCP
 #include "poll_types.h"
 #include "tcp_init.h"
-#ifdef USE_TLS
+#ifdef CORE_TLS
 #include "tls/tls_init.h"
-#endif
-#endif
+#define tls_has_init_si() 1
+#define tls_loaded() 1
+#else
+#include "tls_hooks_init.h"
+#endif /* CORE_TLS */
+#endif /* USE_TCP */
 #include "usr_avp.h"
 #include "core_cmd.h"
 #include "flags.h"
@@ -145,6 +158,13 @@
 #include <dmalloc.h>
 #endif
 #include "version.h"
+
+/* define SIG_DEBUG by default */
+#ifdef NO_SIG_DEBUG
+#undef SIG_DEBUG
+#else
+#define SIG_DEBUG
+#endif
 
 static char id[]="@(#) $Id$";
 static char* version=SER_FULL_VERSION;
@@ -246,8 +266,12 @@ int tcp_children_no = 0;
 int tcp_disable = 0; /* 1 if tcp is disabled */
 #endif
 #ifdef USE_TLS
-int tls_disable = 0; /* 1 if tls is disabled */
-#endif
+#ifdef	CORE_TLS
+int tls_disable = 0;  /* tls enabled by default */
+#else
+int tls_disable = 1;  /* tls disabled by default */
+#endif /* CORE_TLS */
+#endif /* USE_TLS */
 
 struct process_table *pt=0;		/*array with children pids, 0= main proc,
 									alloc'ed in shared mem if possible*/
@@ -332,6 +356,7 @@ int addresses_no=0;                   /* number of names/ips */
 #endif
 struct socket_info* udp_listen=0;
 #ifdef USE_TCP
+int tcp_main_pid=0; /* set after the tcp main process is started */
 struct socket_info* tcp_listen=0;
 #endif
 #ifdef USE_TLS
@@ -369,6 +394,9 @@ struct host_alias* aliases=0; /* name aliases list */
 /* Parameter to child_init */
 int child_rank = 0;
 
+/* how much to wait for children to terminate, before taking extreme measures*/
+int ser_kill_timeout=DEFAULT_SER_KILL_TIMEOUT;
+
 /* process_bm_t process_bit = 0; */
 #ifdef ROUTE_SRV
 #endif
@@ -394,6 +422,7 @@ extern int yyparse();
 
 
 int is_main=1; /* flag = is this the  "main" process? */
+int fixup_complete=0; /* flag = is the fixup complete ? */
 
 char* pid_file = 0; /* filename as asked by use */
 char* pgid_file = 0;
@@ -422,6 +451,7 @@ void cleanup(show_status)
 #endif
 	destroy_timer();
 	destroy_script_cb();
+	destroy_nonsip_hooks();
 	destroy_routes();
 	destroy_atomic_ops();
 #ifdef PKG_MALLOC
@@ -469,25 +499,31 @@ static void kill_all_children(int signum)
 
 	if (own_pgid) kill(0, signum);
 	else if (pt){
-		lock_get(process_lock);
+		 /* lock processes table only if this is a child process
+		  * (only main can add processes, so from main is safe not to lock
+		  *  and moreover it avoids the lock-holding suicidal children problem)
+		  */
+		if (!is_main) lock_get(process_lock); 
         LOG(L_ERR,"Process Table:\n");
         for (r=0; r<*process_count; r++){
                 LOG(L_ERR,"%2d. (%d) > %s \n",r,pt[r].pid,pt[r].desc);
         }
+	
 		for (r=1; r<*process_count; r++){
+			if (r==process_no) continue; /* try not to be suicidal */
 			if (pt[r].pid) {
 				kill(pt[r].pid, signum);
 			}
 			else LOG(L_CRIT, "BUG: killing: %s > %d no pid!!!\n",
 							pt[r].desc, pt[r].pid);
 		}
-		lock_release(process_lock);
+		if (!is_main) lock_release(process_lock);
 	}
 }
 
 
 
-/* if this handler is called, a critical timeout has occured while
+/* if this handler is called, a critical timeout has occurred while
  * waiting for the children to finish => we should kill everything and exit */
 static void sig_alarm_kill(int signo)
 {
@@ -499,13 +535,32 @@ static void sig_alarm_kill(int signo)
 }
 
 
-/* like sig_alarm_kill, but the timeout has occured when cleaning up
+/* like sig_alarm_kill, but the timeout has occurred when cleaning up
  * => try to leave a core for future diagnostics */
 static void sig_alarm_abort(int signo)
 {
 	/* LOG is not signal safe, but who cares, we are abort-ing anyway :-) */
 	LOG(L_CRIT, "BUG: shutdown timeout triggered, dying...");
 	abort();
+}
+
+
+
+static void shutdown_children(int sig, int show_status)
+{
+	kill_all_children(sig);
+	if (set_sig_h(SIGALRM, sig_alarm_kill) == SIG_ERR ) {
+		LOG(L_ERR, "ERROR: shutdown: could not install SIGALARM handler\n");
+		/* continue, the process will die anyway if no
+		 * alarm is installed which is exactly what we want */
+	}
+	alarm(ser_kill_timeout);
+	while((wait(0) > 0) || (errno==EINTR)); /* wait for all the 
+											   children to terminate*/
+	set_sig_h(SIGALRM, sig_alarm_abort);
+	cleanup(show_status); /* cleanup & show status*/
+	alarm(0);
+	set_sig_h(SIGALRM, SIG_IGN);
 }
 
 
@@ -530,15 +585,9 @@ void handle_sigs()
 				DBG("INT received, program terminates\n");
 			else
 				DBG("SIGTERM received, program terminates\n");
-
-			/* first of all, kill the children also */
-			kill_all_children(SIGTERM);
-
-			     /* Wait for all the children to die */
-			while(wait(0) > 0);
-
-			cleanup(1); /* cleanup & show status*/
-			LOG(L_INFO,"Thank you for flying " NAME "\n");
+			/* shutdown/kill all the children */
+			shutdown_children(SIGTERM, 1);
+			dprint(L_CRIT,"Thank you for flying " NAME "\n");
 			exit(0);
 			break;
 
@@ -582,18 +631,7 @@ void handle_sigs()
 			LOG(L_INFO, "INFO: terminating due to SIGCHLD\n");
 #endif
 			/* exit */
-			kill_all_children(SIGTERM);
-			if (set_sig_h(SIGALRM, sig_alarm_kill) == SIG_ERR ) {
-				LOG(L_ERR, "ERROR: could not install SIGALARM handler\n");
-				/* continue, the process will die anyway if no
-				 * alarm is installed which is exactly what we want */
-			}
-			alarm(60); /* 1 minute close timeout */
-			while(wait(0) > 0); /* wait for all the children to terminate*/
-			set_sig_h(SIGALRM, sig_alarm_abort);
-			cleanup(1); /* cleanup & show status*/
-			alarm(0);
-			set_sig_h(SIGALRM, SIG_IGN);
+			shutdown_children(SIGTERM, 1);
 			DBG("terminating due to SIGCHLD\n");
 			exit(0);
 			break;
@@ -631,10 +669,13 @@ static void sig_usr(int signo)
 		/* process the important signals */
 		switch(signo){
 			case SIGPIPE:
+#ifdef SIG_DEBUG /* signal unsafe stuff follows */
 					LOG(L_INFO, "INFO: signal %d received\n", signo);
+#endif
 				break;
 			case SIGINT:
 			case SIGTERM:
+#ifdef SIG_DEBUG /* signal unsafe stuff follows */
 					LOG(L_INFO, "INFO: signal %d received\n", signo);
 					/* print memory stats for non-main too */
 					#ifdef PKG_MALLOC
@@ -644,7 +685,8 @@ static void sig_usr(int signo)
 						pkg_sums();
 					#endif					
 					#endif
-					exit(0);
+#endif					
+					_exit(0);
 					break;
 			case SIGUSR1:
 				/* statistics, do nothing, printed only from the main proc */
@@ -655,11 +697,14 @@ static void sig_usr(int signo)
 					break;
 			case SIGCHLD:
 #ifndef 			STOP_JIRIS_CHANGES
+#ifdef SIG_DEBUG /* signal unsafe stuff follows */
 					DBG("SIGCHLD received: "
 						"we do not worry about grand-children\n");
-#else
-					exit(0); /* terminate if one child died */
 #endif
+#else
+					_exit(0); /* terminate if one child died */
+#endif
+					break;
 		}
 	}
 }
@@ -830,13 +875,12 @@ int main_loop()
 	int  i;
 	pid_t pid;
 	struct socket_info* si;
+	char si_desc[MAX_PT_DESC];
 #ifdef EXTRA_DEBUG
 	int r;
 #endif
 
 	/* one "main" process and n children handling i/o */
-
-	is_main=0;
 	if (dont_fork){
 #ifdef STATS
 		setstats( 0 );
@@ -909,10 +953,6 @@ int main_loop()
 			LOG(L_ERR, "main_dontfork: init_child failed\n");
 			goto error;
 		}
-
-		is_main=1; /* hack 42: call init_child with is_main=0 in case
-					 some modules wants to fork a child */
-
 		return udp_rcv_loop();
 	}else{
 
@@ -945,7 +985,7 @@ int main_loop()
 			}
 		}
 #ifdef USE_TLS
-		if (!tls_disable){
+		if (!tls_disable && tls_has_init_si()){
 			for(si=tls_listen; si; si=si->next){
 				/* same as for tcp*/
 				if (tls_init(si)==-1)  goto error;
@@ -969,8 +1009,10 @@ int main_loop()
 		/* udp processes */
 		for(si=udp_listen; si; si=si->next){
 			for(i=0;i<children_no;i++){
+				snprintf(si_desc, MAX_PT_DESC, "receiver child=%d sock=%s:%s",
+					i, si->name.s, si->port_no_str.s);	
 				child_rank++;
-				pid = fork_process(child_rank, "udp", 1);
+				pid = fork_process(child_rank, si_desc, 1);
 				if (pid<0){
 					LOG(L_CRIT,  "main_loop: Cannot fork\n");
 					goto error;
@@ -981,10 +1023,6 @@ int main_loop()
 					setstats( i+r*children_no );
 #endif
 					return udp_rcv_loop();
-				}else{
-						snprintf(pt[process_no].desc, MAX_PT_DESC,
-							"receiver child=%d sock= %s:%s", i,
-							si->name.s, si->port_no_str.s );
 				}
 			}
 			/*parent*/
@@ -1005,7 +1043,6 @@ int main_loop()
 			goto error;
 		}else if (pid==0){
 			/* child */
-			/* is_main=0; */
 			if (arm_slow_timer()<0) goto error;
 			slow_timer_main();
 		}else{
@@ -1020,12 +1057,20 @@ int main_loop()
 			goto error;
 		}else if (pid==0){
 			/* child */
-			/* is_main=0; */
 			if (arm_timer()<0) goto error;
 			timer_main();
 		}else{
 		}
 	}
+
+/* init childs with rank==MAIN before starting tcp main (in case they want to 
+ *  fork  a tcp capable process, the corresponding tcp. comm. fds in pt[] must
+ *  be set before calling tcp_main_loop()) */
+	if (init_child(PROC_MAIN) < 0) {
+		LOG(L_ERR, "main: error in init_child\n");
+		goto error;
+	}
+
 #ifdef USE_TCP
 		if (!tcp_disable){
 				/* start tcp  & tls receivers */
@@ -1040,6 +1085,7 @@ int main_loop()
 				/* child */
 				tcp_main_loop();
 			}else{
+				tcp_main_pid=pid;
 				unix_tcp_sock=-1;
 			}
 		}
@@ -1048,20 +1094,10 @@ int main_loop()
 	strncpy(pt[0].desc, "attendant", MAX_PT_DESC );
 #ifdef USE_TCP
 	if(!tcp_disable){
-		pt[process_no].unix_sock=-1;
-		pt[process_no].idx=-1; /* this is not a "tcp" process*/
+		/* main's tcp sockets are disabled by default from init_pt() */
 		unix_tcp_sock=-1;
 	}
 #endif
-	/*DEBUG- remove it*/
-
-	/* process_bit = 0; */
-	is_main=1;
-
-	if (init_child(PROC_MAIN) < 0) {
-		LOG(L_ERR, "main: error in init_child\n");
-		goto error;
-	}
 
 	/*DEBUG- remove it*/
 #ifdef EXTRA_DEBUG
@@ -1071,14 +1107,14 @@ int main_loop()
 #endif
 
 	for(;;){
-			pause();
 			handle_sigs();
+			pause();
 	}
 
 
 	/*return 0; */
  error:
-	is_main=1;  /* if we are here, we are the "main process",
+				 /* if we are here, we are the "main process",
 				  any forked children should exit with exit(-1) and not
 				  ever use return */
 	return -1;
@@ -1234,6 +1270,7 @@ int main(int argc, char** argv)
 	}
 	
 	if (init_routes()<0) goto error;
+	if (init_nonsip_hooks()<0) goto error;
 	/* fill missing arguments with the default values*/
 	if (cfg_file==0) cfg_file=CFG_FILE;
 
@@ -1263,6 +1300,7 @@ try_again:
 	seed+=getpid()+time(0);
 	DBG("seeding PRNG with %u\n", seed);
 	srand(seed);
+	srandom(rand()+time(0));
 	DBG("test random number %u\n", rand());
 
 	/*register builtin  modules*/
@@ -1509,15 +1547,6 @@ try_again:
 			goto error;
 		}
 	}
-#ifdef USE_TLS
-	if (!tls_disable){
-		/* init tls*/
-		if (init_tls()<0){
-			LOG(L_CRIT, "could not initialize tls, exiting...\n");
-			goto error;
-		}
-	}
-#endif /* USE_TLS */
 #endif /* USE_TCP */
 	/* init_daemon? */
 	if (!dont_fork){
@@ -1545,6 +1574,23 @@ try_again:
 	 * processes registered from the modules*/
 	if (init_pt(calc_proc_no())==-1)
 		goto error;
+#ifdef USE_TCP
+#ifdef USE_TLS
+	if (!tls_disable){
+		if (!tls_loaded()){
+			LOG(L_WARN, "WARNING: tls support enabled, but no tls engine "
+						" available (forgot to load the tls module?)\n");
+			LOG(L_WARN, "WARNING: disabling tls...\n");
+			tls_disable=1;
+		}
+		/* init tls*/
+		if (init_tls()<0){
+			LOG(L_CRIT, "could not initialize tls, exiting...\n");
+			goto error;
+		}
+	}
+#endif /* USE_TLS */
+#endif /* USE_TCP */
 	
 	/* The total number of processes is now known, note that no
 	 * function being called before this point may rely on the
@@ -1559,6 +1605,7 @@ try_again:
 						r);
 		goto error;
 	};
+	fixup_complete=1;
 
 #ifdef STATS
 	if (init_stats(  dont_fork ? 1 : children_no  )==-1) goto error;
@@ -1566,16 +1613,13 @@ try_again:
 
 	ret=main_loop();
 	/*kill everything*/
-	kill_all_children(SIGTERM);
-	/*clean-up*/
-	cleanup(0);
+	if (is_main) shutdown_children(SIGTERM, 0);
+	/* else terminate process */
 	return ret;
 
 error:
 	/*kill everything*/
-	kill_all_children(SIGTERM);
-	/*clean-up*/
-	cleanup(0);
+	if (is_main) shutdown_children(SIGTERM, 0);
 	return -1;
 
 }

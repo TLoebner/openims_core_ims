@@ -68,7 +68,7 @@ CREATE INDEX mc_cid_key ON missed_calls (sip_callid);
 
 CREATE TABLE credentials (
     auth_username VARCHAR(64) NOT NULL,
-    did VARCHAR(64) NOT NULL DEFAULT '_none',
+    did VARCHAR(64) NOT NULL DEFAULT '_default',
     realm VARCHAR(64) NOT NULL,
     password VARCHAR(28) NOT NULL DEFAULT '',
     flags INTEGER NOT NULL DEFAULT '0',
@@ -91,6 +91,7 @@ CREATE TABLE attr_types (
     priority INTEGER NOT NULL DEFAULT '0',
     access INTEGER NOT NULL DEFAULT '0',
     ordering INTEGER NOT NULL DEFAULT '0',
+    grp VARCHAR(32) NOT NULL DEFAULT 'other',
     CONSTRAINT upt_idx1 UNIQUE (name)
 );
 
@@ -129,8 +130,8 @@ CREATE TABLE uri_attrs (
     value VARCHAR(255),
     type INTEGER NOT NULL DEFAULT '0',
     flags INTEGER NOT NULL DEFAULT '0',
-    scheme INTEGER NOT NULL DEFAULT '0',
-    CONSTRAINT uriattrs_idx UNIQUE (username, did, name, value)
+    scheme VARCHAR(8) NOT NULL DEFAULT 'sip',
+    CONSTRAINT uriattrs_idx UNIQUE (username, did, name, value, scheme)
 );
 
 CREATE TABLE domain (
@@ -168,6 +169,16 @@ CREATE TABLE location (
 );
 
 CREATE INDEX location_contact ON location (contact);
+
+CREATE TABLE contact_attrs (
+    uid VARCHAR(64) NOT NULL,
+    contact VARCHAR(255) NOT NULL,
+    name VARCHAR(32) NOT NULL,
+    value VARCHAR(255),
+    type INTEGER NOT NULL DEFAULT '0',
+    flags INTEGER NOT NULL DEFAULT '0',
+    CONSTRAINT contactattrs_idx UNIQUE (uid, contact, name)
+);
 
 CREATE TABLE trusted (
     src_ip VARCHAR(39) NOT NULL,
@@ -250,10 +261,10 @@ CREATE TABLE uri (
     did VARCHAR(64) NOT NULL,
     username VARCHAR(64) NOT NULL,
     flags INTEGER NOT NULL DEFAULT '0',
-    scheme INTEGER NOT NULL DEFAULT '0'
+    scheme VARCHAR(8) NOT NULL DEFAULT 'sip'
 );
 
-CREATE INDEX uri_idx1 ON uri (username, did);
+CREATE INDEX uri_idx1 ON uri (username, did, scheme);
 CREATE INDEX uri_uid ON uri (uid);
 
 CREATE TABLE speed_dial (
@@ -278,18 +289,17 @@ CREATE TABLE sd_attrs (
 );
 
 CREATE TABLE presentity (
-    presid SERIAL NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     uri VARCHAR(255) NOT NULL,
     uid VARCHAR(64) NOT NULL,
     pdomain VARCHAR(128) NOT NULL,
-    CONSTRAINT presentity_key UNIQUE (presid)
+    xcap_params BYTEA NOT NULL,
+    CONSTRAINT presentity_key UNIQUE (pres_id)
 );
-
-CREATE INDEX presentity_key2 ON presentity (uri);
 
 CREATE TABLE presentity_notes (
     dbid VARCHAR(64) NOT NULL,
-    presid INTEGER NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     etag VARCHAR(64) NOT NULL,
     note VARCHAR(128) NOT NULL,
     lang VARCHAR(64) NOT NULL,
@@ -297,62 +307,55 @@ CREATE TABLE presentity_notes (
     CONSTRAINT pnotes_idx1 UNIQUE (dbid)
 );
 
-CREATE TABLE presentity_persons (
+CREATE TABLE presentity_extensions (
     dbid VARCHAR(64) NOT NULL,
-    presid INTEGER NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     etag VARCHAR(64) NOT NULL,
-    person_element BYTEA NOT NULL,
-    id VARCHAR(128) NOT NULL,
+    element BYTEA NOT NULL,
     expires TIMESTAMP NOT NULL DEFAULT '2005-12-07 08:13:15',
-    CONSTRAINT prespersons_idx1 UNIQUE (dbid)
+    CONSTRAINT presextensions_idx1 UNIQUE (dbid)
 );
 
 CREATE TABLE presentity_contact (
-    contactid SERIAL NOT NULL,
-    presid INTEGER NOT NULL,
-    basic VARCHAR(32) NOT NULL DEFAULT 'offline',
-    status VARCHAR(32) NOT NULL,
-    location VARCHAR(128) NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
+    basic INTEGER NOT NULL,
     expires TIMESTAMP NOT NULL DEFAULT '2004-05-28 21:32:15',
-    placeid INTEGER,
     priority REAL NOT NULL DEFAULT '0.5',
     contact VARCHAR(255),
     tupleid VARCHAR(64) NOT NULL,
-    prescaps INTEGER NOT NULL,
     etag VARCHAR(64) NOT NULL,
     published_id VARCHAR(64) NOT NULL,
-    CONSTRAINT pc_idx1 UNIQUE (contactid)
+    CONSTRAINT presid_index UNIQUE (pres_id, tupleid)
 );
 
-CREATE INDEX presid_index ON presentity_contact (presid);
-CREATE INDEX location_index ON presentity_contact (location);
-CREATE INDEX placeid_index ON presentity_contact (placeid);
-
 CREATE TABLE watcherinfo (
-    r_uri VARCHAR(255) NOT NULL,
     w_uri VARCHAR(255) NOT NULL,
     display_name VARCHAR(128) NOT NULL,
     s_id VARCHAR(64) NOT NULL,
     package VARCHAR(32) NOT NULL DEFAULT 'presence',
     status VARCHAR(32) NOT NULL DEFAULT 'pending',
     event VARCHAR(32) NOT NULL,
-    expires INTEGER NOT NULL,
+    expires TIMESTAMP NOT NULL DEFAULT '2005-12-07 08:13:15',
     accepts INTEGER NOT NULL,
-    presid INTEGER NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     server_contact VARCHAR(255) NOT NULL,
     dialog BYTEA NOT NULL,
     doc_index INTEGER NOT NULL,
     CONSTRAINT wi_idx1 UNIQUE (s_id)
 );
 
-CREATE INDEX wi_ruri_idx ON watcherinfo (r_uri);
-CREATE INDEX wi_wuri_idx ON watcherinfo (w_uri);
-
 CREATE TABLE tuple_notes (
-    presid INTEGER NOT NULL,
+    pres_id VARCHAR(64) NOT NULL,
     tupleid VARCHAR(64) NOT NULL,
     note VARCHAR(128) NOT NULL,
     lang VARCHAR(64) NOT NULL
+);
+
+CREATE TABLE tuple_extensions (
+    pres_id VARCHAR(64) NOT NULL,
+    tupleid VARCHAR(64) NOT NULL,
+    element BYTEA NOT NULL,
+    status_extension INTEGER NOT NULL
 );
 
 CREATE TABLE offline_winfo (

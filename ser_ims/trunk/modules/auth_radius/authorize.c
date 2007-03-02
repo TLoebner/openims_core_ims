@@ -43,11 +43,85 @@
 #include "../../parser/parse_from.h"
 #include "../../parser/parse_to.h"
 #include "../../dprint.h"
+#include "../../id.h"
 #include "../../ut.h"
 #include "../auth/api.h"
 #include "authorize.h"
 #include "sterman.h"
 #include "authrad_mod.h"
+
+
+static void attr_name_value(str* name, str* value, VALUE_PAIR* vp)
+{
+    int i;
+    
+    for (i = 0; i < vp->lvalue; i++) {
+	if (vp->strvalue[i] == ':' || vp->strvalue[i] == '=') {
+	    name->s = vp->strvalue;
+	    name->len = i;
+	    
+	    if (i == (vp->lvalue - 1)) {
+		value->s = (char*)0;
+		value->len = 0;
+	    } else {
+		value->s = vp->strvalue + i + 1;
+		value->len = vp->lvalue - i - 1;
+	    }
+	    return;
+	}
+    }
+
+    name->len = value->len = 0;
+    name->s = value->s = (char*)0;
+}
+
+
+/*
+ * Generate AVPs from the database result
+ */
+static int generate_avps(VALUE_PAIR* received)
+{
+	int_str name, val;
+	VALUE_PAIR *vp;
+	
+	vp = rc_avpair_get(received, ATTRID(attrs[A_SER_UID].v), VENDOR(attrs[A_SER_UID].v));
+	if (vp == NULL) {
+	    WARN("RADIUS server did not send SER-UID attribute in digest authentication reply\n");
+	    return -1;
+	}
+	val.s.len = vp->lvalue;
+	val.s.s = vp->strvalue;
+	name.s.s = "uid";
+	name.s.len = 3;
+
+	if (add_avp(AVP_TRACK_FROM | AVP_CLASS_USER | AVP_NAME_STR | AVP_VAL_STR, name, val) < 0) {
+	    ERR("Unable to create UID attribute\n");
+	    return -1;
+	}
+
+	vp = received;
+	while ((vp = rc_avpair_get(vp, ATTRID(attrs[A_SER_ATTR].v), VENDOR(attrs[A_SER_ATTR].v)))) {
+		attr_name_value(&name.s, &val.s, vp);
+		if (name.s.len == 0) {
+		    ERR("Missing attribute name\n");
+		    return -1;
+		}
+		
+		if (add_avp(AVP_TRACK_FROM | AVP_CLASS_USER | AVP_NAME_STR | AVP_VAL_STR, name, val) < 0) {
+			LOG(L_ERR, "generate_avps: Unable to create a new AVP\n");
+			return -1;
+		} else {
+			DBG("generate_avps: AVP '%.*s'='%.*s' has been added\n",
+			    name.s.len, ZSW(name.s.s), 
+			    val.s.len, ZSW(val.s.s));
+		}
+		vp = vp->next;
+	}
+	
+	return 0;
+}
+
+
 
 
 /* 
@@ -75,8 +149,8 @@ static inline int get_uri(struct sip_msg* _m, str** _uri)
 /*
  * Authorize digest credentials
  */
-static inline int authorize(struct sip_msg* _msg, str* _realm,
-							hdr_types_t _hftype)
+static inline int authenticate(struct sip_msg* msg, str* realm,
+			       hdr_types_t hftype)
 {
 	int res;
 	auth_result_t ret;
@@ -84,51 +158,107 @@ static inline int authorize(struct sip_msg* _msg, str* _realm,
 	auth_body_t* cred;
 	str* uri;
 	struct sip_uri puri;
-	str user, domain;
+	str user, did;
+	VALUE_PAIR* received;
 
-	domain = *_realm;
-	ret = auth_api.pre_auth(_msg, &domain, _hftype, &h);
-	
-	switch(ret) {
-	case ERROR:             return 0;
-	case NOT_AUTHENTICATED: return -1;
-	case DO_AUTHENTICATION: break;
-	case AUTHENTICATED:     return 1;
+	cred = 0;
+	ret = -1;
+	user.s = 0;
+	received = NULL;
+
+	switch(auth_api.pre_auth(msg, realm, hftype, &h)) {
+	case ERROR:
+	case BAD_CREDENTIALS:
+	    ret = -3;
+	    goto end;
+
+	case NOT_AUTHENTICATED:
+	    ret = -1;
+	    goto end;
+
+	case DO_AUTHENTICATION:
+	    break;
+
+	case AUTHENTICATED:
+	    ret = 1;
+	    goto end;
 	}
 
 	cred = (auth_body_t*)h->parsed;
 
-	if (get_uri(_msg, &uri) < 0) {
+	if (use_did) {
+	    if (msg->REQ_METHOD == METHOD_REGISTER) {
+		ret = get_to_did(&did, msg);
+	    } else {
+		ret = get_from_did(&did, msg);
+	    }
+	    if (ret == 0) {
+		did.s = DEFAULT_DID;
+		did.len = sizeof(DEFAULT_DID) - 1;
+	    }
+	} else {
+	    did.len = 0;
+	    did.s = 0;
+	}
+
+	if (get_uri(msg, &uri) < 0) {
 		LOG(L_ERR, "authorize(): From/To URI not found\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 	
 	if (parse_uri(uri->s, uri->len, &puri) < 0) {
 		LOG(L_ERR, "authorize(): Error while parsing From/To URI\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 
 	user.s = (char *)pkg_malloc(puri.user.len);
 	if (user.s == NULL) {
 		LOG(L_ERR, "authorize: No memory left\n");
-		return -1;
+		ret = -1;
+		goto end;
 	}
 	un_escape(&(puri.user), &user);
 
-	res = radius_authorize_sterman(_msg, &cred->digest, &_msg->first_line.u.request.method, &user);
-	pkg_free(user.s);
-
+	res = radius_authorize_sterman(&received, msg, &cred->digest, &msg->first_line.u.request.method, &user);
 	if (res == 1) {
-		ret = auth_api.post_auth(_msg, h);
-		switch(ret) {
-		case ERROR:             return 0;
-		case NOT_AUTHENTICATED: return -1;
-		case AUTHENTICATED:     return 1;
-		default:                return -1;
+	    switch(auth_api.post_auth(msg, h)) {
+	    case ERROR:             
+	    case BAD_CREDENTIALS:
+		ret = -2;
+		break;
+
+	    case NOT_AUTHENTICATED:
+		ret = -1;
+		break;
+
+	    case AUTHENTICATED:
+		if (generate_avps(received) < 0) {
+		    ret = -1;
+		    break;
 		}
+		ret = 1;
+		break;
+
+	    default:
+		ret = -1;
+		break;
+	    }
+	} else {
+	    ret = -1;
 	}
 
-	return -1;
+ end:
+	if (received) rc_avpair_free(received);
+	if (user.s) pkg_free(user.s);
+	if (ret < 0) {
+	    if (auth_api.build_challenge(msg, (cred ? cred->stale : 0), realm, hftype) < 0) {
+		ERR("Error while creating challenge\n");
+		ret = -2;
+	    }
+	}
+	return ret;
 }
 
 
@@ -145,7 +275,7 @@ int radius_proxy_authorize(struct sip_msg* _msg, char* p1, char* p2)
     }
     
 	 /* realm parameter is converted to str* in str_fixup */
-    return authorize(_msg, &realm, HDR_PROXYAUTH_T);
+    return authenticate(_msg, &realm, HDR_PROXYAUTH_T);
 }
 
 
@@ -161,6 +291,6 @@ int radius_www_authorize(struct sip_msg* _msg, char* p1, char* p2)
 	return -1;
     }
     
-    return authorize(_msg, &realm, HDR_AUTHORIZATION_T);
+    return authenticate(_msg, &realm, HDR_AUTHORIZATION_T);
 }
 

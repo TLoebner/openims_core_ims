@@ -1,5 +1,5 @@
 /*
- * $Id: third_party_reg.c 2 2006-11-14 22:37:20Z klaboe $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *

@@ -419,6 +419,7 @@ static inline struct hdr_field* valid_to(struct cell* t, struct sip_msg* reply)
  */
 static int fmt2rad(char *fmt,
 		   struct sip_msg *rq,
+		   str* ouri,
 		   struct hdr_field *to,
 		   unsigned int code,
 		   VALUE_PAIR** send,
@@ -452,7 +453,7 @@ static int fmt2rad(char *fmt,
 		case 'a': /* attr */
 			at = print_attrs(avps, avps_n, 0);
 			if (at) {
-				attr = &attrs[A_SER_ATTRS];
+				attr = &attrs[A_SER_ATTR];
 				val = *at;
 			}
 			break;
@@ -513,11 +514,7 @@ static int fmt2rad(char *fmt,
 
 		case 'o': /* outbound_ruri */
 			attr = &attrs[A_SIP_TRANSLATED_REQUEST_ID];
-			if (rq->new_uri.len) {
-				val = rq->new_uri;
-			} else {
-				val = rq->first_line.u.request.uri;
-			}
+			val = *ouri;
 			break;
 
 		case 'p': /* Source IP address */
@@ -646,7 +643,7 @@ static int fmt2rad(char *fmt,
 		} /* switch (*fmt) */
 
 		if (attr) {
-			if (!rc_avpair_add(rh, send, attr->v, val.s, val.len, 0)) {
+			if (!rc_avpair_add(rh, send, ATTRID(attr->v), val.s, val.len, VENDOR(attr->v))) {
 				LOG(L_ERR, "ERROR:acc:fmt2rad: Failed to add attribute %s\n",
 				    attr->n);
 				return -1;
@@ -726,8 +723,8 @@ static inline int add_user_name(struct sip_msg* rq, void* rh, VALUE_PAIR** send)
 			user_name.s[user->len] = '@';
 			memcpy(user_name.s + user->len + 1, realm->s, realm->len);
 
-			if (!rc_avpair_add(rh, send, attrs[A_USER_NAME].v,
-					   user_name.s, user_name.len, 0)) {
+			if (!rc_avpair_add(rh, send, ATTRID(attrs[A_USER_NAME].v),
+					   user_name.s, user_name.len, VENDOR(attrs[A_USER_NAME].v))) {
 				LOG(L_ERR, "ERROR:acc:add_user_name: Failed to add User-Name attribute\n");
 				pkg_free(user_name.s);
 				return -1;
@@ -746,7 +743,7 @@ static inline int add_user_name(struct sip_msg* rq, void* rh, VALUE_PAIR** send)
  * leading text later
  *
  */
-static int log_request(struct sip_msg* rq, struct hdr_field* to, unsigned int code, time_t req_time)
+static int log_request(struct sip_msg* rq, str* ouri, struct hdr_field* to, unsigned int code, time_t req_time)
 {
 	VALUE_PAIR *send;
 	UINT4 av_type;
@@ -754,18 +751,20 @@ static int log_request(struct sip_msg* rq, struct hdr_field* to, unsigned int co
 	send = NULL;
 	if (skip_cancel(rq)) return 1;
 
-	if (fmt2rad(log_fmt, rq, to, code, &send, req_time) < 0) goto error;
+	if (fmt2rad(log_fmt, rq, ouri, to, code, &send, req_time) < 0) goto error;
 
 	     /* Add Acct-Status-Type attribute */
 	av_type = rad_status(rq, code);
-	if (!rc_avpair_add(rh, &send, attrs[A_ACCT_STATUS_TYPE].v, &av_type, -1, 0)) {
+	if (!rc_avpair_add(rh, &send, ATTRID(attrs[A_ACCT_STATUS_TYPE].v), &av_type, -1, 
+			   VENDOR(attrs[A_ACCT_STATUS_TYPE].v))) {
 		ERR("Add Status-Type\n");
 		goto error;
 	}
 
 	     /* Add Service-Type attribute */
 	av_type = (service_type != -1) ? service_type : vals[V_SIP_SESSION].v;
-	if (!rc_avpair_add(rh, &send, attrs[A_SERVICE_TYPE].v, &av_type, -1, 0)) {
+	if (!rc_avpair_add(rh, &send, ATTRID(attrs[A_SERVICE_TYPE].v), &av_type, -1, 
+			   VENDOR(attrs[A_SERVICE_TYPE].v))) {
 		ERR("add STATUS_TYPE\n");
 		goto error;
 	}
@@ -790,7 +789,15 @@ error:
 
 static void log_reply(struct cell* t , struct sip_msg* reply, unsigned int code, time_t req_time)
 {
-	log_request(t->uas.request, valid_to(t, reply), code, req_time);
+        str* ouri;
+
+	if (t->relayed_reply_branch >= 0) {
+	    ouri = &t->uac[t->relayed_reply_branch].uri;
+	} else {
+	    ouri = GET_NEXT_HOP(t->uas.request);
+	}
+
+	log_request(t->uas.request, ouri, valid_to(t, reply), code, req_time);
 }
 
 
@@ -802,13 +809,21 @@ static void log_ack(struct cell* t , struct sip_msg *ack, time_t req_time)
 	rq = t->uas.request;
 	if (ack->to) to = ack->to;
 	else to = rq->to;
-	log_request(ack, to, t->uas.status, req_time);
+	log_request(ack, GET_RURI(ack), to, t->uas.status, req_time);
 }
 
 
 static void log_missed(struct cell* t, struct sip_msg* reply, unsigned int code, time_t req_time)
 {
-        log_request(t->uas.request, valid_to(t, reply), code, req_time);
+        str* ouri;
+
+	if (t->relayed_reply_branch >= 0) {
+	    ouri = &t->uac[t->relayed_reply_branch].uri;
+	} else {
+	    ouri = GET_NEXT_HOP(t->uas.request);
+	}
+
+        log_request(t->uas.request, ouri , valid_to(t, reply), code, req_time);
 }
 
 
@@ -819,7 +834,7 @@ static void log_missed(struct cell* t, struct sip_msg* reply, unsigned int code,
 static int acc_rad_request0(struct sip_msg *rq, char* p1, char* p2)
 {
 	preparse_req(rq);
-	return log_request(rq, rq->to, 0, time(0));
+	return log_request(rq, GET_RURI(rq), rq->to, 0, time(0));
 }
 
 
@@ -830,7 +845,7 @@ static int acc_rad_request0(struct sip_msg *rq, char* p1, char* p2)
 static int acc_rad_missed0(struct sip_msg *rq, char* p1, char* p2)
 {
 	preparse_req(rq);
-	return log_request(rq, rq->to, 0, time(0));
+	return log_request(rq, GET_RURI(rq), rq->to, 0, time(0));
 }
 
 /* these wrappers parse all what may be needed; they don't care about
@@ -844,7 +859,7 @@ static int acc_rad_request1(struct sip_msg *rq, char* p1, char* p2)
     if (get_int_fparam(&code, rq, (fparam_t*)p1) < 0) {
 	code = 0;
     }
-    return log_request(rq, rq->to, code, time(0));
+    return log_request(rq, GET_RURI(rq), rq->to, code, time(0));
 }
 
 
@@ -859,7 +874,7 @@ static int acc_rad_missed1(struct sip_msg *rq, char* p1, char* p2)
     if (get_int_fparam(&code, rq, (fparam_t*)p1) < 0) {
 	code = 0;
     }
-    return log_request(rq, rq->to, code, time(0));
+    return log_request(rq, GET_RURI(rq), rq->to, code, time(0));
 }
 
 
@@ -970,6 +985,7 @@ void on_req(struct cell* t, int type, struct tmcb_params *ps)
 
 static int mod_init(void)
 {
+	DICT_VENDOR *vend;
 	load_tm_f load_tm;
 
 	     /* import the TM auto-loading function */
@@ -1008,7 +1024,7 @@ static int mod_init(void)
 	attrs[A_SIP_SOURCE_IP_ADDRESS].n     = "Sip-Source-IP-Address";
 	attrs[A_SIP_SOURCE_PORT].n           = "Sip-Source-Port";
 
-	attrs[A_SER_ATTRS].n                 = "SER-Attrs";
+	attrs[A_SER_ATTR].n                  = "SER-Attr";
 	attrs[A_SER_FROM].n                  = "SER-From";
 	attrs[A_SER_FLAGS].n                 = "SER-Flags";
 	attrs[A_SER_ORIGINAL_REQUEST_ID].n   = "SER-Original-Request-Id";
@@ -1039,6 +1055,12 @@ static int mod_init(void)
 	     /* read dictionary */
 	if (rc_read_dictionary(rh, rc_conf_str(rh, "dictionary")) != 0) {
 		LOG(L_ERR, "ERROR:acc:mod_init: Error reading radius dictionary\n");
+		return -1;
+	}
+
+	vend = rc_dict_findvend(rh, "iptelorg");
+	if (vend == NULL) {
+		ERR("RADIUS dictionary is missing required vendor 'iptelorg'\n");
 		return -1;
 	}
 

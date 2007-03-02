@@ -36,25 +36,39 @@
 #include "../../ip_addr.h"
 #include "tls_domain.h"
 
-extern SSL_METHOD* ssl_methods[];
+#ifndef OPENSSL_NO_KRB5
+/* enable workarround for openssl kerberos wrong malloc bug
+ * (kssl code uses libc malloc/free/calloc instead of OPENSSL_malloc & 
+ * friends)*/
+#define TLS_KSSL_WORKARROUND
+extern int openssl_kssl_malloc_bug; /* is openssl bug #1467 present ? */
+#endif
+extern int openssl_mem_threshold1; /* low memory threshold for connect */
+extern int openssl_mem_threshold2; /* like above but for other tsl operations */
+
+
+extern int tls_disable_compression; /* by default enabled */
+extern int tls_force_run; /* by default disabled */
+
+extern const SSL_METHOD* ssl_methods[];
 
 
 /*
  * just once, initialize the tls subsystem 
  */
-int init_tls(void);
+int init_tls_h(void);
 
 
 /*
  * just once before cleanup 
  */
-void destroy_tls(void);
+void destroy_tls_h(void);
 
 
 /*
  * for each socket 
  */
-int tls_init(struct socket_info *si);
+int tls_h_init_si(struct socket_info *si);
 
 /*
  * Make sure that all server domains in the configuration have corresponding
