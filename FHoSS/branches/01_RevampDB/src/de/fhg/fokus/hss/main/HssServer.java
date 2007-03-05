@@ -48,8 +48,8 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
-
-import de.fhg.fokus.hss.diam.HssDiameterStack;
+import de.fhg.fokus.diameter.*;
+import de.fhg.fokus.hss.diam.*;
 
 
 /**
@@ -93,17 +93,23 @@ public class HssServer
             tomcatServer.setPath("./");
             tomcatServer.startTomcat();
             STARTUP_TIME = System.currentTimeMillis();
-            
+            LOGGER.info("Embedded Tomcat started!");
             // Starting Diameter Stack
             
-            HssDiameterStack diameterStack = new HssDiameterStack();
-            diameterStack.startup();
+            //HssDiameterStack diameterStack = new HssDiameterStack();
+            //diameterStack.startup();
+            DiameterStack stack = new DiameterStack();
+            stack.configStack();
             LOGGER.info("FHoSS was started and is ready for use!");
+            
+            Tester thread =  new Tester();
+            thread.start();
             waitForExit();
             
             // stoping FHoSS
             tomcatServer.stopTomcat();
-           	diameterStack.shutdown();
+           	//DiameterStack.shutdown();
+            stack.diameterPeer.shutdown();
             LOGGER.info("FHoSS was stopped!");
             
             System.exit(0);

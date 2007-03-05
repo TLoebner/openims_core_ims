@@ -6,12 +6,14 @@
 	prefix="bean"%>	
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
+	
 <logic:messagesPresent>
 <font color="#FF0000">
 	<bean:message key="error.header" /><br>
 	<html:errors/>
 </font>
 </logic:messagesPresent>
+
 <font color="#FF0000">
 <html:messages id="message" message="true">
 	<bean:message key="error.header" /><br>

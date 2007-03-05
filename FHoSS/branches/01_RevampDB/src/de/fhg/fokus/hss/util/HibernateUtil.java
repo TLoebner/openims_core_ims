@@ -146,8 +146,9 @@ public class HibernateUtil{
     public static void commitTransaction() {
     	Transaction tx = (Transaction) threadTransaction.get();
     	try {
-    		if ( tx != null && !tx.wasCommitted() && !tx.wasRolledBack() )
+    		if ( tx != null && !tx.wasCommitted() && !tx.wasRolledBack() ){
     			tx.commit();
+    		}
     		threadTransaction.set(null);
     	} 
     	catch (HibernateException e) {

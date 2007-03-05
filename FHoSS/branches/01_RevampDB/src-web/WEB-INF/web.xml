@@ -7,7 +7,7 @@
 	
 	<filter id="respFilterId">
         <filter-name>respFilter</filter-name>
-        <filter-class>de.fhg.fokus.hss.servlet.ResponseFilter</filter-class>
+        <filter-class>de.fhg.fokus.hss.web.servlet.ResponseFilter</filter-class>
     </filter>
 	
     <filter-mapping>
@@ -130,8 +130,8 @@
   <security-constraint>
     <web-resource-collection>
       <web-resource-name>hss.web.console</web-resource-name>
-      <url-pattern>*.do</url-pattern>
-      <url-pattern>/index.jsp</url-pattern>
+      <url-pattern>*</url-pattern>
+<!--      <url-pattern>/index.jsp</url-pattern> -->
     </web-resource-collection>
     <auth-constraint>
        <role-name>hss</role-name>

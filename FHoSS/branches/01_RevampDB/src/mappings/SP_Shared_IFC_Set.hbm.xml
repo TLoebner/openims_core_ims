@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
+    
+<hibernate-mapping>
+<class name="de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set" table="sp_shared_ifc_set">
+	
+	<id name="id">
+		<generator class="native"/>
+	</id>
+
+    <many-to-one 
+    	name="sp" 
+    	class="de.fhg.fokus.hss.db.model.SP" 
+    	not-null="true" 
+    	cascade="none" 
+    	lazy="true"
+    >
+        <column name="id_sp" />
+    </many-to-one>	
+    
+    <many-to-one 
+    	name="shared_ifc_set" 
+    	class="de.fhg.fokus.hss.db.model.Shared_IFC_Set" 
+    	not-null="true" 
+    	cascade="none" 
+    	lazy="true"
+    >
+        <column name="id_shared_ifc_set" />
+    </many-to-one>	
+
+</class>
+</hibernate-mapping>

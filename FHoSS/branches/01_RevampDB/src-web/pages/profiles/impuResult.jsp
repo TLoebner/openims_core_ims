@@ -47,6 +47,7 @@
 								}
 							%>
 						</td>
+						
 						<td align="center">
 							<table>
 								<tr>
@@ -60,6 +61,7 @@
 									<td>
 									
 									<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>									
+							
 									<form method="post" action="/hss.web.console/impuDelete.do"
 										target="content" style="text-align: center"><input type="hidden"
 										name="impuId"
