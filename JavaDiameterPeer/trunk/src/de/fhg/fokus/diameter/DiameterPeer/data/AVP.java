@@ -267,6 +267,26 @@ public class AVP {
 	}
 	
 	/**
+	 * Searches for an AVP inside the Vector of child avps 
+	 * if the AVP is a grouped one.
+	 * 
+	 * @param Code		AVP code.
+	 * @return the found AVP, null if not found.
+	 */
+	public AVP findChildAVP(int Code)
+	{
+		AVP avp;
+		if (!is_ungrouped) return null;
+		for(int i=0;i<childs.size();i++){
+			avp = (AVP) childs.get(i);
+			if (avp.code == Code) {
+				return avp;
+			}
+		}
+		return null;
+	}
+	
+	/**
 	 * Searches for an AVP inside the Vector of child avps if the AVP is a grouped one.
 	 * 
 	 * @param Code		AVP code.
@@ -288,8 +308,40 @@ public class AVP {
 		return null;
 	}
 	
-	
+	/**
+	 * Searches for all AVPs with the same code inside the Vector of child avps 
+	 * if the AVP is a grouped one.
+	 * 
+	 * @param Code		AVP code.
+	 * @return the found AVP[], null if not found.
+	 */
+	public AVP[] findChildAVPs(int Code)
+	{
+		
+		AVP[] avpset;
+		int j = 0, count = 0;
+		AVP avp;
+		
+		if (!is_ungrouped) return null;
+		
+		for(int i=0;i<childs.size();i++){
+			avp = (AVP) childs.get(i);
+			if (avp.code == Code)
+					count++;
+		}
+		
+		if (count == 0) return null;
+		avpset = new AVP[count];
+		for(int i=0;i<childs.size();i++){
+			avp = (AVP) childs.get(i);
+			if (avp.code == Code) {
+				avpset[j++] = avp;
+				if (j == count) break;
+			}
+		}
 
+		return avpset;
+	}
 
 	/**
 	 *	Ungroups the AVP data into childs
