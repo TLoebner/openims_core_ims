@@ -186,6 +186,36 @@ public class DiameterMessage {
 	}
 	
 	/**
+	 * Searches for all AVPs with the same code inside the Vector of AVPs.
+	 * @param Code
+	 * @return the found AVP, null if not found
+	 */
+	public AVP[] findAVPs(int Code)
+	{
+		AVP[] avpset;
+		int j = 0, count = 0;
+		AVP avp;
+		
+		for(int i=0;i<avps.size();i++){
+			avp = (AVP) avps.get(i);
+			if (avp.code == Code)
+				count++;
+		}
+		
+		if (count == 0) return null;
+		avpset = new AVP[count];
+		for(int i=0;i<avps.size();i++){
+			avp = (AVP) avps.get(i);
+			if (avp.code == Code) {
+				avpset[j++] = avp;
+				if (j == count) break;
+			}
+		}
+		
+		return avpset;
+	}
+	
+	/**
 	 * Searches for an AVP inside the Vector of AVPs.
 	 * @param Code
 	 * @return the found AVP, null if not found
