@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
+    
+<hibernate-mapping>
+<class name="de.fhg.fokus.hss.db.model.IMPU" table="impu">
+	
+	<id name="id">
+		<generator class="native"/>
+	</id>
+		
+	<property name="identity" type="string" not-null="true" />
+	<property name="type" type="short" not-null="true"/>
+	<property name="barring" type="short" not-null="true" />
+	<property name="user_state" type="short" />		
+	<property name="wildcard_psi" type="string" />
+	<property name="display_name" type="string" />	
+	<property name="psi_activation" type="short" />
+	<property name="can_register" type="short" />	
+
+    <many-to-one name="sp" class="de.fhg.fokus.hss.db.model.SP" not-null="true" cascade="none" lazy="true">
+        <column name="id_sp" />
+    </many-to-one>	
+
+    <many-to-one name="chargingInfo" class="de.fhg.fokus.hss.db.model.ChargingInfo" not-null="true" cascade="none" lazy="true">
+        <column name="id_charging_info" />
+    </many-to-one>	
+
+	<!--
+	<set name="impi_set" table="impi_impu">
+		<key column="id_impu"/>
+		<many-to-many column="id_impi" class="de.fhg.fokus.hss.db.model.IMPI"/>
+	</set>
+	-->
+</class>
+</hibernate-mapping>

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
+    
+<hibernate-mapping>
+<class name="de.fhg.fokus.hss.db.model.IFC" table="ifc">
+	
+	<id name="id">
+		<generator class="native"/>
+	</id>
+
+	<property name="name" type="string" not-null="true" />
+	<property name="profile_part_ind" type="int" not-null="true"/>
+	
+    <many-to-one name="applicationServer" class="de.fhg.fokus.hss.db.model.ApplicationServer" not-null="true" cascade="none" lazy="true" >
+        <column name="id_application_server" />
+    </many-to-one>	
+    
+    <many-to-one name="tp" class="de.fhg.fokus.hss.db.model.TP" not-null="true" cascade="none" lazy="true" >
+        <column name="id_tp" />
+    </many-to-one>	
+</class>
+</hibernate-mapping>
+

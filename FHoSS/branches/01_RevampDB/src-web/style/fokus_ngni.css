@@ -18,7 +18,7 @@ pre {
 	
 .inputbox {
 	border:					thin solid #EB9015;
-	background-color:		white; }
+	background-color:		#FDDE96; }
 
 .inputtext {
 	padding-left:			3px;
@@ -37,23 +37,22 @@ img {
 a {
 	color:					#333333;
 	font-weight:			bold;
-	text-decoration:		none; }
+	text-decoration:		none; 
+	font-size:				12px;	
+}
 	
 a:hover {
 	color:					#EB9015; }
 
-html, body {
-	background:				#FDDE96 url('images/bg_main.gif') repeat-x; }
-
 /* text: */
 
 h1 {
-	font-size:				15px;
+	font-size:				24px;
 	font-weight:			bold;
 	padding-top:			30px; }
 	
 h2 {
-	font-size:				12px;
+	font-size:				15px;
 	font-weight:			bold; }
 
 p {

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
+    
+<hibernate-mapping>
+<class name="de.fhg.fokus.hss.db.model.SP_IFC" table="sp_ifc">
+	
+	<id name="id">
+		<generator class="native"/>
+	</id>
+
+	<property name="priority" type="int" not-null="true"/>
+
+    <many-to-one name="sp" class="de.fhg.fokus.hss.db.model.SP" not-null="true" 
+    	cascade="none" lazy="true">
+        <column name="id_sp" />
+    </many-to-one>	
+
+    <many-to-one name="ifc" class="de.fhg.fokus.hss.db.model.IFC" not-null="true" 
+    	cascade="none" lazy="true">
+        <column name="id_impu" />
+    </many-to-one>	
+
+</class>
+</hibernate-mapping>

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
+    
+<hibernate-mapping>
+<class name="de.fhg.fokus.hss.db.model.IMPI_IMPU" table="impi_impu">
+	
+	<id name="id">
+		<generator class="native"/>
+	</id>
+	<property name="user_state" type="short" not-null="true"/>
+
+    <many-to-one name="impi" class="de.fhg.fokus.hss.db.model.IMPI" not-null="true" 
+    	cascade="none" lazy="true">
+        <column name="id_impi" />
+    </many-to-one>	
+
+    <many-to-one name="impu" class="de.fhg.fokus.hss.db.model.IMPU" not-null="true" 
+    	cascade="none" lazy="true">
+        <column name="id_impu" />
+    </many-to-one>	
+	
+</class>
+</hibernate-mapping>
+
