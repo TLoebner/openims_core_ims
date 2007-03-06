@@ -141,14 +141,9 @@ svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS</
       <ul>
       	<li>ser_ims
       		<ul>
-      			<li><strong> New!!! </strong> Do "make -f Makefile.ser install" in ser_ims/lib
-      				<source>cd ser_ims/lib
-make -f Makefile.ser install
-cd ../..</source>
-				</li>
-      			<li>Do "make all" in ser_ims
+      			<li><strong> New!!! </strong> Do "make libs install all" in ser_ims
       				<source>cd ser_ims
-make all
+make libs install-libs all
 cd ..</source>
 				</li>
       			<li>If something breaks, you probably don't have all the prerequisites.</li>
