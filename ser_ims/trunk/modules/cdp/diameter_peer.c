@@ -290,6 +290,7 @@ int diameter_peer_start(int blocking)
 			return 0;
 		}
 		if (pid==0) {
+			srandom(time(0)*k);
 			#ifdef CDP_FOR_SER
 				snprintf(pt[process_no].desc, MAX_PT_DESC,
 					"cdp worker child=%d", k );
