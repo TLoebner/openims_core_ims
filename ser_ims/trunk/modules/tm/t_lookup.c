@@ -1290,7 +1290,7 @@ int t_get_trans_ident(struct sip_msg* p_msg, unsigned int* hash_index, unsigned 
 {
     struct cell* t;
     if(t_check(p_msg,0) != 1){
-	LOG(L_ERR,"ERROR: t_get_trans_ident: no transaction found\n");
+	LOG(L_DBG,"ERROR: t_get_trans_ident: no transaction found\n");
 	return -1;
     }
     t = get_t();
