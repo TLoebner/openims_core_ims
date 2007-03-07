@@ -225,6 +225,9 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_assert_called_identity() - asserts the called identity by adding the P-Asserted-Identity header
  * <p>
  * - P_trans_in_processing() - checks if the transaction is already in processing
+ * <p>
+ * - P_check_via_sent_by() - checks if the sent-by parameter in the first Via header equals the source IP address of the message
+ * - P_add_via_received() - adds a received parameter to the first via header with the srouce IP address 
  */
 static cmd_export_t pcscf_cmds[]={
 	{"P_add_path",					P_add_path, 				0, 0, REQUEST_ROUTE},
@@ -271,6 +274,8 @@ static cmd_export_t pcscf_cmds[]={
 	
 	{"P_trans_in_processing",		P_trans_in_processing, 		0, 0, REQUEST_ROUTE},
 
+	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
+	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
 	
 	{0, 0, 0, 0, 0}
 }; 
