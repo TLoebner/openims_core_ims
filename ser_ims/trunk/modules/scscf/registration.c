@@ -335,8 +335,6 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	uri = cscf_get_digest_uri(msg,realm);
 	
 	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
-	if (!av)
-	    av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce,&aud_hash);
 	
 	if (!av) {
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: no matching auth vector found - maybe timer expired\n");		
@@ -365,7 +363,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		av->status = AUTH_VECTOR_USELESS;
 		ret = CSCF_RETURN_TRUE;		
 	}else {
-		av->status = AUTH_VECTOR_USELESS;/* first mistake, you're out! */
+		av->status = AUTH_VECTOR_USED;/* first mistake, you're out! (but maybe it's synchronization) */
 		LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: UE said: %.*s, but we have %.*s and expect %.*s\n",
 			response16.len,response16.s,av->authorization.len,av->authorization.s,32,expected);		
 	}		
@@ -439,9 +437,9 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 			S_REGISTER_reply(msg,403,MSG_403_NO_NONCE);
 			goto abort;
 		}
-		av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
+		av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USED,&nonce,&aud_hash);
 		if (!av)
-	    	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_USELESS,&nonce,&aud_hash);
+	    	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
 					
 		if (!av){
 			LOG(L_ERR,"DBG:"M_NAME":S_challenge: Nonce not regonized as sent, no sync!\n");			
@@ -1101,16 +1099,6 @@ auth_vector* get_auth_vector(str private_identity,str public_identity,int status
 			(nonce==0 || (nonce->len == av->authenticate.len &&
 						  memcmp(nonce->s,av->authenticate.s,nonce->len)==0)))
 		{
-			switch (av->status){
-				case AUTH_VECTOR_UNUSED:
-					av->status = AUTH_VECTOR_SENT;
-					break;
-				case AUTH_VECTOR_SENT:
-					av->status = AUTH_VECTOR_USED;
-					break;
-				default:	
-					break;					
-			}			
 			*hash = aud->hash;
 			return av;
 		}
@@ -1153,7 +1141,8 @@ error:
  */
 inline void start_reg_await_timer(auth_vector *av)
 {
-	av->expires = get_ticks() + auth_vector_timeout; 
+	av->expires = get_ticks() + auth_vector_timeout;
+	av->status = AUTH_VECTOR_SENT;
 }
 
 /**
@@ -1184,8 +1173,9 @@ void reg_await_timer(unsigned int ticks, void* param)
 				LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: .. AV %4d - %d Exp %3d  %p\n",
 					av->item_number,av->status,(int)av->expires,av);
 				av_next = av->next;
-				if ((av->status == AUTH_VECTOR_USELESS || 
-					av->status == AUTH_VECTOR_SENT) && av->expires<ticks)
+				if (av->status == AUTH_VECTOR_USELESS ||					 
+				    ( (av->status == AUTH_VECTOR_USED || av->status == AUTH_VECTOR_SENT) && av->expires<ticks)
+				   )
 				{
 					LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: ... dropping av %d - %d\n",						
 						av->item_number,av->status);
