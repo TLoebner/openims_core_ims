@@ -1089,8 +1089,9 @@ int loose_route(struct sip_msg* _m, char* _s1, char* _s2)
 			return after_loose(_m, &puri, 1, 0);
 		} else {
 			store_next_route_in_avps(uri);
-			LOG(L_WARN, "loose_route: no routing target is local\n");
-			return -1;
+			//LOG(L_WARN, "loose_route: no routing target is local\n");
+			//return -1;
+			return after_loose(_m, &puri, 0, 0);
 		}
 	}
 }
