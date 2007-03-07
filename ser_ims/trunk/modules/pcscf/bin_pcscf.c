@@ -345,6 +345,8 @@ int bin_decode_pinhole(bin_data *x,r_nat_dest **pinhole)
 	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[1])) goto error;
 	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[2])) goto error;
 	if (!bin_decode_uint(x,	&(*pinhole)->nat_addr.u.addr32[3])) goto error;
+	
+	if (!bin_decode_ushort(x, &(*pinhole)->nat_port)) goto error;
 
 	return 1;
 error:
