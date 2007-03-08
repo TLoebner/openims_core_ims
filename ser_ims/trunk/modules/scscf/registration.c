@@ -71,6 +71,7 @@ extern struct tm_binds tmb;						/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs 		*/
 
 extern str registration_default_algorithm_s;	/**< fixed default algorithm for registration (if none present)	*/
+extern int registration_disable_early_ims;	/**< if to disable the Early-IMS checks			*/
 
 extern str scscf_name_str;						/**< fixed name of the S-CSCF 					*/
 extern str scscf_service_route;					/**< the service route header					*/
@@ -90,7 +91,7 @@ str early_ims_security={"Early-IMS-Security",18};
 str akav1={"AKAv1-MD5",9};
 str akav2={"AKAv2-MD5",9};
 str md5={"MD5",3};
-str early_ims={"EarlyIMS",8};
+str early_ims={"Early-IMS",9};
 
 /**
  * Convert the SIP Algorithm to Diameter Authorization Scheme.
@@ -336,7 +337,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	}
 	
 	/* check for Early-IMS case */
-	if (!msg->authorization){
+	if (!registration_disable_early_ims && !msg->authorization){
 		str sent_by={0,0},received={0,0};
 		
 		sent_by = cscf_get_last_via_sent_by(msg);

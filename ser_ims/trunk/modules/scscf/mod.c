@@ -105,6 +105,7 @@ int registration_min_expires=10;		/**< minimum registration expiration time 		*/
 int registration_max_expires=1000000;	/**< maximum registration expiration time 		*/
 char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)*/
 str registration_default_algorithm_s={0,0};	/**< fixed default algorithm for registration (if none present)	 */
+int registration_disable_early_ims=0;	/**< if to disable the Early-IMS checks			*/
 
 int subscription_default_expires=3600;	/**< the default value for expires if none found*/
 int subscription_min_expires=10;		/**< minimum subscription expiration time 		*/
@@ -251,7 +252,11 @@ static cmd_export_t scscf_cmds[]={
  * - registration_default_expires - default expires interval for registration, if not specified
  * - registration_min_expires - minimum expires interval
  * - registration_max_expires - maximim expires interval
- * - registration_default_algorithm - default algorithm to use for authentication
+ * - registration_default_algorithm - default algorithm to use for authentication. Can be AKAv1-MD5, AKAv2-MD5, MD5 (Early-IMS
+ *  doesn't make sense as this value applies for S_challenge and EarlyIMS does not imply a challenge). 
+ * - registration_disable_early_ims	- if to disable the checks and MAR for Early-IMS - because if enabled clients can 
+ * induce an extra MAR if a REGISTER does not contain an Authorization header and the last Via contains a sent-by 
+ * parameter
  * <p>
  * - subscription_default_expires - default expires interval for reg subscriptions, if not specified
  * - subscription_min_expires - minimum expires interval
@@ -289,6 +294,7 @@ static param_export_t scscf_params[]={
 	{"registration_min_expires", 		INT_PARAM, &registration_min_expires},
 	{"registration_max_expires", 		INT_PARAM, &registration_max_expires},
 	{"registration_default_algorithm",	STR_PARAM, &registration_default_algorithm},
+	{"registration_disable_early_ims",	INT_PARAM, &registration_disable_early_ims},
 
 	{"subscription_default_expires",	INT_PARAM, &subscription_default_expires},
 	{"subscription_min_expires", 		INT_PARAM, &subscription_min_expires},

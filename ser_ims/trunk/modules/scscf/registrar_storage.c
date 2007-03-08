@@ -805,6 +805,7 @@ void free_r_public(r_public *p)
 	r_subscriber *s,*m;
 	if (!p) return;
 	if (p->aor.s) shm_free(p->aor.s);
+	if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
 	if (p->s) {
 		lock_get(p->s->lock);
 		p->s->ref_count--;

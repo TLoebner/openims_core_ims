@@ -88,6 +88,7 @@ extern int server_assignment_store_data;/**< whether to ask to keep the data in 
 extern int registration_default_expires;/**< the default value for expires if none found*/
 extern int registration_min_expires;	/**< minimum registration expiration time 		*/
 extern int registration_max_expires;	/**< maximum registration expiration time 		*/
+extern int registration_disable_early_ims;	/**< if to disable the Early-IMS checks			*/
 
 extern time_t time_now;					/**< Current time of the S-CSCF registrar 		*/
 
@@ -530,7 +531,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							goto error;
 						}
 						s_used++;
-						if (sent_by.len) {
+						if (!registration_disable_early_ims && sent_by.len) {
 							if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
 							STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
 						}
@@ -569,7 +570,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 					public_identity.len,public_identity.s);
 				goto error;
 			}		
-			if (sent_by.len) {
+			if (!registration_disable_early_ims && sent_by.len) {
 				if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
 				STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
 			}
