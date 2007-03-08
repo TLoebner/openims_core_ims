@@ -60,6 +60,7 @@
 
 #include "cx_avp.h"
 #include "../../mem/shm_mem.h"
+#include <stdio.h>
 
 extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp funcs 		*/
 
@@ -814,11 +815,12 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
  */
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik)
+	str *ck,str *ik,str *ip)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP *avp;
 	str grp;
+	static char buf[64];
 	
 	*auth_data = cdpb.AAAFindMatchingAVP(msg,*auth_data,AVP_IMS_SIP_Auth_Data_Item,
 		IMS_vendor_id,0);
@@ -838,7 +840,15 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 		IMS_vendor_id,0);
 	if (!avp||!avp->data.s) {auth_scheme->s=0;auth_scheme->len=0;}
 	else *auth_scheme = avp->data;
-	
+
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Framed_IP_Address,0,0);
+	if (!avp||!avp->data.s) {ip->s=0;ip->len=0;}
+	else {
+		sprintf(buf,"%u.%u.%u.%u",avp->data.s[2],avp->data.s[3],avp->data.s[4],avp->data.s[5]);
+		ip->len = strlen(buf);
+		ip->s = buf;
+	}
+
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authenticate,
 		IMS_vendor_id,0);
 	if (!avp||!avp->data.s) {authenticate->s=0;authenticate->len=0;}

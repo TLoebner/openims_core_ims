@@ -500,10 +500,19 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	struct hdr_field *h;
 	contact_t *ci;
 	int reg_state,expires_hdr,expires,hash;
-	str public_identity;
+	str public_identity,sent_by={0,0};
 	
 //	if (!*s) return 1;
 	
+	/* check for Early-IMS case */
+	if (!msg->authorization){
+		str received={0,0};		
+		sent_by = cscf_get_last_via_sent_by(msg);
+		if (sent_by.len){
+			received = cscf_get_last_via_received(msg);
+			if (received.len) sent_by=received;				
+		}
+	}
 	expires_hdr = cscf_get_expires_hdr(msg);
 	r_act_time();
 	LOG(L_DBG,"DBG:"M_NAME":update_contacts: Assign Type %d\n",assignment_type);
@@ -521,6 +530,10 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							goto error;
 						}
 						s_used++;
+						if (sent_by.len) {
+							if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
+							STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+						}
 						if (is_star){
 							LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Registration.\n");
 						}else{
@@ -556,6 +569,10 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 					public_identity.len,public_identity.s);
 				goto error;
 			}		
+			if (sent_by.len) {
+				if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
+				STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+			}
 			if (is_star){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
 			}else{	

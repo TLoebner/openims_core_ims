@@ -600,7 +600,6 @@ void P_drop_ipsec(r_contact *c)
 }
 
 
-static str s_sent_by={"sent-by",7};
 /**
  * Checks if the sent-by parameter in the first Via header equals the source IP address of the message
  * @param req - the SIP request
@@ -611,10 +610,9 @@ static str s_sent_by={"sent-by",7};
 int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2)
 {
 	int ret = CSCF_RETURN_FALSE;
-	struct via_body *via;
-	struct via_param *vp;
 	struct ip_addr *src_ip;
 	char *src_ip_ch;
+	str sent_by={0,0};
 
 
 	/* get the real receive IP address */
@@ -623,29 +621,18 @@ int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2)
 	LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Received from <%s>\n",src_ip_ch);			 
 
 	/* find the sent-by Via parameter */
-	via = msg->via1;
-	if (!via){
-		LOG(L_ERR,"ERR:"M_NAME":P_check_sent_by(): Message has no Via header\n");
-		return CSCF_RETURN_ERROR;
-	}
-	for(vp = via->param_lst; vp; vp = vp->next)
-		if (vp->name.len == s_sent_by.len &&
-			strncasecmp(vp->name.s,s_sent_by.s,s_sent_by.len)==0){
-				LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Via sent-by=<%.*s>\n",vp->value.len,vp->value.s);
-				
-				ret = CSCF_RETURN_TRUE;
-				break;
-			}
+	sent_by = cscf_get_last_via_sent_by(msg);
+	LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Via sent-by=<%.*s>\n",sent_by.len,sent_by.s);
 			
 	/* if not found, exit now */	
-	if (ret == CSCF_RETURN_FALSE) {
+	if (sent_by.len == 0) {
 		LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Via does not contain a sent-by parameter\n");
 		return ret;
 	}		
 	
 	/* if found, check if it is matching */
-	if (vp->value.len==strlen(src_ip_ch) &&
-		strncasecmp(vp->value.s,src_ip_ch,vp->value.len)==0){
+	if (sent_by.len==strlen(src_ip_ch) &&
+		strncasecmp(sent_by.s,src_ip_ch,sent_by.len)==0){
 			ret = CSCF_RETURN_TRUE;
 			LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): sent-by matches the actual IP received from\n");
 	}else{

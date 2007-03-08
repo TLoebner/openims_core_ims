@@ -156,7 +156,7 @@ str cscf_get_private_identity(struct sip_msg *msg, str realm)
 {
 	str pi={0,0};
 	struct hdr_field* h=0;
-	int ret;
+	int ret,i;
 
 	if (parse_headers(msg,HDR_AUTHORIZATION_F,0)!=0) {
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_private_identity: Error parsing until header Authorization: \n");
@@ -184,10 +184,14 @@ str cscf_get_private_identity(struct sip_msg *msg, str realm)
 		
 fallback:
 	LOG(L_INFO,"INF:"M_NAME":cscf_get_private_identity: Falling back to private_id=stripped(public_id)\n"
-		"-> Message did not contain a valid Authorization Header!!! This fallback is deprecated!\n");	
+		"-> Message did not contain a valid Authorization Header!!! This fallback is deprecated outside Early-IMS!\n");	
 	pi = cscf_get_public_identity(msg);
 	if (pi.len>4&&strncasecmp(pi.s,"sip:",4)==0) {pi.s+=4;pi.len-=4;}
-
+	for(i=0;i<pi.len;i++)
+		if (pi.s[i]==';') {
+			pi.len=i;
+			break;
+		}
 done:	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_private_identity: <%.*s> \n",
 		pi.len,pi.s);
@@ -1707,20 +1711,20 @@ struct via_body* cscf_get_last_via(struct sip_msg *msg)
 	i = msg->headers;
 	while(i){
 		if (i->type == HDR_VIA_T){
-			if (!i->parsed){
-				vb = pkg_malloc(sizeof(struct via_body));
-				if (!vb){
-					LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via: Error allocating %d bytes\n",sizeof(struct via_body));
-					return 0;
-				}
-				parse_via(i->body.s,i->body.s+i->body.len,vb);
-				i->parsed = vb;
-			}
 			h = i;
 		}
 		i = i->next;
 	}
 	if (!h) return 0;
+	if (!h->parsed){
+		vb = pkg_malloc(sizeof(struct via_body));
+		if (!vb){
+			LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via: Error allocating %d bytes\n",sizeof(struct via_body));
+			return 0;
+		}
+		parse_via(h->body.s,h->body.s+h->body.len,vb);
+		h->parsed = vb;
+	}
 	vb = h->parsed;
 	while(vb->next)
 		vb = vb->next;
@@ -2330,3 +2334,48 @@ error:
 }
 
 
+static str s_sent_by={"sent-by",7};
+/**
+ * Get the sent-by parameter of the last Via header in the message.
+ * @param msg - the SIP message to loog into
+ * @returns the sent-by value string or an empty string if not found
+ */
+str cscf_get_last_via_sent_by(struct sip_msg *msg)
+{
+	struct via_body *via;
+	struct via_param *vp;
+	str sent_by={0,0};
+
+	via = cscf_get_last_via(msg);
+	if (!via){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via_sent_by(): Message has no via header!\n");
+		return sent_by;
+	}			
+	for(vp = via->param_lst; vp; vp = vp->next)
+		if (vp->name.len == s_sent_by.len &&
+			strncasecmp(vp->name.s,s_sent_by.s,s_sent_by.len)==0){							
+				sent_by = vp->value;
+				return sent_by;
+			}
+	return sent_by;			
+}
+
+
+/**
+ * Get the received parameter of the last Via header in the message.
+ * @param msg - the SIP message to loog into
+ * @returns the sent-by value string or an empty string if not found
+ */
+str cscf_get_last_via_received(struct sip_msg *msg)
+{
+	struct via_body *via;	
+	str received={0,0};
+
+	via = cscf_get_last_via(msg);
+	if (!via){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via_received(): Message has no via header!\n");
+		return received;
+	}			
+	if (via->received) return via->received->value;
+	return received;			
+}
