@@ -134,36 +134,6 @@
   
   
   
-  /* SIP-to-IMS Gw */
- 
- /**
-  * \file sip2ims.sh
-  *
-  *	SIP2IMS Gateway startup script
-  *
-  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
-  * 
-  */
-    
- /**
-  * \file sip2ims.cfg
-  *
-  *	SIP-to-IMS Gateway Sample configuration file
-  *
-  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
-  * 
-  */  
-  
- /**
-  * \file sip2ims.sql
-  *
-  *	SIP-to-IMS Gateway Database dump
-  *
-  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
-  * 
-  */ 
-  
-  
   
   /* others */
   

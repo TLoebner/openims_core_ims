@@ -1729,14 +1729,11 @@ struct via_body* cscf_get_last_via(struct sip_msg *msg)
 
 
 /**
- * Looks for the UE Via in First Via header and returns its body, or returns last via if
- * first is sip2ims gateway 
+ * Looks for the UE Via in First Via header and returns its body
  * @param msg - the SIP message
- * @param pcscf_sip2ims_via_host - host of the sip2ims gateway
- * @param pcscf_sip2ims_via_port - port of the sip2ims gateway
  * @returns the via of the UE
  */
-struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port)
+struct via_body* cscf_get_ue_via(struct sip_msg *msg)
 {
 	struct via_body *vb=0;
 	
@@ -1744,11 +1741,6 @@ struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,
 	if (!vb) return 0;
 	
 	if (vb->port == 0) vb->port=5060;
-	if (vb->port == pcscf_sip2ims_via_port &&
-		vb->host.len == pcscf_sip2ims_via_host.len &&
-		strncasecmp(vb->host.s,pcscf_sip2ims_via_host.s,pcscf_sip2ims_via_host.len)==0){
-			vb = cscf_get_last_via(msg);/* just to parse all via */
-		}
 	return vb;	
 }
 
@@ -2168,15 +2160,13 @@ str* cscf_get_service_route(struct sip_msg *msg,int *size)
  * @param host - the host string to be filled with the result
  * @param port - the port number to be filled with the result 
  * @param transport - the transport type to be filled with the result
- * @param pcscf_sip2ims_via_host - host string for the sip2ims gateway to skip in via
- * @param pcscf_sip2ims_via_port - port number for the sip2ims gateway to skip in via
  * @returns 1 on success
  */
-int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port)
+int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport)
 {
 	struct via_body *vb;
 	
-	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
+	vb = cscf_get_ue_via(msg);
 
 	*host = vb->host;
 	*port = vb->port;

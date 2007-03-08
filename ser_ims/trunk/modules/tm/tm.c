@@ -951,7 +951,7 @@ inline static int w_t_newtran( struct sip_msg* p_msg, char* foo, char* bar )
 	int ret;
 	ret = t_newtran( p_msg );
 	if (ret==E_SCRIPT) {
-		LOG(L_ERR, "ERROR: t_newtran: "
+		LOG(L_DBG, "ERROR: t_newtran: "
 			"transaction already in process %p\n", get_t() );
 	}
 	return ret;

@@ -144,8 +144,6 @@ int rtpproxy_tout = 1;						/**< Timeout 										*/
 
 
 
-char* pcscf_sip2ims_via="127.0.0.1:3060";	/**< Via of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
-
 /* fixed parameter storage */
 str pcscf_name_str;							/**< fixed SIP URI of this P-CSCF 					*/
 str pcscf_path_hdr_str;						/**< fixed Path header 								*/
@@ -160,10 +158,6 @@ extern str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the 
 extern str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
 extern str cscf_orig_ioi_str;						/**< fixed name of the Originating network 			*/
 extern str cscf_term_ioi_str;						/**< fixed name of the Terminating network 			*/
-
-
-str pcscf_sip2ims_via_host;					/**< fixed Via host of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
-int pcscf_sip2ims_via_port;					/**< fixed Via port of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
 
 
 persistency_mode_t pcscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
@@ -314,8 +308,6 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - subscribe_retries - how many times to attempt SUBSCRIBE to reg on failure
  * <p>
- * - sip2ims_via - Via address of the SIP2IMS gateway \todo - remove when we would have a full B2B gateway
- * <p>
  * - icid_value_prefix - prefix for the ICID in the P-Charging-Vector header
  * - icid_gen_addr - ICID Gen Addr. in the P-Charging-Vector header
  * - orig_ioi - Originating IOI in the P-Charging-Vector header
@@ -362,8 +354,6 @@ static param_export_t pcscf_params[]={
 	
 	{"subscribe_retries",		INT_PARAM,		&pcscf_subscribe_retries},
 	
-	{"sip2ims_via", 			STR_PARAM, 		&pcscf_sip2ims_via},
-
 	{"icid_value_prefix",		STR_PARAM,		&cscf_icid_value_prefix},
 	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM,		&cscf_orig_ioi},
@@ -420,8 +410,7 @@ static str s_record_route_e={";lr>\r\n",6};
 int fix_parameters()
 {
 	str x;	
-	int i,j;
-	
+		
 	pcscf_name_str.s = pcscf_name;
 	pcscf_name_str.len = strlen(pcscf_name);	
 	
@@ -513,23 +502,6 @@ int fix_parameters()
 	STR_APPEND(pcscf_record_route_mt,s_record_route_e);
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
-	
-	pcscf_sip2ims_via_port = 5060;
-	pcscf_sip2ims_via_host.s = pcscf_sip2ims_via;
-	pcscf_sip2ims_via_host.len = strlen(pcscf_sip2ims_via);
-	for(i=0;i<pcscf_sip2ims_via_host.len;i++)
-		if (pcscf_sip2ims_via_host.s[i]==':'){
-			pcscf_sip2ims_via_port = 0;
-			j=i+1;
-			while(j<pcscf_sip2ims_via_host.len)
-				pcscf_sip2ims_via_port = pcscf_sip2ims_via_port*10 + pcscf_sip2ims_via_host.s[j++]-'0';
-			pcscf_sip2ims_via_host.len = i;
-			if (pcscf_sip2ims_via_port == 0) pcscf_sip2ims_via_port=5060;
-			break;
-		}
-	
-
-
 
 	return 1;
 }
