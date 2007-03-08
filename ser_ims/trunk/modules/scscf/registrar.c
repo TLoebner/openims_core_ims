@@ -506,7 +506,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 //	if (!*s) return 1;
 	
 	/* check for Early-IMS case */
-	if (!msg->authorization){
+	if (!registration_disable_early_ims && !msg->authorization){
 		str received={0,0};		
 		sent_by = cscf_get_last_via_sent_by(msg);
 		if (sent_by.len){
