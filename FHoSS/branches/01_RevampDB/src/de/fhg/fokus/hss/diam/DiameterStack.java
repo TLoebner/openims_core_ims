@@ -34,11 +34,9 @@ public class DiameterStack implements TransactionListener, EventListener {
 
 	public void recvMessage(String FQDN, DiameterMessage request) {
 		if (request.applicationID == DiameterConstants.Application.Cx){
-			System.out.println("\n\nCx message received!");
 			Cx.processCxMessage(diameterPeer, FQDN, request);
 		}
 		else if (request.applicationID == DiameterConstants.Application.Sh){
-			System.out.println("\n\nSh message received!");
 			Sh.processCxMessage(diameterPeer, FQDN, request);
 		}
 		else if (request.applicationID == DiameterConstants.Application.Zh){

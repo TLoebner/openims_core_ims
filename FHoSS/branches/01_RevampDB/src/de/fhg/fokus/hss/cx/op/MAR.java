@@ -91,7 +91,6 @@ public class MAR {
 				e.printStackTrace();
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
-			System.out.println("Child count: " + authDataItem.getChildCount());
 			Vector childs = authDataItem.childs;
 			if (childs == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
@@ -126,7 +125,8 @@ public class MAR {
 			}
 			
 			if ((auth_scheme & impi.getAuth_scheme()) == 0){
-				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_AUTH_SCHEME_NOT_SUPPORTED);
+				throw new CxExperimentalResultException(
+						DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_AUTH_SCHEME_NOT_SUPPORTED);
 			}
 			
 			// 4. Synchronisation
@@ -187,7 +187,8 @@ public class MAR {
 							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 						}
 						else{
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
 						}
 					}
 					else{
@@ -197,10 +198,12 @@ public class MAR {
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
 							UtilAVP.addAuthVectors(response, avList);
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 						}
 						else{
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
 						}
 					}
 					break;
@@ -208,11 +211,7 @@ public class MAR {
 				case CxConstants.IMPU_user_state_Unregistered:
 				case CxConstants.IMPU_user_state_Not_Registered:
 				case CxConstants.IMPU_user_state_Auth_Pending:
-					System.out.println("AICI: 1");
-					System.out.println("Scscf_name: " + scscf_name);
-					System.out.println("server_name: " + server_name);
 					if (scscf_name == null || scscf_name.equals("") || !scscf_name.equals(server_name)){
-						System.out.println("AICI: 11");
 						IMSU_DAO.update(session, impi.getImsu().getId(), server_name, orig_host);
 						IMPU_DAO.update(session, impu.getId(), CxConstants.IMPU_user_state_Auth_Pending);
 						UtilAVP.addPublicIdentity(response, publicIdentity);
@@ -221,25 +220,26 @@ public class MAR {
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
 							UtilAVP.addAuthVectors(response, avList);
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 						}
 						else{
-							System.out.println("AICI: 1111");
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
 						}
 					}
 					else{
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
-						System.out.println("AICI: 21");
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
 							UtilAVP.addAuthVectors(response, avList);
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 						}
 						else{
-							System.out.println("AICI: 2");
-							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
+							UtilAVP.addResultCode(response, 
+									DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
 						}
 					}
 					break;

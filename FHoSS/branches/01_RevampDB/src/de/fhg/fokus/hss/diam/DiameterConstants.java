@@ -184,10 +184,12 @@ public class DiameterConstants
     	public static final int AUTH_APPLICATION_ID = 258;
         public static final int VENDOR_SPECIFIC_APPLICATION_ID = 260;
         public static final int ORIGIN_HOST = 264;
+        public static final int ORIGIN_REALM = 296;
         public static final int VENDOR_ID = 266;
         public static final int RESULT_CODE = 268;
     	public static final int AUTH_SESSION_STATE = 277;
         public static final int DESTINATION_HOST = 293;
+        public static final int DESTINATION_REALM = 283;
         public static final int EXPERIMENTAL_RESULT = 297;
         public static final int EXPERIMENTAL_RESULT_CODE = 298;
         

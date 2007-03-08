@@ -3,13 +3,21 @@
  */
 package de.fhg.fokus.hss.diam;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Vector;
+
+import org.hibernate.Session;
+
 
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.auth.AuthenticationVector;
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -20,6 +28,7 @@ public class UtilAVP {
 	public static String getPublicIdentity(DiameterMessage message){
 		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY, true, 
 				DiameterConstants.Vendor.V3GPP);
+
 		if (avp != null){
 			return new String(avp.data);
 		}
@@ -84,6 +93,78 @@ public class UtilAVP {
 			return new String (avp.data);
 		}
 		return null;
+	}
+	public static String getOriginatingRealm(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.ORIGIN_REALM, true, 
+				DiameterConstants.Vendor.DIAM);
+		if (avp != null){
+			return new String(avp.data);
+		}
+		return null;
+	}
+	
+	public static int getOriginatingRequest(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_ORIGINATING_REQUEST, false, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp != null){
+			return avp.getIntData();
+		}
+		return -1;
+		
+	}
+	
+	public static String getDestinationHost(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.DESTINATION_HOST, true, 
+				DiameterConstants.Vendor.DIAM);
+		if (avp != null){
+			return new String(avp.data);
+		}
+		return null;
+	}
+	
+	public static String getDestinationRealm(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.DESTINATION_REALM, true, 
+				DiameterConstants.Vendor.DIAM);
+		if (avp != null){
+			return new String(avp.data);
+		}
+		return null;
+	}
+	
+	public static String getVendorSpecificApplicationID(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.VENDOR_SPECIFIC_APPLICATION_ID, true, 
+				DiameterConstants.Vendor.DIAM);
+		if (avp != null){
+			return new String(avp.data);
+		}
+		return null;
+	}
+	
+	public static String getAuthSessionState(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.AUTH_SESSION_STATE, true, 
+				DiameterConstants.Vendor.DIAM);
+		if (avp != null){
+			return new String(avp.data);
+		}
+		return null;
+	}
+	
+	public static int getServerAssignmentType(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_SERVER_ASSIGNMENT_TYPE, true, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp != null){
+			return avp.getIntData();
+		}
+		return -1;
+	}
+	
+	public static int getUserDataAlreadyAvailable(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_USER_DATA_ALREADY_AVAILABLE, true, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp != null){
+			return avp.getIntData();
+		}
+		return -1;
 	}
 	
 	public static void addServerCapabilities(DiameterMessage message){
@@ -215,5 +296,45 @@ public class UtilAVP {
 		}
 	}
 	
+	public static void addUserData(DiameterMessage message, String data){
+		AVP userData = new AVP(DiameterConstants.AVPCode.IMS_USER_DATA, true, DiameterConstants.Vendor.V3GPP);
+		userData.setData(data);
+		message.addAVP(userData);
+	}
 	
+	public static void addAsssociatedIdentities(DiameterMessage message, List identitiesList){
+		AVP associatedIdentities = new AVP(DiameterConstants.AVPCode.IMS_ASSOCIATED_IDENTITIES, false, 
+			DiameterConstants.Vendor.V3GPP);
+		
+		AVP userName;
+		Iterator it = identitiesList.iterator();
+		while (it.hasNext()){
+			IMPI impi =  (IMPI) it.next();
+			userName = new AVP(DiameterConstants.AVPCode.USER_NAME, true, DiameterConstants.Vendor.DIAM);
+			userName.setData(impi.getIdentity());
+			associatedIdentities.addChildAVP(userName);
+		}
+		message.addAVP(associatedIdentities);
+	}
+	
+	public static List<IMPU> getAllIMPU(Session session, DiameterMessage message){
+		List<IMPU> impuIdentitiesList = null;
+		Vector avpVector = message.avps;
+		if (avpVector != null){
+			Iterator it = avpVector.iterator();
+			while (it.hasNext()){
+				AVP currentAVP = (AVP) it.next();
+				if (currentAVP.code == DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY){
+					if (impuIdentitiesList == null){
+						impuIdentitiesList = new ArrayList<IMPU>();
+					}
+					String identity = new String(currentAVP.data);
+					IMPU impu = IMPU_DAO.getByIdentity(session, identity);
+					impuIdentitiesList.add(impu);
+				}
+			}
+			return impuIdentitiesList;
+		}
+		return null;
+	}
 }

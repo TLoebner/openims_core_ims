@@ -181,7 +181,8 @@ public class UAR {
 									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
 							break;
 						}
-						list = IMPI_IMPU_DAO.get_All_IMPU_of_IMSU_user_state(session, impi.getImsu().getId(), CxConstants.IMPU_user_state_Auth_Pending);
+						list = IMPI_IMPU_DAO.get_All_IMPU_of_IMSU_user_state(session, 
+								impi.getImsu().getId(), CxConstants.IMPU_user_state_Auth_Pending);
 						if (list.size() > 0 && (serverName != null && !serverName.equals(""))){
 							
 							UtilAVP.addServerName(response, serverName);
@@ -190,7 +191,8 @@ public class UAR {
 							break;
 						}
 						
-						//else add capabilities ....
+						//else add capabilities 
+						//to be added....
 						UtilAVP.addServerCapabilities(response);
 						UtilAVP.addExperimentalResultCode(response, 
 								DiameterConstants.ResultCode.RC_IMS_DIAMETER_FIRST_REGISTRATION.getCode());

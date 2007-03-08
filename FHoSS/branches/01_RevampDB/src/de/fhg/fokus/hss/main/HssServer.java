@@ -45,11 +45,13 @@
 package de.fhg.fokus.hss.main;
 
 import java.io.IOException;
-
 import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
-import de.fhg.fokus.diameter.*;
+import org.hibernate.Session;
+
+
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.diam.*;
+import de.fhg.fokus.hss.util.HibernateUtil;
 
 
 /**
@@ -98,6 +100,13 @@ public class HssServer
             
             //HssDiameterStack diameterStack = new HssDiameterStack();
             //diameterStack.startup();
+            
+            // test only
+            Session session = HibernateUtil.getCurrentSession();
+            IMPI_DAO.getAll(session, 10, 10);
+            HibernateUtil.commitTransaction();
+            HibernateUtil.closeSession();
+            
             DiameterStack stack = new DiameterStack();
             stack.configStack();
             LOGGER.info("FHoSS was started and is ready for use!");

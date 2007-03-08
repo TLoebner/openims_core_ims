@@ -13,6 +13,7 @@
 	<property name="type" type="short" not-null="true"/>
 	<property name="barring" type="short" not-null="true" />
 	<property name="user_state" type="short" />		
+	<property name="id_impu_implicitset" type="int" />		
 	<property name="wildcard_psi" type="string" />
 	<property name="display_name" type="string" />	
 	<property name="psi_activation" type="short" />

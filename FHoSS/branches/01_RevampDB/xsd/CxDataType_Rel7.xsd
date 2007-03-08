@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
-	<xs:simpleType name="tPriority" final="list restriction">
+	<xs:simpleType name="tPriority" final="restriction">
 		<xs:restriction base="xs:int">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tProfilePartIndicator" final="list restriction">
+	<xs:simpleType name="tProfilePartIndicator" final="restriction">
 		<xs:restriction base="xs:unsignedByte">
 			<xs:maxInclusive value="1"/>
 			<xs:enumeration value="0">
@@ -26,17 +26,17 @@
 			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tSharedIFCSetID" final="list restriction">
+	<xs:simpleType name="tSharedIFCSetID" final="restriction">
 		<xs:restriction base="xs:int">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tGroupID" final="list restriction">
+	<xs:simpleType name="tGroupID" final="restriction">
 		<xs:restriction base="xs:int">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tRegistrationType" final="list restriction">
+	<xs:simpleType name="tRegistrationType" final="restriction">
 		<xs:restriction base="xs:unsignedByte">
 			<xs:maxInclusive value="2"/>
 			<xs:enumeration value="0">
@@ -65,7 +65,7 @@
 			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tDefaultHandling" final="list restriction">
+	<xs:simpleType name="tDefaultHandling" final="restriction">
 		<xs:restriction base="xs:unsignedByte">
 			<xs:maxInclusive value="1"/>
 			<xs:enumeration value="0">
@@ -86,7 +86,7 @@
 			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tDirectionOfRequest" final="list restriction">
+	<xs:simpleType name="tDirectionOfRequest" final="restriction">
 		<xs:restriction base="xs:unsignedByte">
 			<xs:maxInclusive value="3"/>
 			<xs:enumeration value="0">
@@ -123,19 +123,19 @@
 			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tPrivateID" final="list restriction">
+	<xs:simpleType name="tPrivateID" final="restriction">
 		<xs:restriction base="xs:anyURI"/>
 	</xs:simpleType>
-	<xs:simpleType name="tSIP_URL" final="list restriction">
+	<xs:simpleType name="tSIP_URL" final="restriction">
 		<xs:restriction base="xs:anyURI"/>
 	</xs:simpleType>
-	<xs:simpleType name="tTEL_URL" final="list restriction">
+	<xs:simpleType name="tTEL_URL" final="restriction">
 		<xs:restriction base="xs:anyURI"/>
 	</xs:simpleType>
-	<xs:simpleType name="tIdentity" final="list restriction">
+	<xs:simpleType name="tIdentity" final="restriction">
 		<xs:union memberTypes="tSIP_URL tTEL_URL"/>
 	</xs:simpleType>
-	<xs:simpleType name="tIdentityType" final="list restriction">
+	<xs:simpleType name="tIdentityType" final="restriction">
 		<xs:restriction base="xs:unsignedByte">
 			<xs:minInclusive value="0"/>
 			<xs:maxInclusive value="2"/>
@@ -178,17 +178,17 @@
 			<xs:element name="Extension" type="tExtension" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
-	<xs:simpleType name="tDisplayName" final="list restriction">
+	<xs:simpleType name="tDisplayName" final="restriction">
 		<xs:restriction base="xs:string">
 			<xs:minLength value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tServiceInfo" final="list restriction">
+	<xs:simpleType name="tServiceInfo" final="restriction">
 		<xs:restriction base="xs:string">
 			<xs:minLength value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:simpleType name="tString" final="list restriction">
+	<xs:simpleType name="tString" final="restriction">
 		<xs:restriction base="xs:string">
 			<xs:minLength value="0"/>
 		</xs:restriction>
@@ -196,7 +196,7 @@
 	<xs:simpleType name="tBool">
 		<xs:restriction base="xs:boolean"/>
 	</xs:simpleType>
-	<xs:simpleType name="tSubscribedMediaProfileId" final="list restriction">
+	<xs:simpleType name="tSubscribedMediaProfileId" final="restriction">
 		<xs:restriction base="xs:int">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
