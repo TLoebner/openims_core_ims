@@ -3,6 +3,7 @@
  */
 package de.fhg.fokus.hss.db.op;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -53,7 +54,7 @@ public class IMPI_IMPU_DAO {
 		return result;
 	}
 	
-	public static List getJoinResult(Session session, int id_impi){
+	public static List getJoinByIMPI(Session session, int id_impi){
 		Query query;
 		query = session.createQuery(
 				"from IMPI_IMPU as impi_impu" +
@@ -61,6 +62,17 @@ public class IMPI_IMPU_DAO {
 				"	inner join impi_impu.impu" +
 				"		where impi_impu.impi.id=?");
 		query.setInteger(0, id_impi);
+		return query.list();
+	}
+
+	public static List getJoinByIMPU(Session session, int id_impu){
+		Query query;
+		query = session.createQuery(
+				"from IMPI_IMPU as impi_impu" +
+				"	inner join impi_impu.impi" +
+				"	inner join impi_impu.impu" +
+				"		where impi_impu.impu.id=?");
+		query.setInteger(0, id_impu);
 		return query.list();
 	}
 	
@@ -98,4 +110,96 @@ public class IMPI_IMPU_DAO {
 		query.setShort(1, user_state);
 		return query.list();
 	}	
+
+	public static List<IMPI> get_all_IMPI_by_IMPU(Session session, int id_impu){
+		Query query;
+		query = session.createQuery(
+				"from IMPI_IMPU as impi_impu" +
+				"	inner join impi_impu.impi" +
+				"	inner join impi_impu.impu" +
+				"		where impi_impu.impu.id=?");
+		query.setInteger(0, id_impu);
+		List resultList = query.list();
+		
+		if (resultList == null || resultList.size() == 0){
+			return null;
+		}
+		
+		List<IMPI> impiList = new ArrayList<IMPI>();
+		Iterator it = resultList.iterator();
+		while (it.hasNext()){
+			Object[] resultRow = (Object []) it.next();
+			IMPI impi = (IMPI) resultRow[1];
+			impiList.add(impi);
+		}
+		
+		return impiList;
+	}	
+
+	public static List<IMPU> get_all_IMPU_by_IMPI(Session session, int id_impi){
+		Query query;
+		query = session.createQuery(
+				"from IMPI_IMPU as impi_impu" +
+				"	inner join impi_impu.impi" +
+				"	inner join impi_impu.impu" +
+				"		where impi_impu.impi.id=?");
+		query.setInteger(0, id_impi);
+		List resultList = query.list();
+		if (resultList == null || resultList.size() == 0){
+			return null;
+		}
+
+		List<IMPU> impuList = new ArrayList<IMPU>();
+		Iterator it = resultList.iterator();
+		while (it.hasNext()){
+			Object[] resultRow = (Object []) it.next();
+			IMPU impu = (IMPU) resultRow[2];
+			impuList.add(impu);
+		}
+		
+		return impuList;
+	}
+	
+	public static List<IMPU> get_all_Default_IMPU_of_Set_by_IMPI(Session session, int id_impi){
+		Query query;
+		query = session.createQuery(
+				"from IMPI_IMPU as impi_impu" +
+				"	inner join impi_impu.impi" +
+				"	inner join impi_impu.impu" +
+				"		where impi_impu.impi.id=? order by impi_impu.impu.id_impu_implicitset");
+		query.setInteger(0, id_impi);
+		List resultList = query.list();
+		if (resultList == null || resultList.size() == 0){
+			return null;
+		}
+
+		List<IMPU> impuList = new ArrayList<IMPU>();
+		Iterator it = resultList.iterator();
+		int previousSet = -1;
+		int currentSet = -1;
+		
+		while (it.hasNext()){
+			Object[] resultRow = (Object []) it.next();
+			IMPU impu = (IMPU) resultRow[2];
+			currentSet = impu.getId_impu_implicitset();
+			if (currentSet != previousSet){
+				impuList.add(impu);
+				previousSet = currentSet;
+			}
+		}
+		
+		return impuList;
+	} 
+	
+	public static int get_IMPU_Registered_cnt(Session session, int id_impu){
+		Query query;
+		query = session.createQuery(
+				"select count(*) from IMPI_IMPU as impi_impu" +
+				"	inner join impi_impu.impu" +
+				"		where impi_impu.user_state=1 and impi_impu.impu.id=?");
+		query.setInteger(0, id_impu);
+		Integer result = (Integer)query.uniqueResult();
+		return result.intValue();
+	}
+	
 }

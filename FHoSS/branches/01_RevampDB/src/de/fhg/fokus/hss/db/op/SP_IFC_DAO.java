@@ -8,6 +8,7 @@ import java.util.List;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.SP_IFC;
 
 /**
@@ -35,4 +36,19 @@ public class SP_IFC_DAO {
 		return query.list();
 	}
 
+	public static int getUnregisteredServicesCount(Session session, int id_sp){
+		// to be fixed!
+		
+//		Query query;
+//		query = session.createQuery(
+//				"select count(*) from SP_IFC as sp_ifc" +
+//				"	inner join sp_ifc.sp" +
+//				"	inner join sp_ifc.ifc");// +
+			//	"		where sp_ifc.sp.id=? and sp_ifc.ifc.profile_part_ind=?");
+		//query.setInteger(0, id_sp);
+		//query.setInteger(1, CxConstants.Profile_Part_Indicator_UnRegistered);
+//		Integer result = (Integer)query.uniqueResult();
+		//return result.intValue();
+		return 0;
+	}
 }

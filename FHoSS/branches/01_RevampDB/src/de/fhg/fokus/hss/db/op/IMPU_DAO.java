@@ -22,8 +22,8 @@ public class IMPU_DAO {
 		return impu;
 	}
 	
-	public static IMPU getByID(Session session, String id){
-		return (IMPU) session.load(IMPU.class, Integer.parseInt(id));
+	public static IMPU getByID(Session session, int id){
+		return (IMPU) session.load(IMPU.class, id);
 	}
 	
 	public static IMPU getByIdentity(Session session, String identity){
@@ -79,5 +79,14 @@ public class IMPU_DAO {
 		return query.list();
 	}
 	
+	public static List get_All_SP_For_Set(Session session, int id_implicit_set){
+		Query query;
+		query = session.createQuery(
+				"from IMPU as impu" +
+				"	inner join impu.sp" +
+				"		where impu.id_impu_implicitset=? order by impu.sp.id");
+		query.setInteger(0, id_implicit_set);
+		return query.list();
+	}
 	
 }

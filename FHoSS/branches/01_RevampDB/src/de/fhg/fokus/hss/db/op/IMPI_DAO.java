@@ -3,6 +3,8 @@
  */
 package de.fhg.fokus.hss.db.op;
 
+import java.util.List;
+
 import org.hibernate.Query;
 import org.hibernate.Session;
 import de.fhg.fokus.hss.db.model.IMPI;
@@ -95,6 +97,14 @@ public class IMPI_DAO {
 		query.setMaxResults(maxResults);
 		result[1] = query.list();
 		return result;
+	}
+	
+	public static List getAllByIMSU(Session session, int id_imsu){
+		Query query;
+		query = session.createQuery("from IMPI where id_imsu=?");
+		query.setInteger(0, id_imsu);
+		
+		return query.list();
 	}
 	
 	public static int deleteByID(Session session, int id){
