@@ -74,9 +74,6 @@ extern str pcscf_record_route_mt_uri;		/**< URI for Record-route terminating	*/
 
 extern str pcscf_name_str;					/**< fixed SIP URI of this P-CSCF 		*/
 
-extern str pcscf_sip2ims_via_host;					/**< fixed Via host of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
-extern int pcscf_sip2ims_via_port;					/**< fixed Via port of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
-
 /**
  * Computes the hash for a string.
  * @param call_id - input string
@@ -393,7 +390,7 @@ static inline int find_dialog_contact(struct sip_msg *msg,char *direction,str *h
 		case 'o':
 		case 'O':
 		case '0':
-			if (!cscf_get_originating_contact(msg,host,port,transport,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port))
+			if (!cscf_get_originating_contact(msg,host,port,transport))
 				return 0;
 			if (*port==0) *port = 5060;
 			return 1;

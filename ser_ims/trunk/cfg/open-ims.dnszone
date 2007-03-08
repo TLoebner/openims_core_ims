@@ -24,8 +24,6 @@ open-ims.test.		1D IN NAPTR 20 50 "s" "SIP+D2T"	""	_sip._tcp.open-ims.test.
 
 scscf                   1D IN A         127.0.0.1
 
-sip2ims			1D IN A		127.0.0.1
-
 hss                     1D IN A         127.0.0.1
 
 ue                      1D IN A         127.0.0.1

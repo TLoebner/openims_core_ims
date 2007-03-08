@@ -135,4 +135,3 @@ UNLOCK TABLES;
 # DB access rights
 grant delete,insert,select,update on icscf.* to icscf@localhost identified by 'heslo';
 grant delete,insert,select,update on icscf.* to provisioning@localhost identified by 'provi';
-# DB access rights

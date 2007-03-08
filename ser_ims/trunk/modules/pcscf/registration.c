@@ -84,9 +84,6 @@ extern int r_hash_size;								/**< records tables parameters 						*/
 
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
 
-extern str pcscf_sip2ims_via_host;					/**< fixed Via host of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
-extern int pcscf_sip2ims_via_port;					/**< fixed Via port of the SIP2IMS gateway - this is a hack \todo Remove this when the SIP2IMS is fully B2B */
-
 
 /**
  * Inserts the Path header.
@@ -163,7 +160,7 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking if registered\n");
 //	print_r(L_INFO);
 	
-	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
+	vb = cscf_get_ue_via(msg);
 	
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking for <%d://%.*s:%d>\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port);
@@ -507,7 +504,7 @@ int P_is_registered(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_INFO,"DBG:"M_NAME":P_is_registered: Looking if registered\n");
 //	print_r(L_INFO);
 
-	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
+	vb = cscf_get_ue_via(msg);
 
 	
 	if (vb->port==0) vb->port=5060;
@@ -544,7 +541,7 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_INFO,"INF:"M_NAME":P_assert_identity: Asserting Identity\n");
 //	print_r(L_INFO);
 	
-	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
+	vb = cscf_get_ue_via(msg);
 	
 	preferred = cscf_get_preferred_identity(msg,&h);
 	
@@ -806,7 +803,7 @@ int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2)
 	r_contact *c;
 	
 	
-	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
+	vb = cscf_get_ue_via(msg);
 	
 	if (vb->port==0) vb->port=5060;
 	c = get_r_contact(vb->host,vb->port,vb->proto);
@@ -874,7 +871,7 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	r_contact *c;
 	str x;
 		
-	vb = cscf_get_ue_via(msg,pcscf_sip2ims_via_host,pcscf_sip2ims_via_port);
+	vb = cscf_get_ue_via(msg);
 	
 	if (vb->port==0) vb->port=5060;
 	

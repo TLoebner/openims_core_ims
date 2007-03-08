@@ -137,7 +137,7 @@ int cscf_del_all_headers(struct sip_msg *msg,int hdr_type);
 
 struct via_body* cscf_get_first_via(struct sip_msg *msg, struct hdr_field **h);
 struct via_body* cscf_get_last_via(struct sip_msg *msg);
-struct via_body* cscf_get_ue_via(struct sip_msg *msg,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port);
+struct via_body* cscf_get_ue_via(struct sip_msg *msg);
 
 str cscf_get_realm(struct sip_msg *msg);
 str cscf_get_realm_from_uri(str uri);
@@ -158,7 +158,7 @@ int cscf_get_content_len(struct sip_msg *msg);
 
 str* cscf_get_service_route(struct sip_msg *msg,int *size);
 
-int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport,str pcscf_sip2ims_via_host,int pcscf_sip2ims_via_port);
+int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport);
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport);
 
 int cscf_get_terminating_identity(struct sip_msg *msg,str *uri);
