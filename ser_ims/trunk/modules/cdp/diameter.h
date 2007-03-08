@@ -249,9 +249,12 @@ typedef enum {
 /** Standard AVP Codes */
 typedef enum {
 	AVP_User_Name                     =    1,
+	AVP_Framed_IP_Address             =	   8,	
 	AVP_Class                         =   25,
 	AVP_Session_Timeout               =   27,
 	AVP_Proxy_State                   =   33,
+	AVP_Framed_Interface_Id           =   96,	
+	AVP_Framed_IPv6_Prefix            =   97,
 	AVP_Host_IP_Address               =  257,
 	AVP_Auth_Application_Id           =  258,
 	AVP_Acct_Application_Id           =  259,	
