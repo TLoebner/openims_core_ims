@@ -111,6 +111,7 @@ enum Reg_States {
 typedef struct _r_public {
 	unsigned int hash;			/**< the hash value 					*/
 	str aor;					/**< the public identity 				*/
+	str early_ims_ip;			/**< IP Address for Early-IMS Auth		*/
 	enum Reg_States reg_state;	/**< registration state					*/
 	ims_subscription *s;		/**< subscription to which it belongs 	*/
 

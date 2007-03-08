@@ -848,8 +848,9 @@ void print_r(int log_level)
 		r_lock(i);
 			p = registrar[i].head;
 			while(p){
-				LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] P: <"ANSI_BLUE"%.*s"ANSI_GREEN"> R["ANSI_MAGENTA"%2d"ANSI_GREEN"] \n",i,
-					p->aor.len,p->aor.s,p->reg_state);
+				LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] P: <"ANSI_BLUE"%.*s"ANSI_GREEN"> R["ANSI_MAGENTA"%2d"ANSI_GREEN"] Early-IMS: <"ANSI_YELLOW"%.*s"ANSI_GREEN"> \n",i,
+					p->aor.len,p->aor.s,p->reg_state,p->early_ims_ip.len,p->early_ims_ip.s);
+					
 				c = p->head;
 				while(c){
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":         C: <"ANSI_RED"%.*s"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"]\n",

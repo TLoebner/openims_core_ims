@@ -85,9 +85,12 @@ extern int av_request_at_sync;					/**< how many auth vectors to request in a sy
 str digest_akav1={"Digest-AKAv1-MD5",16};
 str digest_akav2={"Digest-AKAv2-MD5",16};
 str digest_md5={"Digest-MD5",10};
+str early_ims_security={"Early-IMS-Security",18};
+
 str akav1={"AKAv1-MD5",9};
 str akav2={"AKAv2-MD5",9};
 str md5={"MD5",3};
+str early_ims={"EarlyIMS",8};
 
 /**
  * Convert the SIP Algorithm to Diameter Authorization Scheme.
@@ -102,6 +105,8 @@ str convertAuthSchemeSIPtoDiameter(str algorithm)
 		return digest_akav2;
 	if (algorithm.len == md5.len && strncasecmp(algorithm.s,md5.s,md5.len)==0)
 		return digest_md5;
+	if (algorithm.len == early_ims.len && strncasecmp(algorithm.s,early_ims.s,early_ims.len)==0)
+		return early_ims_security;
 	return algorithm;
 }
 
@@ -118,6 +123,8 @@ str convertAuthSchemeDiametertoSip(str scheme)
 		return akav2;
 	if (scheme.len == digest_md5.len && strncasecmp(scheme.s,digest_md5.s,digest_md5.len)==0)
 		return md5;
+	if (scheme.len == early_ims_security.len && strncasecmp(scheme.s,early_ims_security.s,early_ims_security.len)==0)
+		return early_ims;
 	return scheme;
 }
 
@@ -277,6 +284,7 @@ int S_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2 )
 	return ret?CSCF_RETURN_TRUE:CSCF_RETURN_FALSE;
 }
 
+
 char *zero_padded="00000000000000000000000000000000";
 static str empty_s={0,0};
 /**
@@ -284,7 +292,7 @@ static str empty_s={0,0};
  * @param msg - the SIP message
  * @param str1 - the realm
  * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if authorized, #CSCF_RETURN_TRUE if not or #CSCF_RETURN_ERROR on error
+ * @returns #CSCF_RETURN_TRUE if authorized, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_ERROR on error
  */
 int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 {
@@ -294,9 +302,10 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	str private_identity,public_identity;
 	str nonce,response16;
 	str uri={0,0};
-	auth_vector *av;
 	HASHHEX expected,ha1,hbody;
 	int expected_len=32;
+	auth_vector *av=0;
+	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: Checking if REGISTER is authorized...\n");
 	
@@ -314,13 +323,6 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		return CSCF_RETURN_BREAK;
 	}
 	
-	if (!cscf_get_nonce_response(msg,realm,&nonce,&response16)||
-		!nonce.len || !response16.len)
-	{
-		LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: Nonce or reponse missing\n");
-		return ret;
-	}
-	
 	private_identity = cscf_get_private_identity(msg,realm);
 	if (!private_identity.len) {
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: private identity missing\n");
@@ -332,6 +334,63 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: public identity missing\n");		
 		return ret;
 	}
+	
+	/* check for Early-IMS case */
+	if (!msg->authorization){
+		str sent_by={0,0},received={0,0};
+		
+		sent_by = cscf_get_last_via_sent_by(msg);
+		if (sent_by.len){
+			r_public *p;
+			int ret = CSCF_RETURN_FALSE;
+
+			LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: Possible Early-IMS identified\n");
+			received = cscf_get_last_via_received(msg);
+			if (received.len) sent_by=received;
+			/* if match, return authorized */
+			p = get_r_public(public_identity);
+			if (p && p->early_ims_ip.len == sent_by.len &&
+				strncasecmp(p->early_ims_ip.s,sent_by.s,sent_by.len)==0){
+				ret = CSCF_RETURN_TRUE;
+				goto done_early_ims;
+			}
+			do {
+				/* try and do MAR */
+				if (!S_MAR(msg,public_identity,private_identity,1,				
+					early_ims_security,empty_s,empty_s,scscf_name_str,realm)){
+					/* on fail, return not authorized */
+//					if (p && p->early_ims_ip.s){
+//						shm_free(p->early_ims_ip.s);
+//						p->early_ims_ip.s=0;p->early_ims_ip.len=0;
+//					}
+					goto done_early_ims;
+				}										
+				av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_UNUSED,0,&aud_hash);
+			} while(!av);
+			LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: IP address in MAA was <%.*s>\n",av->authorization.len,av->authorization.s);
+			if (av->authorization.len == sent_by.len &&
+				strncasecmp(av->authorization.s,sent_by.s,sent_by.len)==0){
+				ret = CSCF_RETURN_TRUE;
+				if (p) STR_SHM_DUP(p->early_ims_ip,av->authorization,"IP Early IMS");												
+			}else
+				ret = CSCF_RETURN_FALSE;
+		done_early_ims:					
+			if (p) r_unlock(p->hash);
+			if (av) {
+				av->status = AUTH_VECTOR_USELESS;
+				auth_data_unlock(aud_hash);
+			}
+			return ret;						
+		}
+	}
+
+	if (!cscf_get_nonce_response(msg,realm,&nonce,&response16)||
+		!nonce.len || !response16.len)
+	{
+		LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: Nonce or reponse missing\n");
+		return ret;
+	}	
+	
 	uri = cscf_get_digest_uri(msg,realm);
 	
 	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
@@ -498,7 +557,7 @@ str S_WWW_Authorization_MD5={"WWW-Authenticate: Digest realm=\"%.*s\","
  */ 
 int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 {
-	str x;
+	str x={0,0};
 	char ck[32],ik[32];
 	int ck_len,ik_len;
 	if ((av->algorithm.len == akav1.len && strncasecmp(av->algorithm.s,akav1.s,akav1.len)==0)||
@@ -582,7 +641,7 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 	int cnt,i,j;
 	int item_number;
 	int is_sync=0;
-	str auth_scheme={0,0},authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0};
+	str auth_scheme={0,0},authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0},ip={0,0};
 		
 	if (auts.len){
 		authorization.s = pkg_malloc(nonce.len*3/4+auts.len*3/4+8);
@@ -663,10 +722,10 @@ success:
 	cnt = 0;
 	auth_data = 0;
 	while((Cx_get_auth_data_item_answer(maa,&auth_data,&item_number,
-			&auth_scheme,&authenticate,&authorization,&ck,&ik)))
+			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip)))
 	{
-		av = new_auth_vector(item_number,auth_scheme,authenticate,
-			authorization,ck,ik);
+		if (ip.len)	av = new_auth_vector(item_number,auth_scheme,empty_s,ip,empty_s,empty_s);
+		else av = new_auth_vector(item_number,auth_scheme,authenticate,authorization,ck,ik);
 		
 		if (cnt==0) avlist[cnt++]=av;
 		else {
@@ -828,7 +887,7 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 		memcpy(x->authorization.s,authorization.s,authorization.len);
 	}
 	else if (algorithm.len == md5.len && strncasecmp(algorithm.s,md5.s,md5.len)==0){
-		/* MD5 and all else */
+		/* MD5 */
 		x->authenticate.len = authenticate.len*2;
 		x->authenticate.s = shm_malloc(x->authenticate.len);
 		if (!x->authenticate.s){
@@ -845,7 +904,21 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 		}		
 		memcpy(x->authorization.s,authorization.s,authorization.len);
 		x->authorization.len = authorization.len;		
+	}
+	else if (algorithm.len == early_ims.len && strncasecmp(algorithm.s,early_ims.s,early_ims.len)==0){
+		/* early IMS */
+		x->authenticate.len=0;
+		x->authenticate.s=0;
+		x->authorization.len = authorization.len;
+		x->authorization.s = shm_malloc(x->authorization.len);
+		if (!x->authorization.s){
+			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+			goto done;
+		}		
+		memcpy(x->authorization.s,authorization.s,authorization.len);
+		x->authorization.len = authorization.len;		
 	}else{
+		/* all else */
 		x->authenticate.len=0;
 		x->authenticate.s=0;
 	}
