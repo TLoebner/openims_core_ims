@@ -801,7 +801,7 @@ int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2)
 	rr_t *r;
 	struct via_body *vb;
 	r_contact *c;
-	
+	struct sip_uri uri;
 	
 	vb = cscf_get_ue_via(msg);
 	
@@ -818,6 +818,23 @@ int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2)
 			goto nok;
 	}
 	r = (rr_t*) hdr->parsed;	
+	/* first let's skip route pointing to myself */
+	if (r&&parse_uri(r->nameaddr.uri.s, r->nameaddr.uri.len, &uri)==0 &&
+		check_self(&uri.host,uri.port_no?uri.port_no:SIP_PORT,0))
+	{
+		r = r->next;		
+		if (!r) {
+			hdr = cscf_get_next_route(msg,hdr);
+			if (!hdr){ 
+				if (c->service_route_cnt==0) 
+					goto ok;
+				else 
+					goto nok;
+			}
+			r = (rr_t*) hdr->parsed;	
+		}
+	}
+	/* then check the others */
 	
 	for(i=0;i<c->service_route_cnt;i++){
 		LOG(L_DBG,"DBG:"M_NAME":P_follows_service_route: mst %.*s\n",

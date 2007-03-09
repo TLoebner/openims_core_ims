@@ -71,7 +71,7 @@ extern struct tm_binds tmb;						/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs 		*/
 
 extern str registration_default_algorithm_s;	/**< fixed default algorithm for registration (if none present)	*/
-extern int registration_disable_early_ims;	/**< if to disable the Early-IMS checks			*/
+extern int registration_disable_early_ims;		/**< if to disable the Early-IMS checks			*/
 
 extern str scscf_name_str;						/**< fixed name of the S-CSCF 					*/
 extern str scscf_service_route;					/**< the service route header					*/
@@ -85,13 +85,20 @@ extern int av_request_at_sync;					/**< how many auth vectors to request in a sy
 
 str digest_akav1={"Digest-AKAv1-MD5",16};
 str digest_akav2={"Digest-AKAv2-MD5",16};
+
 str digest_md5={"Digest-MD5",10};
+str digest={"Digest",6};
+str http_digest_md5={"HTTP_DIGEST_MD5",15};
+
 str early_ims_security={"Early-IMS-Security",18};
+str nass_bundled={"NASS-Bundled",12};
+str unknown={"Unknown",7};
+
 
 str akav1={"AKAv1-MD5",9};
 str akav2={"AKAv2-MD5",9};
 str md5={"MD5",3};
-str early_ims={"Early-IMS",9};
+str hss_selected={"HSS-Selected",12};
 
 /**
  * Convert the SIP Algorithm to Diameter Authorization Scheme.
@@ -106,8 +113,8 @@ str convertAuthSchemeSIPtoDiameter(str algorithm)
 		return digest_akav2;
 	if (algorithm.len == md5.len && strncasecmp(algorithm.s,md5.s,md5.len)==0)
 		return digest_md5;
-	if (algorithm.len == early_ims.len && strncasecmp(algorithm.s,early_ims.s,early_ims.len)==0)
-		return early_ims_security;
+	if (algorithm.len == hss_selected.len && strncasecmp(algorithm.s,hss_selected.s,hss_selected.len)==0)
+		return unknown;
 	return algorithm;
 }
 
@@ -122,10 +129,14 @@ str convertAuthSchemeDiametertoSip(str scheme)
 		return akav1;
 	if (scheme.len == digest_akav2.len && strncasecmp(scheme.s,digest_akav2.s,digest_akav2.len)==0)
 		return akav2;
-	if (scheme.len == digest_md5.len && strncasecmp(scheme.s,digest_md5.s,digest_md5.len)==0)
+		
+	if ((scheme.len == digest_md5.len && strncasecmp(scheme.s,digest_md5.s,digest_md5.len)==0)||
+		(scheme.len == digest.len && strncasecmp(scheme.s,digest.s,digest.len)==0)||
+		(scheme.len == http_digest_md5.len && strncasecmp(scheme.s,http_digest_md5.s,http_digest_md5.len)==0))
 		return md5;
-	if (scheme.len == early_ims_security.len && strncasecmp(scheme.s,early_ims_security.s,early_ims_security.len)==0)
-		return early_ims;
+		
+	if (scheme.len == unknown.len && strncasecmp(scheme.s,unknown.s,unknown.len)==0)
+		return hss_selected;
 	return scheme;
 }
 
@@ -906,7 +917,7 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 		memcpy(x->authorization.s,authorization.s,authorization.len);
 		x->authorization.len = authorization.len;		
 	}
-	else if (algorithm.len == early_ims.len && strncasecmp(algorithm.s,early_ims.s,early_ims.len)==0){
+	else if (algorithm.len == early_ims_security.len && strncasecmp(algorithm.s,early_ims_security.s,early_ims_security.len)==0){
 		/* early IMS */
 		x->authenticate.len=0;
 		x->authenticate.s=0;
