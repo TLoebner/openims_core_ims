@@ -170,7 +170,7 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 
 	if (!Cx_add_destination_realm(mar,realm)) goto error;
 		
-	if (!Cx_add_vendor_specific_appid(mar,IMS_vendor_id,IMS_Cx,0 /*IMS_Cx*/)) goto error;
+	if (!Cx_add_vendor_specific_appid(mar,IMS_vendor_id_3GPP,IMS_Cx,0 /*IMS_Cx*/)) goto error;
 	if (!Cx_add_auth_session_state(mar,1)) goto error;		
 		
 	if (!Cx_add_public_identity(mar,public_identity)) goto error;
@@ -234,7 +234,7 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 
 	if (!Cx_add_destination_realm(sar,realm)) goto error;
 		
-	if (!Cx_add_vendor_specific_appid(sar,IMS_vendor_id,IMS_Cx,0 /*IMS_Cx*/)) goto error;
+	if (!Cx_add_vendor_specific_appid(sar,IMS_vendor_id_3GPP,IMS_Cx,0 /*IMS_Cx*/)) goto error;
 	if (!Cx_add_auth_session_state(sar,1)) goto error;		
 		
 	if (!Cx_add_public_identity(sar,public_identity)) goto error;
@@ -284,14 +284,14 @@ AAAMessage* Cx_RTA(AAAMessage * rtr)
 	
 	rta_msg	= cdpb.AAACreateResponse(rtr);//session ID?
 
-	avp = Cx_get_next_public_identity(rtr,0,AVP_IMS_Public_Identity,IMS_vendor_id,__FUNCTION__);	
+	avp = Cx_get_next_public_identity(rtr,0,AVP_IMS_Public_Identity,IMS_vendor_id_3GPP,__FUNCTION__);	
 	if(avp==0){
 		private_id=Cx_get_user_name(rtr);	
 		r_private_expire(private_id);			 
 	}else{
 		public_id=avp->data;
 		r_public_expire(public_id);
-		while((avp=Cx_get_next_public_identity(rtr,cdpb.AAAGetNextAVP(avp),AVP_IMS_Public_Identity,IMS_vendor_id,__FUNCTION__))!=0){
+		while((avp=Cx_get_next_public_identity(rtr,cdpb.AAAGetNextAVP(avp),AVP_IMS_Public_Identity,IMS_vendor_id_3GPP,__FUNCTION__))!=0){
 			public_id=avp->data;
 			r_public_expire(public_id);
 		}		

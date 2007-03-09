@@ -66,10 +66,19 @@
 #define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
 
-/* Vendor ID				*/
-#define IMS_vendor_id 10415			/**< Vendor Id for 3GPP */
-#define IMS_vendor_id_char "10415" 	/**< char value for 3GPP's Vendor Id */
-#define IMS_vendor_id_len	5		/**< len of char value for 3GPP's Vendor Id */
+/* Vendor ID	*/
+
+#define IMS_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
+#define IMS_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
+#define IMS_vendor_id_3GPP_len	5			/**< len of char value for 3GPP's Vendor Id */
+
+#define IMS_vendor_id_ETSI 		13019		/**< Vendor Id for ETSI */
+#define IMS_vendor_id_ETSI_char "13019" 	/**< char value for ETSI's Vendor Id */
+#define IMS_vendor_id_ETSI_len	5			/**< len of char value for 3GPP's Vendor Id */
+
+#define IMS_vendor_id_CableLabs 	 4491	/**< Vendor Id for CableLabs */
+#define IMS_vendor_id_CableLabs_char "4491"	/**< char value for ETSI's Vendor Id */
+#define IMS_vendor_id_CableLabs_len	 4		/**< len of char value for 3GPP's Vendor Id */
 
 /*	Command Codes alocated for IMS	*/
 /*		The Gq Interface 			*/
@@ -114,7 +123,7 @@
 #define IMS_13A		313
 
 
-/** AVP Codes */ 
+/** 3GPP AVP Codes */ 
 enum {
 /**   1 to 255 reserved for backward compatibility with IMS Radius TS29.061	*/
 /** 256 to 299 reserved for future use										*/
@@ -197,6 +206,43 @@ enum {
 	AVP_IMS_DSAI_Tag									= 711
 	
 /** 800 to 899 reserved for TS29.299											*/
+};
+
+/** ETSI AVP Codes */ 
+enum {
+	AVP_Line_Identifier									= 500,
+	AVP_ETSI_SIP_Authenticate 							= 501, 
+	AVP_ETSI_SIP_Authorization 							= 502, 
+	AVP_ETSI_SIP_Authentication_Info 					= 503, 
+	AVP_ETSI_Digest_Realm 								= 504,  
+	AVP_ETSI_Digest_Nonce 								= 505,  
+	AVP_ETSI_Digest_Domain								= 506,  
+	AVP_ETSI_Digest_Opaque 								= 507,  
+	AVP_ETSI_Digest_Stale 								= 508,  
+	AVP_ETSI_Digest_Algorithm 							= 509,  
+	AVP_ETSI_Digest_QoP 								= 510,  
+	AVP_ETSI_Digest_HA1 								= 511,  
+	AVP_ETSI_Digest_Auth_Param 							= 512,  
+	AVP_ETSI_Digest_Username 							= 513,  
+	AVP_ETSI_Digest_URI 								= 514,  
+	AVP_ETSI_Digest_Response 							= 515,  
+	AVP_ETSI_Digest_CNonce 								= 516,  
+	AVP_ETSI_Digest_Nonce_Count 						= 517,  
+	AVP_ETSI_Digest_Method 								= 518,  
+	AVP_ETSI_Digest_Entity_Body_Hash 					= 519,  
+	AVP_ETSI_Digest_Nextnonce 							= 520,  
+	AVP_ETSI_Digest_Response_Auth						= 521	
+};
+
+/** CableLabs AVP Codes */ 
+enum {
+	AVP_CableLabs_SIP_Digest_Authenticate 				= 228,
+	AVP_CableLabs_Digest_Realm 							= 209,
+	AVP_CableLabs_Digest_Domain 						= 206,
+	AVP_CableLabs_Digest_Algorithm 						= 204,
+	AVP_CableLabs_Digest_QoP 							= 208,
+	AVP_CableLabs_Digest_HA1 							= 207,
+	AVP_CableLabs_Digest_Auth_Param 					= 205
 };
 
 /** Server-Assignment-Type Enumerated AVP */

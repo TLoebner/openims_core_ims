@@ -159,7 +159,7 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 
 	if (!Cx_add_destination_realm(uar,realm)) goto error;
 		
-	if (!Cx_add_vendor_specific_appid(uar,IMS_vendor_id,IMS_Cx,0/*IMS_Cx*/)) goto error;
+	if (!Cx_add_vendor_specific_appid(uar,IMS_vendor_id_3GPP,IMS_Cx,0/*IMS_Cx*/)) goto error;
 	if (!Cx_add_auth_session_state(uar,1)) goto error;
 
 	if (!Cx_add_user_name(uar,private_identity)) goto error;
@@ -202,7 +202,7 @@ AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 
 	if (!Cx_add_destination_realm(lir,realm)) goto error;
 	
-	if (!Cx_add_vendor_specific_appid(lir,IMS_vendor_id,IMS_Cx,0/*IMS_Cx*/)) goto error;
+	if (!Cx_add_vendor_specific_appid(lir,IMS_vendor_id_3GPP,IMS_Cx,0/*IMS_Cx*/)) goto error;
 	if (!Cx_add_auth_session_state(lir,1)) goto error;		
 
 	if (!Cx_add_public_identity(lir,public_identity)) goto error;
