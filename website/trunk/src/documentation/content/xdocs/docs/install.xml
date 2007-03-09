@@ -440,12 +440,12 @@ domain open-ims.test</source>
 		  	<li> You can directly execute it and fetch the files to be changed as arguments. See the example
 			below:
 			
-			<source>    # pwd    
-				    # /opt/OpenIMSCore
-
-				    # ser_ims/cfg/configurator.sh ser_ims/cfg/scscf.cfg ser_ims/cfg/icscf.xml \ 
-					    FHoSS/deploy/hssdb.sql FHoSS/deploy/hss.properties
-			</source>		    
+			    <source>    
+# pwd    
+# /opt/OpenIMSCore
+# ser_ims/cfg/configurator.sh ser_ims/cfg/scscf.cfg ser_ims/cfg/icscf.xml \ 
+FHoSS/deploy/hssdb.sql FHoSS/deploy/hss.properties
+			    </source>		    
 			</li>
 		  	
 			<li> Then copy the files to the /opt/OpenIMSCore directory </li>
