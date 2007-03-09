@@ -421,9 +421,9 @@ domain open-ims.test</source>
       <title>Annex C - Changing the Domain Name and IP-Address of configuration files</title>
       <p>
 
-		OpenIMSCore is preconfigured to work with the domain "open-ims.test" and ip address of loopback device, "127.0.0.1" .
+		OpenIMSCore is preconfigured to work with the domain "open-ims.test" and ip address of default loopback device, "127.0.0.1".
 		Following the installation instructions above without changing the configuration files would set up this environment
-		successfully. For some reasons(like testing roaming,using the same core with different realms), you would need
+		successfully. For some reasons(like testing roaming,communicating with other external entitites), you would need
 		to change the domain name. In that case you could use a configuration script(configurator.sh)  which is stored under 
 		directory /opt/OpenIMSCore/ser_ims/cfg/
 		
