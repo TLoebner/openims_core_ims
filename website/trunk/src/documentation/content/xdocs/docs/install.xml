@@ -58,8 +58,6 @@
       	mysql -u root -p < FHoSS/scripts/userdata.sql
 
       	mysql -u root -p < ser_ims/cfg/icscf.sql 
-      	mysql -u root -p < ser_ims/cfg/sip2ims.sql
-
 
       	cp ser_ims/cfg/*.cfg . 
       	cp ser_ims/cfg/*.xml . 
@@ -141,9 +139,9 @@ svn checkout http://svn.berlios.de/svnroot/repos/openimscore/FHoSS/trunk FHoSS</
       <ul>
       	<li>ser_ims
       		<ul>
-      			<li><strong> New!!! </strong> Do "make libs install all" in ser_ims
+      			<li><strong> New!!! </strong> Do "make install-libs all" in ser_ims
       				<source>cd ser_ims
-make libs install-libs all
+make install-libs all
 cd ..</source>
 				</li>
       			<li>If something breaks, you probably don't have all the prerequisites.</li>
@@ -187,6 +185,7 @@ cd..</source>
 						<li>Replace the home domain (open-ims.test) with your own one</li>
 						<li>Change the database passwords</li>
 					</ul>
+					For this operation the ser_ims/cfg/configurator.sh might help you.
 				</li>
 			</ul>
 		</li>
@@ -203,7 +202,6 @@ cd..</source>
 			<ul>
 				<li>Run the SQL dumps (mysql -u root -p -h localhost &lt; dump.sql):
 					<source>mysql -u root -p -h localhost &lt; ser_ims/cfg/icscf.sql
-mysql -u root -p -h localhost &lt; ser_ims/cfg/sip2ims.sql
 
 mysql -u root -p -h localhost &lt; FHoSS/scripts/hssdb.sql
 mysql -u root -p -h localhost &lt; FHoSS/scripts/userdata.sql
@@ -221,7 +219,7 @@ mysql -u root -p -h localhost &lt; FHoSS/scripts/userdata.sql
 		<li>CSCFs
 			<ul>
 				<li>Copy the following files to /opt/OpenIMSCore or another location comfortable for you:
-pcscf.cfg, pcscf.sh, icscf.cfg, icscf.xml, icscf.sh, scscf.cfg, scscf.xml, scscf.sh, sip2ims.cfg, sip2ims.sh
+pcscf.cfg, pcscf.sh, icscf.cfg, icscf.xml, icscf.sh, scscf.cfg, scscf.xml, scscf.sh, 
 					<source>
 cp ser_ims/cfg/*.cfg . 
 cp ser_ims/cfg/*.xml . 
@@ -244,7 +242,7 @@ cp ser_ims/cfg/*.sh .
       <ul>
       	<li>CSCFs
       		<ul>
-      			<li>Start pcscf.sh, icscf.sh, scscf.sh and sip2ims.sh</li>
+      			<li>Start pcscf.sh, icscf.sh and scscf.sh</li>
       			<li>All these should run in parallel.</li>
       			<li>We love debugging, so by default they would stay in foreground.</li>
       			<li>By default you should see periodically log messages with the content of the registrar and with the opened diameter links</li>
@@ -282,18 +280,8 @@ cp ser_ims/cfg/*.sh .
 		</li>
       	<li>SIP-to-IMS Gateway
       		<ul>
-      			<li>By default, the SIP-to-IMS Gateway comes provisioned with the same couple of sample users:
-      				<ul>
-      					<li>alice@open-ims.test</li>
-      					<li>bob@open-ims.test</li>
-      				</ul>
-      			</li>
-      			<li>Use these or insert new ones in the sip2ims.credentials mysql table - use serweb for example to manipulate that.
-					Make sure that for new users here, you also provision the same information in the HSS:
-					<ul>
-						<li>same password</li>
-						<li>public identity equal to the private identity plus the "sip:" in front</li>
-					</ul>      			
+      			<li>The SIP-to-IMS Gateway is now obsolete and was droped from the project. See the Annex and FAQ for information
+      			on how you can use the Open IMS Core with SIP clients capable of only MD5 authentication.
       			</li>
 			</ul>
 		</li>
@@ -306,7 +294,7 @@ cp ser_ims/cfg/*.sh .
 						<li>Secret Key: alice</li>
 						<li>OP: 0x00...0</li>
 						<li>AMF: 0x00...0</li>
-						<li>Anonimity Key: disabled</li>
+						<li>Use of Anonimity Key: enable</li>
 						<li>Public Identity: sip:alice@open-ims.test</li>
 						<li>Realm: open-ims.test</li>
 						<li>Strict Outbound Proxy: sip:pcscf.open-ims.test:4060</li>
@@ -322,8 +310,9 @@ cp ser_ims/cfg/*.sh .
 						<li>User part of the SIP URI: alice</li>
 						<li>Host part of the SIP URI/Domain/realm: open-ims.test</li>
 						<li>Password: alice</li>
-						<li>Strict Outbound Proxy: sip:sip2ims.open-ims.test:3060</li>
-						<li>!!! Make sure that your SIP client does REGISTER sip:open-ims.test and not REGISTER sip:sip2ims.open-ims.test:3060</li>
+						<li>Strict Outbound Proxy: sip:pcscf.open-ims.test:4060</li>
+						<li>!!! Make sure that your SIP client does REGISTER sip:open-ims.test and not REGISTER sip:pcscf.open-ims.test:4060</li>
+						<li>!!! Read the Annex and FAQ related to using MD5-only clients with the Open IMS Core</li>
 					</ul>
 				</li>
 				<li>Bob: similar</li>
@@ -398,6 +387,32 @@ search open-ims.test
 domain open-ims.test</source>
 			</li>
 			<li>Remember that utilities like the DHCP-Client overwrite this file be default!</li>
+		</ul>
+    </section>
+    <section id="annexb">
+      <title>Annex B - SIP Clients How-To</title>
+      <p>
+		The old SIP2IMS module that was performing MD5-to-AKA authentication translation has been deleted as being
+		obsolete as the core can perform MD5 authentication too. Another reason is that it's functionality was seriously 
+		flawed by the fact that it was a SIP proxy rather than a full B2BUA.
+	  </p>
+	  <p><strong>So how do you get a client registered?</strong></p>
+		  <ul>
+		  	<li>First provision the users (or use the default sip:alice@open-ims.test or sip:bob@open-ims.test).
+		  	Make sure than in the HSS provisioning interface in the private identity configuration, you allow the
+		  	use of Digest-MD5 for the respective users
+		  	</li>		  	
+		  	<li>Then you have two options for the S-CSCF to trigger an MD5 authentication
+		  		<ol>
+			  		<li>Modify the client to send a parameter "algorithm=MD5" in the Authorization header in the first
+			  		unauthorized REGISTER.</li>
+			  		<li>Or modify the scscf.cfg and enable the MD5 authorization as the default authentication method instead
+			  		of AKAv1-MD5.</li>
+		  		</ol>
+		  	</li>
+		  	<li>Next just make sure that the client is using the P-CSCF address (sip:pcscf.open-ims.test:4060 by default) as
+		  	strict outbound proxy and the REGISTER Request-URI is "sip:open-ims.test" (or your own domain name) and not
+		  	"sip:pcscf.open-ims.test:4060" as many SIP clients fail here.</li>
 		</ul>
     </section>
   </body>

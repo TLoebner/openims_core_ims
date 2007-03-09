@@ -124,19 +124,10 @@
     <section id="sip2ims">
       <title>SIP-to-IMS Gateway</title>
       <ul>
-      	<li><strong>How do I provision a new user?</strong><br/>
-      		Use serweb or another tool to create a user in the credentials table. Alternatively, you can manually add a similar
-      		entry to those of Alice/Bob. HA1 is irrelevant and can be left blank. HA1b can be computed using e.g.:
-      		<source>ser_ims/utils/gen_ha1/gen_ha1 user realm password</source>
-      		Don't forget: The username must be the same as the private AND the public identity of the user, as SIP UEs do not usually
-      		make a distinction between them. The password must be the same as the secret key provisioned in the HSS. It seems that 
-		many users confuse the private identity, so here is a correct example:				
-		<source>ser_ims/utils/gen_ha1/gen_ha1 alice@open-ims.test open-ims.test alice</source>
-      	</li>
-      	<li><strong>It doesn't work with another Proxy-CSCF. Why?</strong><br/>
-      		The P-CSCF assumes that it is the first hop for any UE originated requests. Unfortunately now the SIP-to-IMS Gateway
-      		works in proxy mode and our P-CSCF is hacked to recognize this case. There are plans to move to a full B2BUA mode, but
-      		this will take some time.
+      	<li>
+      	The SIP-to-IMS Gateway is obsolete and was removed from the project. The Open IMS Core supports MD5 authentication
+      	without it. See the <a href="/docs/install.html#annexb">Installation-Annex B</a> for information on how to use
+      	SIP clients with the Open IMS Core.
       	</li>
       </ul>
     </section>
