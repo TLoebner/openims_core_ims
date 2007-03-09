@@ -415,5 +415,43 @@ domain open-ims.test</source>
 		  	"sip:pcscf.open-ims.test:4060" as many SIP clients fail here.</li>
 		</ul>
     </section>
+
+
+    <section id="annexc">
+      <title>Annex C - Changing the Domain Name and IP-Address of configuration files</title>
+      <p>
+
+		OpenIMSCore is preconfigured to work with the domain "open-ims.test" and ip address of loopback device, "127.0.0.1" .
+		Following the installation instructions above without changing the configuration files would set up this environment
+		successfully. For some reasons(like testing roaming,using the same core with different realms), you would need
+		to change the domain name. In that case you could use a configuration script(configurator.sh)  which is stored under 
+		directory /opt/OpenIMSCore/ser_ims/cfg/
+		
+	  </p>
+	  <p><strong>Does it only change *.cfg files?</strong></p>
+
+	  <p>
+		No, it can also reconfigure *.xml , *.sql and FHoSS configuration files(*.properties).
+
+	  </p>
+		
+	  <p><strong>How do I make use of configurator.sh?</strong></p>
+		  <ul>
+		  	<li> You can directly execute it and fetch the files to be changed as arguments. See the example
+			below:
+			
+			<source>    # pwd    
+				    # /opt/OpenIMSCore
+
+				    # ser_ims/cfg/configurator.sh ser_ims/cfg/scscf.cfg ser_ims/cfg/icscf.xml \ 
+					    FHoSS/deploy/hssdb.sql FHoSS/deploy/hss.properties
+			</source>		    
+			</li>
+		  	
+			<li> Then copy the files to the /opt/OpenIMSCore directory </li>
+			<li> Note that you have to backup your configuration files that you want to reconfigure </li>
+			
+		</ul>
+    </section>
   </body>
 </document>
