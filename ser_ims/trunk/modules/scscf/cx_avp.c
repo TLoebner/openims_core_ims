@@ -186,7 +186,7 @@ inline int Cx_add_public_identity(AAAMessage *msg,str data)
 	Cx_add_avp(msg,data.s,data.len,
 		AVP_IMS_Public_Identity,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -203,7 +203,7 @@ inline int Cx_add_visited_network_id(AAAMessage *msg,str data)
 	Cx_add_avp(msg,data.s,data.len,
 		AVP_IMS_Visited_Network_Identifier,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -222,7 +222,7 @@ inline int Cx_add_authorization_type(AAAMessage *msg,unsigned int data)
 	Cx_add_avp(msg,x,4,
 		AVP_IMS_User_Authorization_Type,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -240,7 +240,7 @@ inline int Cx_add_server_name(AAAMessage *msg,str data)
 	Cx_add_avp(msg,data.s,data.len,
 		AVP_IMS_Server_Name,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -259,7 +259,7 @@ inline int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
 	Cx_add_avp(msg,x,4,
 		AVP_IMS_SIP_Number_Auth_Items,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -284,7 +284,7 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 			auth_scheme.s,auth_scheme.len,
 			AVP_IMS_SIP_Authentication_Scheme,
 			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-			IMS_vendor_id,
+			IMS_vendor_id_3GPP,
 			AVP_DONT_FREE_DATA,
 			__FUNCTION__);
 	}	
@@ -293,7 +293,7 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 			auth.s,auth.len,
 			AVP_IMS_SIP_Authorization,
 			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-			IMS_vendor_id,
+			IMS_vendor_id_3GPP,
 			AVP_DONT_FREE_DATA,
 			__FUNCTION__);
 	}
@@ -306,7 +306,7 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 	Cx_add_avp(msg,group.s,group.len,
 		AVP_IMS_SIP_Auth_Data_Item,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_FREE_DATA,
 		__FUNCTION__);
 }
@@ -325,7 +325,7 @@ inline int Cx_add_server_assignment_type(AAAMessage *msg,unsigned int data)
 	Cx_add_avp(msg,x,4,
 		AVP_IMS_Server_Assignment_Type,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -344,7 +344,7 @@ inline int Cx_add_userdata_available(AAAMessage *msg,unsigned int data)
 	Cx_add_avp(msg,x,4,
 		AVP_IMS_User_Data_Already_Available,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
@@ -390,7 +390,7 @@ inline int Cx_add_experimental_result_code(AAAMessage *msg,unsigned int data)
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 	
-	set_4bytes(x,IMS_vendor_id);
+	set_4bytes(x,IMS_vendor_id_3GPP);
 	Cx_add_avp_list(&list,
 		x,4,
 		AVP_IMS_Vendor_Id,
@@ -547,7 +547,7 @@ inline str Cx_get_public_identity(AAAMessage *msg)
 {
 	return Cx_get_avp(msg,
 		AVP_IMS_Public_Identity,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 }
 
@@ -582,7 +582,7 @@ inline str Cx_get_visited_network_id(AAAMessage *msg)
 {
 	return Cx_get_avp(msg,
 		AVP_IMS_Visited_Network_Identifier,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 }
 
@@ -596,7 +596,7 @@ inline int Cx_get_authorization_type(AAAMessage *msg, int *data)
 	str s;
 	s = Cx_get_avp(msg,
 		AVP_IMS_User_Authorization_Type,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 	if (!s.s) return 0;
 	*data = get_4bytes(s.s);
@@ -613,7 +613,7 @@ inline int Cx_get_server_assignment_type(AAAMessage *msg, int *data)
 	str s;
 	s = Cx_get_avp(msg,
 		AVP_IMS_Server_Assignment_Type,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 	if (!s.s) return 0;
 	*data = get_4bytes(s.s);
@@ -630,7 +630,7 @@ inline int Cx_get_userdata_available(AAAMessage *msg, int *data)
 	str s;
 	s = Cx_get_avp(msg,
 		AVP_IMS_User_Data_Already_Available,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 	if (!s.s) return 0;
 	*data = get_4bytes(s.s);
@@ -694,7 +694,7 @@ inline str Cx_get_server_name(AAAMessage *msg)
 {	
 	return Cx_get_avp(msg,
 		AVP_IMS_Server_Name,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 }
 
@@ -715,7 +715,7 @@ inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o
 	str grp;
 	grp = Cx_get_avp(msg,
 		AVP_IMS_Server_Capabilities,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 	if (!grp.s) return 0;
 
@@ -755,7 +755,7 @@ inline int Cx_get_sip_number_auth_items(AAAMessage *msg, int *data)
 	str s;
 	s = Cx_get_avp(msg,
 		AVP_IMS_SIP_Number_Auth_Items,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 	if (!s.s) return 0;
 	*data = get_4bytes(s.s);
@@ -778,14 +778,14 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
 	str grp;
 	grp = Cx_get_avp(msg,
 		AVP_IMS_SIP_Auth_Data_Item,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 	if (!grp.s) return 0;
 
 	list = cdpb.AAAUngroupAVPS(grp);
 	
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authentication_Scheme,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {
 		cdpb.AAAFreeAVPList(&list);
 		return 0;
@@ -793,7 +793,7 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
 	*auth_scheme = avp->data;
 	
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authorization,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (avp) *authorization = avp->data;
 	else {authorization->s=0;authorization->len=0;}		
 
@@ -823,7 +823,7 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	static char buf[64];
 	
 	*auth_data = cdpb.AAAFindMatchingAVP(msg,*auth_data,AVP_IMS_SIP_Auth_Data_Item,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!*auth_data) return 0;
 		
 	grp = (*auth_data)->data;
@@ -832,12 +832,12 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	list = cdpb.AAAUngroupAVPS(grp);
 
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Item_Number,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.len==4) *item_number=0;
 	else *item_number = get_4bytes(avp->data.s);
 	
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authentication_Scheme,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {auth_scheme->s=0;auth_scheme->len=0;}
 	else *auth_scheme = avp->data;
 
@@ -850,22 +850,22 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	}
 
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authenticate,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {authenticate->s=0;authenticate->len=0;}
 	else *authenticate = avp->data;
 		
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authorization,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {authorization->s=0;authorization->len=0;}
 	else *authorization = avp->data;
 
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Confidentiality_Key,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {ck->s=0;ck->len=0;}
 	else *ck = avp->data;
 
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Integrity_Key,
-		IMS_vendor_id,0);
+		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {ik->s=0;ik->len=0;}
 	else *ik = avp->data;
 
@@ -896,7 +896,7 @@ inline str Cx_get_user_data(AAAMessage *msg)
 {	
 	return Cx_get_avp(msg,
 		AVP_IMS_User_Data,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 }
 
@@ -909,6 +909,6 @@ inline str Cx_get_charging_info(AAAMessage *msg)
 {	
 	return Cx_get_avp(msg,
 		AVP_IMS_Charging_Information,
-		IMS_vendor_id,
+		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 }
