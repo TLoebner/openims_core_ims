@@ -8,6 +8,8 @@
 # Author: Sven Bornemann -at- materna de
 #
 # History:
+#   0.3 (03/09/07(:
+#     * sip2ims transactions are commented out.
 #   0.2 (02/06/07): 
 #     * Changed parameter handling (getopt).
 #     * Allow direct mysql import.
@@ -38,6 +40,7 @@
 # * IMS Core installation in /opt/OpenIMSCore required.
 # * Password is limited to 16 characters.
 # 
+
 
 Usage()
 {
@@ -119,10 +122,10 @@ insert into hssdb.impu2impi(impi_id, impu_id) values ((select impi_id from hssdb
 insert into hssdb.roam(impi_id, nw_id) values((select impi_id from hssdb.impi where hssdb.impi.impi_string='<USER>@$REALM'), (select nw_id from hssdb.networks where hssdb.networks.network_string='$REALM'));
 
 -- add SIP2IMS credentials
-insert into sip2ims.credentials values ('<USER>', '_none', '$REALM', '$PASSWORD',1,'','$KEY',(select imsu_id from hssdb.imsu where hssdb.imsu.name='<USER>_imsu'));"
+-- insert into sip2ims.credentials values ('<USER>', '_none', '$REALM', '$PASSWORD',1,'','$KEY',(select imsu_id from hssdb.imsu where hssdb.imsu.name='<USER>_imsu'));"
 
 
-DELETE_SCRIPT_TEMPLATE="delete from sip2ims.credentials where auth_username='<USER>';
+DELETE_SCRIPT_TEMPLATE=" --delete from sip2ims.credentials where auth_username='<USER>';
 
 delete from hssdb.roam where impi_id = (select impi_id from hssdb.impi where hssdb.impi.impi_string='<USER>@$REALM');
 
