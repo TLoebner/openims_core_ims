@@ -1165,7 +1165,6 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2)
 				}
 				cp = send_rtpp_command(node, v, (to_tag.len > 0) ? 14 : 12);
 			} while (cp == NULL);
-			LOG(L_DBG, "force_rtp_proxy2: proxy reply: %s\n", cp);
 			/* Parse proxy reply to <argc,argv> */
 			argc = 0;
 			memset(argv, 0, sizeof(argv));
@@ -1279,12 +1278,9 @@ static int unforce_rtp_proxy_f(struct sip_msg* msg, int node_idx)
 }
 
 
-
+/* initialization of rtp_proxy module */
 int rtpproxy_init()
 {
-	/* rtpproxy */	
-	LOG(L_CRIT,"rtpproxy_enable block , rtpproxy_enable var is:%d\n",rtpproxy_enable) ;
-
 
 	memset(&rtpp_list, 0, sizeof(rtpp_list));
 	rtpp_node_count = 0;
@@ -1294,7 +1290,6 @@ int rtpproxy_init()
 
 		p = rtpproxy_sock;
 		plim = p + strlen(p);
-		LOG(L_CRIT,"loop with p:%s\n",p) ;
 		for(;;) {
 			struct rtpp_node *pnode;
 			int weight;
@@ -1331,7 +1326,7 @@ int rtpproxy_init()
 			pnode->rn_disabled = 0;
 			pnode->rn_url = pkg_malloc(p2 - p1 + 1);
 	
-			LOG(L_CRIT,"node is created\n") ;
+			LOG(L_INFO,"INFO:"M_NAME"node is created\n") ;
 
 		
 
@@ -1340,8 +1335,9 @@ int rtpproxy_init()
 				return -1;
 			}
 	
-			LOG(L_CRIT,"started to add the pnode to rtpp list\n") ;
+			/*LOG(L_CRIT,"started to add the pnode to rtpp list\n") ; */
 
+			/* adding proxy nodes to the list */
 			memmove(pnode->rn_url, p1, p2 - p1);
 			pnode->rn_url[p2 - p1] = 0;
 			if (rtpp_list.rn_first == NULL) {
@@ -1352,7 +1348,6 @@ int rtpproxy_init()
 			rtpp_list.rn_last = pnode;
 			++rtpp_node_count;
 			
-			LOG(L_CRIT,"rtpp_node_count is incremented to %d\n",rtpp_node_count) ; 
 			/* Leave only address in rn_address */
 			pnode->rn_address = pnode->rn_url;
 	
@@ -1367,7 +1362,7 @@ int rtpproxy_init()
 				pnode->rn_umode = 0;
 				pnode->rn_address += 5;
 			}	
-			LOG(L_CRIT,"is getting out of the rtp block\n") ;
+		 /* 	LOG(L_CRIT,"is getting out of the rtp block\n") ;*/
 		}
 	}
 	return 1;
@@ -1461,13 +1456,10 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 		    case METHOD_INVITE:
 		    	if (msg->first_line.type == SIP_REQUEST){
 			 		/* on INVITE */
-					/* check the contact , strip up the uri & contact */
-					LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on INVITE...\n");
 					/* check the sdp if it has a 1918 */
-					if(1/* sdp_1918(msg)*/)
+					if(1)
 					{
-						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... found private network in SDP...\n");
-						/* get rtp_proxy/nathelper to open ports - get a iovec*/
+					/* get rtp_proxy/nathelper to open ports - get a iovec*/
 						response = force_rtp_proxy2_f(msg,"","") ;
 						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... rtp proxy done\n");			    	
 				    } else {			
@@ -1479,15 +1471,14 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 		    		if (msg->first_line.u.reply.statuscode == 183 ||
 				    	(msg->first_line.u.reply.statuscode >= 200 &&
 				    	 msg->first_line.u.reply.statuscode < 300)) {
-						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on INVITE response %d...\n",msg->first_line.u.reply.statuscode);
-					    if(1 /* sdp_1918(msg) */)
+					    if(1)
 					    {
-							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... found private network in SDP...\n");
-						    /* str1 & str2 must be something */
+						/* sdp_1918(msg) */
+						/* str1 & str2 must be something */
 						    response = force_rtp_proxy2_f(msg, "", "") ;						
 							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... rtp proxy done\n");			    	
 						} else {
-							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... found public network in SDP.\n");
+							/* public ip found */
 							response = CSCF_RETURN_FALSE ;						
 						}
 						break;
