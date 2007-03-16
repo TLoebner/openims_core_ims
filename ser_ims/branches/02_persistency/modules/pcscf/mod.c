@@ -66,6 +66,7 @@
 
 #include "mod.h"
 
+#include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../socket_info.h"
 #include "../../timer.h"
@@ -171,7 +172,15 @@ char* pcscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to d
 int pcscf_persistency_timer_dialogs=60;								/**< interval to snapshot dialogs data		*/ 
 int pcscf_persistency_timer_registrar=60;							/**< interval to snapshot registrar data	*/ 
 int pcscf_persistency_timer_subscriptions=60;						/**< interval to snapshot subscriptions data*/ 
+char* pcscf_db_url="postgres://mario:mario@localhost/pcscfdb";
+int* subs_snapshot_version;	/**< the version of the next subscriptions snapshot on the db*/
+int* subs_step_version;	/**< the step version within the current subscriptions snapshot version*/
+int* dialogs_snapshot_version; /**< the version of the next dialogs snapshot on the db*/
+int* dialogs_step_version; /**< the step version within the current dialogs snapshot version*/
+int* registrar_snapshot_version; /**< the version of the next registrar snapshot on the db*/
+int* registrar_step_version; /**< the step version within the current registrar snapshot version*/
 
+gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
 
@@ -369,7 +378,7 @@ static param_export_t pcscf_params[]={
 	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
 	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
 	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
-	
+	{"pcscf_db_url",					STR_PARAM, &pcscf_db_url},
 	{0,0,0} 
 };
 
@@ -399,6 +408,9 @@ extern r_hash_slot *registrar;			/**< the contacts */
 
 extern p_dialog_hash_slot *p_dialogs;	/**< the dialogs hash table				*/
 
+/** database */
+db_con_t* pcscf_db = NULL; /**< Database connection handle */
+db_func_t pcscf_dbf;	/**< Structure with pointers to db functions */
 
 static str path_str_s={"Path: <",7};
 static str path_str_1={"sip:term@",9};
@@ -529,6 +541,14 @@ int fix_parameters()
 	return 1;
 }
 
+db_con_t* create_pcscf_db_connection()
+{
+	if (pcscf_persistency_mode!=WITH_DATABASE_BULK && pcscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
+	if (!pcscf_dbf.init) return NULL;
+
+	return pcscf_dbf.init(pcscf_db_url);
+}
+
 /**
  * Initializes the module.
  */
@@ -555,6 +575,82 @@ static int mod_init(void)
 	if (!sl_reply) {
 		LOG(L_ERR, "ERR"M_NAME":mod_init: This module requires sl module\n");
 		goto error;
+	}
+	
+	if(pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE){
+		/* bind to the db module */
+		if (!pcscf_db_url) {
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: no db_url specified but DB has to be used "
+				"(pcscf_persistency_mode=%d\n", pcscf_persistency_mode);
+			return -1;
+		}
+		if (bind_dbmod(pcscf_db_url, &pcscf_dbf) < 0) { /* Find database module */
+			LOG(L_ERR, "ERR"M_NAME":mod_init: Can't bind database module via url %s\n", pcscf_db_url);
+			return -1;
+		}
+
+		if (!DB_CAPABILITY(pcscf_dbf, DB_CAP_ALL)) {
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
+			return -1;
+		}
+		
+		pcscf_db = create_pcscf_db_connection();
+		if (!pcscf_db) {
+			LOG(L_ERR, "ERR:"M_NAME": mod_init: Error while connecting database\n");
+			return -1;
+		}
+		
+		/* db lock */
+		db_lock = (gen_lock_t*)lock_alloc();
+		if(!db_lock){
+	    	LOG(L_ERR, "ERR:"M_NAME": mod_init: No memory left\n");
+			return -1;
+		}
+		lock_init(db_lock);
+	
+		/* snapshot and step versions */
+	
+		subs_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!subs_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: subs_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*subs_snapshot_version=0;
+	
+		subs_step_version=(int*)shm_malloc(sizeof(int));
+		if(!subs_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: subs_step_version, no memory left\n");
+			return -1;
+		}
+		*subs_step_version=0;
+	
+		dialogs_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!dialogs_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: dialogs_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*dialogs_snapshot_version=0;
+	
+		dialogs_step_version=(int*)shm_malloc(sizeof(int));
+		if(!dialogs_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: dialogs_step_version, no memory left\n");
+			return -1;
+		}
+		*dialogs_step_version=0;
+	
+		registrar_snapshot_version=(int*)shm_malloc(sizeof(int));
+		if(!registrar_snapshot_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: registrar_snapshot_version, no memory left\n");
+			return -1;
+		}
+		*registrar_snapshot_version=0;
+	
+		registrar_step_version=(int*)shm_malloc(sizeof(int));
+		if(!registrar_step_version){
+			LOG(L_ERR, "ERR:"M_NAME":mod_init: registrar_step_version, no memory left\n");
+			return -1;
+		}
+		*registrar_step_version=0;	
 	}
 		
 	/* bind to the tm module */
@@ -623,6 +719,11 @@ error:
 
 extern gen_lock_t* process_lock;		/* lock on the process table */
 
+void close_pcscf_db_connection(db_con_t* db)
+{
+	if (db && pcscf_dbf.close) pcscf_dbf.close(db);
+}
+
 /**
  * Initializes the module in child.
  */
@@ -671,6 +772,12 @@ static void mod_destroy(void)
 		r_storage_destroy();
 		p_dialogs_destroy();
 	}
+	
+	if ( (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) && pcscf_db) {
+		DBG("INFO:"M_NAME": ... closing db connection\n");
+		close_pcscf_db_connection(pcscf_db);
+	}
+	pcscf_db = NULL;
 }
 
 
