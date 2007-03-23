@@ -16,33 +16,33 @@
 	<property name="diameter_address" type="string" not-null="true" length="255"/>
 	<property name="rep_data_size_limit" type="int" not-null="true" />
 
-    <property name="udr" type="short" />
-	<property name="pur" type="short" />
-	<property name="snr" type="short" />
-	<property name="udr_rep_data" type="short"/>
-	<property name="udr_impu" type="short" />
-	<property name="udr_ims_user_state" type="short" />
-	<property name="udr_scscf_name" type="short" />
-	<property name="udr_ifc" type="short" />
-	<property name="udr_location" type="short" />
-	<property name="udr_user_state" type="short" />
-	<property name="udr_charging_info" type="short" />
-	<property name="udr_msisdn" type="short" /> 
-	<property name="udr_psi_activation" type="short" />
-	<property name="udr_dsai" type="short" />
-	<property name="udr_aliases_rep_data" type="short" />
-	<property name="pur_rep_data" type="short" />
-	<property name="pur_psi_activation" type="short" />
-	<property name="pur_dsai" type="short" />
-	<property name="pur_aliases_rep_data" type="short" />
-	<property name="snr_rep_data" type="short" />
-	<property name="snr_impu" type="short" />
-	<property name="snr_ims_user_state" type="short" />
-	<property name="snr_scscf_name" type="short" />
-	<property name="snr_ifc" type="short" />
-	<property name="snr_psi_activation" type="short" />
-	<property name="snr_dsai" type="short" />
-	<property name="snr_aliases_rep_data" type="short" />
+    <property name="udr" type="int" />
+	<property name="pur" type="int" />
+	<property name="snr" type="int" />
+	<property name="udr_rep_data" type="int"/>
+	<property name="udr_impu" type="int" />
+	<property name="udr_ims_user_state" type="int" />
+	<property name="udr_scscf_name" type="int" />
+	<property name="udr_ifc" type="int" />
+	<property name="udr_location" type="int" />
+	<property name="udr_user_state" type="int" />
+	<property name="udr_charging_info" type="int" />
+	<property name="udr_msisdn" type="int" /> 
+	<property name="udr_psi_activation" type="int" />
+	<property name="udr_dsai" type="int" />
+	<property name="udr_aliases_rep_data" type="int" />
+	<property name="pur_rep_data" type="int" />
+	<property name="pur_psi_activation" type="int" />
+	<property name="pur_dsai" type="int" />
+	<property name="pur_aliases_rep_data" type="int" />
+	<property name="snr_rep_data" type="int" />
+	<property name="snr_impu" type="int" />
+	<property name="snr_ims_user_state" type="int" />
+	<property name="snr_scscf_name" type="int" />
+	<property name="snr_ifc" type="int" />
+	<property name="snr_psi_activation" type="int" />
+	<property name="snr_dsai" type="int" />
+	<property name="snr_aliases_rep_data" type="int" />
 	
 </class>
 </hibernate-mapping>

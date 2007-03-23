@@ -1,0 +1,146 @@
+/*
+  *  Copyright (C) 2004-2007 FhG Fokus
+  *
+  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+  * implementation
+  *
+  * Open IMS Core is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation; either version 2 of the License, or
+  * (at your option) any later version.
+  *
+  * For a license to use the Open IMS Core software under conditions
+  * other than those described here, or to purchase support for this
+  * software, please contact Fraunhofer FOKUS by e-mail at the following
+  * addresses:
+  *     info@open-ims.org
+  *
+  * Open IMS Core is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * It has to be noted that this Open Source IMS Core System is not
+  * intended to become or act as a product in a commercial context! Its
+  * sole purpose is to provide an IMS core reference implementation for
+  * IMS technology testing and IMS application prototyping for research
+  * purposes, typically performed in IMS test-beds.
+  *
+  * Users of the Open Source IMS Core System have to be aware that IMS
+  * technology may be subject of patents and licence terms, as being
+  * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+  * standards. Thus all Open IMS Core users have to take notice of this
+  * fact and have to agree to check out carefully before installing,
+  * using and extending the Open Source IMS Core System, if related
+  * patents and licenses may become applicable to the intended usage
+  * context. 
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  * 
+  */
+
+package de.fhg.fokus.hss.web.form;
+
+import org.apache.struts.action.ActionErrors;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessage;
+
+import de.fhg.fokus.hss.cx.CxConstants;
+
+import java.io.Serializable;
+import javax.servlet.http.HttpServletRequest;
+
+/**
+ * @author adp dot fokus dot fraunhofer dot de 
+ * Adrian Popescu / FOKUS Fraunhofer Institute
+ */
+
+public class IFC_Form extends ActionForm implements Serializable{
+
+	private int id;
+	private String name;
+	private int priority;
+	private int profile_part_ind;
+	private int id_application_server;
+	private int id_tp;
+
+	private String nextAction;
+	public void reset(ActionMapping actionMapping, HttpServletRequest request){
+    	this.id = -1;
+    	this.name = null;
+    	this.priority = 0;
+    	this.profile_part_ind = CxConstants.Profile_Part_Indicator_Registered;
+    	this.id_application_server = -1;
+    	this.id_tp = -1;
+    	this.nextAction = null;
+    }
+	
+    public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
+        ActionErrors actionErrors = new ActionErrors();
+
+        if (name == null || name.equals("")){
+        	actionErrors.add("ifc.name", new ActionMessage("ifc_form.error.name"));
+        }
+        return actionErrors;
+    }
+    
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getNextAction() {
+		return nextAction;
+	}
+
+	public void setNextAction(String nextAction) {
+		this.nextAction = nextAction;
+	}
+
+	public int getId_application_server() {
+		return id_application_server;
+	}
+
+	public void setId_application_server(int id_application_server) {
+		this.id_application_server = id_application_server;
+	}
+
+	public int getId_tp() {
+		return id_tp;
+	}
+
+	public void setId_tp(int id_tp) {
+		this.id_tp = id_tp;
+	}
+
+	public int getProfile_part_ind() {
+		return profile_part_ind;
+	}
+
+	public void setProfile_part_ind(int profile_part_ind) {
+		this.profile_part_ind = profile_part_ind;
+	}
+
+	public int getPriority() {
+		return priority;
+	}
+
+	public void setPriority(int priority) {
+		this.priority = priority;
+	}
+	
+}

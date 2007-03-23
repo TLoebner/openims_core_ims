@@ -50,8 +50,23 @@ function add_action_for_form(a) {
 		case 12:
 			document.IMPI_Form.nextAction.value="add_impu";
 			document.IMPI_Form.submit();			
+			break;
+		case 13:
+			document.IMPI_Form.nextAction.value="delete";
+			document.IMPI_Form.submit();			
+			
 	}
 
+}
+function add_action_for_form2(action, id) {
+ if (action == "delete"){
+	switch(id){
+		case 13:
+			document.IMPI_Form.nextAction.value="delete2";
+			document.IMPI_Form.submit();			
+			break;
+	}
+}
 }
 
 function disable_other_boxes(){
@@ -119,7 +134,7 @@ function disable_other_boxes(){
 			</tr>
 			<tr>
 				<td>Digest-AKAv1: </td>
-				<td><html:checkbox property="aka1" value="true" styleClass="inputbox"/> </td>
+				<td><html:checkbox property="aka1" styleClass="inputbox"/> </td>
 			</tr>
 			<tr>
 				<td>Digest-AKAv2: </td>
@@ -198,7 +213,7 @@ function disable_other_boxes(){
 			</tr>	
 		</table>
 		</logic:notEqual>		
-	</html:form>
+
 			
 		<logic:notEqual value="-1" property="id" name="IMPI_Form">		
 		<table class="as" width="400">
@@ -220,17 +235,19 @@ function disable_other_boxes(){
 					</td>
 
 					<td>					
-						<form method="post" action="/hss.web.console/IMPI_Delete.do?action=delete_associated_impu&id_impu=<bean:write name="impu" property="id" />" target="content" 
+<!--						<form method="post" action="/hss.web.console/IMPI_Delete.do?action=delete_associated_impu&id_impu=<bean:write name="impu" property="id" />" target="content" 
 							style="text-align: center">
 							<input type="hidden" name="id" value="<bean:write name="IMPI_Form" property="id" />"> 
 							<input type="image" src="/hss.web.console/images/progress_rem.gif">
 						</form>
+-->
+				<html:button property="delete" value="delete" onclick="add_action_for_form2('delete', 13);"/>												
 					</td>
 				</tr>
 			</logic:iterate>						
 		</table>
 		</logic:notEqual>
-		
+	</html:form>		
 		</td></tr>
 	  </table>
 	  </center> 		

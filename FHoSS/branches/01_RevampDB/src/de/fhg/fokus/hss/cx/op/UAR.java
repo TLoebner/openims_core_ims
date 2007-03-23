@@ -1,6 +1,45 @@
-/**
- * 
- */
+/*
+  *  Copyright (C) 2004-2007 FhG Fokus
+  *
+  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+  * implementation
+  *
+  * Open IMS Core is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation; either version 2 of the License, or
+  * (at your option) any later version.
+  *
+  * For a license to use the Open IMS Core software under conditions
+  * other than those described here, or to purchase support for this
+  * software, please contact Fraunhofer FOKUS by e-mail at the following
+  * addresses:
+  *     info@open-ims.org
+  *
+  * Open IMS Core is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * It has to be noted that this Open Source IMS Core System is not
+  * intended to become or act as a product in a commercial context! Its
+  * sole purpose is to provide an IMS core reference implementation for
+  * IMS technology testing and IMS application prototyping for research
+  * purposes, typically performed in IMS test-beds.
+  *
+  * Users of the Open Source IMS Core System have to be aware that IMS
+  * technology may be subject of patents and licence terms, as being
+  * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+  * standards. Thus all Open IMS Core users have to take notice of this
+  * fact and have to agree to check out carefully before installing,
+  * using and extending the Open Source IMS Core System, if related
+  * patents and licenses may become applicable to the intended usage
+  * context. 
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  * 
+  */
 package de.fhg.fokus.hss.cx.op;
 import java.util.Iterator;
 import java.util.List;
@@ -21,10 +60,11 @@ import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_VisitedNetwork_DAO;
-import de.fhg.fokus.hss.db.op.VisitedNetworkDAO;
+import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.UtilAVP;
-import de.fhg.fokus.hss.util.HibernateUtil;
+import de.fhg.fokus.hss.db.hibernate.*;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -38,12 +78,13 @@ public class UAR {
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
 		
+		
 		try{
 			long time1 = System.currentTimeMillis();
 			System.out.println("Start:" + time1);
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
-						
+		
 			String publicIdentity = UtilAVP.getPublicIdentity(request);
 			String privateIdentity = UtilAVP.getUserName(request);
 			if (publicIdentity == null || privateIdentity == null){
@@ -54,11 +95,11 @@ public class UAR {
 			if (visited_network_name == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
-			VisitedNetwork visited_network = VisitedNetworkDAO.getByIdentity(session, visited_network_name);
+			VisitedNetwork visited_network = VisitedNetwork_DAO.get_by_Identity(session, visited_network_name);
 
 			// 1. check if the identities exist in hss
-			IMPU impu = IMPU_DAO.getByIdentity(session, publicIdentity);
-			IMPI impi = IMPI_DAO.getByIdentity(session, privateIdentity);
+			IMPU impu = IMPU_DAO.get_by_Identity(session, publicIdentity);
+			IMPI impi = IMPI_DAO.get_by_Identity(session, privateIdentity);
 			if (impu == null || impi == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN);
 			}
@@ -66,14 +107,14 @@ public class UAR {
 			System.out.println("\n\nDelta:" + (time2-time1));
 
 			// 2. check association
-			IMPI_IMPU impi_impu = IMPI_IMPU_DAO.getByIMPI_IMPU(session, impi.getId(), impu.getId());
+			IMPI_IMPU impi_impu = IMPI_IMPU_DAO.get_by_IMPI_and_IMPU_ID(session, impi.getId(), impu.getId());
 			if (impi_impu == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITIES_DONT_MATCH);
 			}
 			
 			// 3. check for IMPU if is barred
 			if (impu.getBarring() == 1){
-				List impuList = IMPU_DAO.getOthersFromSet(session, impu.getId(), impu.getId_impu_implicitset());
+				List impuList = IMPU_DAO.get_others_from_set(session, impu.getId(), impu.getId_impu_implicitset());
 				if (impuList == null || impuList.size() == 0){
 					throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_AUTHORIZATION_REJECTED);
 				}
@@ -123,8 +164,8 @@ public class UAR {
 					break;	
 			}
 
-			String serverName = impi.getImsu().getScscf_name();
 			
+			String serverName = IMSU_DAO.get_SCSCF_Name_by_IMSU_ID(session, impi.getId_imsu());
 			// 5. check the state of the public identity
 			switch (impu.getUser_state()){
 			
@@ -163,7 +204,8 @@ public class UAR {
 					}
 					else if (authorizationType == DiameterConstants.AVPValue.UAT_Registration){
 						
-						List list = IMPI_IMPU_DAO.get_All_IMPU_of_IMSU_user_state(session, impi.getImsu().getId(), CxConstants.IMPU_user_state_Registered);
+						List list = IMPI_IMPU_DAO.get_all_IMPU_of_IMSU_with_User_State(session, impi.getId_imsu(), 
+								CxConstants.IMPU_user_state_Registered);
 						if (list.size() > 0){
 							if (serverName != null && !serverName.equals(""))						
 								UtilAVP.addServerName(response, serverName);
@@ -172,7 +214,7 @@ public class UAR {
 							break;
 						}
 						
-						list = IMPI_IMPU_DAO.get_All_IMPU_of_IMSU_user_state(session, impi.getImsu().getId(), 
+						list = IMPI_IMPU_DAO.get_all_IMPU_of_IMSU_with_User_State(session, impi.getId_imsu(), 
 								CxConstants.IMPU_user_state_Unregistered);
 						if (list.size() > 0){
 							if (serverName != null && !serverName.equals(""))						
@@ -181,8 +223,8 @@ public class UAR {
 									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
 							break;
 						}
-						list = IMPI_IMPU_DAO.get_All_IMPU_of_IMSU_user_state(session, 
-								impi.getImsu().getId(), CxConstants.IMPU_user_state_Auth_Pending);
+						list = IMPI_IMPU_DAO.get_all_IMPU_of_IMSU_with_User_State(session, 
+								impi.getId_imsu(), CxConstants.IMPU_user_state_Auth_Pending);
 						if (list.size() > 0 && (serverName != null && !serverName.equals(""))){
 							
 							UtilAVP.addServerName(response, serverName);

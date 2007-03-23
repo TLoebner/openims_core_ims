@@ -9,25 +9,8 @@
 		<generator class="native"/>
 	</id>
 
-    <many-to-one 
-    	name="sp" 
-    	class="de.fhg.fokus.hss.db.model.SP" 
-    	not-null="true" 
-    	cascade="none" 
-    	lazy="true"
-    >
-        <column name="id_sp" />
-    </many-to-one>	
-    
-    <many-to-one 
-    	name="shared_ifc_set" 
-    	class="de.fhg.fokus.hss.db.model.Shared_IFC_Set" 
-    	not-null="true" 
-    	cascade="none" 
-    	lazy="true"
-    >
-        <column name="id_shared_ifc_set" />
-    </many-to-one>	
-
+	<property name="id_sp" type="int" not-null="true"/>
+	<property name="id_shared_ifc_set" type="int" not-null="true"/>
+	
 </class>
 </hibernate-mapping>

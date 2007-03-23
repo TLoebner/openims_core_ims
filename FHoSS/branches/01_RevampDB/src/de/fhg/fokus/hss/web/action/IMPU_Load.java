@@ -1,5 +1,49 @@
+/*
+  *  Copyright (C) 2004-2007 FhG Fokus
+  *
+  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+  * implementation
+  *
+  * Open IMS Core is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation; either version 2 of the License, or
+  * (at your option) any later version.
+  *
+  * For a license to use the Open IMS Core software under conditions
+  * other than those described here, or to purchase support for this
+  * software, please contact Fraunhofer FOKUS by e-mail at the following
+  * addresses:
+  *     info@open-ims.org
+  *
+  * Open IMS Core is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * It has to be noted that this Open Source IMS Core System is not
+  * intended to become or act as a product in a commercial context! Its
+  * sole purpose is to provide an IMS core reference implementation for
+  * IMS technology testing and IMS application prototyping for research
+  * purposes, typically performed in IMS test-beds.
+  *
+  * Users of the Open Source IMS Core System have to be aware that IMS
+  * technology may be subject of patents and licence terms, as being
+  * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+  * standards. Thus all Open IMS Core users have to take notice of this
+  * fact and have to agree to check out carefully before installing,
+  * using and extending the Open Source IMS Core System, if related
+  * patents and licenses may become applicable to the intended usage
+  * context. 
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  * 
+  */
+
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,24 +62,31 @@ import org.hibernate.LockMode;
 import org.hibernate.Session;
 
 
+import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
-import de.fhg.fokus.hss.util.HibernateUtil;
+import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
+
+/**
+ * @author adp dot fokus dot fraunhofer dot de 
+ * Adrian Popescu / FOKUS Fraunhofer Institute
+ */
+
 
 public class IMPU_Load extends Action {
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse)
 			throws Exception{
-		
 
 		IMPU_Form form = (IMPU_Form) actionForm;
 		int id = form.getId();
-		
-		if (id == -1 || form.getSelect_charging_info() == null || form.getSelect_sp() == null){
+
+
+		if (form.getSelect_charging_info() == null || form.getSelect_sp() == null || form.getSelect_identity_type() == null){
 			// create
 			System.out.println("We have the create here!");
 			form.setUser_state(0);
@@ -47,16 +98,23 @@ public class IMPU_Load extends Action {
 			l1 = HibernateUtil.getCurrentSession().createCriteria(ChargingInfo.class).list();
 			HibernateUtil.commitTransaction();
 			form.setSelect_charging_info(l1);
+			
+			List select_identity_type = new ArrayList();
+			select_identity_type.add(CxConstants.Identity_Type.Public_User_Identity);
+			select_identity_type.add(CxConstants.Identity_Type.Wildcarded_PSI);
+			select_identity_type.add(CxConstants.Identity_Type.Distinct_PSI);
+			form.setSelect_identity_type(select_identity_type);
+			
 		}
 		
 		if (id != -1){
-			// load
+			// load all the parameters into the form
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
 			IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
-
+			System.out.println("IMPU:" +  impu);
 			if (impu != null){
-				form.set_Id_sp(impu.getSp().getId());
+				form.set_Id_sp(impu.getId_sp());
 				
 				if (impu.getBarring() == 1){
 					form.setBarring(true);
@@ -66,12 +124,12 @@ public class IMPU_Load extends Action {
 				}
 				
 				form.setIdentity(impu.getIdentity());
-				form.setId_charging_info(impu.getChargingInfo().getId());
+				form.setId_charging_info(impu.getId_charging_info());
 				form.setId_impu_implicitset(impu.getId_impu_implicitset());
+				form.setUser_state(impu.getUser_state());
 			}
 			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
-			
 		}
 		
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);

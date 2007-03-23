@@ -8,17 +8,9 @@
 	<id name="id">
 		<generator class="native"/>
 	</id>
-
-    <many-to-one name="impu" class="de.fhg.fokus.hss.db.model.IMPU" not-null="true" 
-    	cascade="none" lazy="true">
-        <column name="id_impu" />
-    </many-to-one>	
-
-    <many-to-one name="visited_network" class="de.fhg.fokus.hss.db.model.VisitedNetwork" not-null="true" 
-    	cascade="none" lazy="true">
-        <column name="id_visited_network" />
-    </many-to-one>	
-	
+	<property name="id_impu" type="int" not-null="true"/>
+	<property name="id_visited_network" type="int" not-null="true"/>
+		
 </class>
 </hibernate-mapping>
 

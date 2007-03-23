@@ -19,9 +19,10 @@
 	<tr>
 		<td id="bound_left">&nbsp;</td>
 		<td valign="top" bgcolor="#FFFFFF">
-			<br/><br/> <h2> User Identities </h2>
+			<h2> User Identities </h2>
 			
 			<ul>
+
 			<!-- IMPU-->
 			<li> <b> Public User Identity </b> <br>			
 			
@@ -33,6 +34,7 @@
 				<a href="/hss.web.console/IMPU_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
+
 			<!-- IMPI-->
 			<li> <b> Private Identity </b> <br>
 			
@@ -43,6 +45,8 @@
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
 				<a href="/hss.web.console/IMPI_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
+
+
 
 			<!-- IMSU-->
 			<li> <b> IMS Subscription </b> <br>
