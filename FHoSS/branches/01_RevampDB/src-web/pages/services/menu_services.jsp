@@ -9,7 +9,7 @@
 
 <html>
 <head>
-<link rel="stylesheet" type="text/css" 
+<link rel="stylesheet" type="text/css"
 	href="/hss.web.console/style/fokus_ngni.css">
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title> Services Menu Page</title>
@@ -20,65 +20,50 @@
 	<tr>
 		<td id="bound_left">&nbsp;</td>
 		<td valign="top" bgcolor="#FFFFFF">
-			<h1> Services </h1>
+			<h2> Services </h2>
 			
 			<ul>
 			
 			<!-- Service Profile -->
 			<li> <b> Service Profiles </b> <br>			
-			<a href="service_profile.jsp?action=search" target="content"> Search </a> <br>
+			<a href="sp_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
-				<a href="service_profile.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/SP_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
+
 
 			<!-- Application Server -->
 			<li> <b> Application Servers </b> <br>
-			<a href="app_server.jsp?action=search" target="content"> Search </a> <br>
+			<a href="as_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
-				<a href="app_server.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/AS_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
-			<!-- Trigger Point -->
+
+			<!-- Trigger Points -->
 			<li> <b> Trigger Points </b> <br>
-			<a href="tp.jsp?action=search" target="content"> Search </a> <br>
+			<a href="tp_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMSU)) { %>
-				<a href="tp.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/TP_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
+
 
 			<!-- Initial Filter Criteria -->
 			<li> <b> Initial Filter Criteria </b> <br>
-			<a href="ifc.jsp?action=search" target="content"> Search </a> <br>
+			<a href="ifc_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMSU)) { %>
-				<a href="ifc.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/IFC_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
-			<!-- Shared iFC -->
-			<li> <b> Shared iFC </b> <br>
-			<a href="sh_ifc.jsp?action=search" target="content"> Search </a> <br>
+
+			<!-- Shared iFC Sets -->
+			<li> <b> Shared iFC Sets </b> <br>
+			<a href="s_ifc_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMSU)) { %>
-				<a href="sh_ifc.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/S_IFC_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 			</ul>
 			
-			<h1> Public Service Identifiers </h1>
-			
-			<ul>
-			
-			<!-- PSI Template -->
-			<li> <b> PSI Template </b> <br>			
-			<a href="psi_template.jsp?action=search" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
-				<a href="psi_template.jsp?action=create" target="content"> Create </a> <br>
-			<% } %> <br>
-
-			<!-- PSI -->
-			<li> <b> PSI </b> <br>			
-			<a href="psi.jsp?action=search" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
-				<a href="psi.jsp?action=create" target="content"> Create </a> <br>
-			<% } %> <br>
-			
-			</ul/>
 		</td>
 	</tr>
 </table>

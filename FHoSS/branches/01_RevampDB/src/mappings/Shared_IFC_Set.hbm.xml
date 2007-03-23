@@ -9,19 +9,10 @@
 		<generator class="native"/>
 	</id>
 
-	<property name="id_set" type="int" not-null="true" />
+	<property name="id_set" type="int" not-null="false"/>
 	<property name="name" type="string" not-null="true"/>
 	<property name="priority" type="int" not-null="true"/>
-
-    <many-to-one 
-    	name="ifc" 
-    	class="de.fhg.fokus.hss.db.model.IFC" 
-    	not-null="true" 
-    	cascade="none" 
-    	lazy="true"
-    >
-        <column name="id_ifc" />
-    </many-to-one>	
+	<property name="id_ifc" type="int" not-null="false"/>
 
 </class>
 </hibernate-mapping>

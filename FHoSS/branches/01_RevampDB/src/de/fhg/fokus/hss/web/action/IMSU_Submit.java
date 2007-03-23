@@ -1,3 +1,46 @@
+/*
+  *  Copyright (C) 2004-2007 FhG Fokus
+  *
+  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+  * implementation
+  *
+  * Open IMS Core is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation; either version 2 of the License, or
+  * (at your option) any later version.
+  *
+  * For a license to use the Open IMS Core software under conditions
+  * other than those described here, or to purchase support for this
+  * software, please contact Fraunhofer FOKUS by e-mail at the following
+  * addresses:
+  *     info@open-ims.org
+  *
+  * Open IMS Core is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * It has to be noted that this Open Source IMS Core System is not
+  * intended to become or act as a product in a commercial context! Its
+  * sole purpose is to provide an IMS core reference implementation for
+  * IMS technology testing and IMS application prototyping for research
+  * purposes, typically performed in IMS test-beds.
+  *
+  * Users of the Open Source IMS Core System have to be aware that IMS
+  * technology may be subject of patents and licence terms, as being
+  * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+  * standards. Thus all Open IMS Core users have to take notice of this
+  * fact and have to agree to check out carefully before installing,
+  * using and extending the Open Source IMS Core System, if related
+  * patents and licenses may become applicable to the intended usage
+  * context. 
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  * 
+  */
+
 package de.fhg.fokus.hss.web.action;
 
 import javax.servlet.http.HttpServletRequest;
@@ -11,9 +54,18 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.IMSU;
-import de.fhg.fokus.hss.util.HibernateUtil;
+import de.fhg.fokus.hss.db.model.TP;
+import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMSU_Form;
+import de.fhg.fokus.hss.web.form.TP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
+
+/**
+ * @author adp dot fokus dot fraunhofer dot de 
+ * Adrian Popescu / FOKUS Fraunhofer Institute
+ */
+
 
 public class IMSU_Submit extends Action{
 	
@@ -23,65 +75,74 @@ public class IMSU_Submit extends Action{
 		String action = request.getParameter("action");
 		IMSU_Form form = (IMSU_Form) actionForm;
 		String nextAction = form.getNextAction();
-		
+		ActionForward forward = null;
 		int id = form.getId();
-		if (nextAction.equals("save")){
+		
+		
+		try{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
-
-			if (id == -1){
-				// create
-				IMSU imsu = new IMSU();
-				imsu.setName(form.getName());
-				imsu.setDiameter_name(form.getDiameter_name());
-				imsu.setScscf_name(form.getScscf_name());
-				imsu.setId_capabilities_set(form.getId_capabilities_set());
-				imsu.setId_preferred_scscf(form.getId_preferred_scscf());
-				session.save(imsu);
-				form.setId(imsu.getId());
-			}
-			else{
-				// update
-				IMSU imsu = (IMSU) session.load(IMSU.class, form.getId());
-				imsu.setName(form.getName());
-				imsu.setDiameter_name(form.getDiameter_name());
-				imsu.setScscf_name(form.getScscf_name());
-				imsu.setId_capabilities_set(form.getId_capabilities_set());
-				imsu.setId_preferred_scscf(form.getId_preferred_scscf());
-
-				session.saveOrUpdate(imsu);
-			}
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
-		}
-		else if (nextAction.equals("refresh")){
-			HibernateUtil.beginTransaction();
-			Session session = HibernateUtil.getCurrentSession();
-			IMSU imsu = (IMSU) session.load(IMSU.class, form.getId());
-
-			if (imsu != null){
-				form.setDiameter_name(imsu.getDiameter_name());
-				form.setScscf_name(imsu.getScscf_name());
-				form.setName(imsu.getName());
-				form.setId_capabilities_set(imsu.getId_capabilities_set());
-				form.setId_preferred_scscf(imsu.getId_preferred_scscf());
+		
+			if (id != -1){
+				if (IMSU_Load.testForDelete(session, form.getId())){
+					request.setAttribute("deleteDeactivation", "false");
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
+			}			
+			
+			if (nextAction.equals("save")){
+				IMSU imsu = null;
+				if (id == -1){
+					// create
+					imsu = new IMSU();
+				}
+				else{
+					// update
+					imsu = IMSU_DAO.get_by_ID(session, id);
+				}
 				
+				// make the changes
+				imsu.setName(form.getName());
+				imsu.setDiameter_name(form.getDiameter_name());
+				imsu.setScscf_name(form.getScscf_name());
+				imsu.setId_capabilities_set(form.getId_capabilities_set());
+				imsu.setId_preferred_scscf(form.getId_preferred_scscf());
+				
+				if (id == -1){
+					IMSU_DAO.insert(session, imsu);
+					form.setId(imsu.getId());
+				}
+				else{
+					IMSU_DAO.update(session, imsu);
+				}
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
-			System.out.println("We have the refresh here!");
+			else if (nextAction.equals("refresh")){
+				IMSU imsu = IMSU_DAO.get_by_ID(session, id);
+				IMSU_Load.setForm(form, imsu);
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}
+			else if (nextAction.equals("delete")){
+				IMSU_DAO.delete_by_ID(session, form.getId());
+				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+			}
+		}
+		catch(DatabaseException e){
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			e.printStackTrace();
+		}
+		finally{
+			HibernateUtil.beginTransaction();
+			Session session = HibernateUtil.getCurrentSession();
 			
 		}
-		else if (nextAction.equals("ppr")){
-			System.out.println("We have the ppr here!");
-		}
-		else if (nextAction.equals("rtr")){
-			System.out.println("We have the rtr here!");
-		}		
-		System.out.println("\n\nIMSU_SUBMIT FORWARD!");
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		return forward;
 	}
+	
+	
 }

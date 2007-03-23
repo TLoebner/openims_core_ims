@@ -22,10 +22,6 @@
 	<property name="sdp_line_content" type="string"/>			
 	<property name="registration_type" type="int"/>				
 	
-    <many-to-one name="tp" class="de.fhg.fokus.hss.db.model.TP" not-null="true" cascade="none" lazy="true" insert="false" update="false">
-        <column name="id_tp"/>
-    </many-to-one>	
-
 </class>
 </hibernate-mapping>
 

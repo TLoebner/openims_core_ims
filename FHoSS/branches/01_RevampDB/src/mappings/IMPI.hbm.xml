@@ -15,17 +15,7 @@
 	<property name="op" type="binary" not-null="true"/>
 	<property name="sqn" type="string" not-null="true"/>
 	<property name="ip" type="string"/>
+	<property name="id_imsu" type="int" not-null="true"/>
 	
-    <many-to-one name="imsu" class="de.fhg.fokus.hss.db.model.IMSU" not-null="true" 
-    	cascade="none" lazy="true">
-        <column name="id_imsu" />
-    </many-to-one>	
-
-	<!--				
-	<set name="impu_set" table="impi_impu">
-		<key column="id_impi"/>
-		<many-to-many column="id_impu" class="de.fhg.fokus.hss.db.model.IMPU"/>
-	</set>
-	-->	
 </class>
 </hibernate-mapping>

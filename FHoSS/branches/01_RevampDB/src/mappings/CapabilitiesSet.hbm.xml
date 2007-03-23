@@ -12,17 +12,8 @@
 	<property name="id_set" type="int" not-null="true" />
 	<property name="name" type="string" not-null="true"/>
 	<property name="is_mandatory" type="int" not-null="true"/>
+	<property name="id_capability" type="int" not-null="true"/>
 	
-    <many-to-one 
-    	name="capability" 
-    	class="de.fhg.fokus.hss.db.model.Capability" 
-    	not-null="true" 
-    	cascade="none" 
-    	lazy="true"
-    >
-        <column name="id_capability" />
-    </many-to-one>	
-
 </class>
 </hibernate-mapping>
 

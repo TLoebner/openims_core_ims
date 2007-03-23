@@ -20,22 +20,23 @@
 	<tr>
 		<td id="bound_left">&nbsp;</td>
 		<td valign="top" bgcolor="#FFFFFF">
-			<h1> Network Configuration </h1>
+			<h2> Network Configuration </h2>
 			
 			<ul>
 			
 			<!-- Visited Networks -->
 			<li> <b> Visited Networks </b> <br>			
-			<a href="visited_network.jsp?action=search" target="content"> Search </a> <br>
+
+			<a href="visited_network_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
-				<a href="visited_network.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/VN_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
 			<!-- Charging Sets -->
 			<li> <b> Charging Sets </b> <br>
-			<a href="charging_set.jsp?action=search" target="content"> Search </a> <br>
+			<a href="charging_set_search.jsp" target="content"> Search </a> <br>
 			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
-				<a href="charging_set.jsp?action=create" target="content"> Create </a> <br>
+				<a href="/hss.web.console/CS_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
 			</ul>

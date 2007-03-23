@@ -10,16 +10,8 @@
 	</id>
 
 	<property name="priority" type="int" not-null="true"/>
-
-    <many-to-one name="sp" class="de.fhg.fokus.hss.db.model.SP" not-null="true" 
-    	cascade="none" lazy="true">
-        <column name="id_sp" />
-    </many-to-one>	
-
-    <many-to-one name="ifc" class="de.fhg.fokus.hss.db.model.IFC" not-null="true" 
-    	cascade="none" lazy="true">
-        <column name="id_impu" />
-    </many-to-one>	
+	<property name="id_sp" type="int" not-null="true"/>
+	<property name="id_ifc" type="int" not-null="true"/>
 
 </class>
 </hibernate-mapping>

@@ -52,7 +52,7 @@ import javax.servlet.ServletResponse;
 
 import org.apache.log4j.Logger;
 
-import de.fhg.fokus.hss.util.HibernateUtil;
+import de.fhg.fokus.hss.db.hibernate.*;
 
 /**
  * This class is a simple servlet filter which close the hibernate transaction and session, before the response is sent back 

@@ -38,7 +38,6 @@
 			<tr class="header">
 				<td class="header"> ID: </td>
 				<td class="header"> Name: </td>
-				<td class="header"> Delete: </td>									
 			</tr>
 				
 			<logic:iterate name="resultList" id="imsu"
@@ -53,12 +52,6 @@
 						</a>	
 					</td>
 						
-					<td>
-						<form method="post" action="/hss.web.console/IMSU_Delete.do" target="content" style="text-align: center">
-							<input type="hidden" name="id" value="<bean:write name="imsu" property="id" />"> 
-							<input type="image" src="/hss.web.console/images/progress_rem.gif">
-						</form>
-					</td>
 				</tr>
 			</logic:iterate>
 			

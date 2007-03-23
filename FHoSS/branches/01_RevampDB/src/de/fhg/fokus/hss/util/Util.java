@@ -69,8 +69,8 @@ public class Util {
 		}
 	}
 	
-	public static String getRealm(String sCSCFName){
-		String host = Util.getHost(sCSCFName);
+	public static String getRealm(String hostname){
+		String host = Util.getHost(hostname);
 		
 		return host.substring(host.indexOf('.') + 1);
 	}

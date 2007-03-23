@@ -1,6 +1,46 @@
-/**
- * 
- */
+/*
+  *  Copyright (C) 2004-2007 FhG Fokus
+  *
+  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+  * implementation
+  *
+  * Open IMS Core is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation; either version 2 of the License, or
+  * (at your option) any later version.
+  *
+  * For a license to use the Open IMS Core software under conditions
+  * other than those described here, or to purchase support for this
+  * software, please contact Fraunhofer FOKUS by e-mail at the following
+  * addresses:
+  *     info@open-ims.org
+  *
+  * Open IMS Core is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU General Public License for more details.
+  *
+  * It has to be noted that this Open Source IMS Core System is not
+  * intended to become or act as a product in a commercial context! Its
+  * sole purpose is to provide an IMS core reference implementation for
+  * IMS technology testing and IMS application prototyping for research
+  * purposes, typically performed in IMS test-beds.
+  *
+  * Users of the Open Source IMS Core System have to be aware that IMS
+  * technology may be subject of patents and licence terms, as being
+  * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+  * standards. Thus all Open IMS Core users have to take notice of this
+  * fact and have to agree to check out carefully before installing,
+  * using and extending the Open Source IMS Core System, if related
+  * patents and licenses may become applicable to the intended usage
+  * context. 
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  * 
+  */
+
 package de.fhg.fokus.hss.diam;
 
 import java.util.ArrayList;
@@ -55,6 +95,7 @@ public class UtilAVP {
 	public static String getVisitedNetwork(DiameterMessage message){
 		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_VISITED_NETWORK_IDENTIFIER, true, 
 				DiameterConstants.Vendor.V3GPP);
+		System.out.println("AVP is:"  + avp);
 		if (avp != null){
 			return new String(avp.data);
 		}
@@ -166,6 +207,29 @@ public class UtilAVP {
 		}
 		return -1;
 	}
+
+	public static List<IMPU> getAllIMPU(Session session, DiameterMessage message){
+		List<IMPU> impuIdentitiesList = null;
+		Vector avpVector = message.avps;
+		if (avpVector != null){
+			Iterator it = avpVector.iterator();
+			while (it.hasNext()){
+				AVP currentAVP = (AVP) it.next();
+				if (currentAVP.code == DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY){
+					if (impuIdentitiesList == null){
+						impuIdentitiesList = new ArrayList<IMPU>();
+					}
+					String identity = new String(currentAVP.data);
+					IMPU impu = IMPU_DAO.get_by_Identity(session, identity);
+					impuIdentitiesList.add(impu);
+				}
+			}
+			return impuIdentitiesList;
+		}
+		return null;
+	}
+	
+	
 	
 	public static void addServerCapabilities(DiameterMessage message){
 		//....
@@ -316,25 +380,35 @@ public class UtilAVP {
 		}
 		message.addAVP(associatedIdentities);
 	}
+
+	public static void addDeregistrationReason(DiameterMessage message, int reasonCode, String reasonInfo){
+		AVP deregistrationReasonAVP = new AVP(DiameterConstants.AVPCode.IMS_DEREGISTRATION_REASON, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		AVP reasonCodeAVP = new AVP(DiameterConstants.AVPCode.IMS_REASON_CODE, true, 
+				DiameterConstants.Vendor.V3GPP);
+		reasonCodeAVP.setData(reasonCode);
+		deregistrationReasonAVP.addChildAVP(reasonCodeAVP);
+		
+		AVP reasonInfoAVP = new AVP(DiameterConstants.AVPCode.IMS_REASON_INFO, true, 
+				DiameterConstants.Vendor.V3GPP);
+		reasonInfoAVP.setData(reasonInfo);
+		deregistrationReasonAVP.addChildAVP(reasonInfoAVP);
+		
+		message.addAVP(deregistrationReasonAVP);
+	}
 	
-	public static List<IMPU> getAllIMPU(Session session, DiameterMessage message){
-		List<IMPU> impuIdentitiesList = null;
-		Vector avpVector = message.avps;
-		if (avpVector != null){
-			Iterator it = avpVector.iterator();
-			while (it.hasNext()){
-				AVP currentAVP = (AVP) it.next();
-				if (currentAVP.code == DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY){
-					if (impuIdentitiesList == null){
-						impuIdentitiesList = new ArrayList<IMPU>();
-					}
-					String identity = new String(currentAVP.data);
-					IMPU impu = IMPU_DAO.getByIdentity(session, identity);
-					impuIdentitiesList.add(impu);
-				}
-			}
-			return impuIdentitiesList;
-		}
-		return null;
+	public static void addDestinationHost(DiameterMessage message, String host){
+		AVP destHostAVP = new AVP(DiameterConstants.AVPCode.DESTINATION_HOST, true, 
+				DiameterConstants.Vendor.DIAM);
+		destHostAVP.setData(host);
+		message.addAVP(destHostAVP);
+	}
+	
+	public static void addDestinationRealm(DiameterMessage message, String realm){
+		AVP destRealm = new AVP(DiameterConstants.AVPCode.DESTINATION_REALM, true,
+				DiameterConstants.Vendor.DIAM);
+		destRealm.setData(realm);
+		message.addAVP(destRealm);
 	}
 }

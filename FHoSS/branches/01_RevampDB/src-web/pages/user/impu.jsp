@@ -72,7 +72,7 @@ function add_action_for_form(a) {
 			
 		<table>
 			<tr>
-				<td>ID: </td>
+				<td> ID: </td>
 				<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
 			</tr>
 			<tr>
@@ -92,7 +92,7 @@ function add_action_for_form(a) {
 				</html:select></td>	
 			</tr>
 			
-			<tr>
+<!--			<tr>
 				<td>Implicit Set:</td>
 				<td>
 			<%
@@ -110,6 +110,7 @@ function add_action_for_form(a) {
 					
 				</td>
 			</tr>
+-->			
 			<tr>	
 				<td>Charging-Info Set:</td>
 				<td><html:select property="id_charging_info" name="IMPU_Form" styleClass="inputtext" size="1" style="width:250px;">
@@ -120,23 +121,51 @@ function add_action_for_form(a) {
 			</tr>
 			
 			<tr>
-				<td>User-Status:</td>
+				<td> Can Register </td>
+				<td><html:checkbox property="can_register" styleClass="inputbox"/> </td>
+			</tr>			
+
+			<tr>
+				<td> IMPU Type </td>
+				<td><html:select property="type" name="IMPU_Form" styleClass="inputtext" size="1" style="width:250px;" > 
+					<html:option value="-1">Select type...</html:option>
+					<html:optionsCollection name="IMPU_Form" property="select_identity_type" label="name" value="code"/>
+				</html:select></td>	
+			</tr>			
+			
+			<tr>
+				<td> Wildcard PSI </td>
+				<td><html:text property="wildcard_psi" styleClass="inputtext"/> </td>				
+			</tr>			
+			
+			<tr>
+				<td> PSI Activation </td>
+				<td><html:checkbox property="psi_activation" styleClass="inputbox"/> </td>				
+			</tr>			
+			
+			<tr>
+				<td> Display Name </td>
+				<td><html:text property="display_name" styleClass="inputtext" styleClass="inputtext"/> </td>							
+			</tr>			
+			
+			<tr>
+				<td> User-Status </td>
 				<html:hidden property="user_state" />
+
+				<logic:equal value="0" property="user_state" name="IMPU_Form">
+					<td bgcolor="#FF0000"> NOT-REGISTERED </td>
+				</logic:equal>
 
 				<logic:equal value="1" property="user_state" name="IMPU_Form">
 					<td bgcolor="#00FF00"> REGISTERED </td>
 				</logic:equal>
 				
-				<logic:equal value="0" property="user_state" name="IMPU_Form">
-					<td bgcolor="#FF0000"> NOT-REGISTERED </td>
-				</logic:equal>
-				
-				<logic:equal value="-1" property="user_state" name="IMPU_Form">
+				<logic:equal value="2" property="user_state" name="IMPU_Form">
 					<td bgcolor="#0000FF"> UN-REGISTERED </td>
 				</logic:equal>
 				
-				<logic:equal value="2" property="user_state" name="IMPU_Form">
-					<td bgcolor="#FFFF00"> PENDING </td>
+				<logic:equal value="3" property="user_state" name="IMPU_Form">
+					<td bgcolor="#FFFF00"> AUTH-PENDING </td>
 				</logic:equal>
 			</tr>
 		</table>		
@@ -170,7 +199,6 @@ function add_action_for_form(a) {
 	  </center> 		
 
 	</html:form>
-	
 	
 </body>
 </html>

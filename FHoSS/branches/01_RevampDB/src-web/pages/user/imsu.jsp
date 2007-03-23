@@ -37,12 +37,8 @@ function add_action_for_form(a) {
 			document.IMSU_Form.nextAction.value="refresh";
 			document.IMSU_Form.submit();			
 			break;
-		case 10:
-			document.IMSU_Form.nextAction.value="ppr";
-			document.IMSU_Form.submit();			
-			break;
-		case 11:	
-			document.IMSU_Form.nextAction.value="rtr";
+		case 4:
+			document.IMSU_Form.nextAction.value="delete";
 			document.IMSU_Form.submit();			
 			break;
 	}
@@ -112,16 +108,21 @@ function add_action_for_form(a) {
 			<tr><td align=center> <br/>
 				<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
 				<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(3);"/> 
+				
 				<% if (id == -1){ %>
 					<html:button property="reset_button" value="Reset" onclick="add_action_for_form(2);"/> 
 				<%}%>
+
+				<% if (id != -1){ %>
+				<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
+					disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
+				<%}%>					
 				
 			</td></tr>
 		</table>			
 	  </center> 		
 
 	</html:form>
-	
 	
 </body>
 </html>
