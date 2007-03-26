@@ -69,7 +69,7 @@ MAIN_NAME=ser
 VERSION = 2
 PATCHLEVEL = 1
 SUBLEVEL =  0
-EXTRAVERSION = -dev1-OpenIMSCore-$Revision$
+EXTRAVERSION = -dev1 OpenIMSCore r$Rev$
 
 SER_VER = $(shell expr $(VERSION) \* 1000000 + $(PATCHLEVEL) \* 1000 + \
 			$(SUBLEVEL) )

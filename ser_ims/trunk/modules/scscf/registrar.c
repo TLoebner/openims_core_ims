@@ -127,8 +127,8 @@ void registrar_timer(unsigned int ticks, void* param)
 					cn = c->next;
 					if (!r_valid_contact(c)){
 						LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",
-							c->uri.len,c->uri.s);
-						S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_EXPIRED,0);	
+							c->uri.len,c->uri.s);							
+						S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_EXPIRED,1);/* send now because we might drop the dialog soon */	
 						del_r_contact(p,c);
 					}
 					
@@ -421,10 +421,10 @@ success:
 		if (saa) cdpb.AAAFreeMessage(&saa);
 		return ret;
 	}else{
-		/* it was called internally and there is no SIP message to respond to */
+		/* it was called internally and there is no SIP message to respond to */		
 	}
 	if (saa) cdpb.AAAFreeMessage(&saa);
-	return CSCF_RETURN_FALSE;
+	return CSCF_RETURN_TRUE;
 done:	
 	if (saa) cdpb.AAAFreeMessage(&saa);
 	return CSCF_RETURN_FALSE;

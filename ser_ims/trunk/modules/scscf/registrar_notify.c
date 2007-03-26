@@ -789,12 +789,14 @@ int S_event_reg(void *pv,void *c,void *ps,int event_type,int send_now)
 	r_act_time();
 	switch (event_type){
 		case IMS_REGISTRAR_NONE:
+			if (send_now) notification_timer(0,0);
 			return 0;
 			break;
 		case IMS_REGISTRAR_SUBSCRIBE:
 			content = r_get_reginfo_full(p,event_type,&subsExpires);
 			r_create_notifications(p,0,s,content,subsExpires);			
 			if (content.s) pkg_free(content.s);
+			if (send_now) notification_timer(0,0);
 			return 1;
 			break;
 			
@@ -810,14 +812,15 @@ int S_event_reg(void *pv,void *c,void *ps,int event_type,int send_now)
 			content = r_get_reginfo_partial(p,c,event_type,&subsExpires);	
 			r_create_notifications(p,c,s,content,subsExpires);
 			if (content.s) pkg_free(content.s);
+			if (send_now) notification_timer(0,0);
 			return 1;
 			break;
 				
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":S_event_reg: Unknown event %d\n",event_type);
+			if (send_now) notification_timer(0,0);
 			return 0;	
-	}
-	if (send_now) notification_timer(0,0);
+	}		
 }
 
 
