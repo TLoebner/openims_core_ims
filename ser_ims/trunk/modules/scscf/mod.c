@@ -214,7 +214,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_can_subscribe",				S_can_subscribe,			0,0,REQUEST_ROUTE},
 	{"S_subscribe",					S_subscribe,				0,0,REQUEST_ROUTE},
 
-	{"S_trans_in_processing",		S_trans_in_processing,				0,0,REQUEST_ROUTE},
+	{"S_trans_in_processing",		S_trans_in_processing,		0,0,REQUEST_ROUTE},
 	
 	
 	{"S_mobile_originating",		S_mobile_originating,		0,0,REQUEST_ROUTE},
