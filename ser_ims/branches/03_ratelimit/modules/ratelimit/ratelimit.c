@@ -33,11 +33,11 @@
  * d rpc fns for static limits
  * - FIFO interface (this will have to wait until unixsock module compiles :-D )
  * - locking 
- * - long long's instead of doubles in get_cpuload
- * - rpc stats
+ * d long long's instead of doubles in get_cpuload
+ * d rpc stats
  * d rpc params
- * - remove act_busy
- * - split patches into general modparams + adaptive + rpc
+ * d remove act_busy
+ * d split patches into general modparams + adaptive + rpc
 */
 
 #include <stdio.h>
@@ -138,7 +138,6 @@ static void timer(unsigned int, void *);
 static int rl_check(struct sip_msg*, char *, char *);
 static int w_rl_drop(struct sip_msg*, char *, char *);
 static int fixup_rl_drop(void **, int);
-static int act_busy(struct sip_msg*, char *, char *); 
 static int add_queue_params(modparam_t, void *);
 static int add_pipe_params(modparam_t, void *);
 void destroy(void);
@@ -150,7 +149,6 @@ static cmd_export_t cmds[]={
 	{"rl_drop", w_rl_drop, 0, fixup_rl_drop, REQUEST_ROUTE},
 	{"rl_drop", w_rl_drop, 1, fixup_rl_drop, REQUEST_ROUTE},
 	{"rl_drop", w_rl_drop, 2, fixup_rl_drop, REQUEST_ROUTE},
-	{"act_busy", act_busy, 0, 0, REQUEST_ROUTE},
 	{0,0,0,0,0}
 };
 
@@ -226,13 +224,13 @@ static int str_cpy(str * dest, str * src)
 static int get_cpuload(double * load)
 {
 	static 
-	double o_user, o_nice, o_sys, o_idle, o_iow, o_irq, o_sirq, o_stl;
-	double n_user, n_nice, n_sys, n_idle, n_iow, n_irq, n_sirq, n_stl;
+	long long o_user, o_nice, o_sys, o_idle, o_iow, o_irq, o_sirq, o_stl;
+	long long n_user, n_nice, n_sys, n_idle, n_iow, n_irq, n_sirq, n_stl;
 	static int first_time = 1;
 	FILE * f = fopen("/proc/stat", "r");
 
 	if (! f) return -1;
-	fscanf(f, "cpu  %lf%lf%lf%lf%lf%lf%lf%lf",
+	fscanf(f, "cpu  %lld%lld%lld%lld%lld%lld%lld%lld",
 			&n_user, &n_nice, &n_sys, &n_idle, &n_iow, &n_irq, &n_sirq, &n_stl);
 	fclose(f);
 
@@ -240,7 +238,7 @@ static int get_cpuload(double * load)
 		first_time = 0;
 		*load = 0;
 	} else {		
-		double d_total =(n_user	- o_user)	+ 
+		long long d_total =(n_user	- o_user)	+ 
 						(n_nice	- o_nice)	+ 
 						(n_sys	- o_sys)	+ 
 						(n_idle	- o_idle)	+ 
@@ -248,9 +246,9 @@ static int get_cpuload(double * load)
 						(n_irq	- o_irq)	+ 
 						(n_sirq	- o_sirq)	+ 
 						(n_stl	- o_stl);
-		double d_idle = (n_idle - o_idle);
+		long long d_idle = (n_idle - o_idle);
 
-		*load = 1.0 - d_idle / d_total;
+		*load = 1.0 - ((double)d_idle) / (double)d_total;
 	}
 
 	o_user	= n_user; 
@@ -408,19 +406,16 @@ static int fixup_rl_drop(void **param, int param_no)
 	},\
 };
 
-#define FP_STRING(val, l) { \
+#define FP_STRING(val) { \
 	.orig = val, \
 	.type = FPARAM_STR, \
 	.v = { \
-		.str = { \
-			.s = val, \
-			.len = l \
-		}, \
+		.str = STR_STATIC_INIT(val) \
 	},\
 };
 
 static fparam_t fp_503 = FP_INT(503);
-static fparam_t fp_server_busy = FP_STRING("Server Busy", 11);
+static fparam_t fp_server_busy = FP_STRING("Server Unavailable");
 
 static int rl_drop(struct sip_msg * msg, int low, int high)
 {
@@ -464,18 +459,6 @@ static int w_rl_drop(struct sip_msg* msg, char *p1, char *p2)
 	}
 
 	return rl_drop(msg, low, high);
-}
-
-static int act_busy(struct sip_msg* msg, char *p1, char *p2)
-{
-	static double x = 0.0;
-	int i;
-
-	for (i=0; i<10000; i++) {
-		x += (double)i;
-		x /= (double)i;
-	}
-	return (x < 10) ? 1 : -1;
 }
 
 static inline int str_i_cmp(str a, str b)
@@ -808,29 +791,17 @@ static const char *rpc_get_queue_doc[2] = {
 
 /* rpc function implementations */
 static void rpc_stats(rpc_t *rpc, void *c) {
-#if 0
-#if defined(RL_WITH_RED)
-	if (rpc->printf(c, "   INVITE: %d/%d (drop rate: %d)", *invite_counter,
-		*invite_limit, *invite_load) < 0) return;
+	int i;
+
+	for (i=0; i<MAX_PIPES; i++) {
+		if (rpc->printf(c, "pipe=%d load=%d\n", i, *pipes[i].load) < 0)
+			return;
+		rpc_lf(rpc, c);
+	}
+
+	if (rpc->printf(c, "drop_rate=%d\n", *drop_rate) < 0)
+			return;
 	rpc_lf(rpc, c);
-	if (rpc->printf(c, " REGISTER: %d/%d (drop rate: %d)", *register_counter,
-		*register_limit, *register_load) < 0) return;
-	rpc_lf(rpc, c);
-	if (rpc->printf(c, "SUBSCRIBE: %d/%d (drop rate: %d)", *subscribe_counter,
-		*subscribe_limit, *subscribe_load) < 0) return;
-	rpc_lf(rpc, c);
-#else
-	if (rpc->printf(c, "   INVITE: %d/%d", *invite_counter,
-		*invite_limit) < 0) return;
-	rpc_lf(rpc, c);
-	if (rpc->printf(c, " REGISTER: %d/%d", *register_counter,
-		*register_limit) < 0) return;
-	rpc_lf(rpc, c);
-	if (rpc->printf(c, "SUBSCRIBE: %d/%d", *subscribe_counter,
-		*subscribe_limit) < 0) return;
-	rpc_lf(rpc, c);
-#endif
-#endif
 }
 
 static void rpc_timer(rpc_t *rpc, void *c) {
