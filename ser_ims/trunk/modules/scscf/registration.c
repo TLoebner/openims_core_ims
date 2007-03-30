@@ -257,17 +257,12 @@ int S_check_visited_network_id(struct sip_msg *msg,char *str1,char *str2 )
 	int ret = CSCF_RETURN_FALSE;
 	char c;
 	str v={0,0};
-	regex_t r;
+	regmatch_t pmatch;
 	struct hdr_field *hdr;
-	if (regcomp(&r,str1,REG_EXTENDED|REG_ICASE)){
-		LOG(L_ERR,"ERR:"M_NAME":S_check_visited_network_id: Error compiling regexp <%s>\n",str1);
-		return ret;
-	}
 	v = cscf_get_visited_network_id(msg,&hdr);
 	c = v.s[v.len];
 	v.s[v.len] = 0;
-	if (regexec(&r,v.s,0,NULL,0)==0) ret = CSCF_RETURN_TRUE;
-	regfree(&r);
+	if (regexec(((fparam_t*)str1)->v.regex, v.s, 1, &pmatch, 0)==0) ret = CSCF_RETURN_TRUE;
 	v.s[v.len] = c;
 	return ret;
 }
