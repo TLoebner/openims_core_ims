@@ -132,8 +132,6 @@ While testing the ratelimit changes these two tools were useful:
   - <<X1, ctest>>
   - <<X2, pidctl>>
 
-Changelogs and snapshots are available for these at http://patraulea.com/ratelimit/[]
-
 [[X1]]
 ctest
 ~~~~~
