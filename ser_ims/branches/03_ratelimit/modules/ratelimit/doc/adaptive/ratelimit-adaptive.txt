@@ -83,6 +83,51 @@ Parameters can be changed after startup, currently only via the xmlrpc interface
 have to load the xmlrpc module and use the pidctl.py script (or some different xmlrpc
 client) mentioned below.
 
+Cfg example
+~~~~~~~~~~~
+
+This is the .cfg file that is being used to test the updated ratelimit module:
+
+[python]
+code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+loadmodule "../ser_ims/modules/sl/sl.so"
+loadmodule "../ser_ims/modules/xmlrpc/xmlrpc.so"
+loadmodule "../ser_ims/modules/ratelimit/ratelimit.so"
+loadmodule "../ser_ims/modules/fifo/fifo.so"
+
+modparam("ratelimit", "pipe", "0:TAILDROP:200")
+modparam("ratelimit", "pipe", "1:RED:100")
+modparam("ratelimit", "pipe", "2:TAILDROP:50")
+modparam("ratelimit", "pipe", "3:FEEDBACK:80")
+
+modparam("ratelimit", "queue", "0:REGISTER")
+modparam("ratelimit", "queue", "0:MESSAGE")
+modparam("ratelimit", "queue", "3:INVITE")
+modparam("ratelimit", "queue", "2:*")
+
+modparam("ratelimit", "timer_interval", 1)
+modparam("ratelimit", "load_source", "external")
+
+modparam("fifo", "fifo_file", "/tmp/ser_fifo")
+modparam("fifo", "fifo_dir", "/tmp/")
+
+
+route {
+	if (method == "POST") {
+		dispatch_rpc();
+		break;
+	}
+
+	if (! rl_check()) {
+		rl_drop(50, 300);
+		break;
+	}
+#	act_busy();
+	sl_send_reply("200", "OK");
+}
+code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 Adaptive drop rates
 -------------------
 
