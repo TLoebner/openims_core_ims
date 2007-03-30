@@ -435,6 +435,46 @@ till loadavg reaches 0.80 and _REGISTER_S till 0.50; or does it ?).</p>
 <p>Parameters can be changed after startup, currently only via the xmlrpc interface: you
 have to load the xmlrpc module and use the pidctl.py script (or some different xmlrpc
 client) mentioned below.</p>
+<h3>2.4. Cfg example</h3>
+<p>This is the .cfg file that is being used to test the updated ratelimit module:</p>
+<div class="listingblock">
+<div class="content">
+<pre><tt>loadmodule "../ser_ims/modules/sl/sl.so"
+loadmodule "../ser_ims/modules/xmlrpc/xmlrpc.so"
+loadmodule "../ser_ims/modules/ratelimit/ratelimit.so"
+loadmodule "../ser_ims/modules/fifo/fifo.so"
+
+modparam("ratelimit", "pipe", "0:TAILDROP:200")
+modparam("ratelimit", "pipe", "1:RED:100")
+modparam("ratelimit", "pipe", "2:TAILDROP:50")
+modparam("ratelimit", "pipe", "3:FEEDBACK:80")
+
+modparam("ratelimit", "queue", "0:REGISTER")
+modparam("ratelimit", "queue", "0:MESSAGE")
+modparam("ratelimit", "queue", "3:INVITE")
+modparam("ratelimit", "queue", "2:*")
+
+modparam("ratelimit", "timer_interval", 1)
+modparam("ratelimit", "load_source", "external")
+
+modparam("fifo", "fifo_file", "/tmp/ser_fifo")
+modparam("fifo", "fifo_dir", "/tmp/")
+
+
+route {
+        <strong>if</strong> (method == "POST") {
+                dispatch_rpc();
+                <strong>break</strong>;
+        }
+
+        <strong>if</strong> (! rl_check()) {
+                rl_drop(50, 300);
+                <strong>break</strong>;
+        }
+<i>#       act_busy();</i>
+        sl_send_reply("200", "OK");
+}</tt></pre>
+</div></div>
 </div>
 <h2>3. Adaptive drop rates</h2>
 <div class="sectionbody">
@@ -565,7 +605,7 @@ FIFO interface
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 30-Mar-2007 15:55:06 CEST
+Last updated 30-Mar-2007 17:43:21 CEST
 </div>
 </div>
 </body>
