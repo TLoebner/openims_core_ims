@@ -539,7 +539,7 @@ int I_scscf_select(struct sip_msg* msg, char* str1, char* str2)
 		STR_APPEND(hdr,scscf_name);
 		STR_APPEND(hdr,route_hdr_e);
 	
-		if (!cscf_add_header_first(msg,&hdr)){
+		if (!cscf_add_header_first(msg,&hdr,HDR_ROUTE_T)){
 			pkg_free(hdr.s);
 			result = CSCF_RETURN_TRUE;
 		}

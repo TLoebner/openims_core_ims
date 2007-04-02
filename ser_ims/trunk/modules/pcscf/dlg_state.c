@@ -956,7 +956,7 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	
 	//LOG(L_ERR,"%.*s",x.len,x.s);
 	d_unlock(d->hash);
-	if (cscf_add_header_first(msg,&x)) {
+	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)) {
 		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
 			return CSCF_RETURN_TRUE;
 		else {
@@ -1048,7 +1048,7 @@ int P_record_route(struct sip_msg *msg,char *str1,char *str2)
 			STR_APPEND(rr,s_record_route_e);					
 	}
 	
-	if (cscf_add_header_first(msg,&rr)) return CSCF_RETURN_TRUE;
+	if (cscf_add_header_first(msg,&rr,HDR_RECORDROUTE_T)) return CSCF_RETURN_TRUE;
 	else{
 		if (rr.s) pkg_free(rr.s);
 		return CSCF_RETURN_BREAK;

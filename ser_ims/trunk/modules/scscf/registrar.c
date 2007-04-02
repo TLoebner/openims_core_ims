@@ -903,7 +903,7 @@ static inline int r_add_route_path(struct sip_msg *msg,r_contact *c)
 	memcpy(hdr.s+hdr.len,route_hdr2.s,route_hdr2.len);
 	hdr.len+=route_hdr2.len;
 	
-	if (!cscf_add_header_first(msg,&hdr)){
+	if (!cscf_add_header_first(msg,&hdr,HDR_ROUTE_T)){
 		//pkg_free(hdr.s);
 		return 0;
 	}

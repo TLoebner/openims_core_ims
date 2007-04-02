@@ -932,7 +932,7 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	
 	//LOG(L_ERR,"%.*s",x.len,x.s);
 	r_unlock(c->hash);
-	if (cscf_add_header_first(msg,&x)) {
+	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)) {
 		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
 			return CSCF_RETURN_TRUE;
 		else {

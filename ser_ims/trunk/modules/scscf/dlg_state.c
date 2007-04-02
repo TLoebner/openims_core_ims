@@ -860,7 +860,7 @@ int S_record_route(struct sip_msg *msg,char *str1,char *str2)
 			STR_APPEND(rr,s_record_route_e);					
 	}
 	
-	if (cscf_add_header_first(msg,&rr)) return CSCF_RETURN_TRUE;
+	if (cscf_add_header_first(msg,&rr,HDR_RECORDROUTE_T)) return CSCF_RETURN_TRUE;
 	else{
 		if (rr.s) pkg_free(rr.s);
 		return CSCF_RETURN_BREAK;

@@ -642,6 +642,118 @@ int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2)
 	return ret;
 }
 
+
+/**
+ * Checks if a response coming from a UE contains the same Via headers sent in the corresponding request
+ * @param rpl - the SIP reply
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns true if ok, false if not or error
+ */
+int P_follows_via_list(struct sip_msg *rpl,char *str1, char *str2)
+{
+	int h_req_pos, h_rpl_pos,indx_rpl, indx_req;
+	struct hdr_field *h_req=NULL, *h_out_req, *h_rpl=NULL, *h_out_rpl;
+	str via_req={0,0}, via_rpl={0,0};
+
+	struct sip_msg *req = cscf_get_request_from_reply(rpl);	
+	if (!req){
+		LOG(L_ERR,"ERR:"M_NAME":P_follows_via_list: No transactional request found.\n");
+		return CSCF_RETURN_ERROR;
+	}	
+
+	indx_rpl = indx_req = 0;
+	//get via headers
+	via_rpl = cscf_get_next_via_str(rpl, 0, 0, &h_out_rpl, &h_rpl_pos);
+	while (via_rpl.len)
+	{
+		if (indx_rpl > 0) //first header from reply shouldn't be checked
+		{
+			if (indx_req == 0)
+			{
+				via_req = cscf_get_next_via_str(req, 0, 0, &h_out_req, &h_req_pos);
+				if (!via_req.len || !cscf_str_via_matching(&via_req, &via_rpl))
+				{
+					LOG(L_INFO,"DBG:"M_NAME":P_follows_via_list: first via not matching <%.*s>!=<%.*s>\n",
+						via_req.len,via_req.s,via_rpl.len,via_rpl.s);
+					return CSCF_RETURN_FALSE; 
+				}
+			}
+			else
+			{
+				if (!via_req.len || (via_req.len!=via_rpl.len) || (strncasecmp(via_req.s, via_rpl.s, via_req.len)))
+				{
+					LOG(L_INFO,"DBG:"M_NAME":P_follows_via_list: not matching <%.*s>!=<%.*s>\n",
+						via_req.len,via_req.s,via_rpl.len,via_rpl.s);
+					return CSCF_RETURN_FALSE;
+				}
+			}
+			indx_req++;
+			h_req = h_out_req;
+			if (!h_req)
+			{
+				break;
+			}
+			via_req = cscf_get_next_via_str(req, h_req, h_req_pos , &h_out_req, &h_req_pos);
+		}
+		indx_rpl++;
+		h_rpl = h_out_rpl;
+		if (!h_rpl) break;
+		via_rpl = cscf_get_next_via_str(rpl, h_rpl, h_rpl_pos , &h_out_rpl, &h_rpl_pos);
+	}
+
+	if (h_out_req || h_out_rpl) //remaining headers ...
+	{ 
+		LOG(L_INFO,"DBG:"M_NAME":P_follows_via_list: header count not matching \n");
+		return CSCF_RETURN_FALSE;
+	}
+	return CSCF_RETURN_TRUE;
+}
+
+static str via_hdr_s={"Via: ",5};
+static str via_hdr_e={"\r\n",2};
+/**
+ * enforce a response coming from a UE to contain the same Via headers sent in the corresponding request
+ * @param rpl - the SIP reply
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns true if ok, false if not or error
+ */
+int P_enforce_via_list(struct sip_msg *rpl,char *str1, char *str2)
+{
+	static struct hdr_field * h = NULL;
+	str hdr;
+
+	cscf_del_all_headers(rpl, HDR_VIA_T);
+
+	struct sip_msg *req = cscf_get_request_from_reply(rpl);
+	
+	if (!req){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_via_list: No transactional request found.\n");
+		return CSCF_RETURN_FALSE;
+	
+	}
+
+	h = cscf_get_next_via_hdr(req,0);
+	while (h)
+	{
+		hdr.len = h->body.len + via_hdr_s.len + via_hdr_e.len;
+		hdr.s = pkg_malloc(hdr.len);
+		if (!hdr.s)
+		{
+			LOG(L_ERR, "ERR:"M_NAME":P_enforce_via_list: cannot alloc bytes : %d", hdr.len);
+		}
+		hdr.len=0;
+		STR_APPEND(hdr, via_hdr_s);
+		STR_APPEND(hdr, h->body);
+		STR_APPEND(hdr, via_hdr_e);
+		cscf_add_header_first(rpl, &hdr, HDR_VIA_T);
+		h = cscf_get_next_via_hdr(req,h);
+	}
+	
+	return CSCF_RETURN_TRUE;
+}
+
 static str s_received={";received=",10};
 static str s_received2={"received",8};
 /**
