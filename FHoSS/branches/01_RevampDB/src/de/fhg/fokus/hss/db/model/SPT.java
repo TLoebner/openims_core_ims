@@ -57,7 +57,7 @@ public class SPT {
 	private String method;
 	private String header;
 	private String header_content;
-	private int session_case;
+	private Integer session_case;
 	private String sdp_line;
 	private String sdp_line_content;
 	
@@ -158,8 +158,11 @@ public class SPT {
 		return session_case;
 	}
 
-	public void setSession_case(int session_case) {
-		this.session_case = session_case;
+	public void setSession_case(Integer session_case) {
+		if (session_case != null)
+			this.session_case = session_case;
+		else
+			this.session_case = -1;	
 	}
 
 	public int getType() {

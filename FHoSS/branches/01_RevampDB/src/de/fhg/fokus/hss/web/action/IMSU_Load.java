@@ -43,7 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -56,13 +56,13 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.db.model.CapabilitiesSet;
-import de.fhg.fokus.hss.db.model.IMPI;
+
 import de.fhg.fokus.hss.db.model.IMSU;
-import de.fhg.fokus.hss.db.model.PreferredSet;
+
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
-import de.fhg.fokus.hss.db.op.PreferredSet_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMSU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -89,14 +89,25 @@ public class IMSU_Load extends Action {
 			l1 = CapabilitiesSet_DAO.get_all_sets(session);
 			form.setSelect_capabilities_set(l1);
 			
-			l1 = PreferredSet_DAO.get_all_sets(session);
+			l1 = Preferred_SCSCF_Set_DAO.get_all_sets(session);
 			form.setSelect_preferred_scscf(l1);
-		
+			List associated_IMPIs_list = new ArrayList();
+			
 			if (id != -1) {
+				if (IMSU_Load.testForDelete(session, form.getId())){
+					request.setAttribute("deleteDeactivation", "false");
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
 				// load
 				IMSU imsu = IMSU_DAO.get_by_ID(session, id);
 				IMSU_Load.setForm(form, imsu);
+				
+				associated_IMPIs_list = IMPI_DAO.get_all_by_IMSU_ID(session, id);
+				
 			}
+			request.setAttribute("associated_IMPIs", associated_IMPIs_list);
 		}
 		catch(DatabaseException e){
 			e.printStackTrace();
@@ -120,12 +131,16 @@ public class IMSU_Load extends Action {
 			form.setScscf_name(imsu.getScscf_name());
 			form.setName(imsu.getName());
 			form.setId_capabilities_set(imsu.getId_capabilities_set());
-			form.setId_preferred_scscf(imsu.getId_preferred_scscf());
+			form.setId_preferred_scscf(imsu.getId_preferred_scscf_set());
 		}
 		return exitCode;
 	}	
 
 	public static boolean testForDelete(Session session, int id){
+		List result = IMPI_DAO.get_all_by_IMSU_ID(session, id);
+		if (result != null && result.size() > 0){
+			return false;
+		}
 		return true;
 	}
 }

@@ -49,10 +49,10 @@ package de.fhg.fokus.hss.db.model;
  */
 public class RTR_PPR {
 	private int id;
-	private long hopbyhop;
-	private long endtoend;
-	private int id_impu;
-	private int id_impi;
+	private Long hopbyhop;
+	private Long endtoend;
+	private Integer id_impu;
+	private Integer id_impi;
 	private short type;
 	private short subtype;
 	private int grp;
@@ -63,8 +63,11 @@ public class RTR_PPR {
 		return endtoend;
 	}
 
-	public void setEndtoend(long endtoend) {
-		this.endtoend = endtoend;
+	public void setEndtoend(Long endtoend) {
+		if (endtoend != null)
+			this.endtoend = endtoend;
+		else
+			this.endtoend = -1l;
 	}
 
 	public int getGrp() {
@@ -79,8 +82,11 @@ public class RTR_PPR {
 		return hopbyhop;
 	}
 
-	public void setHopbyhop(long hopbyhop) {
-		this.hopbyhop = hopbyhop;
+	public void setHopbyhop(Long hopbyhop) {
+		if (hopbyhop != null)
+			this.hopbyhop = hopbyhop;
+		else
+			this.hopbyhop = -1l;
 	}
 
 	public int getId() {
@@ -95,16 +101,22 @@ public class RTR_PPR {
 		return id_impi;
 	}
 
-	public void setId_impi(int id_impi) {
-		this.id_impi = id_impi;
+	public void setId_impi(Integer id_impi) {
+		if (id_impi != null)
+			this.id_impi = id_impi;
+		else
+			this.id_impi = -1;
 	}
 
 	public int getId_impu() {
 		return id_impu;
 	}
 
-	public void setId_impu(int id_impu) {
-		this.id_impu = id_impu;
+	public void setId_impu(Integer id_impu) {
+		if (id_impu != null)
+			this.id_impu = id_impu;
+		else
+			this.id_impu = -1;
 	}
 
 	public short getSubtype() {

@@ -12,8 +12,8 @@
 	<property name="name" type="string" not-null="true" />
 	<property name="scscf_name" type="string" />
 	<property name="diameter_name" type="string"/>
-	<property name="id_capabilities_set" type="int" />	
-	<property name="id_preferred_scscf" type="int" />	
+	<property name="id_capabilities_set" type="java.lang.Integer" />	
+	<property name="id_preferred_scscf_set" type="java.lang.Integer" />	
 
 </class>
 </hibernate-mapping>

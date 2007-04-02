@@ -43,6 +43,8 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -55,6 +57,7 @@ import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.TP;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMSU_Form;
@@ -108,7 +111,7 @@ public class IMSU_Submit extends Action{
 				imsu.setDiameter_name(form.getDiameter_name());
 				imsu.setScscf_name(form.getScscf_name());
 				imsu.setId_capabilities_set(form.getId_capabilities_set());
-				imsu.setId_preferred_scscf(form.getId_preferred_scscf());
+				imsu.setId_preferred_scscf_set(form.getId_preferred_scscf());
 				
 				if (id == -1){
 					IMSU_DAO.insert(session, imsu);
@@ -130,6 +133,10 @@ public class IMSU_Submit extends Action{
 				IMSU_DAO.delete_by_ID(session, form.getId());
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			
+			List associated_IMPIs_list = IMPI_DAO.get_all_by_IMSU_ID(session, id);
+			request.setAttribute("associated_IMPIs", associated_IMPIs_list);
+			
 		}
 		catch(DatabaseException e){
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);

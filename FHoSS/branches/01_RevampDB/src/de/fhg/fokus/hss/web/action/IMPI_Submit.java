@@ -87,131 +87,180 @@ public class IMPI_Submit extends Action{
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
+		// get the input parameters
+		
+		String test = (String) request.getAttribute("associated_IMPU_ID");
+		
+		System.out.println("test" + test);
 		IMPI_Form form = (IMPI_Form) actionForm;
 		String nextAction = form.getNextAction();
-		
+		ActionForward forward = null;
 		int id = form.getId();
+		
+		try{
+			HibernateUtil.beginTransaction();
+			Session session = HibernateUtil.getCurrentSession();
 
-		HibernateUtil.beginTransaction();
-		Session session = HibernateUtil.getCurrentSession();
-					
-		if (nextAction.equals("save")){
-			int auth_scheme;
-			if (id == -1){
-				// create
-				auth_scheme = IMPI.generateAuthScheme(form.isAka1(), form.isAka2(), form.isMd5(), 
-						form.isEarly(), form.isAll());	
+			if (nextAction.equals("save")){
+				int auth_scheme;
+				IMPI impi;
 				
-				IMSU imsu = IMSU_DAO.get_by_ID(session, form.getId_imsu());
-				IMPI impi = IMPI_DAO.insert(session, form.getIdentity(), form.getSecretKey(), auth_scheme, form.getIp(), 
-						HexCodec.decode(form.getAmf()), HexCodec.decode(form.getOp()), new String (HexCodec.decode(form.getSqn())),
-						imsu.getId());
-				form.setId(impi.getId());
-			}
-			else{
-				// update
-				 auth_scheme = IMPI.generateAuthScheme(form.isAka1(), form.isAka2(), form.isMd5(), 
-						form.isEarly(), form.isAll());				
+				if (id == -1){
+					// create
+					impi = new IMPI();
+				}
+				else{
+					// update
+					impi = IMPI_DAO.get_by_ID(session, id);
+				}
+				auth_scheme = IMPI.generateAuthScheme(form.isAka1(), form.isAka2(), form.isMd5(), form.isDigest(), form.isHttp_digest(),
+					form.isEarly(), form.isNass_bundle(), form.isAll());	
 				
-				IMSU imsu = IMSU_DAO.get_by_ID(session, form.getId_imsu());
-				IMPI_DAO.update(session, form.getId(), form.getIdentity(), form.getSecretKey(), auth_scheme, form.getIp(),
-						HexCodec.decode(form.getAmf()), HexCodec.decode(form.getOp()), new String (HexCodec.decode(form.getSqn())),
-						imsu.getId());
-			}	
-			
-			if ((auth_scheme & 15) == 15){
-				form.setAll(true);
-				form.setAka1(false);
-				form.setAka2(false);
-				form.setMd5(false);
-				form.setEarly(false);
-			}
-		}
-		else if (nextAction.equals("refresh")){
-			IMPI impi = (IMPI) IMPI_DAO.get_by_ID(session, id);
-			if (impi != null){
-				form.setIdentity(impi.getIdentity());
-				form.setSecretKey(impi.getK());
-				int auth_scheme = impi.getAuth_scheme();
-				if ((auth_scheme & 15) == 15){
+				impi.setIdentity(form.getIdentity());
+				impi.setK(form.getSecretKey());
+				impi.setAuth_scheme(auth_scheme);
+				impi.setIp(form.getIp());
+				impi.setAmf(HexCodec.decode(form.getAmf()));
+				impi.setOp(HexCodec.decode(form.getOp()));
+				impi.setSqn(new String(HexCodec.decode(form.getSqn())));
+				impi.setId_imsu(form.getId_imsu());
+				//impi.setDefault_auth_scheme()
+				impi.setLine_identifier(form.getLine_identifier());
+
+				if (id == -1){
+					IMPI_DAO.insert(session, impi);
+					form.setId(impi.getId());
+				}
+				else{
+					IMPI_DAO.update(session, impi);
+				}
+				
+				if ((auth_scheme & 127) == 127){
 					form.setAll(true);
 					form.setAka1(false);
 					form.setAka2(false);
 					form.setMd5(false);
+					form.setDigest(false);
+					form.setHttp_digest(false);
 					form.setEarly(false);
+					form.setNass_bundle(false);
+				}
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+				
+			}
+			else if (nextAction.equals("refresh")){
+				IMPI impi = (IMPI) IMPI_DAO.get_by_ID(session, id);
+				//List associated_IMPUs = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
+				
+				IMPI_Load.setForm(form, impi);
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+				
+			}
+			else if (nextAction.equals("add_impu")){
+				IMPU impu = IMPU_DAO.get_by_Identity(session, form.getImpu_identity());	
+				if (impu != null){
+					IMPI_IMPU_DAO.insert(session, form.getId(), impu.getId(), CxConstants.IMPU_user_state_Not_Registered);
 				}
 				else{
-					if ((auth_scheme & 1) == 1){
-						form.setAka1(true);
-					}
-					if ((auth_scheme & 2) == 1){
-						form.setAka2(true);
-					}
-					if ((auth_scheme & 4) == 1){
-						form.setMd5(true);
-					}
-					if ((auth_scheme & 8) == 1){
-						form.setEarly(true);
-					}
+					ActionMessages actionMessages = new ActionMessages();
+					actionMessages.add(Globals.MESSAGE_KEY, new ActionMessage("impi.error.associated_impu_not_found"));
+					saveMessages(request, actionMessages);
 				}
-				form.setIp(impi.getIp());
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 				
-				form.setAmf(HexCodec.encode(impi.getAmf()));
-				form.setOp(HexCodec.encode(impi.getOp()));
-				form.setSqn(HexCodec.encode(impi.getSqn()));
+				// reload the associated IMPUs
+//				List list = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
+//				form.setAssociated_impu_set(list);
+			}
+			else if (nextAction.equals("add_imsu")){
+				IMPI impi = (IMPI) IMPI_DAO.get_by_ID(session, id);
+				IMSU imsu = IMSU_DAO.get_by_Name(session, form.getImsu_name());
 				
-				form.setId_imsu(impi.getId_imsu());
+				if (imsu != null){
+					impi.setId_imsu(imsu.getId());
+					IMPI_DAO.update(session, impi);
+				}
+				else{
+					ActionMessages actionMessages = new ActionMessages();
+					actionMessages.add(Globals.MESSAGE_KEY, new ActionMessage("impi.error.associated_imsu_not_found"));
+					saveMessages(request, actionMessages);
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
-		}
-		else if (nextAction.equals("add_impu")){
-			IMPU impu = IMPU_DAO.get_by_Identity(session, form.getImpu_identity());	
-			if (impu != null){
-				IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
-				IMPI_IMPU_DAO.insert(session, impi.getId(), impu.getId(), (short)0);
+			else if (nextAction.equals("delete")){
+				IMPI_DAO.delete_by_ID(session, form.getId());
+				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
-			else{
-				ActionMessages actionMessages = new ActionMessages();
-				actionMessages.add(Globals.MESSAGE_KEY, new ActionMessage("impi.error.associated_impu_not_found"));
-				saveMessages(request, actionMessages);
+			else if (nextAction.equals("delete_associated_IMSU")){
+				IMPI impi = IMPI_DAO.get_by_ID(session, id);
+				impi.setId_imsu(null);
+				IMPI_DAO.update(session, impi);
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
+			
+			else if (nextAction.equals("delete_associated_IMPU")){
+				IMPI_IMPU_DAO.delete_by_IMPI_and_IMPU_ID(session, id, form.getAssociated_ID());
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}
+		
+			// reload the associated IMPUs
+			List list = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
+			if (list == null){
+				list = new ArrayList();
+			}
+			request.setAttribute("associated_IMPUs", list);
+			IMSU associated_IMSU = null;
+
+			if (id != -1){
+				IMPI impi = IMPI_DAO.get_by_ID(session, id);
+				if (impi != null)
+					associated_IMSU = IMSU_DAO.get_by_ID(session, impi.getId_imsu());
+			}
+			request.setAttribute("associated_IMSU", associated_IMSU);
+	    	form.setSelect_auth_scheme(WebConstants.select_auth_scheme);
 		}
-		else if (nextAction.equals("delete")){
-			System.out.println("Delete!!!!!!!!!!");
+		catch(DatabaseException e){
+			e.printStackTrace();
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			return forward;
 		}
-		else if (nextAction.equals("delete2")){
-			System.out.println("Delete2222222!!!!!!!!!!");
+		finally{
+			HibernateUtil.commitTransaction();
+			HibernateUtil.closeSession();
 		}
 		
-		//reload the imsuList
-		List imsuList= IMSU_DAO.get_all(session);		
-		form.setSelect_imsu(imsuList);
-		
-		// reload the associated IMPUs
-		IMPI impi = IMPI_DAO.get_by_ID(session, id);
-		List list = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
-		form.setAssociated_impu_set(list);
-
-		HibernateUtil.commitTransaction();
-		HibernateUtil.closeSession();
-
 		if (nextAction.equals("ppr")){
 			System.out.println("We have the ppr here!");
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		}
 		else if (nextAction.equals("rtr")){
 			System.out.println("We have the rtr here!");
-			session = HibernateUtil.getCurrentSession();
+			
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
+			
 			DiameterStack stack = HSSContainer.getInstance().diamStack;
-			impi = IMPI_DAO.get_by_ID(session, form.getId());
+			IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
 			List impiList = new ArrayList();
 			impiList.add(impi);
 			RTR.sendRequest(stack.diameterPeer, null, impiList,
 					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		}		
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+		
 		return forward;
 	}
 }

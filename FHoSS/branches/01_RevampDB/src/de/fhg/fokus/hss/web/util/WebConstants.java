@@ -43,6 +43,11 @@
 
 package de.fhg.fokus.hss.web.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import de.fhg.fokus.hss.cx.CxConstants;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -52,4 +57,35 @@ public class WebConstants {
 	public static final String FORWARD_SUCCESS = "success";
 	public static final String FORWARD_FAILURE = "failure";
 	public static final String FORWARD_DELETE = "delete";
+	
+	public static final List select_identity_type;
+	static{
+		select_identity_type = new ArrayList();
+		select_identity_type.add(CxConstants.Identity_Type.Public_User_Identity);
+		select_identity_type.add(CxConstants.Identity_Type.Wildcarded_PSI);
+		select_identity_type.add(CxConstants.Identity_Type.Distinct_PSI);
+	}
+
+	public static final List select_auth_scheme;
+	static{
+		select_auth_scheme = new ArrayList();
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_AKAv1);
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_AKAv2);
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_MD5);
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_Digest);
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5);
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_Early);
+		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_NASS_Bundle);
+	}
+	
+	public static final List select_user_state;
+	static{
+		select_user_state = new ArrayList();
+		select_user_state.add(CxConstants.IMPU_user_state_Not_Registered);
+		select_user_state.add(CxConstants.IMPU_user_state_Registered);
+		select_user_state.add(CxConstants.IMPU_user_state_Unregistered);
+		select_user_state.add(CxConstants.IMPU_user_state_Auth_Pending);
+	}
+	
+	
 }

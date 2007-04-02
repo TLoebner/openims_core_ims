@@ -3,13 +3,21 @@
 /* + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + */
 
 /* basics: */
-html, body, div, p, h1, h2, h3, span, a, table, td, form, img {
+html, body, div, p, h1, h2, h3, span, a, td, form, img {
 	margin:					0;
 	padding:				0;
 	font-family:			Verdana, Arial, Helvetica, sans-serif;
 	color:					#333333;
-	text-align:				left;
+	/*text-align:				left;*/
 	line-height:			140%; }
+
+table{
+	padding:				0;
+	font-family:			Verdana, Arial, Helvetica, sans-serif;
+	color:					#333333;
+	/*text-align:				left;*/
+	line-height:			140%; }
+
 
 pre {
 	margin:					0;
@@ -24,13 +32,13 @@ pre {
 	padding-left:			3px;
 	font-family:			Verdana, Arial, Helvetica, sans-serif;
 	border:					thin solid #EB9015;
-	background-color:		#FDDE96; }
+	background-color:		#FFFFFF; }
 .inputtext_readonly {
 	padding-left:			3px;
 	font-family:			Verdana, Arial, Helvetica, sans-serif;
 	color:					#BBBBBB;
 	border:					thin solid #EB9015;
-	background-color:		#FDDE96; }
+	background-color:		#F0F0F0; }
 img {
 	border:					none; }
 

@@ -13,7 +13,7 @@
 	<property name="type" type="int" not-null="true"/>
 	<property name="barring" type="int" not-null="true" />
 	<property name="user_state" type="int" />		
-	<property name="id_impu_implicitset" type="int" />		
+	<property name="id_implicit_set" type="int" />		
 	<property name="wildcard_psi" type="string" />
 	<property name="display_name" type="string" />	
 	<property name="psi_activation" type="int" />

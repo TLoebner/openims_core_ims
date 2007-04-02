@@ -23,21 +23,17 @@
 
 </head>
 <body>
+<center><h1><br/><br/>IMS Subscription - Search Results </h1></center>
 
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1>IMS Subscription - Search Results </h1><br/><br/></td>
-</tr>
-</table>
-</center>
-
-<center>
-	<table class="as" width="500">
+<table align=center valign=middle height=100%>
+	<tr><td>
+	 <table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">	
 		<logic:notEmpty name="resultList">
 			<tr class="header">
-				<td class="header"> ID: </td>
-				<td class="header"> Name: </td>
+				<td class="header"> ID </td>
+				<td class="header"> Name </td>
+				<td class="header"> S-CSCF Name </td>
+				<td class="header"> Diameter Name </td>
 			</tr>
 				
 			<logic:iterate name="resultList" id="imsu"
@@ -51,7 +47,12 @@
 							<bean:write name="imsu" property="name" />
 						</a>	
 					</td>
-						
+					<td>
+						<bean:write name="imsu" property="scscf_name" />
+					</td>
+					<td>
+						<bean:write name="imsu" property="diameter_name" />
+					</td>
 				</tr>
 			</logic:iterate>
 			
@@ -59,7 +60,8 @@
 
 			%>
 			<tr>
-				<td colspan="3" class="header"><script type="text/javascript"
+				<td colspan="3" class="header">
+				<script type="text/javascript"
 					language="JavaScript">
 					function submitForm(pageId){
 						document.IMSU_SearchForm.page.value = pageId;
@@ -86,7 +88,7 @@
 								<% }
 							}
 							%>
-			</td>
+							</td>
 							<td><bean:message key="result.rowsPerPage" /><br>
 							<html:hidden property="page"></html:hidden> 
 							<html:select property="rowsPerPage" onchange="javascript:document.IMSU_SearchForm.submit();">
@@ -115,7 +117,7 @@
 		</logic:empty></td>
 		</td></tr>
 		</table>		
-</center>
-
+	</td></tr>
+</table>
 </body>
 </html>

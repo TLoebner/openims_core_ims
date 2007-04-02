@@ -65,6 +65,15 @@ public class IMSU_DAO {
 		session.saveOrUpdate(imsu);
 	}
 
+	public static void update(Session session, int id_imsu, String scscf_name, String diameter_name){
+		Query query;
+		query = session.createSQLQuery("update imsu set scscf_name=?, diameter_name=? where id=?");
+		query.setString(0, scscf_name);
+		query.setString(1, diameter_name);
+		query.setInteger(2, id_imsu);
+		query.executeUpdate();
+	}
+	
 	public static IMSU get_by_ID(Session session, int id){
 		Query query;
 		query = session.createSQLQuery("select * from imsu where id=?")
@@ -74,6 +83,17 @@ public class IMSU_DAO {
 		return (IMSU) query.uniqueResult();
 	}
 	
+	public static IMSU get_by_IMPI_ID(Session session, int id_impi){
+		Query query;
+		query = session.createSQLQuery("select * from imsu inner join impi on imsu.id=impi.id_imsu where impi.id=?")
+			.addEntity(IMSU.class);
+		query.setInteger(0, id_impi);
+		List result = query.list();
+
+		if (result != null && result.size() > 0)
+			return (IMSU)result.get(0);
+		return null;
+	}	
 	public static IMSU get_by_Name(Session session, String name){
 		Query query;
 		query = session.createSQLQuery("select * from imsu where name like ?")
@@ -87,6 +107,20 @@ public class IMSU_DAO {
 		query = session.createSQLQuery("select * from imsu where name like ?")
 			.addEntity(IMSU.class);
 		query.setString(0, "%" + name + "%");
+
+		Object[] result = new Object[2];
+		result[0] = new Integer(query.list().size());
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		result[1] = query.list();
+		return result;
+	}
+	
+	public static Object[] get_by_Wildcarded_SCSCF_Name(Session session, String scscf_name, int firstResult, int maxResults){
+		Query query;
+		query = session.createSQLQuery("select * from imsu where scscf_name like ?")
+			.addEntity(IMSU.class);
+		query.setString(0, "%" + scscf_name + "%");
 
 		Object[] result = new Object[2];
 		result[0] = new Integer(query.list().size());

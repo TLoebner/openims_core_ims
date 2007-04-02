@@ -52,6 +52,7 @@ import org.hibernate.Session;
 
 import de.fhg.fokus.hss.diam.*;
 import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -92,6 +93,7 @@ public class HSSContainer {
 		
         Session session = HibernateUtil.getCurrentSession();
         //IMPI_DAO.getAll(session, 10, 10);
+        //IMPI_IMPU_DAO.insert(session,13,3, 0);
         HibernateUtil.commitTransaction();
         HibernateUtil.closeSession();
 		
@@ -105,6 +107,7 @@ public class HSSContainer {
 	
 	public static void main(String args[]){
 		HSSContainer hssContainer = HSSContainer.getInstance();
+
 		waitForExit();
 		try{
 			hssContainer.tomcatServer.stopTomcat();

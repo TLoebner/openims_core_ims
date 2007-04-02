@@ -41,60 +41,43 @@
   * 
   */
 
-package de.fhg.fokus.hss.db.model;
+package de.fhg.fokus.hss.db.op;
 
+
+import java.util.List;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class PreferredSet {
-	private int id;
-	private int id_set;
-	private String name;
-	private String scscf_name;
-	private int priority;
+public class Preferred_SCSCF_Set_DAO {
 	
-	public PreferredSet(){}
-
-	public int getId() {
-		return id;
+	public static List get_all_from_set(Session session, int id_set){
+		Query query = session.createSQLQuery("select * from preferred_set where id_set=?")
+			.addEntity(Preferred_SCSCF_Set.class);
+		query.setInteger(0, id_set);
+		return query.list();
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public static List get_all_sets(Session session){
+		Query query = session.createSQLQuery("select distinct id_set, name from preferred_set")
+			.addEntity(Preferred_SCSCF_Set.class);
+		return query.list();
 	}
-
-	public int getId_set() {
-		return id_set;
+	
+	public static int delete_set_by_set_ID(Session session, int id_set){
+		Query query = session.createSQLQuery("delete from preferred_set where id_set=?");
+		query.setInteger(0, id_set);
+		return query.executeUpdate();
 	}
-
-	public void setId_set(int id_set) {
-		this.id_set = id_set;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public int getPriority() {
-		return priority;
-	}
-
-	public void setPriority(int priority) {
-		this.priority = priority;
-	}
-
-	public String getScscf_name() {
-		return scscf_name;
-	}
-
-	public void setScscf_name(String scscf_name) {
-		this.scscf_name = scscf_name;
-	}
-
+	
+/*	public static int delete_SCSCF_Name_from_set(Session session, String scscf_name){
+		Query query = session.createQuery("delete from PreferredSet where scscf_name like ?");
+		query.setString(0, scscf_name);
+		return query.executeUpdate();
+	}*/
 }
-

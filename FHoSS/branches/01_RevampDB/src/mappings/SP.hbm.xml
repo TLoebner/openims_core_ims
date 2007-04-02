@@ -10,7 +10,7 @@
 	</id>
 
 	<property name="name" type="string" not-null="true"/>
-	<property name="cn_service_auth" type="int"/>
+	<property name="cn_service_auth" type="java.lang.Integer"/>
 					
 </class>
 </hibernate-mapping>

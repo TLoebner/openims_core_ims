@@ -9,10 +9,10 @@
 		<generator class="native"/>
 	</id>
 
-	<property name="hopbyhop" type="long" />
-	<property name="endtoend" type="long"/>
-	<property name="id_impu" type="int" />
-	<property name="id_impi" type="int"/>
+	<property name="hopbyhop" type="java.lang.Long" />
+	<property name="endtoend" type="java.lang.Long"/>
+	<property name="id_impu" type="java.lang.Integer" />
+	<property name="id_impi" type="java.lang.Integer"/>
 	<property name="type" type="short"/>
 	<property name="subtype" type="short"/>	
 	<property name="grp" type="int"/>	

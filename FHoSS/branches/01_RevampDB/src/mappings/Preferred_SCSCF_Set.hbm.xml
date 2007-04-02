@@ -3,7 +3,7 @@
     "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
     
 <hibernate-mapping>
-<class name="de.fhg.fokus.hss.db.model.PreferredSet" table="preferred_set">
+<class name="de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set" table="preferred_scscf_set">
 	
 	<id name="id">
 		<generator class="native"/>

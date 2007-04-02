@@ -91,6 +91,9 @@ public class IMSU_Search extends Action{
 			else if (form.getName() != null && !form.getName().equals("")){
 				queryResult = IMSU_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
 			}
+			else if (form.getScscf_name() != null && !form.getScscf_name().equals("")){
+				queryResult = IMSU_DAO.get_by_Wildcarded_SCSCF_Name(session, form.getScscf_name(), firstResult, rowsPerPage);
+			}
 			else{
 				queryResult = IMSU_DAO.get_all(session, firstResult, rowsPerPage);
 			}

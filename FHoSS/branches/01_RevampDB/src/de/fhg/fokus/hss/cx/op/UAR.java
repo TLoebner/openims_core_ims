@@ -96,7 +96,10 @@ public class UAR {
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
 			VisitedNetwork visited_network = VisitedNetwork_DAO.get_by_Identity(session, visited_network_name);
-
+			if (visited_network == null){
+				throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
+			}
+			
 			// 1. check if the identities exist in hss
 			IMPU impu = IMPU_DAO.get_by_Identity(session, publicIdentity);
 			IMPI impi = IMPI_DAO.get_by_Identity(session, privateIdentity);
@@ -114,7 +117,7 @@ public class UAR {
 			
 			// 3. check for IMPU if is barred
 			if (impu.getBarring() == 1){
-				List impuList = IMPU_DAO.get_others_from_set(session, impu.getId(), impu.getId_impu_implicitset());
+				List impuList = IMPU_DAO.get_others_from_set(session, impu.getId(), impu.getId_implicit_set());
 				if (impuList == null || impuList.size() == 0){
 					throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_AUTHORIZATION_REJECTED);
 				}

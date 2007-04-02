@@ -6,7 +6,9 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="de.fhg.fokus.hss.util.SecurityPermissions" %>
+<%@ page import=" java.util.*, de.fhg.fokus.hss.util.SecurityPermissions, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.cx.CxConstants, 
+	de.fhg.fokus.hss.web.util.WebConstants" %>
+	
 <jsp:useBean id="resultList" type="java.util.List" scope="request"></jsp:useBean>
 <jsp:useBean id="maxPages" type="java.lang.String" scope="request"></jsp:useBean>
 <jsp:useBean id="currentPage" type="java.lang.String" scope="request"></jsp:useBean>
@@ -24,66 +26,93 @@
 </head>
 <body>
 
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1>Public User Identity - Search Results </h1><br/><br/></td>
-</tr>
-</table>
-</center>
+<body>
+	<center><h1><br/><br/> Public User Identity - Search Results </h1></center>
+	<table align=center valign=middle height=100%>
+		<tr><td>
+	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">	
 
-<center>
-	<table class="as" width="500">
-		<logic:notEmpty name="resultList">
-			<tr class="header">
-				<td class="header"> ID: </td>
-				<td class="header"> <bean:message key="impu.head.id" />: </td>
-				<td class="header"> Barring: </td>
-				<td class="header"> Implicit-Set: </td>
-				<td class="header"> <bean:message key="impu.head.regStatus" />: </td>		
-				<td class="header"> Delete: </td>									
-			</tr>
-				
-			<logic:iterate name="resultList" id="impu"
-				type="de.fhg.fokus.hss.db.model.IMPU" indexId="ix">
-				<tr class="<%= ix.intValue()%2 == 0 ? "even" : "odd" %>">
-					<td>
-						<bean:write name="impu" property="id" />
-					</td>
-					<td> 
-						<a href="/hss.web.console/IMPU_Load.do?id=<bean:write name="impu" property="id" />"> 
-							<bean:write name="impu" property="identity" />
-						</a>	
-					</td>
-					<td>
-						<%
-							if (impu.getBarring() == 1){
-								out.println("true");
-							}
-							else{
-								out.println("false");
-							}
-						%>
-					</td>
-					<td>
-						<bean:write name="impu" property="id_impu_implicitset" />
-					</td>
-						
-					<td>
-						<%
-							out.println("statusul");
-						%>
-					</td>
-					<td>
-						<form method="post" action="/hss.web.console/IMPU_Delete.do" target="content" style="text-align: center">
-							<input type="hidden" name="id" value="<bean:write name="impu" property="id" />"> 
-							<input type="image" src="/hss.web.console/images/progress_rem.gif">
-						</form>
-					</td>
+				<tr class="header">
+					<td class="header"> ID </td>
+					<td class="header"> Identity </td>
+					<td class="header"> Implicit-Set ID </td>
+					<td class="header"> Type </td>
+					<td class="header"> Reg. Status </td>
+					<td class="header"> Barring </td>
 				</tr>
-			</logic:iterate>
+
+				<%
+				if (resultList != null && resultList.size() > 0){
+					IMPU impu;
+					int idx = 0;
+					Iterator it = resultList.iterator();
+					
+					while (it.hasNext()){
+						impu = (IMPU) it.next();
+				%>		
+					<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
+						<td>
+							<%= impu.getId() %>
+						</td>
+						<td> 
+							<a href="/hss.web.console/IMPU_Load.do?id=<%= impu.getId() %>"> 
+								<%= impu.getIdentity() %>
+							</a>	
+						</td>
+						<td>
+							<%= impu.getId_implicit_set() %>
+						</td>
+						
+						<td>
+							<%= ((CxConstants.Identity_Type)WebConstants.select_identity_type.get(impu.getType())).getName() %>
+						</td>
+
+						<td>
+							<%
+								if (impu.getUser_state() == CxConstants.IMPU_user_state_Registered){
+									out.println("Registered");
+								}
+								else if (impu.getUser_state() == CxConstants.IMPU_user_state_Not_Registered){
+									out.println("Not-Registered");
+								}
+								else if (impu.getUser_state() == CxConstants.IMPU_user_state_Unregistered){
+									out.println("Unregistered");
+								}
+								if (impu.getUser_state() == CxConstants.IMPU_user_state_Auth_Pending){
+									out.println("Auth-Pending");
+								}
+							%>
+						</td>
+
+						<td>
+							<% 
+								if (impu.getBarring() == 1){
+									out.println("true");
+								}
+								else{
+									out.println("false");
+								}
+							 %>
+						</td>
+					</tr>
+				<%		
 			
-			<%if (Integer.parseInt(maxPages) > 1) {
+						idx++;		
+					} //while
+				} // if
+				else{	
+				%>
+					<tr>
+						<td>
+							<bean:message key="result.emptyResultSet" />
+						</td>
+					</tr>						
+				<%
+				}
+				%>	
+
+			<%
+				if (Integer.parseInt(maxPages) > 1) {
 
 			%>
 			<tr>
@@ -135,15 +164,10 @@
 			<%}
 
 		%>
-		</logic:notEmpty> 
 		
-		<tr><td>
-		<logic:empty name="resultList">
-			<bean:message key="result.emptryResultSet" />
-		</logic:empty></td>
-		</td></tr>
-		</table>		
-</center>
-
+		</table>
+	</td></tr>
+</table>	
+		
 </body>
 </html>

@@ -215,6 +215,7 @@ public class MAR {
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
 					if (!scscf_name.equals(server_name)){
+						
 						IMSU_DAO.update(session, impi.getId_imsu(), server_name, orig_host);
 						IMPU_DAO.update(session, impu.getId(), CxConstants.IMPU_user_state_Auth_Pending);
 						UtilAVP.addPublicIdentity(response, publicIdentity);

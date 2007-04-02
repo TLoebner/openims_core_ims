@@ -57,7 +57,15 @@ import de.fhg.fokus.hss.db.model.IMSU;
  */
 public class IMPI_DAO {
 
-	public static IMPI insert(Session session, String identity, String key, int auth_scheme, String ip, 
+	public static void insert(Session session, IMPI impi){
+		session.save(impi);
+	}
+	
+	public static void update(Session session, IMPI impi){
+		session.saveOrUpdate(impi);
+	}	
+
+/*	public static IMPI insert(Session session, String identity, String key, int auth_scheme, String ip, 
 			byte[] amf, byte[] op, String sqn, int id_imsu){
 		
 		IMPI impi = new IMPI();
@@ -90,7 +98,7 @@ public class IMPI_DAO {
 		
 		return impi;
 	}
-
+*/
 	public static IMPI update(Session session, int id, String sqn){
 		
 		IMPI impi = (IMPI) session.load(IMPI.class, id);
@@ -148,7 +156,7 @@ public class IMPI_DAO {
 	
 	public static List get_all_by_IMSU_ID(Session session, int id_imsu){
 		Query query;
-		query = session.createSQLQuery("select * from impi where id_imsu=?")
+		query = session.createSQLQuery("select * from impi where id_imsu=? order by id")
 			.addEntity(IMPI.class);
 		query.setInteger(0, id_imsu);
 		

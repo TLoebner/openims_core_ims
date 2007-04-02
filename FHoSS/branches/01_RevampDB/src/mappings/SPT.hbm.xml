@@ -17,7 +17,7 @@
 	<property name="method" type="string"/>	
 	<property name="header" type="string"/>	
 	<property name="header_content" type="string"/>		
-	<property name="session_case" type="int"/>		
+	<property name="session_case" type="java.lang.Integer"/>		
 	<property name="sdp_line" type="string"/>		
 	<property name="sdp_line_content" type="string"/>			
 	<property name="registration_type" type="int"/>				

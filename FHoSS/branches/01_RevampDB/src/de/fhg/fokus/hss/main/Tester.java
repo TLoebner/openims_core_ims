@@ -10,6 +10,7 @@ import java.util.Set;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.auth.HexCodec;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMSU;
@@ -42,6 +43,25 @@ public class Tester extends Thread{
 		//IMPI_IMPU_DAO.get_IMPI(session, 2);
 		long t02= System.currentTimeMillis();
 		System.out.println("Delta select t0: " + (t02 - t01));
+		
+		IMPI impi = new IMPI();
+		impi.setIdentity("sasas");
+		impi.setK("saasa");
+		impi.setAuth_scheme(1);
+		impi.setIp("");
+		impi.setAmf(HexCodec.decode("0000"));
+		impi.setOp(HexCodec.decode("0000000000"));
+		impi.setSqn(new String(HexCodec.decode("1111")));
+		impi.setId_imsu(-1);
+		//impi.setDefault_auth_scheme()
+		impi.setLine_identifier("erere");
+		
+		IMPI_DAO.insert(session, impi);
+		impi.setIdentity("id2");
+		IMPI_DAO.update(session, impi);
+		
+		IMPI impi2 = IMPI_DAO.get_by_ID(session, impi.getId());
+		System.out.println("\n\nIMPI Identitu:" + impi2.getIdentity());
 		
 		int xmed = 0;
 		int cnt = 0;

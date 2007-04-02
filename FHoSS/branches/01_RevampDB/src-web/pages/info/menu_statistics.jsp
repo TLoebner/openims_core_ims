@@ -18,13 +18,8 @@
 	<tr>
 		<td id="bound_left">&nbsp;</td>
 		<td id="level01" valign="top" bgcolor="#FFFFFF">
-
-			<h1> Statistics </h1>
-		
+			<h2> Statistics </h2>
 			<ul>
-			  <li> <a href="overview.jsp" target="content">Overview</a> <br>
-			  <li><a href="commands.jsp" target="content">Command Counter</a> <br>
-			  <li><a href="data.jsp" target="content">Data content</a> <br>
 			  <li><a href="logging.jsp" target="content">Logging</a> <br>
 			</ul>  
 		</td>
