@@ -71,4 +71,8 @@ void P_drop_ipsec(r_contact *c);
 		
 int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2);
 int P_add_via_received(struct sip_msg *msg,char *str1, char *str2);		
+
+int P_follows_via_list(struct sip_msg *rpl,char *str1, char *str2);
+int P_enforce_via_list(struct sip_msg *rpl,char *str1, char *str2);
+
 #endif /* P_CSCF_SECURITY_H */

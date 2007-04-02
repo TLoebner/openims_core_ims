@@ -764,6 +764,7 @@ unsigned long qm_available(struct qm_block* qm)
 	{
 		struct qm_frag* f;
 		int i;		
+		int memlog=L_ERR;
 		mem_counter *root=0,*x;
 		lock_get(process_lock);
 		if (process_no!=0)

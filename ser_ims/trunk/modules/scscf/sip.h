@@ -60,7 +60,7 @@
 #include "../../parser/contact/parse_contact.h"
 #include "../../parser/parse_rr.h"
 
-int cscf_add_header_first(struct sip_msg *msg, str *hdr);
+int cscf_add_header_first(struct sip_msg *msg, str *hdr,int type);
 int cscf_add_header(struct sip_msg *msg, str *hdr,int type);
 int cscf_add_header_rpl(struct sip_msg *msg, str *hdr);
 int cscf_add_contact(struct sip_msg *msg,str uri,int expires);
@@ -96,6 +96,12 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_record_routes(struct sip_msg *msg);
 
 struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_field *start);
+
+struct hdr_field* cscf_get_next_via_hdr(struct sip_msg *msg,struct hdr_field *start);
+str cscf_get_next_via_str(struct sip_msg *msg, struct hdr_field * h, int pos, struct hdr_field **h_out, int *pos_out);
+
+int cscf_via_matching( struct via_body *req_via, struct via_body *rpl_via );
+int cscf_str_via_matching(str *sreq_via, str *srpl_via);
 
 str cscf_get_realm_from_ruri(struct sip_msg *msg);
 

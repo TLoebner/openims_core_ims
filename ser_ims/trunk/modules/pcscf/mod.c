@@ -222,6 +222,9 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * <p>
  * - P_check_via_sent_by() - checks if the sent-by parameter in the first Via header equals the source IP address of the message
  * - P_add_via_received() - adds a received parameter to the first via header with the srouce IP address 
+ * <p>
+ * - P_follows_via_list() - checks if a response coming from a UE contains the same Via headers sent in the corresponding request
+ * - P_enforce_via_list() - enforce a response coming from a UE to contain the same Via headers sent in the corresponding request
  */
 static cmd_export_t pcscf_cmds[]={
 	{"P_add_path",					P_add_path, 				0, 0, REQUEST_ROUTE},
@@ -270,6 +273,9 @@ static cmd_export_t pcscf_cmds[]={
 
 	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
 	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
+	
+	{"P_follows_via_list",			P_follows_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"P_enforce_via_list",			P_enforce_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	
 	{0, 0, 0, 0, 0}
 }; 

@@ -105,7 +105,7 @@ int I_THIG_add_Path(struct sip_msg* msg, char* str1, char* str2)
 	str x;
 	LOG(L_ALERT,"DBG:"M_NAME":I_add_THIG_Path: Adding THIG Path header\n");
 	STR_PKG_DUP(x,icscf_thig_path_str,"pkg");
-	ret=cscf_add_header_first(msg,&x);
+	ret=cscf_add_header_first(msg,&x,HDR_OTHER_T);
 	if (!ret){
 		LOG(L_ALERT,"DBG:"M_NAME":I_add_THIG_Path: Error adding Path for THIG\n");
 		return CSCF_RETURN_FALSE;
@@ -131,7 +131,7 @@ int I_THIG_add_RR(struct sip_msg* msg, char* str1, char* str2)
 	str x;
 	LOG(L_ALERT,"DBG:"M_NAME":I_add_THIG_RR: Adding THIG Record-Route header\n");
 	STR_PKG_DUP(x,icscf_thig_rr_str,"pkg");
-	ret=cscf_add_header_first(msg,&x);
+	ret=cscf_add_header_first(msg,&x,HDR_RECORDROUTE_T);
 	if (!ret){
 		LOG(L_ALERT,"DBG:"M_NAME":I_add_THIG_RR: Error adding Record-Route for THIG\n");
 		return CSCF_RETURN_FALSE;

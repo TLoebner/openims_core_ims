@@ -61,6 +61,7 @@
 #include "../../data_lump_rpl.h"
 #include "../../parser/parse_to.h"
 #include "../../parser/parse_expires.h"
+#include "../../parser/parse_via.h"
 #include "../../parser/parse_content.h"
 #include "../../parser/parse_nameaddr.h"
 #include "../../parser/digest/digest.h"
@@ -80,7 +81,7 @@ extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 
  * @param content - the str containing the new header
  * @returns 1 on succes, 0 on failure
  */
-int cscf_add_header_first(struct sip_msg *msg, str *hdr)
+int cscf_add_header_first(struct sip_msg *msg, str *hdr,int type)
 {
 	struct hdr_field *first;
 	struct lump* anchor,*l;
@@ -93,7 +94,7 @@ int cscf_add_header_first(struct sip_msg *msg, str *hdr)
 		return 0;
 	}
 
-	if (!(l=insert_new_lump_before(anchor, hdr->s,hdr->len,HDR_ROUTE_T))){
+	if (!(l=insert_new_lump_before(anchor, hdr->s,hdr->len,type))){
 		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header_first: error creating lump for header\n" );
 		return 0;
 	}	
@@ -926,7 +927,7 @@ int cscf_remove_first_route(struct sip_msg *msg,str value)
 				STR_APPEND(x,route_hdr_s);
 				STR_APPEND(x,route);
 				STR_APPEND(x,route_hdr_e);				
-				if (!cscf_add_header_first(msg,&x))
+				if (!cscf_add_header_first(msg,&x,HDR_ROUTE_T))
 					pkg_free(x.s);
 			}
 		}
@@ -997,7 +998,7 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h)
 				STR_APPEND(x,route_hdr_s);
 				STR_APPEND(x,route);
 				STR_APPEND(x,route_hdr_e);				
-				if (!cscf_add_header_first(msg,&x))
+				if (!cscf_add_header_first(msg,&x,HDR_ROUTE_T))
 					pkg_free(x.s);
 			}
 		}
@@ -1079,6 +1080,234 @@ struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_fiel
 	}	
 	return 0;
 }
+
+/**
+ * Returns the next via header
+ * @param msg - the SIP message
+ * @param start - The header to start searching from or NULL if from first header 
+ * @returns header field on success or NULL on error 
+ */
+struct hdr_field* cscf_get_next_via_hdr(struct sip_msg *msg,struct hdr_field *start)
+{
+	struct hdr_field *h;
+	
+	if (!msg) return 0;
+	
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_next_via: error parsing headers\n");
+		return 0;
+	}
+	if (start) h = start->next;
+	else h = msg->headers;
+	while (h){
+		if (h->type == HDR_VIA_T)
+			return h;
+		h = h->next;
+	}	
+	return 0;
+}
+
+/**
+ * trims the str 
+ * @param s - str param to trim
+ */
+static int str_trim(str *s)
+{
+	int i;
+	for (i = 0;i < s->len; i++)
+	{
+		if (s->s[i] != '\r' && s->s[i] != '\t' && s->s[i] != ' ')
+		{
+			break;
+		}
+	}
+	s->s = s->s + i;	
+	s->len -= i;
+
+	for (i = s->len;i >=0; i--)
+	{
+		if (s->s[i] == '\r' && s->s[i] == '\t' && s->s[i] == ' ')
+		{
+			s->len--;
+		}
+		else
+		{
+			break;
+		}
+	}
+	return 1;
+}
+
+/**
+ * Returns the next via str
+ * \note in order to check if there are more headers to parse, check param h_out with NULL after obtain a valid via 
+ *  str. If you will pass a NULL param for h then first header will be returned again.
+ * @param msg - the SIP message
+ * @param h - The header to start searching from or NULL if from first header 
+ * @param pos - The position in the header to start searching
+ * @param h_out - The header to start next searching operations - it will be used for subsequent calls
+ * @param pos_out - The position in the header to start next searching operation - it will be used for subsequent calls
+ * @returns header field on success or NULL on error 
+ */
+str cscf_get_next_via_str(struct sip_msg *msg, struct hdr_field * h, int pos, struct hdr_field **h_out, int *pos_out)
+{
+	char *viab;
+	int i, viab_start;
+	str via_str={0,0};
+	if (!h_out || !pos_out)
+		return via_str; 
+	
+	if (!h)
+	{
+		h = cscf_get_next_via_hdr(msg,0);
+		pos = 0;
+	}
+
+	viab = h->body.s;
+	i = viab_start = pos;
+
+	while (i < h->body.len)
+	{
+		if (viab[i] == ',')
+		{
+			via_str.s = viab + viab_start;
+			via_str.len = i - viab_start;
+			str_trim(&via_str);
+			viab_start = i+1;
+			*h_out = h;
+			*pos_out = viab_start;
+			return via_str;
+		}
+		i++;
+	}
+	via_str.s = viab + viab_start;
+	via_str.len = i - viab_start;
+	str_trim(&via_str);
+	*h_out = cscf_get_next_via_hdr(msg,h);
+	*pos_out = 0;	
+	return via_str;
+}
+
+/**
+ * cscf_via_matching 
+ * @param req_via - first via body (request)
+ * @param rpl_via - second via body (reply)
+ * @returns true if the 2 via_body structures are matching 
+ */
+int cscf_via_matching( struct via_body *req_via, struct via_body *rpl_via )
+{
+	if ((!req_via->branch && rpl_via->branch) || (req_via->branch && !rpl_via->branch))
+	{
+		LOG(L_INFO,"DBG:"M_NAME":cscf_via_matching: branch param missing\n");
+		return 0;;
+	}
+	if (req_via->branch && rpl_via->branch)
+	{
+		if (req_via->branch->value.len != rpl_via->branch->value.len ||
+			strncasecmp(req_via->branch->value.s, rpl_via->branch->value.s,rpl_via->branch->value.len)!=0)
+		{
+			LOG(L_INFO,"DBG:"M_NAME":cscf_via_matching: different branch param\n");
+			return 0;
+		}
+	}
+	if (req_via->host.len!=rpl_via->host.len||
+		strncasecmp(req_via->host.s, rpl_via->host.s,rpl_via->host.len)!=0)
+	{
+		LOG(L_INFO,"DBG:"M_NAME":cscf_via_matching: different host \n");
+		return 0;
+	}
+	if (req_via->port!=rpl_via->port)
+	{
+		LOG(L_INFO,"DBG:"M_NAME":cscf_via_matching: different port \n");
+		return 0;
+	}
+	
+	if (req_via->transport.len!=rpl_via->transport.len||
+		strncasecmp(req_via->transport.s, rpl_via->transport.s,rpl_via->transport.len)!=0)
+	{
+		LOG(L_INFO,"DBG:"M_NAME":cscf_via_matching: transport host \n");
+		return 0;
+	}
+	/* everything matched -- we found it */
+	return 1;
+}
+
+
+
+
+
+static inline void free_via_param_list(struct via_param* vp)
+{
+	struct via_param* foo;
+	while(vp){
+		foo=vp;
+		vp=vp->next;
+		pkg_free(foo);
+	}
+}
+
+static str via_hdr_term={"\r\n.",3};
+/**
+ * Checks if 2 via strings are equal. 
+ * \note The parameters must contain just one Via header field!!! else you'll have a memory leak
+ * @param sreq_via - first via (request)
+ * @param srpl_via - second via (reply)
+ * @returns 1 if the 2 vias are matching, 0 if not
+ */
+int cscf_str_via_matching(str *sreq_via, str *srpl_via)
+{	
+	struct via_body req_via, rpl_via;
+	str hdr1={0,0}, hdr2={0,0};
+	int result = 0;
+	
+	memset(&req_via, 0, sizeof(struct via_body));
+	memset(&rpl_via, 0, sizeof(struct via_body));
+
+	if (sreq_via->s[sreq_via->len+1] !='\r' || sreq_via->s[sreq_via->len+2] != '\n') //check for CRLF 
+	{
+		hdr1.len = sreq_via->len + via_hdr_term.len;
+		hdr1.s = pkg_malloc(hdr1.len);
+		if (!hdr1.s)
+		{
+			LOG(L_ERR, "ERR:"M_NAME":cscf_str_via_matching: cannot alloc bytes : %d", hdr1.len);
+			return 0;
+		}
+		hdr1.len=0;
+		STR_APPEND(hdr1, *sreq_via);
+		STR_APPEND(hdr1, via_hdr_term);
+		parse_via(hdr1.s,hdr1.s+hdr1.len,&req_via);
+	}
+	else
+		parse_via(sreq_via->s,sreq_via->s+sreq_via->len, &req_via);
+	
+	
+	if (srpl_via->s[srpl_via->len+1] !='\r' || srpl_via->s[srpl_via->len+2] != '\n') //check for CRLF 
+	{
+		hdr2.len = srpl_via->len + via_hdr_term.len;
+		hdr2.s = pkg_malloc(hdr2.len);
+		if (!hdr2.s)
+		{
+			LOG(L_ERR, "ERR:"M_NAME":cscf_str_via_matching: cannot alloc bytes : %d", hdr2.len);
+			goto done;
+		}
+		hdr2.len=0;
+		STR_APPEND(hdr2, *srpl_via);
+		STR_APPEND(hdr2, via_hdr_term);
+		parse_via(hdr2.s,hdr2.s+hdr2.len,&rpl_via);
+	}
+	else
+		parse_via(srpl_via->s, srpl_via->s+srpl_via->len, &rpl_via);
+		
+	result = cscf_via_matching(&req_via, &rpl_via);
+	
+done:	
+	if (hdr1.s) pkg_free(hdr1.s);
+	if (hdr1.s) pkg_free(hdr2.s);
+	if (req_via.param_lst) free_via_param_list(req_via.param_lst);
+	if (rpl_via.param_lst) free_via_param_list(rpl_via.param_lst);
+	return result;
+}
+
 
 
 /** 
