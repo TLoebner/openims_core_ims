@@ -51,7 +51,7 @@ public class IMPI_IMPU {
 	private int id;
 	private int id_impi;
 	private int id_impu;
-	private short user_state;
+	private int user_state;
 	
 	public IMPI_IMPU(){}
 
@@ -63,11 +63,11 @@ public class IMPI_IMPU {
 		this.id = id;
 	}
 
-	public short getUser_state() {
+	public int getUser_state() {
 		return user_state;
 	}
 
-	public void setUser_state(short user_state) {
+	public void setUser_state(int user_state) {
 		this.user_state = user_state;
 	}
 

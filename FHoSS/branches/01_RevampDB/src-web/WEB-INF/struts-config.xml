@@ -101,6 +101,7 @@
 		<action path="/IMPI_Submit" name="IMPI_Form" type="de.fhg.fokus.hss.web.action.IMPI_Submit" input="/IMPI_Load.do" validate="true">
 			<forward name="success" path="/pages/user/impi.jsp" />
 			<forward name="failure" path="/pages/user/impi.jsp"/>
+			<forward name="delete" path="/pages/user/impi_search.jsp" />						
 		</action>
 
 		<action path="/IMPI_Search" name="IMPI_SearchForm" type="de.fhg.fokus.hss.web.action.IMPI_Search" validate="false">

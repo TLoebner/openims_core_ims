@@ -48,12 +48,6 @@ package de.fhg.fokus.hss.cx;
  */
 
 public class CxConstants {
-
-	// IMPU_user_state
-	public static final short IMPU_user_state_Not_Registered = 0;
-	public static final short IMPU_user_state_Registered = 1;
-	public static final short IMPU_user_state_Unregistered = 2;
-	public static final short IMPU_user_state_Auth_Pending = 3;
 	
 	// Public Idenitity Types
 	public static final short IMPU_type_Public_User_Identity = 0;
@@ -115,14 +109,23 @@ public class CxConstants {
 	public static final int Default_Handling_Session_Continued = 0;
 	public static final int Default_Handling_Session_Terminated = 1;
 	
+	// IMPU_user_state
+	public static final short IMPU_user_state_Not_Registered = 0;
+	public static final short IMPU_user_state_Registered = 1;
+	public static final short IMPU_user_state_Unregistered = 2;
+	public static final short IMPU_user_state_Auth_Pending = 3;
 	
+
 	public enum AuthScheme{
 		Auth_Scheme_AKAv1("Digest-AKAv1-MD5", 1),
 		Auth_Scheme_AKAv2("Digest-AKAv2-MD5", 2),
 		Auth_Scheme_MD5("Digest-MD5", 4),
-		Auth_Scheme_Early("Early-IMS", 8);
+		Auth_Scheme_Digest("Digest", 8),
+		Auth_Scheme_HTTP_Digest_MD5("HTTP-Digest-MD5",16),		
+		Auth_Scheme_Early("Early-IMS", 32),
+		Auth_Scheme_NASS_Bundle("NASS-Bundle", 64);
 		
-		private int code;
+		private final int code;
 		private String name;
 		
 		private AuthScheme(String name, int code){

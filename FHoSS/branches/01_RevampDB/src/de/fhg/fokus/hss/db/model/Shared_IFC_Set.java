@@ -52,7 +52,7 @@ public class Shared_IFC_Set {
 	private int id_set;
 	private String name;
 	private int priority;
-	private int id_ifc;
+	private Integer id_ifc;
 	
 	public Shared_IFC_Set(){}
 
@@ -92,8 +92,11 @@ public class Shared_IFC_Set {
 		return id_ifc;
 	}
 
-	public void setId_ifc(int id_ifc) {
-		this.id_ifc = id_ifc;
+	public void setId_ifc(Integer id_ifc) {
+		if (id_ifc != null)
+			this.id_ifc = id_ifc;
+		else
+			this.id_ifc = -1;
 	}
 }
 

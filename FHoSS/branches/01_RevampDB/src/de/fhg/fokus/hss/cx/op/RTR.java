@@ -117,7 +117,7 @@ public class RTR {
 								int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
 								if (reg_cnt == 1){
 									// set the user_state to Not-Registered
-									DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_impu_implicitset(), 
+									DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, true);
 									// 	clear the scscf_name & origin_host
 									IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
@@ -125,14 +125,14 @@ public class RTR {
 								else{
 									// Set the user_state to Not-Registered only on IMPI_IMPU association, 
 									//IMPU registration state remain registered
-									DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_impu_implicitset(), 
+									DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, false);
 								}
 								break;
 								
 							case CxConstants.IMPU_user_state_Unregistered:
 								// set the user_state to Not-Registered
-								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_impu_implicitset(), 
+								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, true);
 								// clear the scscf_name & origin_host
 								IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
@@ -155,7 +155,7 @@ public class RTR {
 							int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
 							if (reg_cnt == 1){
 								// set the user_state to Not-Registered
-								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_impu_implicitset(), 
+								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, true);
 								// clear the scscf_name & origin_host
 								IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
@@ -163,14 +163,14 @@ public class RTR {
 							else{
 								// Set the user_state to Not-Registered only on IMPI_IMPU association, 
 								//IMPU registration state remain registered
-								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_impu_implicitset(), 
+								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, false);
 							}
 							break;
 							
 						case CxConstants.IMPU_user_state_Unregistered:
 							// set the user_state to Not-Registered
-							DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_impu_implicitset(), 
+							DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, true);
 							// clear the scscf_name & origin_host
 							IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");

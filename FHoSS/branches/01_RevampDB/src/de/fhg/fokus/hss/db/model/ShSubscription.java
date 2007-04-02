@@ -51,8 +51,8 @@ package de.fhg.fokus.hss.db.model;
 public class ShSubscription {
 	private int id;
 	private int id_application_server;
-	private int id_impi;
-	private int id_impu;
+	private Integer id_impi;
+	private Integer id_impu;
 	private int data_ref;
 	private int expires;
 
@@ -94,16 +94,22 @@ public class ShSubscription {
 		return id_impi;
 	}
 
-	public void setId_impi(int id_impi) {
-		this.id_impi = id_impi;
+	public void setId_impi(Integer id_impi) {
+		if (id_impi != null)
+			this.id_impi = id_impi;
+		else
+			this.id_impi = -1;
 	}
 
 	public int getId_impu() {
 		return id_impu;
 	}
 
-	public void setId_impu(int id_impu) {
-		this.id_impu = id_impu;
+	public void setId_impu(Integer id_impu) {
+		if (id_impu != null)
+			this.id_impu = id_impu;
+		else
+			this.id_impu = -1;
 	}
 	
 }

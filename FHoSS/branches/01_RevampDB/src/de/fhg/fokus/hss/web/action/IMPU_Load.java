@@ -66,6 +66,7 @@ import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -99,35 +100,27 @@ public class IMPU_Load extends Action {
 			HibernateUtil.commitTransaction();
 			form.setSelect_charging_info(l1);
 			
-			List select_identity_type = new ArrayList();
-			select_identity_type.add(CxConstants.Identity_Type.Public_User_Identity);
-			select_identity_type.add(CxConstants.Identity_Type.Wildcarded_PSI);
-			select_identity_type.add(CxConstants.Identity_Type.Distinct_PSI);
-			form.setSelect_identity_type(select_identity_type);
+			form.setSelect_identity_type(WebConstants.select_identity_type);
 			
 		}
 		
 		if (id != -1){
+			
 			// load all the parameters into the form
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
-			IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
-			System.out.println("IMPU:" +  impu);
-			if (impu != null){
-				form.set_Id_sp(impu.getId_sp());
-				
-				if (impu.getBarring() == 1){
-					form.setBarring(true);
-				}
-				else{
-					form.setBarring(false);
-				}
-				
-				form.setIdentity(impu.getIdentity());
-				form.setId_charging_info(impu.getId_charging_info());
-				form.setId_impu_implicitset(impu.getId_impu_implicitset());
-				form.setUser_state(impu.getUser_state());
+
+			// add the value of deleteDeactivation	
+			if (IMPU_Load.testForDelete(session, form.getId())){
+				request.setAttribute("deleteDeactivation", "false");
 			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+			
+			IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
+			IMPU_Load.setForm(form, impu);
+			
 			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
@@ -135,5 +128,53 @@ public class IMPU_Load extends Action {
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
+	}
+
+	public static boolean testForDelete(Session session, int id){
+		List result = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU(session, id);
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		return true;
+	}
+	
+	public static boolean setForm(IMPU_Form form, IMPU impu){
+		boolean exitCode = false;
+		
+		if (impu != null){
+			exitCode = true;
+			form.setId(impu.getId());
+			form.setIdentity(impu.getIdentity());
+			
+			if (impu.getBarring() == 1){
+				form.setBarring(true);
+			}
+			else{
+				form.setBarring(false);
+			}
+			form.set_Id_sp(impu.getId_sp());
+			form.setId_charging_info(impu.getId_charging_info());
+			form.setId_impu_implicitset(impu.getId_implicit_set());
+			
+			if (impu.getCan_register() == 1){	
+				form.setCan_register(true);
+			}
+			else{
+				form.setCan_register(false);
+			}
+			form.setType(impu.getType());
+			form.setWildcard_psi(impu.getWildcard_psi());
+			
+			if (impu.getPsi_activation() == 1){
+				form.setPsi_activation(true);	
+			}
+			else{
+				form.setPsi_activation(false);
+			}
+			form.setDisplay_name(impu.getDisplay_name());
+			form.setUser_state(impu.getUser_state());
+		}
+		
+		return exitCode;
 	}
 }

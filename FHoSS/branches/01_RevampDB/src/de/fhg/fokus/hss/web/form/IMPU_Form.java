@@ -51,7 +51,6 @@ import org.apache.struts.action.ActionMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -76,11 +75,54 @@ public class IMPU_Form extends ActionForm implements Serializable{
 	private String wildcard_psi;
 	private String display_name;
 	private boolean psi_activation;
+	
 
+	private String impi_identity;
 	private List select_sp;
 	private List select_charging_info;
 	private List select_identity_type;
 	private String nextAction;
+
+	public void reset(ActionMapping actionMapping, HttpServletRequest request){
+    	this.id = -1;
+    	this.identity = null;
+    	this.barring = false;    	
+    	this.id_impu_implicitset = -1;
+    	this.id_sp = -1;
+    	this.id_charging_info = -1;
+    	this.can_register = true;
+
+    	this.type = CxConstants.Identity_Type.Public_User_Identity.code;    	
+    	this.wildcard_psi = null;
+    	this.psi_activation = false;
+    	
+    	this.display_name = null;
+    	this.user_state = 0;
+    	
+    	this.select_charging_info = null;
+    	this.select_sp = null;
+    	this.select_identity_type = null;
+    }
+	
+    public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
+        ActionErrors actionErrors = new ActionErrors();
+
+        if (identity == null || ((!identity.startsWith("sip:") && !identity.startsWith("sips:")) && 
+        		(!identity.startsWith("tel:") && !identity.startsWith("tels:")))){
+        	actionErrors.add("identity", new ActionMessage("impu_form.error.identity"));
+        }
+
+        if (this.id_sp == -1){
+        	actionErrors.add("id_sp", new ActionMessage("impu_form.error.id_sp"));
+        }
+
+        if (this.id_charging_info == -1){
+        	actionErrors.add("id_charging_info", new ActionMessage("impu_form.error.id_charging_info"));
+        }
+        
+        return actionErrors;
+    }
+	
 	
 	public boolean isBarring() {
 		return barring;
@@ -184,44 +226,13 @@ public class IMPU_Form extends ActionForm implements Serializable{
 	public void setSelect_identity_type(List select_identity_type) {
 		this.select_identity_type = select_identity_type;
 	}
-	public void reset(ActionMapping actionMapping, HttpServletRequest request){
-    	this.id = -1;
-    	this.identity = null;
-    	this.barring = false;    	
-    	this.id_impu_implicitset = -1;
-    	this.id_sp = -1;
-    	this.id_charging_info = -1;
-    	this.can_register = true;
 
-    	this.type = CxConstants.Identity_Type.Public_User_Identity.code;    	
-    	this.wildcard_psi = null;
-    	this.psi_activation = false;
-    	
-    	this.display_name = null;
-    	this.user_state = 0;
-    	
-    	this.select_charging_info = null;
-    	this.select_sp = null;
-    	this.select_identity_type = null;
-    }
-	
-    public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
-        ActionErrors actionErrors = new ActionErrors();
+	public String getImpi_identity() {
+		return impi_identity;
+	}
 
-        if (identity == null || ((!identity.startsWith("sip:") && !identity.startsWith("sips:")) && 
-        		(!identity.startsWith("tel:") && !identity.startsWith("tels:")))){
-        	actionErrors.add("identity", new ActionMessage("impu_form.error.identity"));
-        }
-
-        if (this.id_sp == -1){
-        	actionErrors.add("id_sp", new ActionMessage("impu_form.error.id_sp"));
-        }
-
-        if (this.id_charging_info == -1){
-        	actionErrors.add("id_charging_info", new ActionMessage("impu_form.error.id_charging_info"));
-        }
-        
-        return actionErrors;
-    }
+	public void setImpi_identity(String impi_identity) {
+		this.impi_identity = impi_identity;
+	}
 	
 }

@@ -162,12 +162,12 @@ public class SAR {
 					
 					// set registration state to registered, if neccessary
 					// set the registration state on all impu from the same implicitset
-					DB_Op.setUserState(session, impi.getId(), impu.getId_impu_implicitset(), 
+					DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 							CxConstants.IMPU_user_state_Registered, true);
 					UtilAVP.addUserName(response, privateIdentity);
 					
 					//download the profile data
-					String user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_impu_implicitset());
+					String user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_implicit_set());
 					if (user_data == null){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
@@ -186,7 +186,7 @@ public class SAR {
 					IMSU_DAO.update(session, impi.getId_imsu(), serverName, originHost);
 
 					// set the user_state to Unregistered
-					DB_Op.setUserState(session, impi.getId(), impu.getId_impu_implicitset(), 
+					DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 							CxConstants.IMPU_user_state_Unregistered, true);
 					
 					// add a private to the response (the first private found, if are more than one available)
@@ -230,7 +230,7 @@ public class SAR {
 								if (reg_cnt == 1){
 									// set the user_state to Not-Registered
 									System.out.println("before set user state");
-									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_impu_implicitset(), 
+									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, true);
 									// clear the scscf_name & origin_host
 									System.out.println("before update");
@@ -239,7 +239,7 @@ public class SAR {
 								}
 								else{
 									System.out.println("cnt  0");
-									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_impu_implicitset(), 
+									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, false);
 									
 								}
@@ -248,7 +248,7 @@ public class SAR {
 								
 							case CxConstants.IMPU_user_state_Unregistered:
 								// set the user_state to Not-Registered
-								DB_Op.setUserState(session, impi.getId(), crt_impu.getId_impu_implicitset(), 
+								DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, true);
 								// clear the scscf_name & origin_host
 								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
@@ -279,7 +279,7 @@ public class SAR {
 						int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, crt_impu.getId());
 						if (reg_cnt == 1){
 							// set the user_state to Not-Registered
-							DB_Op.setUserState(session, impi.getId(), crt_impu.getId_impu_implicitset(), 
+							DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, true);
 							// clear the scscf_name & origin_host
 							IMSU_DAO.update(session, impi.getId_imsu(), "", "");
@@ -287,7 +287,7 @@ public class SAR {
 						else{
 							// Set the user_state to Not-Registered only on IMPI_IMPU association, IMPU registration state
 							//remain registered
-							DB_Op.setUserState(session, impi.getId(), crt_impu.getId_impu_implicitset(), 
+							DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, false);
 						}
 					}
@@ -315,7 +315,7 @@ public class SAR {
 					}
 					else{
 						
-						user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_impu_implicitset());
+						user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_implicit_set());
 						if (user_data == null){
 							throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 						}
@@ -345,7 +345,7 @@ public class SAR {
 							int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
 							if (reg_cnt == 1){
 								// set the user_state to Not-Registered
-								DB_Op.setUserState(session, impi.getId(), impu.getId_impu_implicitset(), 
+								DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, true);
 								// clear the scscf_name & origin_host
 								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
@@ -353,14 +353,14 @@ public class SAR {
 							else{
 								// Set the user_state to Not-Registered only on IMPI_IMPU association, 
 								//IMPU registration state remain registered
-								DB_Op.setUserState(session, impi.getId(), impu.getId_impu_implicitset(), 
+								DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, false);
 							}
 							break;
 							
 						case CxConstants.IMPU_user_state_Unregistered:
 							// set the user_state to Not-Registered
-							DB_Op.setUserState(session, impi.getId(), impu.getId_impu_implicitset(), 
+							DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, true);
 							// clear the scscf_name & origin_host
 							IMSU_DAO.update(session, impi.getId_imsu(), "", "");
@@ -368,7 +368,7 @@ public class SAR {
 							
 						case CxConstants.IMPU_user_state_Auth_Pending:
 							// reset Auth-Pending
-							DB_Op.resetAuthPending(session, impi.getId(), impu.getId_impu_implicitset());
+							DB_Op.resetAuthPending(session, impi.getId(), impu.getId_implicit_set());
 							break;
 					}
 					

@@ -64,7 +64,7 @@ import de.fhg.fokus.hss.db.model.IMPU;
 
 public class IMPI_IMPU_DAO {
 
-	public static void insert(Session session, int id_impi, int id_impu, short user_state){
+	public static void insert(Session session, int id_impi, int id_impu, int user_state){
 		IMPI_IMPU impi_impu = new IMPI_IMPU();
 		impi_impu.setId_impi(id_impi);
 		impi_impu.setId_impu(id_impu);
@@ -84,10 +84,10 @@ public class IMPI_IMPU_DAO {
 	public static List get_all_IMPU_by_IMPI_ID(Session session, int id_impi){
 		Query query;
 
-		query = session.createSQLQuery("select * from impi_impu" +
-				"	inner join impu on impi_impu.id_impu=impu.id" +
+		query = session.createSQLQuery("select * from impu" +
+				"	inner join impi_impu on impu.id=impi_impu.id_impu" +
 				" where impi_impu.id_impi=?")
-					.addEntity(IMPU.class);
+				.addEntity("impu", IMPU.class);
 		query.setInteger(0, id_impi);
 		return query.list();
 		
@@ -236,7 +236,7 @@ public class IMPI_IMPU_DAO {
 		while (it.hasNext()){
 			
 			IMPU impu = (IMPU) it.next();
-			currentSet = impu.getId_impu_implicitset();
+			currentSet = impu.getId_implicit_set();
 			if (currentSet != previousSet){
 				impuList.add(impu);
 				previousSet = currentSet;
@@ -268,5 +268,6 @@ public class IMPI_IMPU_DAO {
 		BigInteger result = (BigInteger)query.uniqueResult();
 		return result.intValue();
 	}
+	
 	
 }

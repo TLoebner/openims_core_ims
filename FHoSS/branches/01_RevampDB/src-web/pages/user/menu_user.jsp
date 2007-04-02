@@ -23,17 +23,16 @@
 			
 			<ul>
 
-			<!-- IMPU-->
-			<li> <b> Public User Identity </b> <br>			
+			<!-- IMSU-->
+			<li> <b> IMS Subscription </b> <br>
 			
-			<!-- link to search IMPU-->
-			<a href="impu_search.jsp" target="content"> Search </a> <br>
+			<!-- link to search IMSU-->
+			<a href="imsu_search.jsp?action=search" target="content"> Search </a> <br>
 			
-			<!-- link to create IMPU -->
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
-				<a href="/hss.web.console/IMPU_Load.do?id=-1" target="content"> Create </a> <br>
+			<!-- link to create IMSU-->			
+			<% if(request.isUserInRole(SecurityPermissions.SP_IMSU)) { %>
+				<a href="/hss.web.console/IMSU_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
-
 
 			<!-- IMPI-->
 			<li> <b> Private Identity </b> <br>
@@ -46,17 +45,15 @@
 				<a href="/hss.web.console/IMPI_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
-
-
-			<!-- IMSU-->
-			<li> <b> IMS Subscription </b> <br>
+			<!-- IMPU-->
+			<li> <b> Public User Identity </b> <br>			
 			
-			<!-- link to search IMSU-->
-			<a href="imsu_search.jsp?action=search" target="content"> Search </a> <br>
+			<!-- link to search IMPU-->
+			<a href="impu_search.jsp" target="content"> Search </a> <br>
 			
-			<!-- link to create IMSU-->			
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMSU)) { %>
-				<a href="/hss.web.console/IMSU_Load.do?id=-1" target="content"> Create </a> <br>
+			<!-- link to create IMPU -->
+			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
+				<a href="/hss.web.console/IMPU_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 			
 			</ul>

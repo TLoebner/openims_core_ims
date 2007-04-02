@@ -11,42 +11,50 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<link rel="stylesheet" type="text/css"
-	href="/hss.web.console/style/fokus_ngni.css">
 
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title><bean:message key="result.title" /></title>
 
+<link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
+
 </head>
 <body>
+<table align=center valign=middle height=100%>
 
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1> IMS Subscription - Search </h1><br/><br/></td>
-</tr>
-</table>
-</center>
+	<tr> 
+		<td align=center>
+			<br/><br/><h1> IMS Subscription - Search </h1>
+		</td>
+	</tr>
+	<tr height=99%>
+		<td align=center>
+		<html:form action="IMSU_Search">
 
-<html:form action="IMSU_Search">
-<center>
-		<table>
-			<tr>
-				<td>Search by ID:</td>
-				<td><html:text property="imsu_id" value="" styleClass="inputbox"/></td>
+		<table border=0 cellspacing=0 align="center" width=300>
+		<tr><td align="right"><b>Enter Search Parameters</b></td></tr>
+
+	 <tr><td>
+		 <table border="0" cellspacing="1" align="center" width="100%" style="border:1px solid #FF6600;">
+		    <tr bgcolor="#FFCC66">
+				<td>ID</td>
+				<td><html:text property="imsu_id" value="" size="8" /></td>
 			</tr>
-			<tr>
-				<td>Search by Name:</td>
-				<td><html:text property="name" value="" styleClass="inputbox"/></td>
+		    <tr bgcolor="#FFCC66">
+				<td>Name</td>
+				<td><html:text property="name" value="" size="32" /></td>
 			</tr>
-		</table>		
-		
-		<table>
-			<tr>
-				<td><br/><html:submit property="search" value="Search" /></td>
-			</tr>				
-		</table>
-</center>
-</html:form>
+		    <tr bgcolor="#FFCC66">
+				<td>S-CSCF Name</td>
+				<td><html:text property="scscf_name" value="" size="32" /></td>
+			</tr>
+		 </table>	
+	</td></tr>	 
+	<tr>
+		<td align="center"><br/><html:submit property="search" value="Search" /></td>
+	</tr>			
+	</table>	
+	</html:form>
+</table>	
+
 </body>
 </html>

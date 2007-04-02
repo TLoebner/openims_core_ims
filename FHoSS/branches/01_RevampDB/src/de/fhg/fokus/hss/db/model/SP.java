@@ -50,7 +50,7 @@ package de.fhg.fokus.hss.db.model;
 public class SP {
 	private int id;
 	private String name;
-	private int cn_service_auth;
+	private Integer cn_service_auth;
 
 	public SP(){}
 
@@ -58,8 +58,11 @@ public class SP {
 		return cn_service_auth;
 	}
 
-	public void setCn_service_auth(int cn_service_auth) {
-		this.cn_service_auth = cn_service_auth;
+	public void setCn_service_auth(Integer cn_service_auth) {
+		if (cn_service_auth != null)
+			this.cn_service_auth = cn_service_auth;
+		else
+			this.cn_service_auth = -1;
 	}
 
 	public int getId() {

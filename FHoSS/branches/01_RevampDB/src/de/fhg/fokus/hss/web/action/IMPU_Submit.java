@@ -61,6 +61,7 @@ import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -91,110 +92,80 @@ public class IMPU_Submit extends Action{
 		form.setSelect_charging_info(list);
 
 		// refresh the select_identity_type
-		List select_identity_type = new ArrayList();
-		select_identity_type.add(CxConstants.Identity_Type.Public_User_Identity);
-		select_identity_type.add(CxConstants.Identity_Type.Wildcarded_PSI);
-		select_identity_type.add(CxConstants.Identity_Type.Distinct_PSI);
-		form.setSelect_identity_type(select_identity_type);
-		
-		
-		
+		form.setSelect_identity_type(WebConstants.select_identity_type);		
 		
 		if (nextAction.equals("save")){
+			IMPU impu = null;
 			if (id == -1){
 				// create
-				IMPU impu = new IMPU();
-				impu.setIdentity(form.getIdentity());
-				impu.setType(0);
-				if (form.isBarring()){
-					impu.setBarring(1);
-				}
-				else{
-					impu.setBarring(0);
-				}
-								
-				impu.setId_impu_implicitset(0);
-				impu.setWildcard_psi("");
-				impu.setDisplay_name("");
-				
-				Iterator it = form.getSelect_sp().iterator();
-				while (it.hasNext()){
-					SP sp = (SP) it.next();
-					if (sp.getId()== form.getId_sp()){
-						impu.setId_sp(sp.getId());
-						break;
-					}
-				}
-				it = form.getSelect_charging_info().iterator();
-				while (it.hasNext()){
-					ChargingInfo chargingInfo = (ChargingInfo) it.next();
-					if (chargingInfo.getId()== form.getId_charging_info()){
-						impu.setId_charging_info(chargingInfo.getId());
-						break;
-					}
-				}
-
-				session.save(impu);
-				impu.setId_impu_implicitset(impu.getId());
-				session.saveOrUpdate(impu);
-			
-				form.setId(impu.getId());
-				form.setId_impu_implicitset(impu.getId_impu_implicitset());
+				impu = new IMPU();
 			}
 			else{
-				// update
-				IMPU impu = (IMPU)session.load(IMPU.class, form.getId());
-				impu.setIdentity(form.getIdentity());
-				impu.setType(0);
-				if (form.isBarring()){
-					impu.setBarring(1);
-				}
-				else{
-					impu.setBarring(0);
-				}
-				Iterator it = form.getSelect_sp().iterator();
-				while (it.hasNext()){
-					SP sp = (SP) it.next();
-					if (sp.getId()== form.getId_sp()){
-						impu.setId_sp(sp.getId());
-						break;
-					}
-				}
-				it = form.getSelect_charging_info().iterator();
-				while (it.hasNext()){
-					ChargingInfo chargingInfo = (ChargingInfo) it.next();
-					if (chargingInfo.getId()== form.getId_charging_info()){
-						impu.setId_charging_info(chargingInfo.getId());
-						break;
-					}
-				}
-				impu.setId_impu_implicitset(form.getId_impu_implicitset());
-				impu.setWildcard_psi("");
-				impu.setDisplay_name("");
-				session.saveOrUpdate(impu);
+				impu = IMPU_DAO.get_by_ID(session, id);
 			}
 			
-			//System.out.println("We have the save here!");
+			impu.setIdentity(form.getIdentity());
+			if (form.isBarring()){
+				impu.setBarring(1);
+			}
+			else{
+				impu.setBarring(0);
+			}
+			impu.setType(0);
+			impu.setId_implicit_set(0);
+			impu.setWildcard_psi(form.getWildcard_psi());
+			impu.setDisplay_name(form.getDisplay_name());
+			
+			if (form.getPsi_activation()){
+				impu.setPsi_activation(1);
+			}
+			else{
+				impu.setPsi_activation(0);
+			}
+			
+			if (form.getCan_register()){
+				impu.setCan_register(1);
+			}
+			else{
+				impu.setCan_register(0);
+			}
+			
+			//SP
+			Iterator it = form.getSelect_sp().iterator();
+			while (it.hasNext()){
+				SP sp = (SP) it.next();
+				if (sp.getId()== form.getId_sp()){
+					impu.setId_sp(sp.getId());
+					break;
+				}
+			}
+			
+			// Charging Info
+			it = form.getSelect_charging_info().iterator();
+			while (it.hasNext()){
+				ChargingInfo chargingInfo = (ChargingInfo) it.next();
+				if (chargingInfo.getId()== form.getId_charging_info()){
+					impu.setId_charging_info(chargingInfo.getId());
+					break;
+				}
+			}
+			
+			if (id == -1){
+				//create
+				IMPU_DAO.insert(session, impu);
+				impu.setId_implicit_set(impu.getId());
+				IMPU_DAO.update(session, impu);
+				form.setId(impu.getId());
+				form.setId_impu_implicitset(impu.getId_implicit_set());				
+			}
+			else{
+				//update
+				IMPU_DAO.update(session, impu);
+			}
 		}
 		else if (nextAction.equals("refresh")){
-			
 			IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
-
-			if (impu != null){
-				form.set_Id_sp(impu.getId_sp());
-				
-				if (impu.getBarring() == 1){
-					form.setBarring(true);
-				}
-				else{
-					form.setBarring(false);
-				}
-				
-				form.setIdentity(impu.getIdentity());
-				form.setId_charging_info(impu.getId_charging_info());
-				form.setId_impu_implicitset(impu.getId_impu_implicitset());
-			}
-			System.out.println("We have the refresh here!");
+			IMPU_Load.setForm(form, impu);
 		}
 		else if (nextAction.equals("ppr")){
 			System.out.println("We have the ppr here!");
@@ -203,6 +174,13 @@ public class IMPU_Submit extends Action{
 			System.out.println("We have the rtr here!");
 		}		
 
+		if (IMPU_Load.testForDelete(session, form.getId())){
+			request.setAttribute("deleteDeactivation", "false");
+		}
+		else{
+			request.setAttribute("deleteDeactivation", "true");
+		}
+		
 		HibernateUtil.commitTransaction();
 		HibernateUtil.closeSession();
 		

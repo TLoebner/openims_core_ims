@@ -56,7 +56,7 @@ public class IMPU {
 	private int type;
 	private int barring;
 	private int user_state;
-	private int id_impu_implicitset;
+	private int id_implicit_set;
 	private String wildcard_psi;
 	private String display_name;
 	private int psi_activation;
@@ -90,12 +90,12 @@ public class IMPU {
 		this.id = id;
 	}
 
-	public int getId_impu_implicitset() {
-		return id_impu_implicitset;
+	public int getId_implicit_set() {
+		return id_implicit_set;
 	}
 
-	public void setId_impu_implicitset(int id_impu_implicitset) {
-		this.id_impu_implicitset = id_impu_implicitset;
+	public void setId_implicit_set(int id_implicit_set) {
+		this.id_implicit_set = id_implicit_set;
 	}
 
 	public String getIdentity() {

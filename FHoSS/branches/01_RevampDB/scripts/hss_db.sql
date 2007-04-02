@@ -137,14 +137,16 @@ CREATE TABLE `ifc` (
 DROP TABLE IF EXISTS `impi`;
 CREATE TABLE `impi` (
   `id` int(11) NOT NULL auto_increment,
-  `id_imsu` int(11) NOT NULL default '0',
+  `id_imsu` int(11) default NULL,
   `identity` varchar(255) NOT NULL default '',
   `k` varchar(255) NOT NULL default '',
-  `auth_scheme` int(11) NOT NULL default '1',
+  `auth_scheme` int(11) NOT NULL default '0',
+  `default_auth_scheme` int(11) NOT NULL default '1',
   `amf` tinyblob NOT NULL,
   `op` tinyblob NOT NULL,
   `sqn` varchar(64) NOT NULL default '0',
   `ip` varchar(64) NOT NULL default '',
+  `line_identifier` varchar(64) NOT NULL default '',
   PRIMARY KEY  (`id`),
   KEY `idx_identity` (`identity`),
   KEY `idx_id_imsu` (`id_imsu`)
@@ -176,16 +178,16 @@ CREATE TABLE `impu` (
   `type` tinyint(4) NOT NULL default '0',
   `barring` tinyint(4) NOT NULL default '0',
   `user_state` tinyint(4) NOT NULL default '0',
-  `id_sp` int(11) NOT NULL default '0',
-  `id_impu_implicitset` int(11) NOT NULL default '0',
-  `id_charging_info` varchar(255) NOT NULL default '',
+  `id_sp` int(11) default NULL,
+  `id_implicit_set` int(11) NOT NULL default '0',
+  `id_charging_info` int(11) default NULL,
   `wildcard_psi` varchar(255) NOT NULL default '',
   `display_name` varchar(255) NOT NULL default '',
   `psi_activation` tinyint(4) NOT NULL default '0',
   `can_register` tinyint(4) NOT NULL default '1',
   PRIMARY KEY  (`id`),
   KEY `idx_identity` (`identity`),
-  KEY `idx_id_impu_implicitset` (`id_impu_implicitset`),
+  KEY `idx_id_impu_implicitset` (`id_implicit_set`),
   KEY `idx_type` (`type`),
   KEY `idx_sp` (`id_sp`),
   KEY `idx_wildcard_psi` (`wildcard_psi`)
@@ -219,20 +221,23 @@ CREATE TABLE `imsu` (
   `scscf_name` varchar(255) default NULL,
   `diameter_name` varchar(255) default NULL,
   `id_capabilities_set` int(11) default NULL,
-  `id_preferred_scscf` int(11) default NULL,
+  `id_preferred_scscf_set` int(11) default NULL,
   PRIMARY KEY  (`id`),
   KEY `idx_capabilities_set` (`id_capabilities_set`),
-  KEY `idx_preferred_scscf` (`id_preferred_scscf`),
+  KEY `idx_preferred_scscf` (`id_preferred_scscf_set`),
   KEY `idx_name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='IMS Subscription';
 
+
+
+
 --
--- Table structure for table `preferred_set`
+-- Table structure for table `preferred_scscf_set`
 --
 
-DROP TABLE IF EXISTS `preferred_set`;
-CREATE TABLE `preferred_set` (
-  `id` int(11) NOT NULL default '0',
+DROP TABLE IF EXISTS `preferred_scscf_set`;
+CREATE TABLE `preferred_scscf_set` (
+  `id` int(11) NOT NULL auto_increment,
   `id_set` int(11) NOT NULL default '0',
   `name` varchar(255) NOT NULL default '',
   `scscf_name` varchar(255) NOT NULL default '',

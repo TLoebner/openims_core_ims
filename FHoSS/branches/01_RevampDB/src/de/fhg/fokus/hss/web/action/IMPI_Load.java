@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -56,6 +57,7 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
+import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
@@ -63,6 +65,7 @@ import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
+import de.fhg.fokus.hss.web.form.IMSU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 import de.fhg.fokus.hss.auth.HexCodec;
 
@@ -80,54 +83,31 @@ public class IMPI_Load extends Action {
 
 		IMPI_Form form = (IMPI_Form) actionForm;
 		int id = form.getId();
-
+		List associated_IMPUs = new ArrayList();
+		IMSU associated_IMSU = null;
+		
 		HibernateUtil.beginTransaction();
 		Session session = HibernateUtil.getCurrentSession();
 		
 		try{
 			List imsuList= IMSU_DAO.get_all(session);		
-			form.setSelect_imsu(imsuList);
+			//form.setSelect_imsu(imsuList);
+	    	form.setSelect_auth_scheme(WebConstants.select_auth_scheme);
 			
 			if (id != -1){
 				// load
 				IMPI impi = IMPI_DAO.get_by_ID(session, id); 
 
-				if (impi != null){
-					form.setIdentity(impi.getIdentity());
-					form.setId_imsu(impi.getId_imsu());
-					form.setSecretKey(impi.getK());
-					form.setAmf(HexCodec.encode(impi.getAmf()));
-					form.setOp(HexCodec.encode(impi.getOp()));
-					form.setSqn(HexCodec.encode(impi.getSqn()));
-					form.setIp(impi.getIp());
-				
-					int auth_scheme = impi.getAuth_scheme();
-					if ((auth_scheme & 15) == 15){
-						form.setAll(true);
-					}
-					else{
-						if ((auth_scheme & 1) == 1){
-							form.setAka1(true);
-						}
-					
-						if ((auth_scheme & 2) == 1){
-							form.setAka2(true);
-						}
-						if ((auth_scheme & 4) == 1){
-							form.setMd5(true);
-						}
-						if ((auth_scheme & 8) == 1){
-							form.setEarly(true);
-						}
-					}		
-					// associated IMPUs
-					List list = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
-					form.setAssociated_impu_set(list);
-				}
+				// associated IMPUs
+				associated_IMPUs = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
+				associated_IMSU = IMSU_DAO.get_by_ID(session, impi.getId_imsu());
+				IMPI_Load.setForm(form, impi);
 			}
-			else{
+			else{ 
 				form.setAka1(true);
 			}
+			request.setAttribute("associated_IMSU", associated_IMSU);
+			request.setAttribute("associated_IMPUs", associated_IMPUs);
 		}
 		finally{
 			HibernateUtil.commitTransaction();
@@ -137,5 +117,65 @@ public class IMPI_Load extends Action {
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
+	}
+	
+	public static boolean setForm(IMPI_Form form, IMPI impi){
+		boolean exitCode = false;
+		
+		if (impi != null){
+			exitCode = true;
+			form.setIdentity(impi.getIdentity());
+			form.setId_imsu(impi.getId_imsu());
+			form.setSecretKey(impi.getK());
+			form.setAmf(HexCodec.encode(impi.getAmf()));
+			form.setOp(HexCodec.encode(impi.getOp()));
+			form.setSqn(HexCodec.encode(impi.getSqn()));
+			form.setIp(impi.getIp());
+		
+			int auth_scheme = impi.getAuth_scheme();
+			if ((auth_scheme & 127) == 127){
+				form.setAll(true);
+			}
+			else{
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode()) != 0){
+					form.setAka1(true);
+				}
+			
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode()) != 0){
+					form.setAka2(true);
+				}
+				
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_MD5.getCode()) != 0){
+					form.setMd5(true);
+				}
+
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_Digest.getCode()) != 0){
+					form.setDigest(true);
+				}
+				
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode()) != 0){
+					form.setHttp_digest(true);
+				}
+				
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_Early.getCode()) != 0){
+					form.setEarly(true);
+				}
+				
+				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_NASS_Bundle.getCode()) != 0){
+					form.setNass_bundle(true);
+				}
+				
+			}		
+			//form.setAssociated_impu_set(associated_IMPUs);
+		}
+		return exitCode;
+	}	
+
+	public static boolean testForDelete(Session session, int id){
+		List result = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		return true;
 	}
 }

@@ -50,10 +50,10 @@ import org.apache.struts.action.ActionMessage;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import de.fhg.fokus.hss.cx.CxConstants;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -71,19 +71,25 @@ public class IMPI_Form extends ActionForm implements Serializable{
 	private boolean aka1;
 	private boolean aka2;
 	private boolean md5;
+	private boolean digest;
+	private boolean http_digest;
 	private boolean early;
+	private boolean nass_bundle; 
 	private boolean all;
+	private int default_auth_scheme;
 	private String amf;
 	private String op;
 	private String sqn;
 	private String ip;
+	private String line_identifier;
 	
-	private List select_imsu;
-	
+	//private List select_imsu;
 	private String nextAction;
 	private String impu_identity;
-	private List associated_impu_set;
-	
+	private String imsu_name;
+	//private List associated_impu_set;
+	private int associated_ID;
+	private List select_auth_scheme;
     public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.id_imsu = -1;
@@ -96,11 +102,20 @@ public class IMPI_Form extends ActionForm implements Serializable{
     	this.aka1 = false;
     	this.aka2 = false;
     	this.md5 = false;
+    	this.digest = false;
+    	this.http_digest = false;
     	this.early = false;
+    	this.nass_bundle = false;
     	this.all = false;
+    	this.default_auth_scheme = CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode();
+    	this.line_identifier = null;
     	
-    	this.select_imsu = null;
-    	this.associated_impu_set = null;
+    	this.impu_identity = null;
+    	this.imsu_name = null;
+    	//this.select_imsu = null;
+    	//this.associated_impu_set = null;
+    	this.associated_ID = -1;
+    	this.select_auth_scheme = null;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -109,21 +124,25 @@ public class IMPI_Form extends ActionForm implements Serializable{
         if (identity == null || identity.equals("")){
         	actionErrors.add("identity", new ActionMessage("impi_form.error.identity"));
         }
-        if (this.id_imsu == -1){
+/*        if (this.id_imsu == -1){
         	actionErrors.add("id_imsu", new ActionMessage("impi_form.error.id_imsu"));
-        }
-        if (!(this.aka1 || this.aka2 || this.md5 || this.early || this.all)){
+        }*/
+        if (!(this.aka1 || this.aka2 || this.md5 || this.digest || this.http_digest || this.early || this.nass_bundle || this.all )){
         	actionErrors.add("auth_scheme", new ActionMessage("impi_form.error.auth_scheme"));
         }
         if (secretKey == null || secretKey.equals("")){
         	actionErrors.add("secret_key", new ActionMessage("impi_form.error.secret_key"));
         }
-        if (amf == null || amf.equals("")){
+        if (amf == null || amf.equals("") || amf.length() != 4){
         	actionErrors.add("secret_key", new ActionMessage("impi_form.error.amf"));
         }
-        if (op == null || op.equals("")){
+        if (op == null || op.equals("") || op.length() != 32){
         	actionErrors.add("secret_key", new ActionMessage("impi_form.error.op"));
         }
+        if (sqn == null || sqn.equals("") || sqn.length() != 12){
+        	actionErrors.add("secret_key", new ActionMessage("impi_form.error.sqn"));
+        }
+        
         return actionErrors;
     }
 
@@ -246,16 +265,6 @@ public class IMPI_Form extends ActionForm implements Serializable{
 		this.secretKey = secretKey;
 	}
 
-
-	public List getSelect_imsu() {
-		return select_imsu;
-	}
-
-
-	public void setSelect_imsu(List select_imsu) {
-		this.select_imsu = select_imsu;
-	}
-
 	public String getSqn() {
 		return sqn;
 	}
@@ -280,13 +289,69 @@ public class IMPI_Form extends ActionForm implements Serializable{
 		this.impu_identity = impu_identity;
 	}
 
-	public List getAssociated_impu_set() {
-		return associated_impu_set;
+	public int getDefault_auth_scheme() {
+		return default_auth_scheme;
 	}
 
-	public void setAssociated_impu_set(List associated_impu_set) {
-		this.associated_impu_set = associated_impu_set;
+	public void setDefault_auth_scheme(int default_auth_scheme) {
+		this.default_auth_scheme = default_auth_scheme;
 	}
 
-	
+	public String getLine_identifier() {
+		return line_identifier;
+	}
+
+	public void setLine_identifier(String line_identifier) {
+		this.line_identifier = line_identifier;
+	}
+
+	public List getSelect_auth_scheme() {
+		return select_auth_scheme;
+	}
+
+	public void setSelect_auth_scheme(List select_auth_scheme) {
+		this.select_auth_scheme = select_auth_scheme;
+	}
+
+	public boolean isDigest() {
+		return digest;
+	}
+
+	public void setDigest(boolean digest) {
+		this.digest = digest;
+	}
+
+	public boolean isHttp_digest() {
+		return http_digest;
+	}
+
+	public void setHttp_digest(boolean http_digest) {
+		this.http_digest = http_digest;
+	}
+
+	public boolean isNass_bundle() {
+		return nass_bundle;
+	}
+
+	public void setNass_bundle(boolean nass_bundle) {
+		this.nass_bundle = nass_bundle;
+	}
+
+	public int getAssociated_ID() {
+		return associated_ID;
+	}
+
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
+	}
+
+	public String getImsu_name() {
+		return imsu_name;
+	}
+
+	public void setImsu_name(String imsu_name) {
+		this.imsu_name = imsu_name;
+	}
+
+
 }

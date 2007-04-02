@@ -57,6 +57,7 @@ import org.apache.struts.action.ActionMapping;
 public class IMSU_SearchForm extends ActionForm implements Serializable{
 	private String imsu_id;
 	private String name;
+	private String scscf_name;
 	
 	private String crtPage;
 	private String rowsPerPage;
@@ -64,6 +65,8 @@ public class IMSU_SearchForm extends ActionForm implements Serializable{
 	public void reset(ActionMapping arg0, HttpServletRequest arg1) {
   		this.name = null;
   		this.imsu_id = null;
+  		this.scscf_name = null;
+  		
   		crtPage = "1";
   		rowsPerPage = "20";
   	}
@@ -98,4 +101,13 @@ public class IMSU_SearchForm extends ActionForm implements Serializable{
 	public void setName(String name) {
 		this.name = name;
 	}
+
+	public String getScscf_name() {
+		return scscf_name;
+	}
+
+	public void setScscf_name(String scscf_name) {
+		this.scscf_name = scscf_name;
+	}
+	
 }

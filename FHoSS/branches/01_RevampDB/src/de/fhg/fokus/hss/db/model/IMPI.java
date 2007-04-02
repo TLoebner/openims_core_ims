@@ -45,6 +45,8 @@ package de.fhg.fokus.hss.db.model;
 
 import java.util.Set;
 
+import de.fhg.fokus.hss.cx.CxConstants;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -56,39 +58,48 @@ public class IMPI {
 	private String identity;
 	private String k;
 	private int auth_scheme;
+	private int default_auth_scheme;
+	
 	private byte[] amf;
 	private byte[] op;
 	private String sqn;
 	private String ip;
-	private int id_imsu;
-
-	// constants
-	public static final int AUTH_SCHEME_AKAv1 = 1;
-	public static final int AUTH_SCHEME_AKAv2 = 1 << 1;
-	public static final int AUTH_SCHEME_MD5 = 1 << 2;
-	public static final int AUTH_SCHEME_EARLY = 1 << 3;
+	private Integer id_imsu;
+	private String line_identifier;
 	
 	public IMPI(){}
 
-	public static int generateAuthScheme(boolean akav1, boolean akav2, boolean md5, boolean early, boolean all){
+	public static int generateAuthScheme(boolean akav1, boolean akav2, boolean md5, boolean digest, 
+			boolean http_digest, boolean early, boolean nass_bundle, boolean all){
+		
 		if (all){
-			return 15;
+			return 127;
 		}
 		else{
 			int result = 0;
 
 			if (akav1){
-				result |= IMPI.AUTH_SCHEME_AKAv1; 
+				result |= CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode(); 
 			}
 			if (akav2){
-				result |= IMPI.AUTH_SCHEME_AKAv2; 
+				result |= CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode(); 
 			}
 			if (md5){
-				result |= IMPI.AUTH_SCHEME_MD5; 
+				result |= CxConstants.AuthScheme.Auth_Scheme_Digest.getCode(); 
+			}
+			if (digest){
+				result |= CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode(); 
+			}
+			if (http_digest){
+				result |= CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode(); 
 			}
 			if (early){
-				result |= IMPI.AUTH_SCHEME_EARLY; 
+				result |= CxConstants.AuthScheme.Auth_Scheme_Early.getCode(); 
 			}
+			if (nass_bundle){
+				result |= CxConstants.AuthScheme.Auth_Scheme_NASS_Bundle.getCode(); 
+			}
+			
 			return result;
 		}
 	}
@@ -165,7 +176,28 @@ public class IMPI {
 		return id_imsu;
 	}
 
-	public void setId_imsu(int id_imsu) {
-		this.id_imsu = id_imsu;
+	public void setId_imsu(Integer id_imsu) {
+		if (id_imsu != null)
+			this.id_imsu = id_imsu;
+		else 
+			this.id_imsu = -1;
 	}
+	
+	public int getDefault_auth_scheme() {
+		return default_auth_scheme;
+	}
+
+	public void setDefault_auth_scheme(int default_auth_scheme) {
+		this.default_auth_scheme = default_auth_scheme;
+	}
+
+	public String getLine_identifier() {
+		return line_identifier;
+	}
+
+	public void setLine_identifier(String line_identifier) {
+		this.line_identifier = line_identifier;
+	}
+	
+	
 }

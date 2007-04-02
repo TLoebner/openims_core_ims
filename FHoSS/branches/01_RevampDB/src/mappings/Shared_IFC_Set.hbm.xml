@@ -12,7 +12,7 @@
 	<property name="id_set" type="int" not-null="false"/>
 	<property name="name" type="string" not-null="true"/>
 	<property name="priority" type="int" not-null="true"/>
-	<property name="id_ifc" type="int" not-null="false"/>
+	<property name="id_ifc" type="java.lang.Integer" not-null="false"/>
 
 </class>
 </hibernate-mapping>

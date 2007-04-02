@@ -54,8 +54,8 @@ public class IMSU {
 	private String scscf_name;
 	private String diameter_name;
 	
-	private int id_capabilities_set;
-	private int id_preferred_scscf;
+	private Integer id_capabilities_set;
+	private Integer id_preferred_scscf_set;
 	
 	public IMSU(){}
 	
@@ -76,16 +76,23 @@ public class IMSU {
 		return id_capabilities_set;
 	}
 
-	public void setId_capabilities_set(int id_capabilities_set) {
-		this.id_capabilities_set = id_capabilities_set;
+	public void setId_capabilities_set(Integer id_capabilities_set) {
+		if (id_capabilities_set != null)
+			this.id_capabilities_set = id_capabilities_set;
+		else
+			this.id_capabilities_set = -1;
 	}
 
-	public int getId_preferred_scscf() {
-		return id_preferred_scscf;
+	public int getId_preferred_scscf_set() {
+		return id_preferred_scscf_set;
 	}
-	public void setId_preferred_scscf(int id_preferred_scscf) {
-		this.id_preferred_scscf = id_preferred_scscf;
+	public void setId_preferred_scscf_set(Integer id_preferred_scscf_set) {
+		if (id_preferred_scscf_set != null)
+			this.id_preferred_scscf_set = id_preferred_scscf_set;
+		else
+			this.id_preferred_scscf_set = -1;
 	}
+	
 	public String getName() {
 		return name;
 	}

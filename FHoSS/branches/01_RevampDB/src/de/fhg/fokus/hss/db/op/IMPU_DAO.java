@@ -59,6 +59,14 @@ import de.fhg.fokus.hss.db.model.SP;
  */
 public class IMPU_DAO {
 	
+	public static void insert(Session session, IMPU impu){
+		session.save(impu);
+	}
+	
+	public static void update(Session session, IMPU impu){
+		session.saveOrUpdate(impu);
+	}	
+	
 	public static IMPU update(Session session, int id, short user_state){
 		IMPU impu = (IMPU) session.load(IMPU.class, id);
 		if (impu != null){
@@ -87,7 +95,7 @@ public class IMPU_DAO {
 	
 	public static Object[] get_by_Wildcarded_Identity(Session session, String identity, int firstResult, int maxResults){
 		Query query;
-		query = session.createSQLQuery("select * from IMPU where identity like ?")
+		query = session.createSQLQuery("select * from impu where identity like ?")
 			.addEntity(IMPU.class);
 		query.setString(0, "%" + identity + "%");
 
@@ -120,7 +128,7 @@ public class IMPU_DAO {
 	
 	public static List get_all_from_set(Session session, int id_set){
 		Query query;
-		query = session.createSQLQuery("select * from impu where id_set=?")
+		query = session.createSQLQuery("select * from impu where id_impu_implicitset=?")
 			.addEntity(IMPU.class);
 		query.setInteger(0, id_set);
 		return query.list();
@@ -128,7 +136,7 @@ public class IMPU_DAO {
 	
 	public static Object[] get_all_from_set(Session session, int id_set, int firstResult, int maxResults){
 		Query query;
-		query = session.createSQLQuery("select * from impu where id_set=?")
+		query = session.createSQLQuery("select * from impu where id_impu_implicitset=?")
 		.addEntity(IMPU.class);
 		query.setInteger(0, id_set);
 
@@ -142,7 +150,7 @@ public class IMPU_DAO {
 	
 	public static List get_others_from_set(Session session, int id, int id_set){
 		Query query;
-		query = session.createSQLQuery("select * from impu where id != ? and id_set=?")
+		query = session.createSQLQuery("select * from impu where id != ? and id_impu_implicitset=?")
 			.addEntity(IMPU.class);
 		query.setInteger(0, id);
 		query.setInteger(1, id_set);

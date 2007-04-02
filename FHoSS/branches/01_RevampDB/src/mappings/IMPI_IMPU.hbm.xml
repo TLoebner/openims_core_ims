@@ -8,7 +8,7 @@
 	<id name="id">
 		<generator class="native"/>
 	</id>
-	<property name="user_state" type="short" not-null="true"/>
+	<property name="user_state" type="int" not-null="true"/>
 	<property name="id_impi" type="int" not-null="true"/>
 	<property name="id_impu" type="int" not-null="true"/>
 	

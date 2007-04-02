@@ -26,7 +26,7 @@
 		<mapping resource="mappings/IMPU.hbm.xml"/>						
 		<mapping resource="mappings/IMPU_VisitedNetwork.hbm.xml"/>				
 		<mapping resource="mappings/IMSU.hbm.xml"/>						
-		<mapping resource="mappings/PreferredSet.hbm.xml"/>			
+		<mapping resource="mappings/Preferred_SCSCF_Set.hbm.xml"/>			
 		<mapping resource="mappings/RTR_PPR.hbm.xml"/>									
 		<mapping resource="mappings/Shared_IFC_Set.hbm.xml"/>						
 		<mapping resource="mappings/SP_IFC.hbm.xml"/>						
