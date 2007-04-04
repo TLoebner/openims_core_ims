@@ -210,7 +210,6 @@ Limitations
 _MAX_PIPES_ / _MAX_QUEUES_ can be added without recompiles.
  - External load factor support for the _FEEDBACK_ algorithm is not implemented
  - As mentioned, different load factors can't be specified for one single pipe
- - FIFO interface not implemented
 
 Compatibility issues
 --------------------
@@ -225,6 +224,6 @@ There is a TODO list in the patch for ser_ims/modules/ratelimit/ratelimit.c that
 more up to date. In principle:
 
   - the <<L, Limitations>> section should be empty
-  - locking has to be added (although the current lack of locks shouldn't result in 
-		  crashes)
-  - FIFO interface
+  - _DONE_ locking has to be added (although the current lack of locks shouldn't 
+		  result in crashes)
+  - _DONE_ FIFO interface

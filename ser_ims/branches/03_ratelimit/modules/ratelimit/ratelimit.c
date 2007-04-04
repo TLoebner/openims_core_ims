@@ -32,7 +32,7 @@
  * d move to ratelimit 
  * d rpc fns for static limits
  * d FIFO interface
- * - locking 
+ * d locking 
  * d long long's instead of doubles in get_cpuload
  * d rpc stats
  * d rpc params
@@ -57,11 +57,14 @@
 #include "../../data_lump_rpl.h"
 #include "../../mem/shm_mem.h"
 #include "../../parser/msg_parser.h"
+#include "../../locking.h"
 
 MODULE_VERSION
 
 #define MAX_PIPES	10
 #define MAX_QUEUES	10
+
+//#define RL_DEBUG_LOCKS
 
 /* timer interval length in seconds, tunable via modparam */
 #define RL_TIMER_INTERVAL 10
@@ -140,9 +143,9 @@ typedef struct queue {
 } queue_t;
 
 /* === these change after startup */
-static int timer_interval = RL_TIMER_INTERVAL;
+gen_lock_t * rl_lock;
+
 static double * load_value;	/* actual load, used by PIPE_ALGO_FEEDBACK */
-static int cfg_setpoint;	/* desired load */
 static double * pid_kp, * pid_ki, * pid_kd, * pid_setpoint; /* PID tuning params */
 static int * drop_rate;		/* updated by PIPE_ALGO_FEEDBACK */
 
@@ -155,7 +158,28 @@ static queue_t queues[MAX_QUEUES];
 
 static int nqueues_mp = 0;
 static int * nqueues;
+
+/* these only change in the mod_init() process -- no locking needed */
+static int timer_interval = RL_TIMER_INTERVAL;
+static int cfg_setpoint;	/* desired load, used when reading modparams */
 /* === */
+
+#ifndef RL_DEBUG_LOCKS
+# define LOCK_GET lock_get
+# define LOCK_RELEASE lock_release
+#else
+# define LOCK_GET(l) do { \
+	LOG(L_INFO, "%d: + get\n", __LINE__); \
+	lock_get(l); \
+	LOG(L_INFO, "%d: - get\n", __LINE__); \
+} while (0)
+
+# define LOCK_RELEASE(l) do { \
+	LOG(L_INFO, "%d: + release\n", __LINE__); \
+	lock_release(l); \
+	LOG(L_INFO, "%d: - release\n", __LINE__); \
+} while (0)
+#endif
 
 static int params_inited = 0;
 static regex_t  pipe_params_regex;
@@ -298,7 +322,9 @@ static int get_cpuload(double * load)
 static double int_err = 0.0;
 static double last_err = 0.0;
 
-/* (*load_value) is expected to be in the 0.0 - 1.0 range */
+/* (*load_value) is expected to be in the 0.0 - 1.0 range
+ * (expects rl_lock to be taken)
+ */
 static void do_update_load()
 {
 	static char spcs[51];
@@ -307,6 +333,7 @@ static void do_update_load()
 
 	/* PID update */
 	err = *pid_setpoint - *load_value;
+
 	dif_err = err - last_err;
 
 	/*
@@ -328,6 +355,7 @@ static void do_update_load()
 	*drop_rate = (output > 0) ? output  : 0;
 
 	load = 0.5 + 100.0 * *load_value; /* round instead of floor */
+
 	memset(spcs, '-', load / 4);
 	spcs[load / 4] = 0;
 
@@ -350,6 +378,14 @@ static int mod_init(void)
 	int i;
 
 	DBG("RATELIMIT: initializing ...\n");
+
+	rl_lock = lock_alloc();
+	if (! rl_lock) {
+		LOG(L_ERR, "ratelimit: oom in lock_alloc()\n");
+		return -1;
+	}
+
+	rl_lock = lock_init(rl_lock);
 
 	/* register timer to reset counters */
 	if (register_timer(timer, 0, timer_interval) < 0) {
@@ -427,6 +463,10 @@ void destroy(void)
 		shm_free(pipes[i].limit);
 		shm_free(pipes[i].algo);
 	}
+	/*TODO: free rest of the shm_malloc'ed data */
+
+	lock_destroy(rl_lock);
+	lock_dealloc((void *)rl_lock);
 }
 
 static int fixup_rl_drop(void **param, int param_no)
@@ -519,6 +559,7 @@ str queue_other = STR_STATIC_INIT("*");
 
 /**
  * finds the queue associated with the message's method
+ * (expects rl_lock to be taken)
  * \reture 0 if a nueue was found, -1 otherwise
  */
 static int find_queue(struct sip_msg * msg, int * queue)
@@ -554,28 +595,38 @@ int hash[100] = {18, 50, 51, 39, 49, 68, 8, 78, 61, 75, 53, 32, 45, 77, 31,
 
 /**
  * runs the pipe's algorithm
+ * (expects rl_lock to be taken), TODO revert to "return" instead of "ret ="
  * \return -1 if drop needed, 1 if allowed
  */
 static int pipe_push(struct sip_msg * msg, int id)
 {
+	int ret;
+
 	(*pipes[id].counter)++;
 
 	switch (*pipes[id].algo) {
 		case PIPE_ALGO_NOP:
 			LOG(L_INFO, "warning: queue connected to NOP pipe\n");
-			return 1;
+			ret = 1;
+			break;
 		case PIPE_ALGO_TAILDROP:
-			return (*pipes[id].counter <= *pipes[id].limit * timer_interval) ? 1 : -1;
+			ret = (*pipes[id].counter <= *pipes[id].limit * timer_interval) ? 1 : -1;
+			break;
 		case PIPE_ALGO_RED:
 			if (*pipes[id].load == 0)
-				return 1;
-			return (! (*pipes[id].counter % *pipes[id].load)) ? 1 : -1;
+				ret = 1;
+			else
+				ret = (! (*pipes[id].counter % *pipes[id].load)) ? 1 : -1;
+			break;
 		case PIPE_ALGO_FEEDBACK:
-			return (hash[*pipes[id].counter % 100] < *drop_rate) ? -1 : 1;
+			ret = (hash[*pipes[id].counter % 100] < *drop_rate) ? -1 : 1;
+			break;
 		default:
 			LOG(L_ERR, "unknown ratelimit algorithm: %d\n", *pipes[id].algo);
-			return 1;
+			ret = 1;
 	}
+
+	return ret;
 }
 
 /**
@@ -588,16 +639,24 @@ static int rl_check(struct sip_msg * msg, int forced_pipe)
 	int que_id, pipe_id, ret;
 	str method = msg->first_line.u.request.method;
 
+	LOCK_GET(rl_lock);
 	if (forced_pipe < 0) {
-		if (find_queue(msg, &que_id))
-			return 1;
+		if (find_queue(msg, &que_id)) {
+			pipe_id = que_id = 0;
+			ret = 1;
+			goto out_release;
+		}
 		pipe_id = *queues[que_id].pipe;
 	} else {
-		que_id = -1; 
+		que_id = 0; 
 		pipe_id = forced_pipe;
 	}
 
 	ret = pipe_push(msg, pipe_id);
+out_release:
+	LOCK_RELEASE(rl_lock);
+
+	/* no locks here because it's only read and pipes[pipe_id] is always alloc'ed */
 	LOG(L_DBG,
 			"meth=%.*s queue=%d pipe=%d algo=%d limit=%d pkg_load=%d counter=%d "
 			"load=%2.1lf => %s\n",
@@ -820,6 +879,7 @@ static int add_queue_params(modparam_t type, void * val)
 static void timer(unsigned int ticks, void *param) {
 	int i;
 
+	LOCK_GET(rl_lock);
 	switch (*load_source) {
 		case LOAD_SOURCE_CPU:
 			update_cpu_load();
@@ -831,6 +891,7 @@ static void timer(unsigned int ticks, void *param) {
 			*pipes[i].load = *pipes[i].counter / (*pipes[i].limit * timer_interval);
 		*pipes[i].counter = 0;
 	}
+	LOCK_RELEASE(rl_lock);
 }
 
 /*
@@ -892,15 +953,18 @@ static const char *rpc_get_queue_doc[2] = {
 static void rpc_stats(rpc_t *rpc, void *c) {
 	int i;
 
+	LOCK_GET(rl_lock);
 	for (i=0; i<MAX_PIPES; i++) {
 		if (rpc->printf(c, "pipe=%d load=%d\n", i, *pipes[i].load) < 0)
-			return;
+			goto out;
 		rpc_lf(rpc, c);
 	}
 
 	if (rpc->printf(c, "drop_rate=%d\n", *drop_rate) < 0)
-			return;
+			goto out;
 	rpc_lf(rpc, c);
+out:
+	LOCK_RELEASE(rl_lock);
 }
 
 static void rpc_timer(rpc_t *rpc, void *c) {
@@ -917,14 +981,20 @@ static void rpc_set_pid(rpc_t *rpc, void *c)
 		return;
 	}
 	DBG("set_pid: %lf, %lf, %lf\n", kp, ki, kd);
+	LOCK_GET(rl_lock);
 	*pid_ki = ki;
 	*pid_kp = kp;
 	*pid_kd = kd;
+	LOCK_RELEASE(rl_lock);
 }
 
 static void rpc_get_pid(rpc_t *rpc, void *c) 
 {
-	if (rpc->add(c, "fff", *pid_kp, *pid_ki, *pid_kd) < 0) return;
+	LOCK_GET(rl_lock);
+	if (rpc->add(c, "fff", *pid_kp, *pid_ki, *pid_kd) < 0)
+		goto out;
+out:
+	LOCK_RELEASE(rl_lock);
 }
 
 /* FIXME: if more than one pipe is set up, this can't change the load values for
@@ -955,15 +1025,18 @@ static void rpc_set_pipe(rpc_t *rpc, void *c)
 		return;
 	}
 
+	LOCK_GET(rl_lock);
 	*pipes[pipe_no].algo = algo_id;
 	*pipes[pipe_no].limit = limit;
 
 	if (check_feedback_setpoints(0)) {
 		rpc->fault(c, 400, "feedback limits don't match");
-		return;
+		goto out;
 	} else {
 		*pid_setpoint = 0.01 * (double)cfg_setpoint;
 	}
+out:
+	LOCK_RELEASE(rl_lock);
 }
 
 static void rpc_get_pipes(rpc_t *rpc, void *c) 
@@ -971,15 +1044,18 @@ static void rpc_get_pipes(rpc_t *rpc, void *c)
 	str algo;
 	int i;
 
+	LOCK_GET(rl_lock);
 	for (i=0; i<MAX_PIPES; i++) {
 		if (str_map_int(algo_names, *pipes[i].algo, &algo)) {
 			rpc->fault(c, 400, "unknown algo");
-			return;
+			goto out;
 		}
 	
 		if (rpc->add(c, "Sd", &algo, *pipes[i].limit) < 0)
-			return;
+			goto out;
 	}
+out:
+	LOCK_RELEASE(rl_lock);
 }
 
 /* TODO: if nqueues <= queue_no < MAX_QUEUES then 
@@ -995,9 +1071,10 @@ static void rpc_set_queue(rpc_t *rpc, void *c)
 		return;
 	}
 
+	LOCK_GET(rl_lock);
 	if (queue_no < 0 || queue_no >= *nqueues) {
 		rpc->fault(c, 400, "MAX_QUEUES reached");
-		return;
+		goto out;
 	}
 
 	DBG("set_queue: %d:%.*s:%d\n", queue_no, 
@@ -1006,14 +1083,16 @@ static void rpc_set_queue(rpc_t *rpc, void *c)
 
 	if (pipe_no >= MAX_PIPES) {
 		rpc->fault(c, 400, "invalid pipe number");
-		return;
+		goto out;
 	}
 	
 	*queues[queue_no].pipe = pipe_no;
 	if (str_cpy(queues[queue_no].method, &method)) {
 		rpc->fault(c, 400, "out of memory");
-		return;
+		goto out;
 	}
+out:
+	LOCK_RELEASE(rl_lock);
 }
 
 static void rpc_get_queue(rpc_t *rpc, void *c) 
@@ -1025,9 +1104,10 @@ static void rpc_get_queue(rpc_t *rpc, void *c)
 		return;
 	}
 
+	LOCK_GET(rl_lock);
 	if (qid < 0 || qid >= *nqueues) {
 		rpc->fault(c, 400, "invalid queue id");
-		return;
+		goto out;
 	}
 
 	DBG("get_queue(%d): %.*s, %d\n", 
@@ -1036,8 +1116,10 @@ static void rpc_get_queue(rpc_t *rpc, void *c)
 			queues[qid].method->s,
 			*queues[qid].pipe);
 
-	if (rpc->add(c, "Sd", queues[qid].method, *queues[qid].pipe) < 0)
-		return;
+	if (rpc->add(c, "Sd", queues[qid].method, *queues[qid].pipe) < 0) 
+		goto out;
+out:
+	LOCK_RELEASE(rl_lock);
 }
 
 static void rpc_push_load(rpc_t *rpc, void *c) 
@@ -1054,7 +1136,9 @@ static void rpc_push_load(rpc_t *rpc, void *c)
 		return;
 	}
 
+	LOCK_GET(rl_lock);
 	*load_value = value;
+	LOCK_RELEASE(rl_lock);
 	do_update_load();
 }
 
