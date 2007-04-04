@@ -165,9 +165,10 @@ static regex_t queue_params_regex;
 static int mod_init(void);
 static int child_init(int);
 static void timer(unsigned int, void *);
-static int rl_check(struct sip_msg*, char *, char *);
+static int w_rl_check(struct sip_msg*, char *, char *);
 static int w_rl_drop(struct sip_msg*, char *, char *);
 static int fixup_rl_drop(void **, int);
+static int fixup_rl_check(void **, int);
 static int add_queue_params(modparam_t, void *);
 static int add_pipe_params(modparam_t, void *);
 static int set_load_source(modparam_t, void *);
@@ -176,7 +177,8 @@ void destroy(void);
 static rpc_export_t rpc_methods[];
 
 static cmd_export_t cmds[]={
-	{"rl_check", rl_check, 0, 0, REQUEST_ROUTE},
+	{"rl_check", w_rl_check, 0, fixup_rl_check, REQUEST_ROUTE},
+	{"rl_check", w_rl_check, 1, fixup_rl_check, REQUEST_ROUTE},
 	{"rl_drop", w_rl_drop, 0, fixup_rl_drop, REQUEST_ROUTE},
 	{"rl_drop", w_rl_drop, 1, fixup_rl_drop, REQUEST_ROUTE},
 	{"rl_drop", w_rl_drop, 2, fixup_rl_drop, REQUEST_ROUTE},
@@ -206,7 +208,7 @@ struct module_exports exports= {
 };
 
 /**
- * converts a maped str to an int
+ * converts a mapped str to an int
  * \return	0 if found, -1 otherwise
  */
 static int str_map_str(const str_map_t * map, const str * key, int * ret)
@@ -221,7 +223,7 @@ static int str_map_str(const str_map_t * map, const str * key, int * ret)
 }
 
 /**
- * converts a maped int to a str
+ * converts a mapped int to a str
  * \return	0 if found, -1 otherwise
  */
 static int str_map_int(const str_map_t * map, int key, str * ret)
@@ -435,6 +437,11 @@ static int fixup_rl_drop(void **param, int param_no)
 		return fixup_var_int_12(param, 2);
 }
 
+static int fixup_rl_check(void **param, int param_no)
+{
+	return fix_param(FPARAM_INT, param);
+}
+
 #define FP_INT(val) { \
 	.orig = "int_value", \
 	.type = FPARAM_INT, \
@@ -573,32 +580,53 @@ static int pipe_push(struct sip_msg * msg, int id)
 
 /**
  * runs the current request through the queues
+ * \param	forced_pipe	is >= 0 if a specific pipe should be used, < 0 otherwise
  * \return -1 if drop needed, 1 if allowed
  */
-static int rl_check(struct sip_msg * msg, char * a, char * b)
+static int rl_check(struct sip_msg * msg, int forced_pipe)
 {
-	int id, ret;
+	int que_id, pipe_id, ret;
 	str method = msg->first_line.u.request.method;
 
-	if (find_queue(msg, &id))
-		return 1;
+	if (forced_pipe < 0) {
+		if (find_queue(msg, &que_id))
+			return 1;
+		pipe_id = *queues[que_id].pipe;
+	} else {
+		que_id = -1; 
+		pipe_id = forced_pipe;
+	}
 
-	ret = pipe_push(msg, *queues[id].pipe);
+	ret = pipe_push(msg, pipe_id);
 	LOG(L_DBG,
 			"meth=%.*s queue=%d pipe=%d algo=%d limit=%d pkg_load=%d counter=%d "
 			"load=%2.1lf => %s\n",
 			method.len,
 			method.s, 
-			id, 
-			*queues[id].pipe,
-			*pipes[*queues[id].pipe].algo,
-			*pipes[*queues[id].pipe].limit,
-			*pipes[*queues[id].pipe].load,
-			*pipes[*queues[id].pipe].counter, 
+			que_id, 
+			pipe_id,
+			*pipes[pipe_id].algo,
+			*pipes[pipe_id].limit,
+			*pipes[pipe_id].load,
+			*pipes[pipe_id].counter, 
 			*load_value,
 			(ret == 1) ? "ACCEPT" : "DROP");
 	
 	return ret;
+}
+
+static int w_rl_check(struct sip_msg* msg, char *p1, char *p2) 
+{
+	int pipe;
+
+	LOG(L_DBG, "w_rl_check (%p, %p)\n", p1, p2);
+
+	if (!p1 || get_int_fparam(&pipe, msg, (fparam_t *)p1) < 0) {
+		LOG(L_DBG, "using the pipe associated with the current req. method\n");
+		pipe = -1;
+	}
+
+	return rl_check(msg, pipe);
 }
 
 static int set_load_source(modparam_t type, void * val)
