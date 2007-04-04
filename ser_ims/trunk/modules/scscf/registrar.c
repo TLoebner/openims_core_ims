@@ -775,8 +775,8 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml)
 	contact_t *ci;
 	contact_body_t* b=0;	
 	struct hdr_field *h;
-	str ua;
-	str path;
+	str ua={0,0};
+	str path={0,0};
 	int result = CSCF_RETURN_FALSE;
 	int max_expires, expires_hdr,expires;
 	unsigned int exp;
