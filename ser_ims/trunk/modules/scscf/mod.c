@@ -104,7 +104,7 @@ int registration_default_expires=3600;	/**< the default value for expires if non
 int registration_min_expires=10;		/**< minimum registration expiration time 		*/
 int registration_max_expires=1000000;	/**< maximum registration expiration time 		*/
 char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)*/
-str registration_default_algorithm_s={0,0};	/**< fixed default algorithm for registration (if none present)	 */
+unsigned char registration_default_algorithm_type=1;	/**< fixed default algorithm for registration (if none present)	 */
 int registration_disable_early_ims=0;	/**< if to disable the Early-IMS checks			*/
 
 int subscription_default_expires=3600;	/**< the default value for expires if none found*/
@@ -469,6 +469,7 @@ static int mod_init(void)
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
 	bind_dlg_mod_f load_dlg;
+	str algo;
 	
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
@@ -484,8 +485,9 @@ static int mod_init(void)
 	scscf_aaa_peer_str.s = scscf_aaa_peer;
 	scscf_aaa_peer_str.len = strlen(scscf_aaa_peer);
 	
-	registration_default_algorithm_s.s = registration_default_algorithm;
-	registration_default_algorithm_s.len = strlen(registration_default_algorithm);
+	algo.s = registration_default_algorithm;
+	algo.len = strlen(registration_default_algorithm);
+	registration_default_algorithm_type = get_algorithm_type(algo);	
 	
 	/* load the send_reply function from sl module */
     sl_reply = find_export("sl_send_reply", 2, 0);

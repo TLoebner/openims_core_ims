@@ -59,6 +59,11 @@
 #include "mod.h"
 #include "../../locking.h"
 
+#define NONCE_LEN 16
+
+unsigned char get_algorithm_type(str algorithm);
+unsigned char get_auth_scheme_type(str algorithm);
+
 int S_add_path_service_routes(struct sip_msg *msg,char *str1,char *str2 );
 
 int S_add_service_route(struct sip_msg *msg,char *str1,char *str2 );
@@ -82,10 +87,11 @@ enum auth_vector_status {
 	AUTH_VECTOR_USELESS = 3
 } ;
 
+
 /** Authorization Vector storage structure */
 typedef struct _auth_vector {
 	int item_number;	/**< index of the auth vector		*/
-	str algorithm;		/**< algorithm						*/
+	unsigned char type;	/**< type of authentication vector 	*/
 	str authenticate;	/**< challenge (rand|autn in AKA)	*/
 	str authorization; 	/**< expected response				*/
 	str ck;				/**< Cypher Key						*/
@@ -128,7 +134,7 @@ typedef struct {
 int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av);
 
 int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
-					int count,str algorithm,str nonce,str auts,str server_name,str realm);
+					int count,str auth_scheme,str nonce,str auts,str server_name,str realm);
 
 
 /*

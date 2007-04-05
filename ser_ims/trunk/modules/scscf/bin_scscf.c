@@ -795,7 +795,7 @@ error:
 {
 	char ch;
 	if (!bin_encode_int(x,v->item_number)) goto error;
-	if (!bin_encode_str(x,&(v->algorithm))) goto error;
+	if (!bin_encode_uchar(x,v->type)) goto error;
 	if (!bin_encode_str(x,&(v->authenticate))) goto error;
 	if (!bin_encode_str(x,&(v->authorization))) goto error;
 	if (!bin_encode_str(x,&(v->ck))) goto error;
@@ -831,7 +831,7 @@ auth_vector* bin_decode_auth_vector(bin_data *x)
 	memset(v,0,len);
 	
 	if (!bin_decode_int(x,&(v->item_number))) goto error;
-	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->algorithm),&s)) goto error;
+	if (!bin_decode_uchar(x,&(v->type))) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->authenticate),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->authorization),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(v->ck),&s)) goto error;
@@ -845,7 +845,6 @@ auth_vector* bin_decode_auth_vector(bin_data *x)
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_auth_vector: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (v) {
-		if (v->algorithm.s) shm_free(v->algorithm.s);
 		if (v->authenticate.s) shm_free(v->authenticate.s);
 		if (v->authorization.s) shm_free(v->authorization.s);
 		if (v->ck.s) shm_free(v->ck.s);
@@ -934,7 +933,6 @@ error:
 		while(u->head){
 			v = u->head;
 			vn = v->next;
-			if (v->algorithm.s) shm_free(v->algorithm.s);
 			if (v->authenticate.s) shm_free(v->authenticate.s);
 			if (v->authorization.s) shm_free(v->authorization.s);
 			if (v->ck.s) shm_free(v->ck.s);

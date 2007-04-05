@@ -15,7 +15,5 @@
 	<Acceptor port="3870" bind="127.0.0.1"/>
 	
 	<Auth id="16777216" vendor="10415"/>
-	<Auth id="16777216" vendor="0" />
-	<Acct id="16777216" vendor="0" />
 
 </DiameterPeer>
