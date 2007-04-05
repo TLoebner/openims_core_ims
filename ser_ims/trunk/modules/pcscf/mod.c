@@ -200,8 +200,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * as specified in the Path header at registration
  * - P_remove_route() - remove a route header - deprecated, loose_route() should do the job
  * <p>
- * - P_NAT_response() - forward a response through a NAT
- * - P_NAT_request() - forward a request through a NAT
+ * - P_NAT_relay() - forward a message through a NAT
  * - P_SDP_manipulate() - manipulate a SDP to pipe the media through the RTP Proxy (for NAT)
  * <p>
  * - P_follows_service_routes() - checks if the request follows the Service-Route headers
@@ -241,6 +240,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_IPSec_401",					P_IPSec_401, 				0, 0, ONREPLY_ROUTE},
 	{"P_IPSec_200",					P_IPSec_200,				0, 0, ONREPLY_ROUTE},	
 	{"P_is_integrity_protected",	P_is_integrity_protected, 	0, 0, REQUEST_ROUTE},	
+	{"P_IPSec_relay", 				P_IPSec_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	
 	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
@@ -252,8 +252,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_mobile_terminating",		P_mobile_terminating, 		0, 0, REQUEST_ROUTE},
 	{"P_remove_route",				P_remove_route, 			1, 0, REQUEST_ROUTE},
 	
-	{"P_NAT_response", 				P_NAT_response, 			0, 0, ONREPLY_ROUTE},
- 	{"P_NAT_request", 				P_NAT_request, 				0, 0, REQUEST_ROUTE},
+	{"P_NAT_relay", 				P_NAT_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_SDP_manipulate", 			P_SDP_manipulate, 			0, 0, REQUEST_ROUTE | ONREPLY_ROUTE },
 	
 	{"P_follows_service_routes",	P_follows_service_routes, 	0, 0, REQUEST_ROUTE},
