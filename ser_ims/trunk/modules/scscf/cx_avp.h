@@ -100,7 +100,7 @@ int Cx_get_auth_data_item_request(AAAMessage *msg,
 		 str *auth_scheme, str *authorization);
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik,str *ip);
+	str *ck,str *ik,str *ip,str *ha1);
 	
 str Cx_get_destination_host(AAAMessage *msg);	
 str Cx_get_user_data(AAAMessage *msg);	

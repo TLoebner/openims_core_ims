@@ -815,7 +815,7 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
  */
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik,str *ip)
+	str *ck,str *ik,str *ip,str *ha1)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP *avp;
@@ -841,6 +841,7 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	if (!avp||!avp->data.s) {auth_scheme->s=0;auth_scheme->len=0;}
 	else *auth_scheme = avp->data;
 
+	/* Early-IMS */
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Framed_IP_Address,0,0);
 	if (!avp||!avp->data.s) {ip->s=0;ip->len=0;}
 	else {
@@ -849,6 +850,13 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 		ip->s = buf;
 	}
 
+	/* Digest */
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_CableLabs_Digest_HA1,IMS_vendor_id_CableLabs,0);
+	if (!avp||!avp->data.s) {ha1->s=0;ha1->len=0;}
+	else *ha1 = avp->data;
+	
+	
+	/* AKA, MD5 */
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authenticate,
 		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {authenticate->s=0;authenticate->len=0;}

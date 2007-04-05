@@ -70,7 +70,7 @@
 extern struct tm_binds tmb;						/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs 		*/
 
-extern str registration_default_algorithm_s;	/**< fixed default algorithm for registration (if none present)	*/
+unsigned char registration_default_algorithm_type;	/**< fixed default algorithm for registration (if none present)	*/
 extern int registration_disable_early_ims;		/**< if to disable the Early-IMS checks			*/
 
 extern str scscf_name_str;						/**< fixed name of the S-CSCF 					*/
@@ -82,62 +82,90 @@ extern int auth_data_timeout;					/**< timeout for a hash entry to expire when e
 extern int av_request_at_once;					/**< how many auth vectors to request in a MAR 				*/
 extern int av_request_at_sync;					/**< how many auth vectors to request in a sync MAR 		*/	
 
+enum authorization_types {
+	AUTH_UNKNOWN			= 0,
+/* 3GPP */	
+	AUTH_AKAV1_MD5			= 1,
+	AUTH_AKAV2_MD5			= 2,
+	AUTH_EARLY_IMS			= 3,
+/* FOKUS */
+	AUTH_MD5				= 4,
+/* CableLabs */	
+	AUTH_DIGEST				= 5,
+/* TISPAN */	
+	AUTH_HTTP_DIGEST_MD5	= 6,	
+	AUTH_NASS_BUNDLED		= 7
+};
 
-str digest_akav1={"Digest-AKAv1-MD5",16};
-str digest_akav2={"Digest-AKAv2-MD5",16};
+static str algorithm_types[] = {
+	{"Unknown",7},
+	{"AKAv1-MD5",9},
+	{"AKAv2-MD5",9},
+	{"Early-IMS",9},
+	{"MD5",3},
+	{"CableLabs-Digest",16},
+	{"TISPAN-HTTP_DIGEST_MD5",22},
+	{"NASS-Bundled",12},
+	{0,0}
+};
 
-str digest_md5={"Digest-MD5",10};
-str digest={"Digest",6};
-str http_digest_md5={"HTTP_DIGEST_MD5",15};
+static str auth_scheme_types[] = {
+	{"Unknown",7},
+	{"Digest-AKAv1-MD5",16},
+	{"Digest-AKAv2-MD5",16},
+	{"Early-IMS-Security",18},
+	{"Digest-MD5",10},
+	{"Digest",6},
+	{"HTTP_DIGEST_MD5",15},
+	{"NASS-Bundled",12},
+	{0,0}	
+};
 
-str early_ims_security={"Early-IMS-Security",18};
-str nass_bundled={"NASS-Bundled",12};
-str unknown={"Unknown",7};
-
-
-str akav1={"AKAv1-MD5",9};
-str akav2={"AKAv2-MD5",9};
-str md5={"MD5",3};
-str hss_selected={"HSS-Selected",12};
+//str digest_akav1={"Digest-AKAv1-MD5",16};
+//str digest_akav2={"Digest-AKAv2-MD5",16};
+//
+//str digest_md5={"Digest-MD5",10};
+//str digest={"Digest",6};
+//str http_digest_md5={"HTTP_DIGEST_MD5",15};
+//
+//str early_ims_security={"Early-IMS-Security",18};
+//str nass_bundled={"NASS-Bundled",12};
+//str unknown={"Unknown",7};
+//
+//
+//str akav1={"AKAv1-MD5",9};
+//str akav2={"AKAv2-MD5",9};
+//str md5={"MD5",3};
+//str hss_selected={"HSS-Selected",12};
 
 /**
- * Convert the SIP Algorithm to Diameter Authorization Scheme.
+ * Convert the SIP Algorithm to its type
  * @param algorithm - the SIP Algorithm
- * @returns the Diameter Authorization Scheme
+ * @returns the algorithm type
  */
-str convertAuthSchemeSIPtoDiameter(str algorithm)
-{
-	if (algorithm.len == akav1.len && strncasecmp(algorithm.s,akav1.s,akav1.len)==0)
-		return digest_akav1;
-	if (algorithm.len == akav2.len && strncasecmp(algorithm.s,akav2.s,akav2.len)==0)
-		return digest_akav2;
-	if (algorithm.len == md5.len && strncasecmp(algorithm.s,md5.s,md5.len)==0)
-		return digest_md5;
-	if (algorithm.len == hss_selected.len && strncasecmp(algorithm.s,hss_selected.s,hss_selected.len)==0)
-		return unknown;
-	return algorithm;
+unsigned char get_algorithm_type(str algorithm)
+{	
+	int i;
+	for(i=0;algorithm_types[i].len>0;i++)
+		if (algorithm_types[i].len == algorithm.len &&
+			strncasecmp(algorithm_types[i].s,algorithm.s,algorithm.len)==0)
+		return i;
+	return AUTH_UNKNOWN;		
 }
 
 /**
- * Convert the Diameter Authorization Scheme to SIP Algorithm.
+ * Convert the Diameter Authorization Scheme to its type
  * @param scheme - the Diameter Authorization Scheme
  * @returns the SIP Algorithm
  */
-str convertAuthSchemeDiametertoSip(str scheme)
+unsigned char get_auth_scheme_type(str scheme)
 {
-	if (scheme.len == digest_akav1.len && strncasecmp(scheme.s,digest_akav1.s,digest_akav1.len)==0)
-		return akav1;
-	if (scheme.len == digest_akav2.len && strncasecmp(scheme.s,digest_akav2.s,digest_akav2.len)==0)
-		return akav2;
-		
-	if ((scheme.len == digest_md5.len && strncasecmp(scheme.s,digest_md5.s,digest_md5.len)==0)||
-		(scheme.len == digest.len && strncasecmp(scheme.s,digest.s,digest.len)==0)||
-		(scheme.len == http_digest_md5.len && strncasecmp(scheme.s,http_digest_md5.s,http_digest_md5.len)==0))
-		return md5;
-		
-	if (scheme.len == unknown.len && strncasecmp(scheme.s,unknown.s,unknown.len)==0)
-		return hss_selected;
-	return scheme;
+	int i;
+	for(i=0;auth_scheme_types[i].len>0;i++)
+		if (auth_scheme_types[i].len == scheme.len &&
+			strncasecmp(auth_scheme_types[i].s,scheme.s,scheme.len)==0)
+		return i;
+	return AUTH_UNKNOWN;		
 }
 
 
@@ -364,7 +392,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 			do {
 				/* try and do MAR */
 				if (!S_MAR(msg,public_identity,private_identity,1,				
-					early_ims_security,empty_s,empty_s,scscf_name_str,realm)){
+					auth_scheme_types[AUTH_EARLY_IMS],empty_s,empty_s,scscf_name_str,realm)){
 					/* on fail, return not authorized */
 //					if (p && p->early_ims_ip.s){
 //						shm_free(p->early_ims_ip.s);
@@ -406,23 +434,35 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: no matching auth vector found - maybe timer expired\n");		
 		return ret;
 	}
-	if ((av->algorithm.len == akav1.len && strncasecmp(av->algorithm.s,akav1.s,akav1.len)==0)||
-		(av->algorithm.len == akav2.len && strncasecmp(av->algorithm.s,akav2.s,akav2.len)==0)||
-		(av->algorithm.len == md5.len   && strncasecmp(av->algorithm.s,md5.s,md5.len)==0)){
-
-//		LOG(L_CRIT,"A1: %.*s:%.*s:%.*s\n",private_identity.len,private_identity.s,
-//			realm.len,realm.s,av->authorization.len,av->authorization.s);
+	switch (av->type){
+		case AUTH_AKAV1_MD5:
+		case AUTH_AKAV2_MD5:
+		case AUTH_MD5:
+//			LOG(L_CRIT,"A1: %.*s:%.*s:%.*s\n",private_identity.len,private_identity.s,
+//				realm.len,realm.s,av->authorization.len,av->authorization.s);
 			
-		calc_HA1(HA_MD5,&private_identity,&realm,&(av->authorization),&(av->authenticate),0,ha1);
-		calc_response(ha1,&(av->authenticate),
-			&empty_s,&empty_s,&empty_s,0,
-			&msg->first_line.u.request.method,&uri,hbody,expected);
-		LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s and we  expect %.*s ha1 %.*s\n",
-			response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);		
-	}else{
-		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: algorithm %.*s is not handled.\n",
-			av->algorithm.len,av->algorithm.s);
-		goto error;
+			calc_HA1(HA_MD5,&private_identity,&realm,&(av->authorization),&(av->authenticate),0,ha1);
+			calc_response(ha1,&(av->authenticate),
+				&empty_s,&empty_s,&empty_s,0,
+				&msg->first_line.u.request.method,&uri,hbody,expected);
+			LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s and we  expect %.*s ha1 %.*s\n",
+				response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);
+			break;		
+		case AUTH_DIGEST:
+//			LOG(L_CRIT,"A1: %.*s:%.*s:%.*s\n",private_identity.len,private_identity.s,
+//				realm.len,realm.s,av->authorization.len,av->authorization.s);
+			
+			memcpy(ha1,av->authorization.s,HASHHEXLEN);					
+			calc_response(ha1,&(av->authenticate),
+				&empty_s,&empty_s,&empty_s,0,
+				&msg->first_line.u.request.method,&uri,hbody,expected);
+			LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s and we  expect %.*s ha1 %.*s\n",
+				response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);
+			break;		
+		default:
+			LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: algorithm %.*s is not handled.\n",
+				algorithm_types[av->type].len,algorithm_types[av->type].s);
+			goto error;
 	}
 
 	if (response16.len==expected_len && strncasecmp(response16.s,expected,response16.len)==0){	
@@ -455,7 +495,8 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 	unsigned int aud_hash;
 	str realm,private_identity,public_identity,auts={0,0},nonce={0,0};
 	auth_vector *av=0;
-	str algo={0,0};
+//	str algo={0,0};
+	int algo_type;
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_challenge: Challenging the REGISTER...\n");
 
@@ -487,9 +528,11 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 		goto abort;
 	}
 	/* get the requested algorithm */
-	algo = cscf_get_algorithm(msg,realm);
-	if (algo.len==0)
-		algo = registration_default_algorithm_s;
+//	algo = cscf_get_algorithm(msg,realm);
+//	if (algo.len==0)
+//		algo = registration_default_algorithm_s;
+//	algo_type = get_algorithm_type(algo);
+	algo_type = registration_default_algorithm_type;	
 	
 	/* check if it is a synchronization request */
 	auts = cscf_get_auts(msg,realm);
@@ -517,13 +560,13 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 		}
 		/* if synchronization - force MAR - if MAR ok, old avs will be droped*/
 		S_MAR(msg,public_identity,private_identity,av_request_at_sync,
-				algo,nonce,auts,scscf_name_str,realm);
+				auth_scheme_types[algo_type],nonce,auts,scscf_name_str,realm);
 	}
 	
 	/* loop because some other process might steal the auth_vector that we just retrieved */
 	while(!(av=get_auth_vector(private_identity,public_identity,AUTH_VECTOR_UNUSED,0,&aud_hash))){
 		if (!S_MAR(msg,public_identity,private_identity,av_request_at_once,
-				algo,nonce,auts,scscf_name_str,realm)) break;
+				auth_scheme_types[algo_type],nonce,auts,scscf_name_str,realm)) break;
 		/* do sync just once */
 		auts.len=0;auts.s=0;
 	}
@@ -543,7 +586,7 @@ int S_challenge(struct sip_msg *msg,char *str1,char *str2 )
 	auth_data_unlock(aud_hash);
 	return ret;
 error:
-	ret = CSCF_RETURN_ERROR;	
+	ret = CSCF_RETURN_BREAK;	
 	return 	ret;
 abort:
 	ret = CSCF_RETURN_BREAK;	
@@ -567,51 +610,57 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 	str x={0,0};
 	char ck[32],ik[32];
 	int ck_len,ik_len;
-	if ((av->algorithm.len == akav1.len && strncasecmp(av->algorithm.s,akav1.s,akav1.len)==0)||
-	    (av->algorithm.len == akav2.len && strncasecmp(av->algorithm.s,akav2.s,akav2.len)==0)){
-	    /* AKA */
-		ck_len = bin_to_base16(av->ck.s,16,ck);
-		ik_len = bin_to_base16(av->ik.s,16,ik);
-		x.len = S_WWW_Authorization_AKA.len +
-			realm.len+
-			av->authenticate.len+
-			av->algorithm.len+
-			ck_len+
-			ik_len;		
-		x.s = pkg_malloc(x.len);
-		if (!x.s) {
-			LOG(L_ERR,"ERR:"M_NAME":pack_challenge: Error allocating %d bytes\n",
-				x.len);
+	switch (av->type){
+		case AUTH_AKAV1_MD5:
+		case AUTH_AKAV2_MD5:
+		    /* AKA */
+			ck_len = bin_to_base16(av->ck.s,16,ck);
+			ik_len = bin_to_base16(av->ik.s,16,ik);
+			x.len = S_WWW_Authorization_AKA.len +
+				realm.len+
+				av->authenticate.len+
+				algorithm_types[av->type].len+
+				ck_len+
+				ik_len;		
+			x.s = pkg_malloc(x.len);
+			if (!x.s) {
+				LOG(L_ERR,"ERR:"M_NAME":pack_challenge: Error allocating %d bytes\n",
+					x.len);
+				goto error;
+			}			
+			sprintf(x.s,S_WWW_Authorization_AKA.s,
+				realm.len,realm.s,
+				av->authenticate.len,av->authenticate.s,
+				algorithm_types[av->type].len,algorithm_types[av->type].s,
+				ck_len,ck,
+				ik_len,ik);
+			x.len = strlen(x.s);
+			break;
+		case AUTH_DIGEST:
+			/* Cable-Labs MD5 */
+			/* this one continues into the next one */			
+		case AUTH_MD5:
+			/* FOKUS MD5 */
+			x.len = S_WWW_Authorization_MD5.len +
+				realm.len+
+				av->authenticate.len+
+				algorithm_types[av->type].len;
+			x.s = pkg_malloc(x.len);
+			if (!x.s) {
+				LOG(L_ERR,"ERR:"M_NAME":pack_challenge: Error allocating %d bytes\n",
+					x.len);
+				goto error;
+			}			
+			sprintf(x.s,S_WWW_Authorization_MD5.s,
+				realm.len,realm.s,
+				av->authenticate.len,av->authenticate.s,
+				algorithm_types[AUTH_MD5].len,algorithm_types[AUTH_MD5].s);
+			x.len = strlen(x.s);
+			break;
+		default:
+			LOG(L_CRIT,"ERR:"M_NAME":pack_challenge: not implemented for algorithm %.*s\n",
+				algorithm_types[av->type].len,algorithm_types[av->type].s);
 			goto error;
-		}			
-		sprintf(x.s,S_WWW_Authorization_AKA.s,
-			realm.len,realm.s,
-			av->authenticate.len,av->authenticate.s,
-			av->algorithm.len,av->algorithm.s,
-			ck_len,ck,
-			ik_len,ik);
-		x.len = strlen(x.s);
-	}else if (av->algorithm.len == md5.len && strncasecmp(av->algorithm.s,md5.s,md5.len)==0){
-		/* MD5 */
-		x.len = S_WWW_Authorization_MD5.len +
-			realm.len+
-			av->authenticate.len+
-			av->algorithm.len;
-		x.s = pkg_malloc(x.len);
-		if (!x.s) {
-			LOG(L_ERR,"ERR:"M_NAME":pack_challenge: Error allocating %d bytes\n",
-				x.len);
-			goto error;
-		}			
-		sprintf(x.s,S_WWW_Authorization_MD5.s,
-			realm.len,realm.s,
-			av->authenticate.len,av->authenticate.s,
-			av->algorithm.len,av->algorithm.s);
-		x.len = strlen(x.s);
-	}else{
-		LOG(L_CRIT,"ERR:"M_NAME":pack_challenge: not implemented for algorithm %.*s\n",
-			av->algorithm.len,av->algorithm.s);
-		goto error;
 	}
 		
 	if (cscf_add_header_rpl(msg,&x)) {
@@ -639,7 +688,7 @@ error:
  * @returns 1 on success, 0 on failure
  */
 int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
-					int count,str algorithm,str nonce,str auts,str server_name,str realm)
+					int count,str auth_scheme,str nonce,str auts,str server_name,str realm)
 {
 	AAAMessage *maa;
 	AAA_AVP *auth_data;
@@ -648,7 +697,7 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 	int cnt,i,j;
 	int item_number;
 	int is_sync=0;
-	str auth_scheme={0,0},authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0},ip={0,0};
+	str authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0},ip={0,0},ha1={0,0};
 		
 	if (auts.len){
 		authorization.s = pkg_malloc(nonce.len*3/4+auts.len*3/4+8);
@@ -657,9 +706,7 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 		authorization.len += base64_to_bin(auts.s,auts.len,authorization.s+authorization.len);		
 		is_sync=1;
 	}
-	
-	auth_scheme = convertAuthSchemeSIPtoDiameter(algorithm);
-	
+		
 	maa = Cx_MAR(msg,public_identity,private_identity,count,auth_scheme,authorization,
 					server_name,realm);
 
@@ -729,9 +776,11 @@ success:
 	cnt = 0;
 	auth_data = 0;
 	while((Cx_get_auth_data_item_answer(maa,&auth_data,&item_number,
-			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip)))
+			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip,&ha1)))
 	{
 		if (ip.len)	av = new_auth_vector(item_number,auth_scheme,empty_s,ip,empty_s,empty_s);
+		else 
+		if (ha1.len) av = new_auth_vector(item_number,auth_scheme,empty_s,ha1,empty_s,empty_s);
 		else av = new_auth_vector(item_number,auth_scheme,authenticate,authorization,ck,ik);
 		
 		if (cnt==0) avlist[cnt++]=av;
@@ -847,106 +896,113 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 			str authorization,str ck,str ik)
 {
 	auth_vector *x=0;
-	str algorithm;
 	x = shm_malloc(sizeof(auth_vector));
 	if (!x){
 		LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
 		goto done;
-	}
-	
+	}	
+	memset(x,0,sizeof(auth_vector));
 	x->item_number = item_number;
-
-	algorithm = convertAuthSchemeDiametertoSip(auth_scheme);
-	x->algorithm.len = algorithm.len;
-	x->algorithm.s = shm_malloc(algorithm.len);
-	if (!x->algorithm.s){
-		LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-		goto done;
-	}
-	memcpy(x->algorithm.s,algorithm.s,algorithm.len);
-
-	if ((algorithm.len == akav1.len && strncasecmp(algorithm.s,akav1.s,akav1.len)==0)||
-		(algorithm.len == akav2.len && strncasecmp(algorithm.s,akav2.s,akav2.len)==0)){
-		/* AKA */
-		x->authenticate.len = authenticate.len*4/3+4;
-		x->authenticate.s = shm_malloc(x->authenticate.len);
-		if (!x->authenticate.s){
-			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-			goto done;
-		}
-		x->authenticate.len = bin_to_base64(authenticate.s,authenticate.len,x->authenticate.s);
+	x->type = get_auth_scheme_type(auth_scheme);
+	switch (x->type){
+		case AUTH_AKAV1_MD5:
+		case AUTH_AKAV2_MD5:
+			/* AKA */
+			x->authenticate.len = authenticate.len*4/3+4;
+			x->authenticate.s = shm_malloc(x->authenticate.len);
+			if (!x->authenticate.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}
+			x->authenticate.len = bin_to_base64(authenticate.s,authenticate.len,x->authenticate.s);
+			
+			x->authorization.len = authorization.len;
+			x->authorization.s = shm_malloc(x->authorization.len);
+			if (!x->authorization.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}
+			memcpy(x->authorization.s,authorization.s,authorization.len);
+			x->ck.len = ck.len;
+			x->ck.s = shm_malloc(ck.len);
+			if (!x->ck.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}
+			memcpy(x->ck.s,ck.s,ck.len);
 		
-//		Old version - converting to base16 the XRES
-//		x->authorization.len = authorization.len*2;
-//		x->authorization.s = shm_malloc(x->authorization.len);
-//		if (!x->authorization.s){
-//			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-//			goto done;
-//		}
-//		x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);
-
-		x->authorization.len = authorization.len;
-		x->authorization.s = shm_malloc(x->authorization.len);
-		if (!x->authorization.s){
-			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-			goto done;
-		}
-		memcpy(x->authorization.s,authorization.s,authorization.len);
-	}
-	else if (algorithm.len == md5.len && strncasecmp(algorithm.s,md5.s,md5.len)==0){
-		/* MD5 */
-		x->authenticate.len = authenticate.len*2;
-		x->authenticate.s = shm_malloc(x->authenticate.len);
-		if (!x->authenticate.s){
-			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-			goto done;
-		}		
-		x->authenticate.len = bin_to_base16(authenticate.s,authenticate.len,x->authenticate.s);		
-
-		x->authorization.len = authorization.len;
-		x->authorization.s = shm_malloc(x->authorization.len);
-		if (!x->authorization.s){
-			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-			goto done;
-		}		
-		memcpy(x->authorization.s,authorization.s,authorization.len);
-		x->authorization.len = authorization.len;		
-	}
-	else if (algorithm.len == early_ims_security.len && strncasecmp(algorithm.s,early_ims_security.s,early_ims_security.len)==0){
-		/* early IMS */
-		x->authenticate.len=0;
-		x->authenticate.s=0;
-		x->authorization.len = authorization.len;
-		x->authorization.s = shm_malloc(x->authorization.len);
-		if (!x->authorization.s){
-			LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-			goto done;
-		}		
-		memcpy(x->authorization.s,authorization.s,authorization.len);
-		x->authorization.len = authorization.len;		
-	}else{
-		/* all else */
-		x->authenticate.len=0;
-		x->authenticate.s=0;
-	}
+			x->ik.len = ik.len;
+			x->ik.s = shm_malloc(ik.len);
+			if (!x->ik.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}
+			memcpy(x->ik.s,ik.s,ik.len);
+			break;
+		case AUTH_MD5:
+			/* MD5 */
+			x->authenticate.len = authenticate.len*2;
+			x->authenticate.s = shm_malloc(x->authenticate.len);
+			if (!x->authenticate.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}		
+			x->authenticate.len = bin_to_base16(authenticate.s,authenticate.len,x->authenticate.s);		
 	
-
-	x->ck.len = ck.len;
-	x->ck.s = shm_malloc(ck.len);
-	if (!x->ck.s){
-		LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-		goto done;
+			x->authorization.len = authorization.len;
+			x->authorization.s = shm_malloc(x->authorization.len);
+			if (!x->authorization.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}		
+			memcpy(x->authorization.s,authorization.s,authorization.len);
+			x->authorization.len = authorization.len;		
+			break;
+		case AUTH_DIGEST:
+			{
+				int i;
+				char y[NONCE_LEN];				
+				for(i=0;i<NONCE_LEN;i++)
+					y[i] = (unsigned char) ((int) (256.0*rand()/(RAND_MAX+1.0)));			
+				x->authenticate.len = 2*NONCE_LEN;
+				x->authenticate.s=shm_malloc(x->authenticate.len);
+				if (!x->authenticate.s){
+					LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: failed allocating %d bytes!\n",x->authenticate.len);
+					x->authenticate.len=0;
+					goto done;
+				}
+				x->authenticate.len = bin_to_base16(y,NONCE_LEN,x->authenticate.s); 																
+			}
+			
+			x->authorization.len = authorization.len*2;
+			x->authorization.s = shm_malloc(x->authorization.len);
+			if (!x->authorization.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				x->authorization.len=0;
+				goto done;
+			}		
+			x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);								
+			break;		
+		case AUTH_EARLY_IMS:
+			/* early IMS */
+			x->authenticate.len=0;
+			x->authenticate.s=0;
+			x->authorization.len = authorization.len;
+			x->authorization.s = shm_malloc(x->authorization.len);
+			if (!x->authorization.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}		
+			memcpy(x->authorization.s,authorization.s,authorization.len);
+			x->authorization.len = authorization.len;
+			break;
+		default:		
+			/* all else */
+			x->authenticate.len=0;
+			x->authenticate.s=0;
+			
 	}
-	memcpy(x->ck.s,ck.s,ck.len);
-
-	x->ik.len = ik.len;
-	x->ik.s = shm_malloc(ik.len);
-	if (!x->ik.s){
-		LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
-		goto done;
-	}
-	memcpy(x->ik.s,ik.s,ik.len);
-	
+		
 	x->next=0;
 	x->prev=0;
 	x->status=AUTH_VECTOR_UNUSED;
@@ -963,7 +1019,6 @@ done:
 void free_auth_vector(auth_vector *av)
 {
 	if (av){
-		if (av->algorithm.s) shm_free(av->algorithm.s);
 		if (av->authenticate.s) shm_free(av->authenticate.s);
 		if (av->authorization.s) shm_free(av->authorization.s);
 		if (av->ck.s) shm_free(av->ck.s);
