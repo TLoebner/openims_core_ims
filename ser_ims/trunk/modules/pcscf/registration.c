@@ -83,6 +83,7 @@ extern int r_hash_size;								/**< records tables parameters 						*/
 
 
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
+extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
 
 
 /**
@@ -949,118 +950,143 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 
 
 /**
- * Forward a request through the NAT pinhole
+ * Forward a message through the NAT pinhole
  * @param msg - the SIP message to forward
  * @param str1 - not used
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if no NAT
  */
-int P_NAT_request(struct sip_msg * msg, char * str1, char * str2) {
-	str req_uri;
-	r_contact *c;
+int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2) 
+{
 	str dst;
 	int len, i;
-	struct sip_uri uri;
+	struct ip_addr ip;
+	unsigned short int port;
 
 	if (!pcscf_nat_enable) return CSCF_RETURN_FALSE;
 	
-	if(msg -> first_line.type == SIP_REPLY) {
-		LOG(L_ERR, "ERR"M_NAME":P_relay_request: We do not process replies. Go Away!!!\n");
-		return 0;
+	if(msg -> first_line.type == SIP_REQUEST) {		
+		/* on request get the destination from the Request-URI */
+		r_contact *c;
+		struct sip_uri uri;
+		str req_uri = msg -> first_line.u.request.uri;
+		
+		parse_uri(req_uri.s, req_uri.len, &uri);
+		if(uri.port_no == 0)
+			uri.port_no=5060;
+		
+		c = get_r_contact(uri.host, uri.port_no, uri.proto);
+		
+		if(c==NULL || c->pinhole == NULL) {
+			LOG(L_DBG, "ERR:"M_NAME":P_NAT_relay: we cannot find the pinhole for contact %.*s. Sorry\n", req_uri.len, req_uri.s);
+			if (c) r_unlock(c->hash);
+			return CSCF_RETURN_FALSE;
+		}	
+		ip = c->pinhole->nat_addr;
+		port = c->pinhole->nat_port;
+		r_unlock(c->hash);	
+	} else {
+		/* on response get the destination from the received addr for the corresponding request */
+		struct sip_msg *req;
+		req = cscf_get_request_from_reply(msg);
+		if(req == NULL) {
+			LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Cannot get request for the transaction\n");
+			return CSCF_RETURN_FALSE;
+		}		
+		ip = req->rcv.src_ip;
+		port = req->rcv.src_port;	
 	}
 
-	req_uri = msg -> first_line.u.request.uri;
-	parse_uri(req_uri.s, req_uri.len, &uri);
-	if(uri.port_no == 0)
-		uri.port_no =5060;
-	
-	c = get_r_contact(uri.host, uri.port_no, uri.proto);
-	
-	if(c==NULL ||c->pinhole == NULL) {
-		LOG(L_DBG, "ERR"M_NAME":P_relay_request: we cannot find the pinhole for contact %.*s. Sorry\n", req_uri.len, req_uri.s);
-		if (c) r_unlock(c->hash);
-		return 1;
-	}
-
-	len = 4 /* sip: */ + 4 * c->pinhole -> nat_addr.len /* ip address */ + 1 /* : */ + 6 /* port */;
-	
+	len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
-		LOG(L_ERR, "ERR"M_NAME":P_relay_response: Error allocating %d bytes\n", len);
-		dst.len=0;
-		if (c) r_unlock(c->hash);
+		LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
 		return CSCF_RETURN_FALSE;
 	}
-
 	strcpy(dst.s, "sip:");
-	dst.len = 4;
-		
-	dst.len += sprintf(dst.s + 4, "%d", c->pinhole->nat_addr.u.addr[0]);
+	dst.len = 4;		
+	dst.len += sprintf(dst.s + 4, "%d", ip.u.addr[0]);		
+	for(i = 1; i < ip.len; i++)
+		dst.len += sprintf(dst.s + dst.len, ".%d", ip.u.addr[i]);			
+	dst.len += sprintf(dst.s + dst.len, ":%d", port);
 	
-	for(i = 1; i < c->pinhole->nat_addr.len; i++)
-		dst.len += sprintf(dst.s + dst.len, ".%d", c->pinhole->nat_addr.u.addr[i]);
-		
-	dst.len += sprintf(dst.s + dst.len, ":%d", c->pinhole->nat_port);
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
 		
-	if (c) r_unlock(c->hash);
-	//LOG(L_CRIT, "<<<<%.*s>>>>", msg -> dst_uri.len, msg -> dst_uri.s);
+	LOG(L_INFO, "INFO:"M_NAME":P_NAT_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	return CSCF_RETURN_TRUE;
 }
 
+
+
+static str sip_s={"sip:",4};
 /**
- * Forward a response through the NAT pinhole
+ * Forward a response through the IPSec SA
  * @param msg - the SIP message to forward
  * @param str1 - not used
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if no NAT
  */
-int P_NAT_response(struct sip_msg * msg, char * str1, char * str2) {
-	unsigned int hash, label;
-	struct sip_msg * req;
+int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2) 
+{
 	str dst;
-	int len, i;
+	int len;
+	r_contact *c=0;
+	int proto, port;
+	str host;
 
-	if (!pcscf_nat_enable) return CSCF_RETURN_FALSE;
+	if (!pcscf_use_ipsec) return CSCF_RETURN_FALSE;
 
-	if(cscf_get_transaction(msg, &hash, &label) < 0) {
-		LOG(L_ERR, "ERR"M_NAME":P_relay_response: Cannot get the transaction for reply\n");
-		return CSCF_RETURN_FALSE;
+	if(msg -> first_line.type == SIP_REQUEST) {
+		/* on request, get the destination from the Request-URI */
+		struct sip_uri uri;
+		str req_uri = msg->first_line.u.request.uri;
+		if (parse_uri(req_uri.s,req_uri.len,&uri)<0){
+			LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Error parsing Request-URI: <%.*s>\n",req_uri.len,req_uri.s);
+			return CSCF_RETURN_FALSE;
+		}
+		if(uri.port_no==0) uri.port_no =5060;
+		proto = uri.proto;
+		host = uri.host;		
+		port = uri.port_no;
+	} else {
+		/* On response get the source from the first via in the corresponding request */
+		struct via_body *vb;	
+		struct sip_msg *req;
+		req = cscf_get_request_from_reply(msg);
+		if(req == NULL) {
+			LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Cannot get request for the transaction\n");
+			return CSCF_RETURN_FALSE;
+		}
+		vb = cscf_get_ue_via(req);	
+		if (vb->port==0) vb->port=5060;
+		proto = vb->proto;
+		host = vb->host;		
+		port = vb->port;
 	}
 
-	req = cscf_get_request(hash, label);
-	if(req == NULL) {
-		LOG(L_ERR, "ERR"M_NAME":P_relay_response: Cannot get request for the transaction\n");
+	c = get_r_contact(host,port,proto);
+	if(!c || !(c->pinhole)) {
+		LOG(L_DBG, "ERR:"M_NAME":P_IPSec_relay: we cannot find the contact or its IPSec SAs for <%d://%.*s:%d>.\n", 
+			proto,host.len,host.s,port);
+		if (c) r_unlock(c->hash);
 		return CSCF_RETURN_FALSE;
-	}
+	}					
 
-	len = 4 /* sip: */ + 4 * req -> rcv.src_ip.len /* ip address */ + 1 /* : */ + 6 /* port */;
-
+	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
-		LOG(L_ERR, "ERR"M_NAME":P_relay_response: Error allocating %d bytes\n", len);
+		LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Error allocating %d bytes\n", len);
 		dst.len=0;
 		return CSCF_RETURN_FALSE;
-	}
+	}	
+	STR_APPEND(dst,sip_s);
+	STR_APPEND(dst,host);	
+	dst.len += sprintf(dst.s + dst.len, ":%d", c->ipsec->port_us);	
 
-	strcpy(dst.s, "sip:");
-	dst.len = 4;
-		
-	dst.len += sprintf(dst.s + 4, "%d", req -> rcv.src_ip.u.addr[0]);
-	
-	for(i = 1; i < req -> rcv.src_ip.len; i++)
-		dst.len += sprintf(dst.s + dst.len, ".%d", req -> rcv.src_ip.u.addr[i]);
-		
-	dst.len += sprintf(dst.s + dst.len, ":%d", req -> rcv.src_port);
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
-	
-	//LOG(L_CRIT, "<<<<%.*s>>>>", msg -> dst_uri.len, msg -> dst_uri.s);
+	LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	return CSCF_RETURN_TRUE;
 }
-
-
-
-
 
