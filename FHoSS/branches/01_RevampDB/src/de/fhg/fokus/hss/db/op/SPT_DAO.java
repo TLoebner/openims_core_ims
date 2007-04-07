@@ -56,6 +56,13 @@ import de.fhg.fokus.hss.db.model.SPT;
  */
 public class SPT_DAO {
 	
+	public static void insert(Session session, SPT spt){
+		session.save(spt);
+	}
+	
+	public static void update(Session session, SPT spt){
+		session.saveOrUpdate(spt);
+	}
 	
 	public static SPT get_by_ID(Session session, int id){
 		Query query;
@@ -72,6 +79,20 @@ public class SPT_DAO {
 		query.setInteger(0, id_tp);
 		return query.list();
 	}
+	public static int get_max_grp(Session session, int id_tp){
+		Query query = session.createSQLQuery("select max(grp) from spt where id_tp=?");
+			
+		query.setInteger(0, id_tp);
+		List res = query.list();
+		if (res != null && res.size() > 0){
+			Integer result = (Integer)res.get(0);
+			if (result != null){
+				return result;
+			}
+		}
+		
+		return 0;
+	}	
 	
 	public static int delete_by_ID(Session session, int id){
 		Query query = session.createSQLQuery("delete from spt where id=?");

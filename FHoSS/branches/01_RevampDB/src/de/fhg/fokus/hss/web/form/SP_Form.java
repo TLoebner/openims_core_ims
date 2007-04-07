@@ -49,6 +49,8 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
 
 import java.io.Serializable;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -63,11 +65,24 @@ public class SP_Form extends ActionForm implements Serializable{
 	private String name;
 	private int cn_service_auth;
 
+	private int ifc_id;
+	private int shared_ifc_id;
+	private int sp_ifc_priority;
+	private List select_ifc;
+	private List select_shared_ifc;
+	private int associated_ID;
 	private String nextAction;
+	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.name = null;
     	this.cn_service_auth = 0;
+    	
+    	this.ifc_id = -1;
+    	this.shared_ifc_id = -1;
+    	this.select_ifc = null;
+    	this.select_shared_ifc = null;
+    	this.associated_ID = -1;
     	this.nextAction = null;
     }
 	
@@ -110,6 +125,54 @@ public class SP_Form extends ActionForm implements Serializable{
 
 	public void setNextAction(String nextAction) {
 		this.nextAction = nextAction;
+	}
+
+	public int getIfc_id() {
+		return ifc_id;
+	}
+
+	public void setIfc_id(int ifc_id) {
+		this.ifc_id = ifc_id;
+	}
+
+	public List getSelect_ifc() {
+		return select_ifc;
+	}
+
+	public void setSelect_ifc(List select_ifc) {
+		this.select_ifc = select_ifc;
+	}
+
+	public int getSp_ifc_priority() {
+		return sp_ifc_priority;
+	}
+
+	public void setSp_ifc_priority(int sp_ifc_priority) {
+		this.sp_ifc_priority = sp_ifc_priority;
+	}
+
+	public List getSelect_shared_ifc() {
+		return select_shared_ifc;
+	}
+
+	public void setSelect_shared_ifc(List select_shared_ifc) {
+		this.select_shared_ifc = select_shared_ifc;
+	}
+
+	public int getAssociated_ID() {
+		return associated_ID;
+	}
+
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
+	}
+
+	public int getShared_ifc_id() {
+		return shared_ifc_id;
+	}
+
+	public void setShared_ifc_id(int shared_ifc_id) {
+		this.shared_ifc_id = shared_ifc_id;
 	}
 	
 }

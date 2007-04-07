@@ -46,45 +46,64 @@ function add_action_for_form(a) {
 </head>
 
 <body>
-
-	<!-- Print errors, if any -->
-	<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-	
-	<html:form action="/VN_Submit">
+	<table align=center valign=middle height=100%>
+		<!-- Print errors, if any -->
+		<tr>
+			<td>
+				<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+			</td>
+		</tr>
+		
+		<html:form action="/VN_Submit">
 			<html:hidden property="nextAction" value=""/>
-		<center> 
-
-		<table>
 			<tr>
-				<td> <br/><br/> <h1> Visited Networks Identifiers </h1> <br/><br/> </td>
-			</tr>
-		</table>
-			
-		<table>
-			<tr>
-				<td> ID </td>
-				<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
+				<td align="center"><h1>Visited Networks Identifiers</h1></td>
 			</tr>
 			<tr>
-				<td>Identity </td>
-				<td><html:text property="identity" styleClass="inputtext"/> </td>
-			</tr>
-		</table>		
-			
-		<table>			
-			<tr><td align=center> <br/>
-				<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
-				<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
-				<% if (id == -1){ %>
-					<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
-				<%}%>
-				<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
-					disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
-				
-				
-			</td></tr>
+				<td>
+			 		<table border="0" align="center" width="100%" >						
+			 		<tr>
+			 				<td>
+						 		<table border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">						
+								<tr bgcolor="#FFCC66">
+									<td> ID </td>
+									<td>
+										<html:text property="id" readonly="true" styleClass="inputtext_readonly"/> 
+									</td>
+								</tr>
+								<tr bgcolor="#FFCC66">
+									<td>Identity </td>
+									<td>
+										<html:text property="identity" styleClass="inputtext"/> 
+									</td>
+								</tr>
+								</table>		
+							</td>
+					</tr>
+					<tr>
+						<td>
+							<table align="center">
+								<tr>
+									<td align=center> 
+										<html:button property="save_button" value="Save" onclick="add_action_for_form(1, -1);"/>				
+										<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(3, -1);"/> 
+										<% if (id == -1){ %>
+											<html:button property="reset_button" value="Reset" onclick="add_action_for_form(2, -1);"/> 
+										<%}%>
+						
+										<% if (id != -1){ %>
+										<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4, -1);" 
+											disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
+										<%}%>												
+									</td>
+								</tr>
+							</table>	
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
 		</table>			
-	  </center> 		
 	</html:form>
 </body>
 </html>

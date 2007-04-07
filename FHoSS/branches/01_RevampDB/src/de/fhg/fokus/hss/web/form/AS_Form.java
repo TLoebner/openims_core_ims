@@ -49,8 +49,11 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -97,13 +100,18 @@ public class AS_Form extends ActionForm implements Serializable{
 	private boolean snr_aliases_rep_data;
 
 	private String nextAction;
+	private List select_default_handling;
+	private List select_ifc;
+	private int ifc_id;
+	private int associated_ID;
+	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
-    	this.name = null;
-    	this.server_name = null;
+    	this.name = "";
+    	this.server_name = "";
     	this.default_handling = CxConstants.Default_Handling_Session_Continued;
-    	this.service_info = null;
-    	this.diameter_address = null;
+    	this.service_info = "";
+    	this.diameter_address = "";
     	this.rep_data_size_limit = 1024;
     	this.udr = false;
     	this.pur = false;
@@ -132,7 +140,12 @@ public class AS_Form extends ActionForm implements Serializable{
     	this.snr_psi_activation = false;
     	this.snr_dsai = false;
     	this.snr_aliases_rep_data = false;
+    
     	this.nextAction = null;
+    	this.select_default_handling = WebConstants.select_default_handling;
+    	this.select_ifc = null;
+    	this.ifc_id = -1;
+    	this.associated_ID = -1;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -426,6 +439,38 @@ public class AS_Form extends ActionForm implements Serializable{
 
 	public void setNextAction(String nextAction) {
 		this.nextAction = nextAction;
+	}
+
+	public List getSelect_default_handling() {
+		return select_default_handling;
+	}
+
+	public void setSelect_default_handling(List select_default_handling) {
+		this.select_default_handling = select_default_handling;
+	}
+
+	public int getIfc_id() {
+		return ifc_id;
+	}
+
+	public void setIfc_id(int ifc_id) {
+		this.ifc_id = ifc_id;
+	}
+
+	public List getSelect_ifc() {
+		return select_ifc;
+	}
+
+	public void setSelect_ifc(List select_ifc) {
+		this.select_ifc = select_ifc;
+	}
+
+	public int getAssociated_ID() {
+		return associated_ID;
+	}
+
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
 	}
     
 }

@@ -21,6 +21,7 @@
 
 <%
 	int id = Integer.parseInt(request.getParameter("id"));
+	request.setAttribute("gigi", new Integer(12));
 %>
 
 <script type="text/javascript" language="JavaScript">
@@ -111,8 +112,9 @@ function disable_other_boxes(){
 			<html:hidden property="nextAction" value=""/>
 			<html:hidden property="associated_ID" value=""/>			
 			<html:hidden property="id_imsu" />			
+			<html:hidden property="already_assigned_imsu_id" />						
 			<tr>
-				<td align="center"><h1> Private User Identity </h1></td>
+				<td align="center"><h1> Private User Identity -IMPI- </h1></td>
 			</tr>
 			<tr>
 				<td>
@@ -339,7 +341,11 @@ function disable_other_boxes(){
 								%>
 										<tr class="even">																			
 											<td>  <%= associated_IMSU.getId() %></td>
-											<td>  <%= associated_IMSU.getName() %></td>
+											<td>  
+												<a href="/hss.web.console/IMSU_Load.do?id=<%= associated_IMSU.getId() %>" > 
+													<%= associated_IMSU.getName() %>
+												</a>	
+											</td>
 											<td> 
 												<input type="button" name="delete_associated_imsu" 
 													"value="Delete" onclick="add_action_for_form(6, <%= associated_IMSU.getId() %>);"/>													
@@ -351,11 +357,37 @@ function disable_other_boxes(){
 							</table>
 						</td>
 					</tr>		
+
+					<tr>
+						<td>
+							<br/>
+						</td>	
+					</tr>
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td>	
+										<b>Create & Bind new IMPU </b>
+									</td>
+									<td>
+										<%
+											out.println("<a href=\"/hss.web.console/IMPU_Load.do?id=-1&already_assigned_impi_id=" + id + "\" > ");
+										%>
+											<img src="/hss.web.console/images/add_obj.gif" /> 
+										</a>
+									</td>
+								</tr>	
+							</table>
+						</td>
+					</tr>	
+
 					
 					<tr>
 						<td>
 							<br/>
 						</td>	
+					</tr>	
 					<tr>
 						<td>
 							<table>
@@ -392,8 +424,13 @@ function disable_other_boxes(){
 												
 								%>
 											<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">																			
-												<td>  <%= impu.getId() %></td>
-												<td>  <%= impu.getIdentity() %></td>
+												<td>  <%= impu.getId() %></td>												
+												
+												<td>  
+													<a href="/hss.web.console/IMPU_Load.do?id=<%= impu.getId() %>" > 
+														<%= impu.getIdentity() %>
+													</a>	
+												</td>
 												<td> 
 													<input type="button" name="delete_associated_impu" 
 														"value="Delete" onclick="add_action_for_form(5, <%= impu.getId() %>);"/>													

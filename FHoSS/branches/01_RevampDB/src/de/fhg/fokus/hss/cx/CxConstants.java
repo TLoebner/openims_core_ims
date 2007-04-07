@@ -68,6 +68,10 @@ public class CxConstants {
 	// Profile_Part_Indicator
 	public static final int Profile_Part_Indicator_Registered = 0;
 	public static final int Profile_Part_Indicator_UnRegistered = 1;
+
+	public static final String Profile_Part_Indicator_Registered_Name = "Registered";
+	public static final String Profile_Part_Indicator_UnRegistered_Name = "Unregistered";
+	
 	
 	// Server_Assignment_Type
 	public static final int Server_Assignment_Type_No_Assignment = 0;
@@ -99,6 +103,12 @@ public class CxConstants {
 	public static final int SPT_Type_SIPHeader = 2;
 	public static final int SPT_Type_SessionCase = 3;
 	public static final int SPT_Type_SessionDescription = 4;
+	
+	public static final String SPT_Type_RequestURI_Name = "Request-URI";
+	public static final String SPT_Type_Method_Name = "Method";
+	public static final String SPT_Type_SIPHeader_Name = "SIP-Header";
+	public static final String SPT_Type_SessionCase_Name = "Session-Case";
+	public static final String SPT_Type_SessionDescription_Name = "SDP Line";
 	
 	// tRegistrationType
 	public static final int Registration_Type_Initial_Registration = 0;

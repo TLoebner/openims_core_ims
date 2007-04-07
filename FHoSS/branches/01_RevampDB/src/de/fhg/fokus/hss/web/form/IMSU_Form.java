@@ -69,9 +69,9 @@ public class IMSU_Form extends ActionForm implements Serializable{
 
 	private List select_capabilities_set;
 	private List select_preferred_scscf;
-	
+	private String impi_identity;
 	private String nextAction;
-	
+	private int associated_ID;
 	
     public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
@@ -82,6 +82,8 @@ public class IMSU_Form extends ActionForm implements Serializable{
     	this.id_preferred_scscf = -1;
     	//this.select_capabilities_set = null;
     	//this.select_preferred_scscf = null;
+    	this.impi_identity = null;
+    	this.associated_ID = -1;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -165,4 +167,21 @@ public class IMSU_Form extends ActionForm implements Serializable{
 	public void setSelect_preferred_scscf(List select_preferred_scscf) {
 		this.select_preferred_scscf = select_preferred_scscf;
 	}
+
+	public String getImpi_identity() {
+		return impi_identity;
+	}
+
+	public void setImpi_identity(String impi_identity) {
+		this.impi_identity = impi_identity;
+	}
+
+	public int getAssociated_ID() {
+		return associated_ID;
+	}
+
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
+	}
+	
 }

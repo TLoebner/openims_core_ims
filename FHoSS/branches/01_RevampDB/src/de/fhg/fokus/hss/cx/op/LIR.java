@@ -134,7 +134,7 @@ public class LIR {
 				case CxConstants.IMPU_user_state_Unregistered:
 					
 					boolean unregistered_services = false;
-					if (SP_IFC_DAO.getUnregisteredServicesCount(session, impu.getId_sp()) > 0){
+					if (SP_IFC_DAO.get_Unreg_Serv_Count(session, impu.getId_sp()) > 0){
 						unregistered_services = true;
 					}
 					
@@ -146,7 +146,7 @@ public class LIR {
 
 				case CxConstants.IMPU_user_state_Not_Registered:
 					unregistered_services = false;
-					if (SP_IFC_DAO.getUnregisteredServicesCount(session, impu.getId_sp()) > 0){
+					if (SP_IFC_DAO.get_Unreg_Serv_Count(session, impu.getId_sp()) > 0){
 						unregistered_services = true;
 					}
 					

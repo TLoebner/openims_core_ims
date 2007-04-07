@@ -6,7 +6,8 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="de.fhg.fokus.hss.util.SecurityPermissions" %>
+<%@ page import="de.fhg.fokus.hss.db.model.*, java.util.*, de.fhg.fokus.hss.util.SecurityPermissions" %>
+
 <jsp:useBean id="resultList" type="java.util.List" scope="request"></jsp:useBean>
 <jsp:useBean id="maxPages" type="java.lang.String" scope="request"></jsp:useBean>
 <jsp:useBean id="currentPage" type="java.lang.String" scope="request"></jsp:useBean>
@@ -37,87 +38,99 @@ function rowsPerPageChanged(){
 
 </head>
 <body>
+	<center><h1><br/><br/> Charging Info Sets - Search Results </h1></center>
+	<table align=center valign=middle height=80%>
+	<tr>
+		<td>
+	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="450">	
 
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1>Charging Info Sets - Search Results </h1><br/><br/></td>
-</tr>
-</table>
-</center>
-
-<center>
-	<table class="as" width="500">
-		<logic:notEmpty name="resultList">
-			<tr class="header">
-				<td class="header"> ID </td>
-				<td class="header"> Name </td>
-			</tr>
-				
-			<logic:iterate name="resultList" id="charging_info"
-				type="de.fhg.fokus.hss.db.model.ChargingInfo" indexId="ix">
-				<tr class="<%= ix.intValue()%2 == 0 ? "even" : "odd" %>">
-					<td>
-						<bean:write name="charging_info" property="id" />
-					</td>
-					<td> 
-						<a href="/hss.web.console/CS_Load.do?id=<bean:write name="charging_info" property="id" />"> 
-							<bean:write name="charging_info" property="name" />
-						</a>	
-					</td>
+				<tr class="header">
+					<td class="header"> ID </td>
+					<td class="header"> Name </td>
 				</tr>
-			</logic:iterate>
+
+				<%
+				if (resultList != null && resultList.size() > 0){
+					ChargingInfo chg_info;
+					int idx = 0;
+					Iterator it = resultList.iterator();
+					
+					while (it.hasNext()){
+						chg_info = (ChargingInfo) it.next();
+				%>		
+					<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
+						<td>
+							<%= chg_info.getId() %>
+						</td>
+						<td> 
+							<a href="/hss.web.console/CS_Load.do?id=<%= chg_info.getId() %>"> 
+								<%= chg_info.getName() %>
+							</a>	
+						</td>
+					</tr>
+				<%		
 			
-			<tr>
-				<td colspan="3" class="header">
+						idx++;		
+					} //while
+				} // if
+				else{	
+				%>
+					<tr>
+						<td>
+							<bean:message key="result.emptyResultSet" />
+						</td>
+					</tr>						
+				<%
+				}
+				%>	
 				
-				<html:form action="/CS_Search">
-					<table>
-						<tr>
-							<td>
-								<%
-									int length = Integer.parseInt(maxPages) + 1;
-									int cPage = Integer.parseInt(currentPage) + 1;
-									for (int iy = 1; iy < length; iy++) {
-										if (cPage != iy) {
-									%>
-									<a href="javascript:submitForm(<%=String.valueOf(iy)%>);"><%=iy%></a>
-								<%
-									} else {
-									%> 
-									<font style="color:#FF0000;font-weight: 600;"> <%=String.valueOf(iy)%>
-									</font> 
-								<% }
-							}
-							%>
-							</td>
+			</table>			
+		</td>
+	</tr>
+
+	<tr>
+		<td colspan="3" class="header">
+			
+			<html:form action="/CS_Search">
+			<table align="center">
+			<tr>
+				<td>
+			<%
+				int length = Integer.parseInt(maxPages) + 1;
+				int cPage = Integer.parseInt(currentPage) + 1;
+				for (int iy = 1; iy < length; iy++) {
+					if (cPage != iy) {
+			%>
+						<a href="javascript:submitForm(<%=String.valueOf(iy)%>);"><%=iy%></a>
+			<%
+					} else {
+			%> 
+						<font style="color:#FF0000;font-weight: 600;"> <%=String.valueOf(iy)%>
+						</font> 
+					<% }
+				}
+			%>
+				</td>
 							
-							<td><bean:message key="result.rowsPerPage" /><br>
-							<html:hidden property="crtPage"></html:hidden> 
-							<html:select property="rowsPerPage" onchange="javascript:rowsPerPageChanged();">
-
-							<option value="20"
-								<%= rowPerPage.equals("20") ? "selected" : "" %> >20 </option>
-							<option value="30"
-								<%= rowPerPage.equals("30") ? "selected" : "" %> >30 </option>
-							<option value="50"
-								<%= rowPerPage.equals("50") ? "selected" : "" %> >50</option>
-							<option value="100"
-								<%= rowPerPage.equals("100") ? "selected" : "" %> >100</option>
-							</html:select></td>
-						</tr>
-					</table>
-				</html:form></td>
+				<td>
+					<bean:message key="result.rowsPerPage" /><br>
+					<html:hidden property="crtPage"></html:hidden> 
+					<html:select property="rowsPerPage" onchange="javascript:rowsPerPageChanged();">
+						<option value="20"
+							<%= rowPerPage.equals("20") ? "selected" : "" %> >20 </option>
+						<option value="30"
+							<%= rowPerPage.equals("30") ? "selected" : "" %> >30 </option>
+						<option value="50"
+							<%= rowPerPage.equals("50") ? "selected" : "" %> >50</option>
+						<option value="100"
+							<%= rowPerPage.equals("100") ? "selected" : "" %> >100</option>
+						</html:select>
+				</td>
 			</tr>
-		</logic:notEmpty> 
-		
-		<tr><td>
-		<logic:empty name="resultList">
-			<bean:message key="result.emptryResultSet" />
-		</logic:empty></td>
-		</td></tr>
-		</table>		
-</center>
-
+			</table>
+			</html:form>
+		</td>
+	</tr>
+	</table>		
 </body>
 </html>

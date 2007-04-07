@@ -49,8 +49,11 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -62,20 +65,23 @@ public class IFC_Form extends ActionForm implements Serializable{
 
 	private int id;
 	private String name;
-	private int priority;
 	private int profile_part_ind;
 	private int id_application_server;
 	private int id_tp;
 
+	private List select_profile_part_indicator = WebConstants.select_profile_part_indicator;
+	private List select_tp;
+	private List select_as;
 	private String nextAction;
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.name = null;
-    	this.priority = 0;
     	this.profile_part_ind = CxConstants.Profile_Part_Indicator_Registered;
     	this.id_application_server = -1;
     	this.id_tp = -1;
     	this.nextAction = null;
+    	this.select_as = null;
+    	this.select_tp = null;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -135,12 +141,29 @@ public class IFC_Form extends ActionForm implements Serializable{
 		this.profile_part_ind = profile_part_ind;
 	}
 
-	public int getPriority() {
-		return priority;
+	public List getSelect_profile_part_indicator() {
+		return select_profile_part_indicator;
 	}
 
-	public void setPriority(int priority) {
-		this.priority = priority;
+	public void setSelect_profile_part_indicator(List select_profile_part_indicator) {
+		this.select_profile_part_indicator = select_profile_part_indicator;
 	}
+
+	public List getSelect_as() {
+		return select_as;
+	}
+
+	public void setSelect_as(List select_as) {
+		this.select_as = select_as;
+	}
+
+	public List getSelect_tp() {
+		return select_tp;
+	}
+
+	public void setSelect_tp(List select_tp) {
+		this.select_tp = select_tp;
+	}
+
 	
 }

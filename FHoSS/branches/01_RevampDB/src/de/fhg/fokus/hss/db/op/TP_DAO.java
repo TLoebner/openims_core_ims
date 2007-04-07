@@ -43,6 +43,8 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.List;
+
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -118,4 +120,11 @@ public class TP_DAO {
 		result[1] = query.list();
 		return result;
 	}	
+	
+	public static List get_all(Session session){
+		Query query = session.createSQLQuery("select * from tp")
+			.addEntity(TP.class);
+		return query.list();
+	}
+	
 }

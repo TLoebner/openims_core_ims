@@ -90,6 +90,8 @@ public class IMPI_Form extends ActionForm implements Serializable{
 	//private List associated_impu_set;
 	private int associated_ID;
 	private List select_auth_scheme;
+	private int already_assigned_imsu_id;
+	
     public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.id_imsu = -1;
@@ -116,6 +118,7 @@ public class IMPI_Form extends ActionForm implements Serializable{
     	//this.associated_impu_set = null;
     	this.associated_ID = -1;
     	this.select_auth_scheme = null;
+    	this.already_assigned_imsu_id = -1;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -353,5 +356,12 @@ public class IMPI_Form extends ActionForm implements Serializable{
 		this.imsu_name = imsu_name;
 	}
 
+	public int getAlready_assigned_imsu_id() {
+		return already_assigned_imsu_id;
+	}
+
+	public void setAlready_assigned_imsu_id(int already_assigned_imsu_id) {
+		this.already_assigned_imsu_id = already_assigned_imsu_id;
+	}
 
 }

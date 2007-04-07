@@ -50,6 +50,8 @@ import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.SP;
 import de.fhg.fokus.hss.db.model.SP_IFC;
 
 /**
@@ -58,26 +60,48 @@ import de.fhg.fokus.hss.db.model.SP_IFC;
  */
 public class SP_IFC_DAO {
 	
-	public static SP_IFC getBySP_IFC(Session session, int id_sp, int id_ifc){
+	public static void insert(Session session, SP_IFC sp_ifc){
+		session.save(sp_ifc);
+	}
+	
+	public static void update(Session session, SP_IFC sp_ifc){
+		session.saveOrUpdate(sp_ifc);
+	}	
+	
+	public static SP_IFC get_by_SP_and_IFC_ID(Session session, int id_sp, int id_ifc){
 		Query query;
-		query = session.createQuery("from SP_IFC where id_sp=? and id_ifc=?");
+		query = session.createSQLQuery("select * from sp_ifc where id_sp=? and id_ifc=?")
+			.addEntity(SP_IFC.class);
 		query.setInteger(0, id_sp);
 		query.setInteger(1, id_ifc);
 		return (SP_IFC) query.uniqueResult();
 	}
 	
-	public static List get_IFC_by_SP(Session session, int id_sp){
+	public static List get_IFC_by_SP_ID(Session session, int id_sp){
 		Query query;
-		query = session.createQuery(
-				"from SP_IFC as sp_ifc" +
-				"	inner join sp_ifc.sp" +
-				"	inner join sp_ifc.ifc" +
-				"		where sp_ifc.sp.id=?");
+		query = session.createSQLQuery(
+				"select * from ifc " +
+				"	inner join sp_ifc on ifc.id=sp_ifc.id_ifc" +
+				"	inner join sp on sp_ifc.id_sp=sp.id" +
+				"		where sp.id=?")
+				.addEntity(IFC.class);
 		query.setInteger(0, id_sp);
 		return query.list();
 	}
 
-	public static int getUnregisteredServicesCount(Session session, int id_sp){
+	public static List get_all_SP_by_IFC_ID(Session session, int id_ifc){
+		Query query;
+		query = session.createSQLQuery(
+				"select * from sp " +
+				"	inner join sp_ifc on sp.id=sp_ifc.id_sp" +
+				"		where sp_ifc.id_ifc=?")
+				.addEntity(SP.class);
+		query.setInteger(0, id_ifc);
+		return query.list();
+	}
+	
+	
+	public static int get_Unreg_Serv_Count(Session session, int id_sp){
 		// to be fixed!
 		
 //		Query query;
@@ -96,12 +120,32 @@ public class SP_IFC_DAO {
 	public static List get_all_IFC_by_SP_ID(Session session, int id_sp){
 		Query query;
 		query = session.createSQLQuery(
-					"select {SP_IFC.*}, {IFC.*} from sp_ifc SP_IFC" +
-					"	inner join ifc IFC on SP_IFC.id_ifc = IFC.id" +
-					"		where SP_IFC.id_sp=?")
+					"select * from ifc " +
+					"	inner join sp_ifc on ifc.id = sp_ifc.id_ifc" +
+					"		where sp_ifc.id_sp=?")
+						.addEntity(IFC.class);
+		query.setInteger(0, id_sp);
+		return query.list();
+	}	
+
+	public static List get_all_SP_IFC_by_SP_ID(Session session, int id_sp){
+		Query query;
+		query = session.createSQLQuery(
+					"select * from sp_ifc " +
+					"	inner join ifc on ifc.id = sp_ifc.id_ifc" +
+					"		where sp_ifc.id_sp=?")
 						.addEntity(SP_IFC.class)
 						.addEntity(IFC.class);
 		query.setInteger(0, id_sp);
 		return query.list();
 	}	
+	
+	public static int delete_by_SP_and_IFC_ID(Session session, int id_sp, int id_ifc){
+		Query query;
+		query = session.createSQLQuery("delete from sp_ifc where id_sp=? and id_ifc=?");
+		query.setInteger(0, id_sp);
+		query.setInteger(1, id_ifc);
+		return query.executeUpdate();
+	}	
+	
 }

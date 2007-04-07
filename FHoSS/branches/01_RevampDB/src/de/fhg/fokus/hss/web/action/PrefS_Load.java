@@ -43,12 +43,10 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import de.fhg.fokus.hss.db.model.IMPU;
-import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
-import de.fhg.fokus.hss.db.op.IMPU_DAO;
-import de.fhg.fokus.hss.web.form.DeleteForm;
-import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.util.WebConstants;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
@@ -56,8 +54,13 @@ import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
+import de.fhg.fokus.hss.db.model.ChargingInfo;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.web.form.CS_Form;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -65,25 +68,68 @@ import javax.servlet.http.HttpServletResponse;
  */
 
 
-public class IMPU_Delete extends Action {
+public class PrefS_Load extends Action {
 	
-	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
+	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		try{
-			DeleteForm form = (DeleteForm) actionForm;
-			HibernateUtil.beginTransaction();
-			Session session = HibernateUtil.getCurrentSession();
-			int id_impu = form.getId();
+		CS_Form form = (CS_Form) actionForm;
+		int id = form.getId();
 
-			// delete from IMPI_IMPU & IMPU
-			IMPI_IMPU_DAO.delete_by_IMPU_ID(session, id_impu);
-			IMPU_DAO.delete_by_ID(session, id_impu);
-		} 
-		finally{
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
+		HibernateUtil.beginTransaction();
+		Session session = HibernateUtil.getCurrentSession();
+
+		if (id != -1){
+			try{
+				// load
+				ChargingInfo charging_info = ChargingInfo_DAO.get_by_ID(session, id);
+				CS_Load.setForm(form, charging_info);
+				
+				if (testForDelete(session, id)){
+					request.setAttribute("deleteDeactivation", "false");		
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
+			}
+			catch(DatabaseException e){
+				e.printStackTrace();
+			}
+			finally{
+				HibernateUtil.commitTransaction();
+				HibernateUtil.closeSession();
+			}
 		}
-		return mapping.findForward(WebConstants.FORWARD_SUCCESS);
+		else{
+			request.setAttribute("deleteDeactivation", "false");
+		}
+		
+		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+		forward = new ActionForward(forward.getPath() + "?id=" + id);
+		return forward;
+	}
+	
+	public static boolean setForm(CS_Form form, ChargingInfo charging_info){
+		boolean exitCode = false;
+		
+		if (charging_info != null){
+			exitCode = true;
+			form.setId(charging_info.getId());
+			form.setName(charging_info.getName());
+			form.setPri_ccf(charging_info.getPri_ccf());
+			form.setSec_ccf(charging_info.getSec_ccf());
+			form.setPri_ecf(charging_info.getPri_ecf());
+			form.setSec_ecf(charging_info.getSec_ecf());
+		}
+		return exitCode;
+	}
+	
+	public static boolean testForDelete(Session session, int id){
+		List l = IMPU_DAO.get_by_Charging_Info_ID(session, id);
+		if (l == null || l.size() == 0){
+			return true;
+		}
+		return false;
+		
 	}
 }

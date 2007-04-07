@@ -39,6 +39,27 @@
 				<a href="/hss.web.console/CS_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
+			<!-- Capability-->
+			<li> <b> Capability </b> <br>
+			<a href="capability_search.jsp" target="content"> Search </a> <br>
+			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+				<a href="/hss.web.console/Cap_Load.do?id=-1" target="content"> Create </a> <br>
+			<% } %> <br>
+
+			<!-- Capability Sets-->
+			<li> <b> Capability Sets </b> <br>
+			<a href="capability_set_search.jsp" target="content"> Search </a> <br>
+			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+				<a href="/hss.web.console/CapS_Load.do?id=-1" target="content"> Create </a> <br>
+			<% } %> <br>
+
+			<!-- Preferred S-CSCF Sets -->
+			<li> <b> Preferred S-CSCF Sets </b> <br>
+			<a href="preferred_scscf_set_search.jsp" target="content"> Search </a> <br>
+			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+				<a href="/hss.web.console/PrefS_Load.do?id=-1" target="content"> Create </a> <br>
+			<% } %> <br>
+
 			</ul>
 		</td>
 	</tr>

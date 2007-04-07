@@ -64,7 +64,8 @@ public class SPT {
 	private int registration_type;
 	private int id_tp;
 	
-	public SPT(){}
+	public SPT(){
+	}
 
 	public int getCondition_negated() {
 		return condition_negated;
@@ -154,15 +155,12 @@ public class SPT {
 		this.sdp_line_content = sdp_line_content;
 	}
 
-	public int getSession_case() {
+	public Integer getSession_case() {
 		return session_case;
 	}
 
 	public void setSession_case(Integer session_case) {
-		if (session_case != null)
-			this.session_case = session_case;
-		else
-			this.session_case = -1;	
+		this.session_case = session_case;
 	}
 
 	public int getType() {

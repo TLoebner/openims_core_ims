@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.hibernate.Query;
@@ -52,6 +53,7 @@ import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.model.VisitedNetwork;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -74,7 +76,47 @@ public class IMPU_DAO {
 		}
 		return impu;
 	}
+
+	public static void update_others_from_implicit_set_ID(Session session, int id_impu, int old_implicit_set_id){
+		List l = IMPU_DAO.get_others_from_set(session, id_impu, old_implicit_set_id);
+		if (l != null && l.size() > 0){
+			Iterator it = l.iterator();
+			IMPU crt_impu;
+			int id_set = -1;
+			while (it.hasNext()){
+				crt_impu = (IMPU) it.next();
+				if (id_set == -1){
+					id_set = crt_impu.getId();
+				}
+				if (crt_impu.getId() != id_impu){
+					crt_impu.setId_implicit_set(id_set);
+					IMPU_DAO.update(session, crt_impu);
+				}
+			}
+		}
+		/*query = session.createSQLQuery("update impu set id_implicit_set=? where id_implicit_set=? and id !=?");
+		query.setInteger(0, new_implicit_set_id);
+		query.setInteger(1, old_implicit_set_id);
+		query.setInteger(2, id_impu);
+		query.executeUpdate();*/
+	}
 	
+	public static List get_all_VisitedNetworks_by_IMPU_ID(Session session, int id_impu){
+		Query query;
+		query = session.createSQLQuery("select * from visited_network" +
+				"	inner join impu_visited_network on impu_visited_network.id_visited_network=visited_network.id" +
+				" where impu_visited_network.id_impu=?")
+				.addEntity("visited_network", VisitedNetwork.class);
+		query.setInteger(0, id_impu);
+		return query.list();
+	}
+	
+	public static int delete_VisitedNetwork_for_IMPU(Session session, int id_impu, int id_vn){
+		Query query = session.createSQLQuery("delete from impu_visited_network where id_impu=? and id_visited_network=?");
+		query.setInteger(0, id_impu);
+		query.setInteger(1, id_vn);
+		return query.executeUpdate();
+	}
 	
 	public static IMPU get_by_ID(Session session, int id){
 		Query query;
@@ -128,7 +170,7 @@ public class IMPU_DAO {
 	
 	public static List get_all_from_set(Session session, int id_set){
 		Query query;
-		query = session.createSQLQuery("select * from impu where id_impu_implicitset=?")
+		query = session.createSQLQuery("select * from impu where id_implicit_set=?")
 			.addEntity(IMPU.class);
 		query.setInteger(0, id_set);
 		return query.list();
@@ -136,7 +178,7 @@ public class IMPU_DAO {
 	
 	public static Object[] get_all_from_set(Session session, int id_set, int firstResult, int maxResults){
 		Query query;
-		query = session.createSQLQuery("select * from impu where id_impu_implicitset=?")
+		query = session.createSQLQuery("select * from impu where id_implicit_set=?")
 		.addEntity(IMPU.class);
 		query.setInteger(0, id_set);
 
@@ -150,7 +192,7 @@ public class IMPU_DAO {
 	
 	public static List get_others_from_set(Session session, int id, int id_set){
 		Query query;
-		query = session.createSQLQuery("select * from impu where id != ? and id_impu_implicitset=?")
+		query = session.createSQLQuery("select * from impu where id != ? and id_implicit_set=?")
 			.addEntity(IMPU.class);
 		query.setInteger(0, id);
 		query.setInteger(1, id_set);
@@ -162,7 +204,7 @@ public class IMPU_DAO {
 		query = session.createSQLQuery(
 				"select {SP.*}, {IMPU.*} from sp SP" +
 				"	inner join impu IMPU on IMPU.id_sp=SP.id" +
-				"		where IMPU.id_impu_implicitset=? order by IMPU.id_sp")
+				"		where IMPU.id_implicit_set=? order by IMPU.id_sp")
 					.addEntity(SP.class)
 					.addEntity(IMPU.class);
 		query.setInteger(0, id_implicit_set);

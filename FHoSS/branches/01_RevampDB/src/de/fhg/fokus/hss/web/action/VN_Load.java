@@ -63,6 +63,7 @@ import de.fhg.fokus.hss.db.model.VisitedNetwork;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
@@ -120,6 +121,11 @@ public class VN_Load extends Action {
 	}
 	
 	public static boolean testForDelete(Session session, int id){
+		List list = IMPU_DAO.get_all_VisitedNetworks_by_IMPU_ID(session, id);
+		if (list == null || list.size() == 0){
+			return false;
+		}
+		
 		return true;
 	}	
 }

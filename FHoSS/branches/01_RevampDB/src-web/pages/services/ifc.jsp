@@ -47,51 +47,94 @@ function add_action_for_form(a) {
 
 <body>
 
+<html:form action="/IFC_Submit">
+	<html:hidden property="nextAction" value=""/>
+	<html:hidden property="associated_ID" value=""/>
+		
+	<table align=center valign=middle height=100%>
 	<!-- Print errors, if any -->
-	<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-	
-	<html:form action="/IFC_Submit">
-			<html:hidden property="nextAction" value=""/>
-		<center> 
+	<tr>
+		<td>
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+		</td>
+	</tr>	
+	<tr>
+		<td align="center"><h1>  Initial Filter Criteria -iFC- </h1></td>
+	</tr>
+	<tr>
+		<td>
+	 		<table border="0" align="center" width="450" >						
+ 			<tr>
+ 				<td>
+					<table border="0" cellspacing="1" align="center" width="70%" style="border:2px solid #FF6600;">						
+					<tr bgcolor="#FFCC66">
+						<td> ID </td>
+						<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
+					</tr>
+					<tr bgcolor="#FFCC66">
+						<td>Name </td>
+						<td><html:text property="name" styleClass="inputtext" style="width:250px;"/> </td>
+					</tr>
+					<tr bgcolor="#FFCC66">
+						<td>
+							Trigger Point
+						</td>	
+						<td> 		
+							<html:select property="id_tp" styleClass="inputtext" size="1" style="width:250px;">
+								<html:option value="-1">Select TP...</html:option>					
+								<html:optionsCollection property="select_tp" label="name" value="id"/>
+							</html:select>
+						</td>
+					</tr>
 
-		<table>
-			<tr>
-				<td> <br/><br/> <h1> Initial Filter Criteria  </h1> <br/><br/> </td>
+					<tr bgcolor="#FFCC66">
+						<td>
+							Application Server
+						</td>	
+						<td> 			
+							<html:select property="id_application_server" styleClass="inputtext" size="1" style="width:250px;">
+								<html:option value="-1">Select AS...</html:option>					
+								<html:optionsCollection property="select_as" label="name" value="id"/>
+							</html:select>
+						</td>
+					</tr>
+						
+					<tr bgcolor="#FFCC66">
+						<td> 
+							Profile Part Indicator 
+						</td>
+						<td>
+							<html:select property="profile_part_ind" styleClass="inputtext" size="1" style="width:250px;">
+								<html:optionsCollection property="select_profile_part_indicator" label="name" value="code"/>
+							</html:select>
+						</td>
+					</tr>
+					</table>
+				</td>
 			</tr>
-		</table>
-			
-		<table>
-			<tr>
-				<td> ID </td>
-				<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
-			</tr>
-			<tr>
-				<td> Name </td>
-				<td><html:text property="name" styleClass="inputtext"/> </td>
-			</tr>
-			<tr>
-				<td> Priority </td>
-				<td><html:text property="priority" styleClass="inputtext"/> </td>
-			</tr>
-			<tr>
-				<td> Profile Part Indicator </td>
-				<td><html:text property="profile_part_ind" styleClass="inputtext"/> </td>
-			</tr>
-		</table>		
-			
-		<table>			
-			<tr><td align=center> <br/>
-				<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
-				<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
-				<% if (id == -1){ %>
-					<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
-				<%}%>
-				<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
-					disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
-				
-			</td></tr>
-		</table>			
-	  </center> 		
-	</html:form>
+ 			<tr>
+ 				<td>
+					<table align="center">			
+					<tr>
+						<td align=center> <br/>
+							<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
+							<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
+							<% if (id == -1){ %>
+								<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
+							<%}%>
+							<% if (id != -1){ %>
+								<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
+									disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
+							<%}%>									
+						</td>
+					</tr>
+					</table>
+				</td>
+			</tr>							
+			</table>		
+		</td>
+	</tr>
+	</table>		
+</html:form>
 </body>
 </html>

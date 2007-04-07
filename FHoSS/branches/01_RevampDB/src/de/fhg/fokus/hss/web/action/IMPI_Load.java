@@ -108,6 +108,14 @@ public class IMPI_Load extends Action {
 			}
 			request.setAttribute("associated_IMSU", associated_IMSU);
 			request.setAttribute("associated_IMPUs", associated_IMPUs);
+
+			if (IMPI_Load.testForDelete(session, form.getId())){
+				request.setAttribute("deleteDeactivation", "false");
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+			
 		}
 		finally{
 			HibernateUtil.commitTransaction();

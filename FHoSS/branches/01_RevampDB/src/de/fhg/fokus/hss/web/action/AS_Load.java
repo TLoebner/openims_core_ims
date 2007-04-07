@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -60,9 +61,11 @@ import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
@@ -83,20 +86,42 @@ public class AS_Load extends Action {
 		AS_Form form = (AS_Form) actionForm;
 		int id = form.getId();
 
-		HibernateUtil.beginTransaction();
 		Session session = HibernateUtil.getCurrentSession();
+		try{
+			HibernateUtil.beginTransaction();
 
-		if (id != -1){
-			try{
+			if (id != -1){
 				// load
-				ApplicationServer as = ApplicationServer_DAO.get_by_ID(session, id);
-				AS_Load.setForm(form, as);
+					ApplicationServer as = ApplicationServer_DAO.get_by_ID(session, id);
+					AS_Load.setForm(form, as);
 			}
-			finally{
-				HibernateUtil.commitTransaction();
-				HibernateUtil.closeSession();
-			}
-		}	
+			
+			List select_ifc = IFC_DAO.get_all(session);
+			form.setSelect_ifc(select_ifc);
+			
+			List attached_ifc_list = null;
+			attached_ifc_list = IFC_DAO.get_all_by_AS_ID(session, id);
+			if (attached_ifc_list != null)
+				request.setAttribute("attached_ifc_list", attached_ifc_list);
+			else	
+				request.setAttribute("attached_ifc_list", new ArrayList());
+			
+			if (id != -1){
+				if (AS_Load.testForDelete(session, id)){
+					request.setAttribute("deleteDeactivation", "false");
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
+			}			
+			
+			HibernateUtil.commitTransaction();
+		}
+		finally{
+			session.close();
+		}
+		
+
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
@@ -117,7 +142,7 @@ public class AS_Load extends Action {
 			form.setUdr((as.getUdr() == 1));
 			form.setPur((as.getPur() == 1));
 			form.setSnr((as.getSnr() == 1));
-			form.setUdr_rep_data((as.getUdr_rep_data() == 1));
+			form.setUdr_rep_data(as.getUdr_rep_data() == 1);
 			form.setUdr_impu((as.getUdr_impu() == 1));
 			form.setUdr_ims_user_state((as.getUdr_ims_user_state() == 1));
 			form.setUdr_scscf_name((as.getUdr_scscf_name() == 1));
@@ -147,6 +172,10 @@ public class AS_Load extends Action {
 	}
 	
 	public static boolean testForDelete(Session session, int id){
+		List l = IFC_DAO.get_all_by_AS_ID(session, id);
+		if (l != null && l.size() > 0){
+			return false;
+		}
 		return true;
 	}
 }

@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -59,11 +60,16 @@ import org.hibernate.Session;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set;
 import de.fhg.fokus.hss.db.model.TP;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.SP_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
+import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
+import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
 import de.fhg.fokus.hss.web.form.SP_Form;
@@ -85,45 +91,90 @@ public class SP_Load extends Action {
 
 		SP_Form form = (SP_Form) actionForm;
 		int id = form.getId();
-
-		if (id != -1){
-			HibernateUtil.beginTransaction();
-			Session session = HibernateUtil.getCurrentSession();
+		List attached_ifc_list;
+		List attached_shared_ifc_list;
 		
-			try{
-				// load
-				SP sp = SP_DAO.get_by_ID(session, id); 
+		List select_ifc = new ArrayList();
+		List select_shared_ifc = new ArrayList();
+		Session session = null;
+		
+		try{
+			session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
+			
+			// load
+			SP sp = SP_DAO.get_by_ID(session, id); 
+			SP_Load.setForm(form, sp);
+			
+			// set select_ifc & select_shared_ifc
+			select_ifc = IFC_DAO.get_all(session);
+			form.setSelect_ifc(select_ifc);
 
-				if (sp != null){
-					form.setId(sp.getId());
-					form.setName(sp.getName());
-					form.setCn_service_auth(sp.getCn_service_auth());
-				}
+			select_shared_ifc = Shared_IFC_Set_DAO.get_all_Sets(session);	
+			form.setSelect_shared_ifc(select_shared_ifc);
+			
+			attached_ifc_list = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, id);
+			attached_shared_ifc_list = SP_Shared_IFC_Set_DAO.get_all_Shared_IFC_by_SP_ID(session, id);
+			
+			if (attached_shared_ifc_list != null){
+				request.setAttribute("attached_ifc_list", attached_ifc_list);
 			}
-			finally{
-				HibernateUtil.commitTransaction();
-				HibernateUtil.closeSession();
+			else{
+				request.setAttribute("attached_ifc_list", new ArrayList());
 			}
+			
+			if (attached_shared_ifc_list != null){
+				request.setAttribute("attached_shared_ifc_list", attached_shared_ifc_list);
+			}
+			else{
+				request.setAttribute("attached_shared_ifc_list", new ArrayList());
+			}
+			
+			if (SP_Load.testForDelete(session, form.getId())){
+				request.setAttribute("deleteDeactivation", "false");
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+			
+			HibernateUtil.commitTransaction();
+		}
+		finally{
+			if (session != null)
+				session.close();
 		}
 		
+		
+		request.setAttribute("attached_IFC_list", attached_ifc_list);
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
 	}
 	
+	
 	public static boolean testForDelete(Session session, int id){
+		List result = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, id);
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		result = SP_Shared_IFC_Set_DAO.get_all_Shared_IFC_by_SP_ID(session, id);
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		
 		return true;
 	}
 	
-/*	public static boolean setForm(TP_Form form, TP tp){
+	public static boolean setForm(SP_Form form, SP sp){
 		boolean exitCode = false;
 		
-		if (tp != null){
+		if (sp != null){
 			exitCode = true;
-			form.setId(tp.getId());
-			form.setName(tp.getName());
-			form.setCondition_type_cnf(tp.getCondition_type_cnf());
+			form.setId(sp.getId());
+			form.setName(sp.getName());
+			form.setCn_service_auth(sp.getCn_service_auth());
+			
 		}
 		return exitCode;
-	}*/	
+	}	
 }

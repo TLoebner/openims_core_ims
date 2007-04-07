@@ -18,41 +18,46 @@
 <title><bean:message key="result.title" /></title>
 </head>
 <body>
-
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1>Initial Filter Criteria - Search </h1><br/><br/></td>
-</tr>
-</table>
-</center>
-
-<html:form action="IFC_Search">
-<center>
-		<table>
-			<tr>
-				<td>Search by ID</td>
-				<td><html:text property="id_ifc" value="" styleClass="inputbox"/></td>
-			</tr>
-			<tr>
-				<td>Search by Name</td>
-				<td><html:text property="name" value="" styleClass="inputbox"/></td>
-			</tr>
-			<tr>
-				<td>Search by AS Name</td>
-				<td><html:text property="name_application_server" value="" styleClass="inputbox"/></td>
-			</tr>
-			<tr>
-				<td>Search by TP Name</td>
-				<td><html:text property="name_tp" value="" styleClass="inputbox"/></td>
-			</tr>
-		</table>
-		<table>		
-			<tr>
-				<td><br/><html:submit property="search" value="Search" /></td>
-			</tr>				
+	<html:form action="IFC_Search">
+		<table align="center" valign="middle" height="80%">
+		<tr> 
+			<td align=center>
+				<br/><br/><h1>Initial Filter Criteria - Search </h1>
+			</td>
+		</tr>
+		<tr height=99%>
+			<td align=center>
+				<table border=0 cellspacing=0 align="center" width=300>
+				<tr><td align="right"><b>Enter Search Parameters:</b></td></tr>
+	 			<tr>
+	 				<td>
+					 	<table border="0" cellspacing="1" align="center" width="100%" style="border:1px solid #FF6600;">
+		    			<tr bgcolor="#FFCC66">
+							<td>ID</td>
+							<td><html:text property="id_ifc" value="" styleClass="inputtext" size="8"/></td>
+						</tr>
+		    			<tr bgcolor="#FFCC66">							
+		    				<td>Name</td>
+							<td><html:text property="name" value="" styleClass="inputtext" size="32"/></td>
+						</tr>
+						<tr bgcolor="#FFCC66">	
+							<td>AS Name</td>
+							<td><html:text property="name_application_server" value="" styleClass="inputtext" size="32"/></td>
+						</tr>
+						<tr bgcolor="#FFCC66">	
+							<td>TP Name</td>
+							<td><html:text property="name_tp" value="" styleClass="inputtext" size="32"/></td>
+						</tr>
+						</table>
+					</td>		
+				</tr>
+				<tr>
+					<td align="center"><br/><html:submit property="search" value="Search" /></td>
+				</tr>				
+				</table>
+			</td>
+		</tr>		
 		</table>		
-</center>
-</html:form>
+	</html:form>
 </body>
 </html>

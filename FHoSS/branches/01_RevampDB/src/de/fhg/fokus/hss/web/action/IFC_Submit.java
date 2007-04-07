@@ -109,8 +109,10 @@ public class IFC_Submit extends Action{
 
 				// make the changes
 				ifc.setName(form.getName());
-				ifc.setPriority(form.getPriority());
+				//ifc.setPriority(form.getPriority());
 				ifc.setProfile_part_ind(form.getProfile_part_ind());
+				ifc.setId_application_server(form.getId_application_server());
+				ifc.setId_tp(form.getId_tp());
 				
 				if (id == -1){
 					IFC_DAO.insert(session, ifc);
@@ -137,6 +139,9 @@ public class IFC_Submit extends Action{
 				IFC_DAO.delete_by_ID(session, id);
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			
+			IFC_Load.prepareForward(session, form, request, id);
+			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
 			logger.error("DatabaseException occured in IFC_Submit!");
@@ -144,7 +149,7 @@ public class IFC_Submit extends Action{
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			
 			HibernateUtil.closeSession();
 		}
 		return forward;

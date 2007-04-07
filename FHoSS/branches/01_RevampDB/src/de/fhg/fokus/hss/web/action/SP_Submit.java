@@ -43,6 +43,9 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -54,7 +57,13 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.model.SP_IFC;
+import de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.db.op.SP_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
+import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
+import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.SP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -75,10 +84,11 @@ public class SP_Submit extends Action{
 		String nextAction = form.getNextAction();
 		int id = form.getId();
 		ActionForward forward = null;
+		Session session = null;
 		
 		try{
 			HibernateUtil.beginTransaction();
-			Session session = HibernateUtil.getCurrentSession();
+			session = HibernateUtil.getCurrentSession();
 					
 			if (id != -1){
 				if (SP_Load.testForDelete(session, id)){
@@ -93,7 +103,8 @@ public class SP_Submit extends Action{
 				if (id == -1){
 					// create
 					SP sp = SP_DAO.insert(session, form.getName(), form.getCn_service_auth());
-					form.setId(sp.getId());
+					id = sp.getId();
+					form.setId(id);
 				}
 				else{
 					// update
@@ -104,10 +115,8 @@ public class SP_Submit extends Action{
 			}
 			else if (nextAction.equals("refresh")){
 				SP sp = (SP) SP_DAO.get_by_ID(session, id);
-				if (sp != null){
-					form.setName(sp.getName());
-					form.setCn_service_auth(sp.getCn_service_auth());
-				}
+				SP_Load.setForm(form, sp);
+
 				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}
@@ -115,13 +124,87 @@ public class SP_Submit extends Action{
 				SP_DAO.delete_by_ID(session, id);
 				forward  = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			else if (nextAction.equals("attach_ifc")){
+				SP_IFC sp_ifc = new SP_IFC();
+				sp_ifc.setId_sp(id);
+				sp_ifc.setId_ifc(form.getIfc_id());
+				sp_ifc.setPriority(form.getSp_ifc_priority());
+				SP_IFC_DAO.insert(session, sp_ifc);
+				
+				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() + "?id=" + id);
+				
+			}
+			else if (nextAction.equals("attach_shared_ifc")){
+				System.out.println("attach shared IFC:" + form.getShared_ifc_id());
+				SP_Shared_IFC_Set sp_shared_ifc = new SP_Shared_IFC_Set();
+				sp_shared_ifc.setId_sp(id);
+				sp_shared_ifc.setId_shared_ifc_set(form.getShared_ifc_id());
+				SP_Shared_IFC_Set_DAO.insert(session, sp_shared_ifc);
+				
+				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() + "?id=" + id);
+				
+			}
+			else if (nextAction.equals("detach_ifc")){
+				System.out.println("delete IFC:" + form.getAssociated_ID());
+				SP_IFC_DAO.delete_by_SP_and_IFC_ID(session, id, form.getAssociated_ID());
+				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() + "?id=" + id);
+				
+			}
+			else if (nextAction.equals("detach_shared_ifc")){
+				System.out.println("delete shared:" + form.getAssociated_ID());
+				SP_Shared_IFC_Set_DAO.delete_by_SP_and_Shared_IFC_ID(session, id, form.getAssociated_ID());
+				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() + "?id=" + id);
+			}
+
+			// add parameters to request & refresh select properties
+
+			// set select_ifc & select_shared_ifc
+			List select_ifc = null;
+			select_ifc = IFC_DAO.get_all(session);
+			form.setSelect_ifc(select_ifc);			
+			
+			List select_shared_ifc = null;
+			select_shared_ifc = Shared_IFC_Set_DAO.get_all_Sets(session);	
+			form.setSelect_shared_ifc(select_shared_ifc);
+
+			// set the collections of attached ifc & shared_ifc	
+			List attached_ifc_list = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, id);
+			List attached_shared_ifc_list = SP_Shared_IFC_Set_DAO.get_all_Shared_IFC_by_SP_ID(session, id);
+
+			if (attached_shared_ifc_list != null){
+				request.setAttribute("attached_ifc_list", attached_ifc_list);
+			}
+			else{
+				request.setAttribute("attached_ifc_list", new ArrayList());
+			}
+			
+			if (attached_shared_ifc_list != null){
+				request.setAttribute("attached_shared_ifc_list", attached_shared_ifc_list);
+			}
+			else{
+				request.setAttribute("attached_shared_ifc_list", new ArrayList());
+			}
+
+			if (SP_Load.testForDelete(session, form.getId())){
+				request.setAttribute("deleteDeactivation", "false");
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+			
+			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
 			e.printStackTrace();
 		}
 		finally{
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
+			if (session != null){
+				session.close();
+			}
 		}
 		return forward;
 	}

@@ -40,24 +40,32 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
+
 package de.fhg.fokus.hss.web.action;
 
-import de.fhg.fokus.hss.db.model.IMPI;
-import de.fhg.fokus.hss.db.model.IMPI_IMPU;
-import de.fhg.fokus.hss.db.op.IMPI_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
-import de.fhg.fokus.hss.web.form.DeleteForm;
-import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.util.WebConstants;
+import java.util.LinkedList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.Query;
 import org.hibernate.Session;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
+import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
+import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.web.form.CS_SearchForm;
+import de.fhg.fokus.hss.web.form.IMPI_SearchForm;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -65,41 +73,67 @@ import javax.servlet.http.HttpServletResponse;
  */
 
 
-public class IMPI_Delete extends Action {
+public class CapS_Search extends Action{
 	
 	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		ActionForward actionForward = null;
+		CS_SearchForm form = (CS_SearchForm) actionForm;
+		Object [] queryResult = null;
+		ChargingInfo uniqueResult = null;
+		ActionForward forward = null;
 		
+		int rowsPerPage = Integer.parseInt(form.getRowsPerPage());
+		int currentPage = Integer.parseInt(form.getCrtPage()) - 1;
+		int firstResult = currentPage * rowsPerPage;		
+
 		try{
 			HibernateUtil.beginTransaction();
-
-			DeleteForm form = (DeleteForm) actionForm;
 			Session session = HibernateUtil.getCurrentSession();
-			String action = request.getParameter("action");
-			
-			if (action == null){
-				// delete from IMPI_IMPU
-				int id_impi = form.getId();
-				IMPI_IMPU_DAO.delete_by_IMPI_ID(session, id_impi);
-			
-				// 	delete from IMPI
-				IMPI_DAO.delete_by_ID(session, id_impi);
-				
-				actionForward = mapping.findForward(WebConstants.FORWARD_SUCCESS); 
+		
+			if (form.getId_cs() != null && !form.getId_cs().equals("")){
+				uniqueResult = ChargingInfo_DAO.get_by_ID(session, Integer.parseInt(form.getId_cs()));
 			}
-			else if (action.equals("delete_associated_impu")){
-				int id_impu = Integer.parseInt(request.getParameter("id_impu"));
-				IMPI_IMPU_DAO.delete_by_IMPI_and_IMPU_ID(session, form.getId(), id_impu);
-				actionForward = mapping.findForward("success_impi_impu");
+			else if (form.getName() != null && !form.getName().equals("")){
+				queryResult = ChargingInfo_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
 			}
-		} 
+			else{
+				queryResult = ChargingInfo_DAO.get_all(session, firstResult, rowsPerPage);
+			}
+		
+			int maxPages = 1;
+			if (queryResult != null){
+				// more than one result
+				maxPages = ((((Integer)queryResult[0]).intValue() - 1) / rowsPerPage) + 1;
+				request.setAttribute("resultList", (List)queryResult[1]);
+			}
+			else {
+				List list = new LinkedList();
+				if (uniqueResult != null){
+					list.add(uniqueResult);
+				}
+				request.setAttribute("resultList", list);
+			}
+			
+			
+			if (currentPage > maxPages){
+				currentPage = 0;
+			}
+		
+			request.setAttribute("maxPages", String.valueOf(maxPages));
+			request.setAttribute("currentPage", String.valueOf(currentPage));
+			request.setAttribute("rowPerPage", String.valueOf(rowsPerPage));
+			forward = mapping.findForward(WebConstants.FORWARD_SUCCESS);
+			
+		}
+		catch(DatabaseException e){
+			forward = mapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
 		finally{
 			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
 
-		return actionForward;
+		return forward;
 	}
 }

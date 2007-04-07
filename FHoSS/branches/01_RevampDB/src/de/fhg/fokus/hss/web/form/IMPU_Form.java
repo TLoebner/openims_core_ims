@@ -76,11 +76,15 @@ public class IMPU_Form extends ActionForm implements Serializable{
 	private String display_name;
 	private boolean psi_activation;
 	
-
+	private int associated_ID;
 	private String impi_identity;
+	private String impu_implicitset_identity;
+	private int vn_id;
+	private int already_assigned_impi_id;
 	private List select_sp;
 	private List select_charging_info;
 	private List select_identity_type;
+	private List select_vn;
 	private String nextAction;
 
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
@@ -91,17 +95,20 @@ public class IMPU_Form extends ActionForm implements Serializable{
     	this.id_sp = -1;
     	this.id_charging_info = -1;
     	this.can_register = true;
-
     	this.type = CxConstants.Identity_Type.Public_User_Identity.code;    	
     	this.wildcard_psi = null;
     	this.psi_activation = false;
-    	
     	this.display_name = null;
     	this.user_state = 0;
     	
+    	this.associated_ID = -1;
+    	this.impi_identity = null;
+    	this.impu_implicitset_identity = null;
+    	this.vn_id = -1;
     	this.select_charging_info = null;
     	this.select_sp = null;
     	this.select_identity_type = null;
+    	this.select_vn = null;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -234,5 +241,46 @@ public class IMPU_Form extends ActionForm implements Serializable{
 	public void setImpi_identity(String impi_identity) {
 		this.impi_identity = impi_identity;
 	}
+
+	public int getAssociated_ID() {
+		return associated_ID;
+	}
+
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
+	}
+
+	public String getImpu_implicitset_identity() {
+		return impu_implicitset_identity;
+	}
+
+	public void setImpu_implicitset_identity(String impu_implicitset_identity) {
+		this.impu_implicitset_identity = impu_implicitset_identity;
+	}
+
+	public int getVn_id() {
+		return vn_id;
+	}
+
+	public void setVn_id(int vn_id) {
+		this.vn_id = vn_id;
+	}
+
+	public List getSelect_vn() {
+		return select_vn;
+	}
+
+	public void setSelect_vn(List select_vn) {
+		this.select_vn = select_vn;
+	}
+
+	public int getAlready_assigned_impi_id() {
+		return already_assigned_impi_id;
+	}
+
+	public void setAlready_assigned_impi_id(int already_assigned_impi_id) {
+		this.already_assigned_impi_id = already_assigned_impi_id;
+	}
+	
 	
 }

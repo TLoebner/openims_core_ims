@@ -43,6 +43,8 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.List;
+
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -124,10 +126,18 @@ public class SP_DAO {
 		return result;
 	}
 	
+	public static List get_all(Session session){
+		Query query;
+		query = session.createSQLQuery("select * from sp")
+			.addEntity(SP.class);
+		return query.list();
+	}	
+	
 	public static int delete_by_ID(Session session, int id){
 		Query query = session.createSQLQuery("delete from sp where id=?");
 		query.setInteger(0, id);
 		return query.executeUpdate();
 	}
+	
 	
 }
