@@ -43,11 +43,10 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.List;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
@@ -56,16 +55,12 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
-import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
-import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
-import de.fhg.fokus.hss.db.op.TP_DAO;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.AS_Form;
-import de.fhg.fokus.hss.web.form.IFC_Form;
-import de.fhg.fokus.hss.web.form.TP_Form;
+import de.fhg.fokus.hss.web.form.CS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -74,82 +69,89 @@ import de.fhg.fokus.hss.web.util.WebConstants;
  */
 
 
-public class IFC_Load extends Action {
+public class Cap_Submit extends Action{
+	
+	private static Logger logger = Logger.getLogger(AS_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		IFC_Form form = (IFC_Form) actionForm;
+		String action = request.getParameter("action");
+		CS_Form form = (CS_Form) actionForm;
+		String nextAction = form.getNextAction();
+		ActionForward forward = null;
 		int id = form.getId();
 
-		Session session = HibernateUtil.getCurrentSession();
 		try{
 			HibernateUtil.beginTransaction();
+			Session session = HibernateUtil.getCurrentSession();
 
+			// for all the actions we test if the current element can be deleted or not
 			if (id != -1){
-				// load
-				IFC ifc = IFC_DAO.get_by_ID(session, id);
-				if (!IFC_Load.setForm(form, ifc)){
-					// print some error message
-				}			
+				if (CS_Load.testForDelete(session, form.getId())){
+					request.setAttribute("deleteDeactivation", "false");
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
 			}
-			prepareForward(session, form, request, id);
-			HibernateUtil.commitTransaction();
-		}	
+			
+			// all the possible actions
+			if (nextAction.equals("save")){
+				int auth_scheme;
+				ChargingInfo charging_info;
+
+				if (id == -1){
+					// create
+					charging_info = new ChargingInfo();
+				}	
+				else{
+					// update
+					charging_info = ChargingInfo_DAO.get_by_ID(session, id);
+				}	
+				
+				// make the changes
+				charging_info.setName(form.getName());
+				charging_info.setPri_ccf(form.getPri_ccf());
+				charging_info.setSec_ccf(form.getSec_ccf());
+				charging_info.setPri_ecf(form.getPri_ecf());
+				charging_info.setSec_ecf(form.getSec_ecf());
+				
+				if (id == -1){
+					ChargingInfo_DAO.insert(session, charging_info);
+					id = charging_info.getId();
+					form.setId(id);
+				}
+				else{
+					ChargingInfo_DAO.update(session, charging_info);
+				}
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + id);
+				
+				
+			}
+			else if (nextAction.equals("refresh")){
+				ChargingInfo charging_info = (ChargingInfo) ChargingInfo_DAO.get_by_ID(session, id);
+
+				if (!CS_Load.setForm(form, charging_info)){
+					logger.error("The CS withe the ID:" + id + " was not loaded from database!");
+				}
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + id);
+				
+			}
+			else if (nextAction.equals("delete")){
+				ChargingInfo_DAO.delete_by_ID(session, form.getId());
+				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+			}
+		}
 		catch(DatabaseException e){
-			e.printStackTrace();
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			
+			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
-			
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
-	}
-	
-	public static boolean setForm(IFC_Form form, IFC ifc){
-		boolean exitCode = false;
-		
-		if (ifc != null){
-			exitCode = true;
-			
-			form.setId(ifc.getId());
-			form.setName(ifc.getName());
-			form.setProfile_part_ind(ifc.getProfile_part_ind());
-			form.setId_application_server(ifc.getId_application_server());
-			form.setId_tp(ifc.getId_tp());
-		}
-		return exitCode;
-	}
-	
-	public static boolean testForDelete(Session session, int id){
-		List result = SP_IFC_DAO.get_all_SP_by_IFC_ID(session, id);
-		if (result != null && result.size() > 0){
-			return false;
-		}
-		result = Shared_IFC_Set_DAO.get_all_by_IFC_ID(session, id);
-		if (result != null && result.size() > 0){
-			return false;
-		}
-		return true;
-	}
-	
-	public static void prepareForward(Session session, IFC_Form form, HttpServletRequest request, int id){
-		List list = ApplicationServer_DAO.get_all(session);
-		form.setSelect_as(list);
-		
-		list = TP_DAO.get_all(session);
-		form.setSelect_tp(list);
-		
-		if (IFC_Load.testForDelete(session, id)){
-			request.setAttribute("deleteDeactivation", "false");
-		}
-		else{
-			request.setAttribute("deleteDeactivation", "true");
-		}
-		
-		
 	}
 }

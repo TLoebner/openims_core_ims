@@ -51,7 +51,6 @@ function rowsPerPageChanged(){
 			<tr class="header">
 				<td class="header"> ID </td>
 				<td class="header"> Name </td>
-				<td class="header"> Priority </td>
 				<td class="header"> Triggering Point </td>									
 				<td class="header"> Application Server </td>									
 				<td class="header"> Profile Part Indicator </td>													
@@ -69,10 +68,6 @@ function rowsPerPageChanged(){
 						<a href="/hss.web.console/IFC_Load.do?id=<bean:write name="ifc" property="id" />"> 
 							<bean:write name="ifc" property="name" />
 						</a>	
-					</td>
-
-					<td> 
-						<bean:write name="ifc" property="priority" />
 					</td>
 
 					<td> 

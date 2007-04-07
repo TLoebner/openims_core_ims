@@ -48,6 +48,7 @@ import java.util.List;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IFC;
 
@@ -84,6 +85,22 @@ public class IFC_DAO {
 	public static List get_all(Session session){
 		Query query = session.createSQLQuery("select * from ifc")
 			.addEntity(IFC.class);
+		return query.list();
+	}
+	
+	public static List get_all_by_AS_ID(Session session, int id_as){
+		Query query;
+		query = session.createSQLQuery("select * from ifc where id_application_server=?")
+			.addEntity(IFC.class);
+		query.setInteger(0, id_as);
+		return query.list();
+	}
+
+	public static List get_all_by_TP_ID(Session session, int id_tp){
+		Query query;
+		query = session.createSQLQuery("select * from ifc where id_tp=?")
+			.addEntity(IFC.class);
+		query.setInteger(0, id_tp);
 		return query.list();
 	}
 	

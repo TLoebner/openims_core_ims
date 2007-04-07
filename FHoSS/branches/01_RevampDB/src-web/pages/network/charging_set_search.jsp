@@ -19,37 +19,40 @@
 </head>
 <body>
 
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1>Charging Info Sets - Search </h1><br/><br/></td>
-</tr>
-</table>
-</center>
+<body>
+	<table align=center valign=middle height=100%>
+		<tr> 
+			<td align=center>
+				<br/><br/><h1>Charging Info Sets - Search </h1>
+			</td>
+		</tr>
+		<tr height=99%>
+			<td align=center>
+			<html:form action="CS_Search">
+			<table border=0 cellspacing=0 align="center" width=300>
+				<tr><td align="right"><b>Enter Search Parameters:</b></td></tr>
+	 			<tr>
+	 				<td>
+					 	<table border="0" cellspacing="1" align="center" width="100%" style="border:1px solid #FF6600;">
+		    			<tr bgcolor="#FFCC66">
+							<td>ID</td>
+							<td>
+								<html:text property="id_cs" value=""/>
+							</td>
+						</tr>
 
-<html:form action="CS_Search">
-<center>
-		<table class="as">
-			<tr>
-				<td></td>
-				<td><h2>Enter Search Parameters:</h2></td>
-			</tr>
-
-			<tr class="header">
-				<td class="tgpFormular">ID</td>
-				<td class="tgpFormular"><html:text property="id_cs" value=""/></td>
-			</tr>
-			<tr class="header">
-				<td class="tgpFormular">Name</td>
-				<td class="tgpFormular"><html:text property="name" value=""/></td>
-			</tr>
-		</table>
-		<table>		
-			<tr>
-				<td><br/><html:submit property="search" value="Search" /></td>
-			</tr>				
-		</table>		
-</center>
-</html:form>
+						<tr bgcolor="#FFCC66">
+							<td>Name</td>
+							<td><html:text property="name" value="" size="32"/></td>
+						</tr>
+						</table>
+					</td>	
+				<tr>
+					<td align="center"><br/><html:submit property="search" value="Search" /></td>
+				</tr>			
+			</table>	
+			</html:form>
+		</td></tr>	
+	</table>	
 </body>
 </html>

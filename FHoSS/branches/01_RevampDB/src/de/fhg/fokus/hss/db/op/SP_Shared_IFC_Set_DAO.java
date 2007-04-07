@@ -43,11 +43,15 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set;
 import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
@@ -57,6 +61,13 @@ import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class SP_Shared_IFC_Set_DAO {
+	public static void insert(Session session, SP_Shared_IFC_Set sp_shared_ifc){
+		session.save(sp_shared_ifc);
+	}
+	
+	public static void update(Session session, SP_Shared_IFC_Set sp_shared_ifc){
+		session.saveOrUpdate(sp_shared_ifc);
+	}	
 	
 	public static SP_Shared_IFC_Set get_by_SP_Shared_IFC_Set_ID(Session session, int id_sp, int id_shared_ifc_set){
 		Query query;
@@ -88,6 +99,42 @@ public class SP_Shared_IFC_Set_DAO {
 				.addScalar("id_set");
 		query.setInteger(0, id_sp);
 		return query.list();
+	}
+	
+	public static List get_all_Shared_IFC_by_SP_ID(Session session, int id_sp){
+		Query query;
+		query = session.createSQLQuery("select distinct id_set, name from shared_ifc_set" +
+				"	inner join sp_shared_ifc_set on shared_ifc_set.id_set=sp_shared_ifc_set.id_shared_ifc_set" +
+				" where sp_shared_ifc_set.id_sp=?")
+				.addScalar("id_set", Hibernate.INTEGER)
+				.addScalar("name", Hibernate.STRING);
+		query.setInteger(0, id_sp);
+		
+		List result = new ArrayList();
+		if (query.list() != null){
+			Iterator it = query.list().iterator();
+			Object [] row = null;
+			while (it.hasNext()){
+				row = (Object[]) it.next();
+				Shared_IFC_Set shared_IFC = null;
+				if (row != null){
+					shared_IFC = new Shared_IFC_Set();
+					shared_IFC.setId_set((Integer)row[0]);
+					shared_IFC.setName((String)row[1]);
+				}
+				result.add(shared_IFC);
+			}
+		} 
+
+		return result;
+	}
+	
+	public static int delete_by_SP_and_Shared_IFC_ID(Session session, int id_sp, int id_shared_ifc){
+		Query query;
+		query = session.createSQLQuery("delete from sp_shared_ifc_set where id_sp=? and id_shared_ifc_set=?");
+		query.setInteger(0, id_sp);
+		query.setInteger(1, id_shared_ifc);
+		return query.executeUpdate();
 	}
 	
 }

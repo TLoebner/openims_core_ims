@@ -84,7 +84,42 @@ public class ApplicationServer {
 	private int snr_dsai;
 	private int snr_aliases_rep_data;
 	
-	public ApplicationServer(){}
+	public ApplicationServer(){
+		// default values
+		
+		this.default_handling = 1;
+		this.service_info = "";
+		this.diameter_address = "";
+		this.rep_data_size_limit = 100;
+		this.udr = 0;
+		this.pur = 0;
+		this.snr = 0;
+		this.udr_rep_data = 0;
+		this.udr_impu = 0;
+		this.udr_ims_user_state = 0;
+		this.udr_scscf_name = 0;
+		this.udr_ifc = 0;
+		this.udr_location = 0;
+		this.udr_user_state = 0;
+		this.udr_charging_info = 0;
+		this.udr_msisdn = 0;
+		this.udr_psi_activation = 0;
+		this.udr_dsai = 0;
+		this.udr_aliases_rep_data = 0;
+		this.pur_rep_data = 0;
+		this.pur_psi_activation = 0;
+		this.pur_dsai = 0;
+		this.pur_aliases_rep_data = 0;
+		this.snr_rep_data = 0;
+		this.snr_impu = 0;
+		this.snr_ims_user_state = 0;
+		this.snr_scscf_name = 0;
+		this.snr_ifc = 0;
+		this.snr_psi_activation = 0;
+		this.snr_dsai = 0;
+		this.snr_aliases_rep_data = 0;
+		
+	}
 
 	// getters & setters
 	public int getDefault_handling() {

@@ -48,6 +48,7 @@ import java.util.List;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.IMPU_VisitedNetwork;
@@ -59,13 +60,32 @@ import de.fhg.fokus.hss.db.model.VisitedNetwork;
  */
 public class IMPU_VisitedNetwork_DAO {
 	
-	public static IMPU_VisitedNetwork getByIMPU_VisitedNetwork(Session session, int id_impu, int id_visited_network){
+	public static void insert(Session session, IMPU_VisitedNetwork impu_vn){
+		session.save(impu_vn);
+	}
+	
+	public static void update(Session session, IMPU_VisitedNetwork impu_vn){
+		session.saveOrUpdate(impu_vn);
+	}	
+	
+	public static IMPU_VisitedNetwork get_by_IMPU_and_VisitedNetwork_ID(Session session, int id_impu, int id_visited_network){
 		Query query;
 		query = session.createSQLQuery("select * from impu_visited_network where id_impu=? and id_visited_network=?")
 			.addEntity(IMPU_VisitedNetwork.class);
 		query.setInteger(0, id_impu);
 		query.setInteger(1, id_visited_network);
 		return (IMPU_VisitedNetwork) query.uniqueResult();
+	}
+	
+	public static List get_all_VN_by_IMPU_ID(Session session, int id_impu){
+		Query query;
+		query = session.createSQLQuery(
+				"select * from visited_network" +
+				"	inner join impu_visited_network on visited_network.id=impu_visited_network.id_visited_network" +
+				"		where impu_visited_network.id_impu=?")
+					.addEntity(VisitedNetwork.class);
+		query.setInteger(0, id_impu);
+		return query.list();
 	}
 	
 	public static List getJoinResult(Session session, int id_impu){
@@ -82,4 +102,5 @@ public class IMPU_VisitedNetwork_DAO {
 		query.setInteger(0, id_impu);
 		return query.list();
 	}
+		
 }

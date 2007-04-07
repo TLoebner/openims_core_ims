@@ -43,6 +43,9 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -55,7 +58,9 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -112,11 +117,20 @@ public class AS_Submit extends Action{
 				as.setServer_name(form.getServer_name());
 				as.setDefault_handling(form.getDefault_handling());
 				as.setDiameter_address(form.getDiameter_address());
-				as.setService_info(form.getService_info());
+				
+				if (form.getService_info() != null){
+					as.setService_info(form.getService_info());
+				}
+				else{
+					as.setService_info("asasas");
+				}
+				
 				as.setRep_data_size_limit(form.getRep_data_size_limit());
 				as.setUdr(form.isUdr()?1:0);
 				as.setPur(form.isPur()?1:0);
 				as.setSnr(form.isSnr()?1:0);
+				
+				System.out.println("TEST CHECKED:" + form.isUdr_rep_data());
 				as.setUdr_rep_data(form.isUdr_rep_data()?1:0);
 				as.setUdr_impu(form.isUdr_impu()?1:0);
 				as.setUdr_ims_user_state(form.isUdr_ims_user_state()?1:0);
@@ -168,10 +182,52 @@ public class AS_Submit extends Action{
 			}
 			else if (nextAction.equals("delete")){
 				ApplicationServer_DAO.delete_by_ID(session, id);
-
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			else if (nextAction.equals("detach_ifc")){
+				IFC ifc = IFC_DAO.get_by_ID(session, form.getAssociated_ID());
+				if (ifc != null){
+					ifc.setId_application_server(-1);
+					IFC_DAO.update(session, ifc);
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+			}
+			else if (nextAction.equals("attach_ifc")){
+				
+				IFC ifc = IFC_DAO.get_by_ID(session, form.getIfc_id());
+				if (ifc.getId_application_server() > 0){
+					//error
+				}
+				else{
+					ifc.setId_application_server(id);
+					IFC_DAO.update(session, ifc);
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+			}
 
+			
+			List select_ifc = IFC_DAO.get_all(session);
+			form.setSelect_ifc(select_ifc);
+			
+			List attached_ifc_list = null;
+			attached_ifc_list = IFC_DAO.get_all_by_AS_ID(session, id);
+			if (attached_ifc_list != null)
+				request.setAttribute("attached_ifc_list", attached_ifc_list);
+			else	
+				request.setAttribute("attached_ifc_list", new ArrayList());
+
+			if (id != -1){
+				if (AS_Load.testForDelete(session, id)){
+					request.setAttribute("deleteDeactivation", "false");
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
+			}			
 			
 		}
 		catch(DatabaseException e){

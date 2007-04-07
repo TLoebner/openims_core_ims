@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -52,20 +53,18 @@ import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.Query;
 import org.hibernate.Session;
 
-
 import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
+import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
-import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
-import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
-import de.fhg.fokus.hss.db.op.TP_DAO;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
-import de.fhg.fokus.hss.web.form.IFC_Form;
-import de.fhg.fokus.hss.web.form.TP_Form;
+import de.fhg.fokus.hss.web.form.CS_SearchForm;
+import de.fhg.fokus.hss.web.form.IMPI_SearchForm;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -74,82 +73,67 @@ import de.fhg.fokus.hss.web.util.WebConstants;
  */
 
 
-public class IFC_Load extends Action {
+public class Cap_Search extends Action{
 	
-	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
+	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		IFC_Form form = (IFC_Form) actionForm;
-		int id = form.getId();
+		CS_SearchForm form = (CS_SearchForm) actionForm;
+		Object [] queryResult = null;
+		ChargingInfo uniqueResult = null;
+		ActionForward forward = null;
+		
+		int rowsPerPage = Integer.parseInt(form.getRowsPerPage());
+		int currentPage = Integer.parseInt(form.getCrtPage()) - 1;
+		int firstResult = currentPage * rowsPerPage;		
 
-		Session session = HibernateUtil.getCurrentSession();
 		try{
 			HibernateUtil.beginTransaction();
-
-			if (id != -1){
-				// load
-				IFC ifc = IFC_DAO.get_by_ID(session, id);
-				if (!IFC_Load.setForm(form, ifc)){
-					// print some error message
-				}			
+			Session session = HibernateUtil.getCurrentSession();
+		
+			if (form.getId_cs() != null && !form.getId_cs().equals("")){
+				uniqueResult = ChargingInfo_DAO.get_by_ID(session, Integer.parseInt(form.getId_cs()));
 			}
-			prepareForward(session, form, request, id);
-			HibernateUtil.commitTransaction();
-		}	
+			else if (form.getName() != null && !form.getName().equals("")){
+				queryResult = ChargingInfo_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
+			}
+			else{
+				queryResult = ChargingInfo_DAO.get_all(session, firstResult, rowsPerPage);
+			}
+		
+			int maxPages = 1;
+			if (queryResult != null){
+				// more than one result
+				maxPages = ((((Integer)queryResult[0]).intValue() - 1) / rowsPerPage) + 1;
+				request.setAttribute("resultList", (List)queryResult[1]);
+			}
+			else {
+				List list = new LinkedList();
+				if (uniqueResult != null){
+					list.add(uniqueResult);
+				}
+				request.setAttribute("resultList", list);
+			}
+			
+			
+			if (currentPage > maxPages){
+				currentPage = 0;
+			}
+		
+			request.setAttribute("maxPages", String.valueOf(maxPages));
+			request.setAttribute("currentPage", String.valueOf(currentPage));
+			request.setAttribute("rowPerPage", String.valueOf(rowsPerPage));
+			forward = mapping.findForward(WebConstants.FORWARD_SUCCESS);
+			
+		}
 		catch(DatabaseException e){
-			e.printStackTrace();
+			forward = mapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			
+			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
-			
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
+
 		return forward;
-	}
-	
-	public static boolean setForm(IFC_Form form, IFC ifc){
-		boolean exitCode = false;
-		
-		if (ifc != null){
-			exitCode = true;
-			
-			form.setId(ifc.getId());
-			form.setName(ifc.getName());
-			form.setProfile_part_ind(ifc.getProfile_part_ind());
-			form.setId_application_server(ifc.getId_application_server());
-			form.setId_tp(ifc.getId_tp());
-		}
-		return exitCode;
-	}
-	
-	public static boolean testForDelete(Session session, int id){
-		List result = SP_IFC_DAO.get_all_SP_by_IFC_ID(session, id);
-		if (result != null && result.size() > 0){
-			return false;
-		}
-		result = Shared_IFC_Set_DAO.get_all_by_IFC_ID(session, id);
-		if (result != null && result.size() > 0){
-			return false;
-		}
-		return true;
-	}
-	
-	public static void prepareForward(Session session, IFC_Form form, HttpServletRequest request, int id){
-		List list = ApplicationServer_DAO.get_all(session);
-		form.setSelect_as(list);
-		
-		list = TP_DAO.get_all(session);
-		form.setSelect_tp(list);
-		
-		if (IFC_Load.testForDelete(session, id)){
-			request.setAttribute("deleteDeactivation", "false");
-		}
-		else{
-			request.setAttribute("deleteDeactivation", "true");
-		}
-		
-		
 	}
 }

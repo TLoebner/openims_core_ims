@@ -122,7 +122,6 @@ DROP TABLE IF EXISTS `ifc`;
 CREATE TABLE `ifc` (
   `id` int(11) NOT NULL auto_increment,
   `name` varchar(255) NOT NULL default '',
-  `priority` int(11) NOT NULL default '0',  
   `id_application_server` int(11) default NULL,
   `id_tp` int(11) default NULL,
   `profile_part_ind` int(11) default NULL,
@@ -363,6 +362,7 @@ CREATE TABLE `sp_ifc` (
   `id` int(11) NOT NULL auto_increment,
   `id_sp` int(11) NOT NULL default '0',
   `id_ifc` int(11) NOT NULL default '0',
+  `priority` int(11) NOT NULL default '0',  
   PRIMARY KEY  (`id`),
   KEY `id_sp` (`id_sp`),
   KEY `id_ifc` (`id_ifc`),

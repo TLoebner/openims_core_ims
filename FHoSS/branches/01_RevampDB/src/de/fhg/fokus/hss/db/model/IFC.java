@@ -50,7 +50,6 @@ package de.fhg.fokus.hss.db.model;
 public class IFC {
 	private int id;
 	private String name;
-	private int priority;
 	private Integer profile_part_ind;
 	private Integer id_application_server;
 	private Integer id_tp;
@@ -112,12 +111,5 @@ public class IFC {
 		}
 	}
 
-	public int getPriority() {
-		return priority;
-	}
-
-	public void setPriority(int priority) {
-		this.priority = priority;
-	}
 }
 

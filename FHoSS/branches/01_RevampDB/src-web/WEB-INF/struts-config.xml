@@ -51,6 +51,22 @@
 		<form-bean name="VN_Form" type="de.fhg.fokus.hss.web.form.VN_Form"/>
 		<form-bean name="VN_SearchForm" type="de.fhg.fokus.hss.web.form.VN_SearchForm"/>
 
+		<!-- Capabilities -->		
+		<form-bean name="Cap_Form" type="de.fhg.fokus.hss.web.form.Cap_Form"/>
+		<form-bean name="Cap_SearchForm" type="de.fhg.fokus.hss.web.form.Cap_SearchForm"/>
+
+		<!-- Capabilities Set -->		
+		<form-bean name="CapS_Form" type="de.fhg.fokus.hss.web.form.CapS_Form"/>
+		<form-bean name="CapS_SearchForm" type="de.fhg.fokus.hss.web.form.CapS_SearchForm"/>
+
+		<!-- Preferred S-CSCF Set -->		
+		<form-bean name="PrefS_Form" type="de.fhg.fokus.hss.web.form.PrefS_Form"/>
+		<form-bean name="PrefS_SearchForm" type="de.fhg.fokus.hss.web.form.PrefS_SearchForm"/>
+
+		<!-- SPT -->		
+		<form-bean name="SPT_Form" type="de.fhg.fokus.hss.web.form.SPT_Form"/>
+
+
 	</form-beans>
 
 
@@ -80,6 +96,7 @@
 		<action path="/IMPU_Submit" name="IMPU_Form" type="de.fhg.fokus.hss.web.action.IMPU_Submit" input="/IMPU_Load.do" validate="true">
 			<forward name="success" path="/pages/user/impu.jsp" />
 			<forward name="failure" path="/pages/user/impu.jsp"/>
+			<forward name="delete" path="/pages/user/impu_search.jsp" />
 		</action>
 
 		<action path="/IMPU_Search" name="IMPU_SearchForm" type="de.fhg.fokus.hss.web.action.IMPU_Search" validate="false">
@@ -248,6 +265,62 @@
 
 		<action path="/VN_Search" name="VN_SearchForm" type="de.fhg.fokus.hss.web.action.VN_Search" validate="false">
 			<forward name="success" path="/pages/network/visited_network_search_result.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+
+		<!-- Capabilities -->
+		<action path="/Cap_Load" name="Cap_Form" type="de.fhg.fokus.hss.web.action.Cap_Load" validate="false">
+			<forward name="success" path="/pages/network/capability.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+		
+		<action path="/Cap_Submit" name="Cap_Form" type="de.fhg.fokus.hss.web.action.Cap_Submit" 
+			input="/Cap_Load.do" validate="true">
+			
+			<forward name="success" path="/pages/network/capability.jsp" />
+			<forward name="delete" path="/pages/network/capability_search.jsp" />									
+			<forward name="failure" path="/pages/network/capability.jsp"/>
+		</action>
+
+		<action path="/Cap_Search" name="Cap_SearchForm" type="de.fhg.fokus.hss.web.action.Cap_Search" 
+			validate="false">
+			<forward name="success" path="/pages/network/capability_search_result.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+
+		<!-- Capabilities Set -->
+		<action path="/Caps_Load" name="Caps_Form" type="de.fhg.fokus.hss.web.action.Caps_Load" validate="false">
+			<forward name="success" path="/pages/network/capability_set.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+		
+		<action path="/Cap_Submit" name="Cap_Form" type="de.fhg.fokus.hss.web.action.Cap_Submit" 
+			input="/Cap_Load.do" validate="true">
+			
+			<forward name="success" path="/pages/network/capability_set.jsp" />
+			<forward name="delete" path="/pages/network/capability_set_search.jsp" />									
+			<forward name="failure" path="/pages/network/capability_set.jsp"/>
+		</action>
+
+		<action path="/CapS_Search" name="CapS_SearchForm" type="de.fhg.fokus.hss.web.action.CapS_Search" validate="false">
+			<forward name="success" path="/pages/network/capability_set_search_result.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+
+		<!-- Preferred S-CSCF Sets -->
+		<action path="/PrefS_Load" name="PrefS_Form" type="de.fhg.fokus.hss.web.action.PrefS_Load" validate="false">
+			<forward name="success" path="/pages/network/pref_scscf.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+		
+		<action path="/PrefS_Submit" name="PrefS_Form" type="de.fhg.fokus.hss.web.action.PrefS_Submit" input="/PrefS_Load.do" validate="true">
+			<forward name="success" path="/pages/network/pref_scscf.jsp" />
+			<forward name="delete" path="/pages/network/pref_scscf_search.jsp" />									
+			<forward name="failure" path="/pages/network/pref_scscf.jsp"/>
+		</action>
+
+		<action path="/PrefS_Search" name="PrefS_SearchForm" type="de.fhg.fokus.hss.web.action.PrefS_Search" validate="false">
+			<forward name="success" path="/pages/network/pref_scscf_search_result.jsp" />
 			<forward name="failure" path="/pages/errorPage.jsp"/>
 		</action>
 				

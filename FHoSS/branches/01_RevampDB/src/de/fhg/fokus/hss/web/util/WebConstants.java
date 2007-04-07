@@ -57,7 +57,7 @@ public class WebConstants {
 	public static final String FORWARD_SUCCESS = "success";
 	public static final String FORWARD_FAILURE = "failure";
 	public static final String FORWARD_DELETE = "delete";
-	
+
 	public static final List select_identity_type;
 	static{
 		select_identity_type = new ArrayList();
@@ -85,6 +85,47 @@ public class WebConstants {
 		select_user_state.add(CxConstants.IMPU_user_state_Registered);
 		select_user_state.add(CxConstants.IMPU_user_state_Unregistered);
 		select_user_state.add(CxConstants.IMPU_user_state_Auth_Pending);
+	}
+
+	public static final List<Tuple> select_default_handling;
+	static{
+		select_default_handling = new ArrayList<Tuple>();
+		select_default_handling.add(new Tuple("Session - Continued", CxConstants.Default_Handling_Session_Continued));
+		select_default_handling.add(new Tuple("Session - Terminated", CxConstants.Default_Handling_Session_Terminated));
+	}
+	
+	public static final List<Tuple> select_condition_type_cnf;
+	static{
+		select_condition_type_cnf = new ArrayList<Tuple>();
+		select_condition_type_cnf.add(new Tuple("Disjunctive Normal Format", CxConstants.ConditionType.DNF.code));
+		select_condition_type_cnf.add(new Tuple("Conjunctive Normal Format", CxConstants.ConditionType.CNF.code));
+	}	
+
+	public static final List<Tuple> select_spt_type;
+	static{
+		select_spt_type = new ArrayList<Tuple>();
+		select_spt_type.add(new Tuple("Request-URI", CxConstants.SPT_Type_RequestURI));
+		select_spt_type.add(new Tuple("Method", CxConstants.SPT_Type_Method));
+		select_spt_type.add(new Tuple("SIP-Header", CxConstants.SPT_Type_SIPHeader));
+		select_spt_type.add(new Tuple("Session-Case", CxConstants.SPT_Type_SessionCase));
+		select_spt_type.add(new Tuple("SDP-Line", CxConstants.SPT_Type_SessionDescription));
+	}
+
+	public static final ArrayList<Tuple> select_spt_method_type;
+	static{
+		select_spt_method_type = new ArrayList<Tuple>();
+		select_spt_method_type.add(new Tuple("INVITE", "INVITE"));
+		select_spt_method_type.add(new Tuple("PUBLISH", "PUBLISH"));
+		select_spt_method_type.add(new Tuple("SUBSCRIBE", "SUBSCRIBE"));
+		//etc
+	}
+	public static final ArrayList<Tuple> select_profile_part_indicator;
+	static{
+		select_profile_part_indicator = new ArrayList<Tuple>();
+		select_profile_part_indicator.add(new Tuple(CxConstants.Profile_Part_Indicator_Registered_Name,
+				CxConstants.Profile_Part_Indicator_Registered));
+		select_profile_part_indicator.add(new Tuple(CxConstants.Profile_Part_Indicator_UnRegistered_Name, 
+				CxConstants.Profile_Part_Indicator_UnRegistered));
 	}
 	
 	

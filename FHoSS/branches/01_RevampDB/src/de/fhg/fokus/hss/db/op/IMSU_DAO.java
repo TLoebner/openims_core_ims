@@ -73,7 +73,7 @@ public class IMSU_DAO {
 		query.setInteger(2, id_imsu);
 		query.executeUpdate();
 	}
-	
+		
 	public static IMSU get_by_ID(Session session, int id){
 		Query query;
 		query = session.createSQLQuery("select * from imsu where id=?")

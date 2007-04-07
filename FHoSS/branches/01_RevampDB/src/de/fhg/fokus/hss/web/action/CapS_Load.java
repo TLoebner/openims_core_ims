@@ -55,17 +55,11 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.IFC;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
-import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
-import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
-import de.fhg.fokus.hss.db.op.TP_DAO;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
-import de.fhg.fokus.hss.web.form.IFC_Form;
-import de.fhg.fokus.hss.web.form.TP_Form;
+import de.fhg.fokus.hss.web.form.CS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -74,82 +68,68 @@ import de.fhg.fokus.hss.web.util.WebConstants;
  */
 
 
-public class IFC_Load extends Action {
+public class CapS_Load extends Action {
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		IFC_Form form = (IFC_Form) actionForm;
+		CS_Form form = (CS_Form) actionForm;
 		int id = form.getId();
 
+		HibernateUtil.beginTransaction();
 		Session session = HibernateUtil.getCurrentSession();
-		try{
-			HibernateUtil.beginTransaction();
 
-			if (id != -1){
+		if (id != -1){
+			try{
 				// load
-				IFC ifc = IFC_DAO.get_by_ID(session, id);
-				if (!IFC_Load.setForm(form, ifc)){
-					// print some error message
-				}			
+				ChargingInfo charging_info = ChargingInfo_DAO.get_by_ID(session, id);
+				CS_Load.setForm(form, charging_info);
+				
+				if (testForDelete(session, id)){
+					request.setAttribute("deleteDeactivation", "false");		
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
 			}
-			prepareForward(session, form, request, id);
-			HibernateUtil.commitTransaction();
-		}	
-		catch(DatabaseException e){
-			e.printStackTrace();
+			catch(DatabaseException e){
+				e.printStackTrace();
+			}
+			finally{
+				HibernateUtil.commitTransaction();
+				HibernateUtil.closeSession();
+			}
 		}
-		finally{
-			
-			HibernateUtil.closeSession();
+		else{
+			request.setAttribute("deleteDeactivation", "false");
 		}
-			
+		
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
 	}
 	
-	public static boolean setForm(IFC_Form form, IFC ifc){
+	public static boolean setForm(CS_Form form, ChargingInfo charging_info){
 		boolean exitCode = false;
 		
-		if (ifc != null){
+		if (charging_info != null){
 			exitCode = true;
-			
-			form.setId(ifc.getId());
-			form.setName(ifc.getName());
-			form.setProfile_part_ind(ifc.getProfile_part_ind());
-			form.setId_application_server(ifc.getId_application_server());
-			form.setId_tp(ifc.getId_tp());
+			form.setId(charging_info.getId());
+			form.setName(charging_info.getName());
+			form.setPri_ccf(charging_info.getPri_ccf());
+			form.setSec_ccf(charging_info.getSec_ccf());
+			form.setPri_ecf(charging_info.getPri_ecf());
+			form.setSec_ecf(charging_info.getSec_ecf());
 		}
 		return exitCode;
 	}
 	
 	public static boolean testForDelete(Session session, int id){
-		List result = SP_IFC_DAO.get_all_SP_by_IFC_ID(session, id);
-		if (result != null && result.size() > 0){
-			return false;
+		List l = IMPU_DAO.get_by_Charging_Info_ID(session, id);
+		if (l == null || l.size() == 0){
+			return true;
 		}
-		result = Shared_IFC_Set_DAO.get_all_by_IFC_ID(session, id);
-		if (result != null && result.size() > 0){
-			return false;
-		}
-		return true;
-	}
-	
-	public static void prepareForward(Session session, IFC_Form form, HttpServletRequest request, int id){
-		List list = ApplicationServer_DAO.get_all(session);
-		form.setSelect_as(list);
-		
-		list = TP_DAO.get_all(session);
-		form.setSelect_tp(list);
-		
-		if (IFC_Load.testForDelete(session, id)){
-			request.setAttribute("deleteDeactivation", "false");
-		}
-		else{
-			request.setAttribute("deleteDeactivation", "true");
-		}
-		
+		return false;
 		
 	}
 }

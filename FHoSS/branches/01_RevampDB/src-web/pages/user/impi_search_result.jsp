@@ -22,18 +22,24 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 	<title><bean:message key="result.title" /></title>
 
-	<script type="text/javascript" language="JavaScript">
-		function submitForm(pageId){
-			document.IMPI_SearchForm.page.value = pageId;
-			document.IMPI_SearchForm.submit();
-		}
-	</script> 
+<script type="text/javascript" language="JavaScript">
+function submitForm(pageId){
+	document.IMPI_SearchForm.crtPage.value = pageId;
+	document.IMPI_SearchForm.submit();
+}
+
+function rowsPerPageChanged(){
+	document.IMPI_SearchForm.crtPage.value = 1;
+	document.IMPI_SearchForm.submit();
+}
+</script> 
 </head>
 
 <body>
 	<center><h1><br/><br/> Private User Identity - Search Results </h1></center>
-	<table align=center valign=middle height=100%>
-		<tr><td>
+	<table align=center valign=middle height=80%>
+	<tr>
+		<td>
 	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">	
 
 				<tr class="header">
@@ -84,61 +90,54 @@
 				}
 				%>	
 				
-				<%					
-				if (Integer.parseInt(maxPages) > 1) {
-
-				%>
+			</table>			
+		</td>
+	</tr>
+	<tr>
+		<td colspan="3" class="header">
+		
+			<html:form action="/IMPI_Search">
+				<table align="center">
 				<tr>
-					<td colspan="3" class="header">
-			
-					<html:form action="/IMPI_Search">
-					<table>
-						<tr>
-							<td>
-								<%
-									int length = Integer.parseInt(maxPages) + 1;
-									int cPage = Integer.parseInt(currentPage) + 1;
-									for (int iy = 1; iy < length; iy++) {
-										if (cPage != iy) {
-								%>
-											<a href="javascript:submitForm(<%=String.valueOf(iy)%>);"><%=iy%></a>
-								<%
-										} 
-										else {
-								%> 
-											<font style="color:#FF0000;font-weight: 600;"> 
-												<%=String.valueOf(iy)%>
-											</font> 
-								<% 
-										}
-									}
-								%>
-							</td>
-							<td>
-								<bean:message key="result.rowsPerPage" /><br>
-								<html:hidden property="page"></html:hidden> 
-								<html:select property="rowsPerPage" onchange="javascript:document.IMPI_SearchForm.submit();">
-
-									<option value="20"
-										<%= rowPerPage.equals("20") ? "selected" : "" %> >20 </option>
-									<option value="30"
-										<%= rowPerPage.equals("30") ? "selected" : "" %> >30 </option>
-									<option value="50"
-										<%= rowPerPage.equals("50") ? "selected" : "" %> >50</option>
-									<option value="100"
-										<%= rowPerPage.equals("100") ? "selected" : "" %> >100</option>
-								</html:select>
-							</td>
-						</tr>
-					</table>
-					</html:form>
+					<td>
+					<%
+						int length = Integer.parseInt(maxPages) + 1;
+						int cPage = Integer.parseInt(currentPage) + 1;
+						for (int iy = 1; iy < length; iy++) {
+							if (cPage != iy) {
+					%>
+								<a href="javascript:submitForm(<%=String.valueOf(iy)%>);"><%=iy%></a>
+					<%
+							} 
+							else {
+					%> 
+									<font style="color:#FF0000;font-weight: 600;"> 
+										<%=String.valueOf(iy)%>
+									</font> 
+					<% 
+							}
+						}
+					%>
+					</td>
+					<td>
+						<bean:message key="result.rowsPerPage" /><br>
+						<html:hidden property="crtPage"></html:hidden> 
+						<html:select property="rowsPerPage" onchange="javascript:rowsPerPageChanged();">
+							<option value="20"
+								<%= rowPerPage.equals("20") ? "selected" : "" %> >20 </option>
+							<option value="30"
+								<%= rowPerPage.equals("30") ? "selected" : "" %> >30 </option>
+							<option value="50"
+								<%= rowPerPage.equals("50") ? "selected" : "" %> >50</option>
+							<option value="100"
+								<%= rowPerPage.equals("100") ? "selected" : "" %> >100</option>
+						</html:select>
 					</td>
 				</tr>
-			<%
-				}
-	 		%>
 			</table>
-		</td></tr>
+			</html:form>
+		</td>
+	</tr>
 	</table>	
 </body>
 </html>

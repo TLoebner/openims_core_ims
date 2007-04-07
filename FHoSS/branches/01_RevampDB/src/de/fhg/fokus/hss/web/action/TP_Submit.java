@@ -43,6 +43,10 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -54,12 +58,20 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
+import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.model.SPT;
+import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.TP;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
+import de.fhg.fokus.hss.db.op.SPT_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.op.TP_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.AS_Form;
+import de.fhg.fokus.hss.web.form.SPT_Form;
 import de.fhg.fokus.hss.web.form.TP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -136,14 +148,155 @@ public class TP_Submit extends Action{
 				TP_DAO.delete_by_ID(session, id);
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			else if (nextAction.equals("attach_ifc")){
+				IFC ifc = IFC_DAO.get_by_ID(session, form.getIfc_id());
+				if (ifc != null){
+					if (ifc.getId_tp() > 0){
+						//error
+					}
+					else{
+						ifc.setId_tp(id);
+						IFC_DAO.update(session, ifc);
+					}
+				}
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+			}
+			else if (nextAction.equals("detach_ifc")){
+				IFC ifc = IFC_DAO.get_by_ID(session, form.getAssociated_ID());
+				if (ifc != null){
+					ifc.setId_tp(-1);
+					IFC_DAO.update(session, ifc);
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+			}			
+			else if (nextAction.equals("attach_spt")){
+				System.out.println("adddddddnew SPT added to db!");
+
+				if ((form.getGroup() != -1) && (form.getType() != -1)){
+					// add new SPT
+					
+					SPT spt = new SPT();
+					spt.setGrp(form.getGroup());
+					spt.setType(form.getType());
+					spt.setId_tp(id);
+					spt.setCondition_negated(0);
+
+					switch (form.getType()){
+						case CxConstants.SPT_Type_RequestURI:
+							spt.setRequesturi("");
+							break;
+
+						case CxConstants.SPT_Type_Method:
+							spt.setMethod("INVITE");
+							break;
+
+						case CxConstants.SPT_Type_SessionCase:
+							spt.setSession_case(0);
+							break;
+
+						case CxConstants.SPT_Type_SessionDescription:
+							spt.setSdp_line("");
+							spt.setSdp_line_content("");
+							break;
+
+						case CxConstants.SPT_Type_SIPHeader:
+							spt.setHeader("");
+							spt.setHeader_content("");
+							break;
+					}
+					SPT_DAO.insert(session, spt);
+					
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+				
+			}
+			else if (nextAction.equals("save_spt")){
+				saveSpts(session, form, id);
+				System.out.println("Save SPT!");
+
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+			}
+			
+			TP_Load.prepareForward(session, form, request, id);
+			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
 		return forward;
 	}
+	
+		
+	private void saveSpts(Session session, TP_Form form, int id_tp){
+		Iterator itSptForms = form.getSpts().iterator();
+
+		int newGroupId = -1;
+		int formGroupId = -1;
+		SPT spt = null;
+		SPT_Form sptForm = null;
+		
+
+		while (itSptForms.hasNext()){
+			
+			// perform update on existing spts
+			
+			sptForm = (SPT_Form) itSptForms.next();
+			int sptID = sptForm.getSptId();
+			spt = SPT_DAO.get_by_ID(session, sptID);
+
+			if (spt == null)
+				continue;
+			if (sptForm.isDelete() == true){
+				SPT_DAO.delete_by_ID(session, sptID);
+			} 
+			else{
+				
+				switch (spt.getType()){
+
+					case CxConstants.SPT_Type_RequestURI:
+						spt.setRequesturi(sptForm.getRequestUri());
+						break;
+
+					case CxConstants.SPT_Type_Method:
+						spt.setMethod(sptForm.getSipMethod());
+						break;
+
+					case CxConstants.SPT_Type_SessionCase:
+						spt.setSession_case(Integer.parseInt(sptForm.getSessionCase()));
+						break;
+
+					case CxConstants.SPT_Type_SessionDescription:
+						spt.setSdp_line(sptForm.getSessionDescLine());
+						spt.setSdp_line_content(sptForm.getSessionDescContent());
+						break;
+
+					case CxConstants.SPT_Type_SIPHeader:
+						spt.setHeader(sptForm.getSipHeader());
+						spt.setHeader_content(sptForm.getSipHeaderContent());
+						break;
+				}
+				
+				
+				if (formGroupId != sptForm.getGroup()){
+					formGroupId = sptForm.getGroup();
+					newGroupId++;
+				}
+
+				spt.setGrp(newGroupId);
+				spt.setCondition_negated(sptForm.isNeg()?1:0);
+				SPT_DAO.update(session, spt);
+			}
+		}// while
+
+	}	
 }

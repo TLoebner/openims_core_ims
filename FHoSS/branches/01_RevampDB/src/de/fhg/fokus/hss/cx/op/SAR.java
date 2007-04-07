@@ -190,7 +190,7 @@ public class SAR {
 							CxConstants.IMPU_user_state_Unregistered, true);
 					
 					// add a private to the response (the first private found, if are more than one available)
-					privateIdentitiesList = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU(session, impu.getId());
+					privateIdentitiesList = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, impu.getId());
 					if (privateIdentitiesList == null || privateIdentitiesList.size() == 0){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
@@ -539,13 +539,14 @@ public class SAR {
 			
 			// InitialFilterCriteria 			=> 0 to n
 			
-			List list_ifc = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, sp_array[i].getId());
+			List list_ifc = SP_IFC_DAO.get_all_SP_IFC_by_SP_ID(session, sp_array[i].getId());
 			if (list_ifc != null && list_ifc.size() > 0){
 				Iterator it_ifc;
 				it_ifc = list_ifc.iterator();
 				Object[] crt_row;
-				sb.append(ifc_s);
+				
 				while (it_ifc.hasNext()){
+					sb.append(ifc_s);
 					crt_row = (Object[]) it_ifc.next();
 					SP_IFC crt_sp_ifc= (SP_IFC) crt_row[0];
 					IFC crt_ifc = (IFC) crt_row[1];
@@ -589,7 +590,10 @@ public class SAR {
 							sb.append(condition_negated_e);
 							
 							// group
+							sb.append(group_s);
 							sb.append(crt_spt.getGrp());
+							sb.append(group_e);
+							
 							switch (crt_spt.getType()){
 								
 								case CxConstants.SPT_Type_RequestURI:
@@ -681,6 +685,8 @@ public class SAR {
 						sb.append(service_info_e);
 					}
 
+					sb.append(app_server_e);
+					
 					if (crt_ifc.getProfile_part_ind() != -1){
 						// add the profile part indicator
 						sb.append(profile_part_ind_s);
@@ -688,10 +694,12 @@ public class SAR {
 						sb.append(profile_part_ind_e);
 
 					}
+					
+					sb.append(ifc_e);
 				}
-				sb.append(ifc_e);
+				
 			}
-			
+			/*
 			// CoreNetworkServiceAuthorization	=> 0 to n
 			if (sp_array[i].getCn_service_auth() != -1){
 				sb.append(cn_services_auth_s);
@@ -700,6 +708,8 @@ public class SAR {
 				sb.append(subs_media_profile_id_e);
 				sb.append(cn_services_auth_e);
 			}
+			*/
+			
 			
 			// Extension						=> 0 to 1
 			List all_IDs = SP_Shared_IFC_Set_DAO.get_all_shared_IFC_set_IDs_by_SP_ID(session, sp_array[i].getId());

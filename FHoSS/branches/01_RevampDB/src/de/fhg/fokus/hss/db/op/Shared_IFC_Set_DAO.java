@@ -43,8 +43,11 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -89,8 +92,26 @@ public class Shared_IFC_Set_DAO {
 	
 	public static List get_all_Sets(Session session){
 		Query query = session.createSQLQuery("select distinct id_set, name from shared_ifc_set")
-			.addEntity(Shared_IFC_Set.class);
-		return query.list();
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+		
+		List result = new ArrayList();
+		if (query.list() != null){
+			Iterator it = query.list().iterator();
+			Object [] row = null;
+			while (it.hasNext()){
+				row = (Object[]) it.next();
+				Shared_IFC_Set shared_IFC = null;
+				if (row != null){
+					shared_IFC = new Shared_IFC_Set();
+					shared_IFC.setId_set((Integer)row[0]);
+					shared_IFC.setName((String)row[1]);
+				}
+				result.add(shared_IFC);
+			}
+		} 
+
+		return result;
 	}
 
 	public static Shared_IFC_Set get_by_ID(Session session, int id){
@@ -101,6 +122,16 @@ public class Shared_IFC_Set_DAO {
 
 		return (Shared_IFC_Set) query.uniqueResult();
 	}
+	
+	public static List get_all_by_IFC_ID(Session session, int id_ifc){
+		Query query;
+		query = session.createSQLQuery("select * from shared_ifc_set where id_ifc=?")
+			.addEntity(Shared_IFC_Set.class);
+		query.setInteger(0, id_ifc);
+
+		return query.list();
+	}
+	
 	
 	public static Object[] get_by_Wildcarded_Name(Session session, String name, 
 			int firstResult, int maxResults){
@@ -166,4 +197,5 @@ public class Shared_IFC_Set_DAO {
 		query.setInteger(0, id);
 		return query.executeUpdate();
 	}
+	
 }

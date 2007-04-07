@@ -164,11 +164,11 @@ public class IMPI_IMPU_DAO {
 		return query.list();
 	}	
 
-	public static List get_all_IMPI_by_IMPU(Session session, int id_impu){
+	public static List get_all_IMPI_by_IMPU_ID(Session session, int id_impu){
 		Query query;
 		query = session.createSQLQuery(
-				"select * from impi_impu" +
-				"	inner join impi on impi_impu.id_impi=impi.id" +
+				"select * from impi" +
+				"	inner join impi_impu on impi.id=impi_impu.id_impi" +
 				"		where impi_impu.id_impu=?")
 					.addEntity(IMPI.class);
 		query.setInteger(0, id_impu);

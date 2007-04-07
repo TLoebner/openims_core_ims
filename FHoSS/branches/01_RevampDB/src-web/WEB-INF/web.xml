@@ -9,6 +9,18 @@
         <filter-name>respFilter</filter-name>
         <filter-class>de.fhg.fokus.hss.web.servlet.ResponseFilter</filter-class>
     </filter>
+
+    <filter-mapping>
+        <filter-name>respFilter</filter-name>
+	    <url-pattern>/pages/services/sp.jsp</url-pattern>
+    </filter-mapping>
+
+
+
+
+
+
+
 	
     <filter-mapping>
         <filter-name>respFilter</filter-name>

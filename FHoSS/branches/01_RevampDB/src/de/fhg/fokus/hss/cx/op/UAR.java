@@ -141,7 +141,7 @@ public class UAR {
 			
 				case DiameterConstants.AVPValue.UAT_Registration:
 					IMPU_VisitedNetwork impu_visited_network = 
-						IMPU_VisitedNetwork_DAO.getByIMPU_VisitedNetwork(session, impu.getId(), visited_network.getId());
+						IMPU_VisitedNetwork_DAO.get_by_IMPU_and_VisitedNetwork_ID(session, impu.getId(), visited_network.getId());
 					if (impu_visited_network == null){
 						throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_ROAMING_NOT_ALLOWED);
 					}
@@ -155,7 +155,7 @@ public class UAR {
 					
 				case DiameterConstants.AVPValue.UAT_Registration_and_Capabilities:
 					impu_visited_network = 
-						IMPU_VisitedNetwork_DAO.getByIMPU_VisitedNetwork(session, impu.getId(), visited_network.getId());
+						IMPU_VisitedNetwork_DAO.get_by_IMPU_and_VisitedNetwork_ID(session, impu.getId(), visited_network.getId());
 					if (impu_visited_network == null){
 						throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_ROAMING_NOT_ALLOWED);
 					}

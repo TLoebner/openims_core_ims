@@ -12,9 +12,9 @@
 	<property name="name" type="string" not-null="true" />
 	<property name="server_name" type="string" not-null="true" length="255"/>
 	<property name="default_handling" type="int" not-null="true" />
-	<property name="service_info" type="string" not-null="true" length="255"/>
-	<property name="diameter_address" type="string" not-null="true" length="255"/>
-	<property name="rep_data_size_limit" type="int" not-null="true" />
+	<property name="service_info" type="string" length="255"/>
+	<property name="diameter_address" type="string" length="255"/>
+	<property name="rep_data_size_limit" type="int"  />
 
     <property name="udr" type="int" />
 	<property name="pur" type="int" />

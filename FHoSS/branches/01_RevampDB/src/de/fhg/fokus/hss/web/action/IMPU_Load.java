@@ -66,7 +66,12 @@ import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_VisitedNetwork_DAO;
+import de.fhg.fokus.hss.db.op.SP_DAO;
+import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -89,20 +94,28 @@ public class IMPU_Load extends Action {
 
 		if (form.getSelect_charging_info() == null || form.getSelect_sp() == null || form.getSelect_identity_type() == null){
 			// create
-			System.out.println("We have the create here!");
-			form.setUser_state(0);
-			List l1;
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
-			l1 = HibernateUtil.getCurrentSession().createCriteria(SP.class).list();
-			form.setSelect_sp(l1);
-
-			l1 = HibernateUtil.getCurrentSession().createCriteria(ChargingInfo.class).list();
-			HibernateUtil.commitTransaction();
-			form.setSelect_charging_info(l1);
 			
+			List sp_list;
+			sp_list = SP_DAO.get_all(session);
+			form.setSelect_sp(sp_list);
+
+			List chg_list;
+			chg_list = ChargingInfo_DAO.get_all(session);
+			form.setSelect_charging_info(chg_list);
+
 			form.setSelect_identity_type(WebConstants.select_identity_type);
+
+			List vn_list;
+			vn_list = VisitedNetwork_DAO.get_all(session);
+			form.setSelect_vn(vn_list);
+			
+			HibernateUtil.commitTransaction();
 			
 		}
+		int already_assigned_impi_id = form.getAlready_assigned_impi_id();
+		System.out.println("Already assigned IMPI id:" + already_assigned_impi_id);
 		
 		if (id != -1){
 			
@@ -119,6 +132,16 @@ public class IMPU_Load extends Action {
 			}
 			
 			IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
+			
+			List implicitset_IMPUs = IMPU_DAO.get_all_from_set(session, impu.getId_implicit_set());
+			request.setAttribute("implicitset_IMPUs", implicitset_IMPUs);
+			
+			List associated_IMPIs = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, id);
+			request.setAttribute("associated_IMPIs", associated_IMPIs);
+			
+			List visitedNetworks = IMPU_DAO.get_all_VisitedNetworks_by_IMPU_ID(session, id);
+			request.setAttribute("visitedNetworks", visitedNetworks);
+			
 			IMPU_Load.setForm(form, impu);
 			
 			HibernateUtil.commitTransaction();
@@ -131,10 +154,15 @@ public class IMPU_Load extends Action {
 	}
 
 	public static boolean testForDelete(Session session, int id){
-		List result = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU(session, id);
+		List result = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, id);
 		if (result != null && result.size() > 0){
 			return false;
 		}
+		result = IMPU_VisitedNetwork_DAO.get_all_VN_by_IMPU_ID(session, id);
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		
 		return true;
 	}
 	

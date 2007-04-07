@@ -91,7 +91,6 @@ public class IMPI_Submit extends Action{
 		
 		String test = (String) request.getAttribute("associated_IMPU_ID");
 		
-		System.out.println("test" + test);
 		IMPI_Form form = (IMPI_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
@@ -128,8 +127,14 @@ public class IMPI_Submit extends Action{
 				impi.setLine_identifier(form.getLine_identifier());
 
 				if (id == -1){
+					if (form.getAlready_assigned_imsu_id() > 0){
+						impi.setId_imsu(form.getAlready_assigned_imsu_id());
+						form.setAlready_assigned_imsu_id(-1);
+					}
+					
 					IMPI_DAO.insert(session, impi);
-					form.setId(impi.getId());
+					id = impi.getId();
+					form.setId(id);
 				}
 				else{
 					IMPI_DAO.update(session, impi);
@@ -145,6 +150,7 @@ public class IMPI_Submit extends Action{
 					form.setEarly(false);
 					form.setNass_bundle(false);
 				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 				
@@ -228,6 +234,14 @@ public class IMPI_Submit extends Action{
 			}
 			request.setAttribute("associated_IMSU", associated_IMSU);
 	    	form.setSelect_auth_scheme(WebConstants.select_auth_scheme);
+	    	
+			if (IMPI_Load.testForDelete(session, form.getId())){
+				request.setAttribute("deleteDeactivation", "false");
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+	    	
 		}
 		catch(DatabaseException e){
 			e.printStackTrace();

@@ -43,6 +43,8 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -56,18 +58,15 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.IMPI;
-import de.fhg.fokus.hss.db.model.IMSU;
+import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.model.SPT;
 import de.fhg.fokus.hss.db.model.TP;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
-import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
+import de.fhg.fokus.hss.db.op.SPT_DAO;
 import de.fhg.fokus.hss.db.op.TP_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
-import de.fhg.fokus.hss.web.form.IMPI_Form;
+
+import de.fhg.fokus.hss.web.form.SPT_Form;
 import de.fhg.fokus.hss.web.form.TP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 import de.fhg.fokus.hss.auth.HexCodec;
@@ -89,18 +88,23 @@ public class TP_Load extends Action {
 
 		HibernateUtil.beginTransaction();
 		Session session = HibernateUtil.getCurrentSession();
+		try{
 
-		if (id != -1){
-			try{
+			if (id != -1){
 				// load
 				TP tp = TP_DAO.get_by_ID(session, id);
 				TP_Load.setForm(form, tp);
+				
+				List spt_Form_List = TP_Load.getSpts(session, id);
+				form.setSpts(spt_Form_List);
 			}
-			finally{
-				HibernateUtil.commitTransaction();
-				HibernateUtil.closeSession();
-			}
-		}	
+			TP_Load.prepareForward(session, form, request, id);
+			HibernateUtil.commitTransaction();
+		}
+		finally{
+			HibernateUtil.closeSession();
+		}
+
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
@@ -119,6 +123,87 @@ public class TP_Load extends Action {
 	}
 	
 	public static boolean testForDelete(Session session, int id){
+		List l = IFC_DAO.get_all_by_TP_ID(session, id);
+		if (l != null && l.size() > 0){
+			return false;
+		}
+		l = SPT_DAO.get_all_by_TP_ID(session, id);
+		if (l != null && l.size() > 0){
+			return false;
+		}
+		
 		return true;
 	}
+	
+	public static void prepareForward(Session session, TP_Form form, HttpServletRequest request, int id){
+		List select_ifc = IFC_DAO.get_all(session);
+		form.setSelect_ifc(select_ifc);
+		
+		List attached_ifc_list = null;
+		attached_ifc_list = IFC_DAO.get_all_by_TP_ID(session, id);
+		if (attached_ifc_list != null)
+			request.setAttribute("attached_ifc_list", attached_ifc_list);
+		else	
+			request.setAttribute("attached_ifc_list", new ArrayList());
+		
+		if (id != -1){
+			// update the SPT list
+			List spt_Form_List = TP_Load.getSpts(session, id);
+			form.setSpts(spt_Form_List);
+
+			if (TP_Load.testForDelete(session, id)){
+				request.setAttribute("deleteDeactivation", "false");
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+		}			
+	}
+
+	public static List<SPT_Form> getSpts(Session session, int id_tp){
+		
+		List result = new ArrayList();
+		
+		List sptList = SPT_DAO.get_all_by_TP_ID(session, id_tp);
+		Iterator it = sptList.iterator();
+
+		while (it.hasNext()){
+			
+			SPT spt = (SPT) it.next();
+			SPT_Form sptForm = new SPT_Form();
+
+			switch (spt.getType()){
+				case CxConstants.SPT_Type_RequestURI:
+					sptForm.setRequestUri(spt.getRequesturi());
+					break;
+
+				case CxConstants.SPT_Type_Method:
+					sptForm.setSipMethod(spt.getMethod());
+					break;
+
+				case CxConstants.SPT_Type_SIPHeader:
+					sptForm.setSipHeader(spt.getHeader());
+					sptForm.setSipHeaderContent(spt.getHeader_content());
+					break;
+
+				case CxConstants.SPT_Type_SessionCase:
+					sptForm.setSessionCase(String.valueOf(spt.getSession_case()));
+					break;
+
+				case CxConstants.SPT_Type_SessionDescription:
+					sptForm.setSessionDescContent(spt.getSdp_line_content());
+					sptForm.setSessionDescLine(spt.getSdp_line());
+					break;
+			}
+
+			sptForm.setSptId(spt.getId());
+			sptForm.setType(spt.getType());
+			sptForm.setGroup(spt.getGrp());
+			sptForm.setNeg(spt.getCondition_negated()==1?true:false);
+			result.add(sptForm);
+		}
+
+		return result;
+	}
+	
 }
