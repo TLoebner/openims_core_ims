@@ -81,16 +81,7 @@ public class VN_Submit extends Action{
 		try{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
-					
-			if (id != -1){
-				if (VN_Load.testForDelete(session, id)){
-					request.setAttribute("deleteDeactivation", "false");
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
-			}			
-			
+								
 			if (nextAction.equals("save")){
 				VisitedNetwork visited_network;
 
@@ -132,6 +123,8 @@ public class VN_Submit extends Action{
 				VisitedNetwork_DAO.delete_by_ID(session, id);
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			
+			VN_Load.prepareForward(session, form, request, id);
 		}
 		catch(DatabaseException e){
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);

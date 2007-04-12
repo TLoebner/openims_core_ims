@@ -5,7 +5,7 @@
 <hibernate-mapping>
 <class name="de.fhg.fokus.hss.db.model.Capability" table="capability">
 	<id name="id">
-		<generator class="native"/>
+	<!--	<generator class="native"/> -->
 	</id>
 	
 	<property name="name" type="string" not-null="true" />

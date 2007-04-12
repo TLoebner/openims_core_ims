@@ -127,6 +127,14 @@ public class WebConstants {
 		select_profile_part_indicator.add(new Tuple(CxConstants.Profile_Part_Indicator_UnRegistered_Name, 
 				CxConstants.Profile_Part_Indicator_UnRegistered));
 	}
+
+	public static final ArrayList<Tuple> select_cap_type;
+	static{
+		select_cap_type = new ArrayList<Tuple>();
+		select_cap_type.add(new Tuple("Optional", 0));
+		select_cap_type.add(new Tuple("Mandatory", 1));		
+	}
+	
 	
 	
 }

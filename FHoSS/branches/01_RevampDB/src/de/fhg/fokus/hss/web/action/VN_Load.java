@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -61,6 +62,8 @@ import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.VisitedNetwork;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
+import de.fhg.fokus.hss.db.op.Capability_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
@@ -68,6 +71,7 @@ import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.AS_Form;
+import de.fhg.fokus.hss.web.form.CapS_Form;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
 import de.fhg.fokus.hss.web.form.VN_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -96,6 +100,7 @@ public class VN_Load extends Action {
 				// load
 				VisitedNetwork visited_network = VisitedNetwork_DAO.get_by_ID(session, id);
 				VN_Load.setForm(form, visited_network);
+				prepareForward(session, form, request, id);
 			}
 			catch(DatabaseException e){
 				e.printStackTrace();
@@ -121,11 +126,22 @@ public class VN_Load extends Action {
 	}
 	
 	public static boolean testForDelete(Session session, int id){
-		List list = IMPU_DAO.get_all_VisitedNetworks_by_IMPU_ID(session, id);
-		if (list == null || list.size() == 0){
+		List list = IMPU_DAO.get_all_IMPU_for_VN_ID(session, id);
+		if (list != null && list.size() > 0){
 			return false;
 		}
-		
 		return true;
 	}	
+
+	public static void prepareForward(Session session, ActionForm form, HttpServletRequest request, int id){
+		if (id != -1){
+			if (testForDelete(session, id)){
+				request.setAttribute("deleteDeactivation", "false");		
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+		}
+	}
+	
 }

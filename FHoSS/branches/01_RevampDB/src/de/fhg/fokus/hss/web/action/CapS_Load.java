@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -55,11 +56,17 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
+import de.fhg.fokus.hss.db.model.CapabilitiesSet;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
+import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
+import de.fhg.fokus.hss.db.op.Capability_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.CS_Form;
+import de.fhg.fokus.hss.web.form.CapS_Form;
+import de.fhg.fokus.hss.web.form.Cap_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -73,63 +80,71 @@ public class CapS_Load extends Action {
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		CS_Form form = (CS_Form) actionForm;
-		int id = form.getId();
-
-		HibernateUtil.beginTransaction();
-		Session session = HibernateUtil.getCurrentSession();
-
-		if (id != -1){
-			try{
+		CapS_Form form = (CapS_Form) actionForm;
+		int id = form.getId_set();
+		ActionForward forward = null;
+		
+		try{
+			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
+			
+			if (id != -1){
 				// load
-				ChargingInfo charging_info = ChargingInfo_DAO.get_by_ID(session, id);
-				CS_Load.setForm(form, charging_info);
-				
-				if (testForDelete(session, id)){
-					request.setAttribute("deleteDeactivation", "false");		
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
+				CapabilitiesSet cap_s = CapabilitiesSet_DAO.get_by_set_ID(session, id);
+				CapS_Load.setForm(form, cap_s);
 			}
-			catch(DatabaseException e){
-				e.printStackTrace();
-			}
-			finally{
-				HibernateUtil.commitTransaction();
-				HibernateUtil.closeSession();
-			}
+
+			CapS_Load.prepareForward(session, form, request, id);
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id_set=" + id);
 		}
-		else{
-			request.setAttribute("deleteDeactivation", "false");
+		catch(DatabaseException e){
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			e.printStackTrace();
+		}
+		finally{
+			HibernateUtil.commitTransaction();
+			HibernateUtil.closeSession();
 		}
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
 	}
 	
-	public static boolean setForm(CS_Form form, ChargingInfo charging_info){
+	public static boolean setForm(CapS_Form form, CapabilitiesSet cap_s){
 		boolean exitCode = false;
 		
-		if (charging_info != null){
+		if (cap_s != null){
 			exitCode = true;
-			form.setId(charging_info.getId());
-			form.setName(charging_info.getName());
-			form.setPri_ccf(charging_info.getPri_ccf());
-			form.setSec_ccf(charging_info.getSec_ccf());
-			form.setPri_ecf(charging_info.getPri_ecf());
-			form.setSec_ecf(charging_info.getSec_ecf());
+			form.setId_set(cap_s.getId_set());
+			form.setName(cap_s.getName());
 		}
 		return exitCode;
 	}
 	
 	public static boolean testForDelete(Session session, int id){
-		List l = IMPU_DAO.get_by_Charging_Info_ID(session, id);
-		if (l == null || l.size() == 0){
-			return true;
+		int cnt = CapabilitiesSet_DAO.get_cnt_for_set(session, id);
+		if (cnt > 1){
+			return false;
 		}
-		return false;
-		
+		return true;
 	}
+	
+	public static void prepareForward(Session session, CapS_Form form, HttpServletRequest request, int id){
+		List select_cap = Capability_DAO.get_all(session);
+		form.setSelect_cap(select_cap);
+		
+		if (testForDelete(session, id)){
+			request.setAttribute("deleteDeactivation", "false");		
+		}
+		else{
+			request.setAttribute("deleteDeactivation", "true");
+		}
+		List attached_cap = CapabilitiesSet_DAO.get_all_from_set(session, id);
+		if (attached_cap != null)
+				request.setAttribute("attached_cap", attached_cap);
+		else
+				request.setAttribute("attached_cap", new ArrayList());
+	}
+	
 }

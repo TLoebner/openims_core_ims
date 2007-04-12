@@ -64,6 +64,13 @@ public class ApplicationServer_DAO {
 		session.saveOrUpdate(as);
 	}
 	
+	public static int get_cnt(Session session){
+		Query query;
+		query = session.createSQLQuery("select count(*) from application_server")
+			.addEntity(ApplicationServer.class);
+		Integer result = (Integer)query.uniqueResult();
+		return result.intValue();
+	}
 	
 	public static int delete_by_ID(Session session, int ID){
 		Query query = session.createSQLQuery("delete from application_server where id=?");

@@ -55,12 +55,15 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.CapabilitiesSet;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.form.CS_Form;
+import de.fhg.fokus.hss.web.form.CapS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -76,74 +79,78 @@ public class CapS_Submit extends Action{
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
-		CS_Form form = (CS_Form) actionForm;
+		CapS_Form form = (CapS_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
-		int id = form.getId();
+		int id_set = form.getId_set();
 
 		try{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
 
-			// for all the actions we test if the current element can be deleted or not
-			if (id != -1){
-				if (CS_Load.testForDelete(session, form.getId())){
-					request.setAttribute("deleteDeactivation", "false");
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
-			}
-			
 			// all the possible actions
 			if (nextAction.equals("save")){
-				int auth_scheme;
-				ChargingInfo charging_info;
+				CapabilitiesSet cap_s;
 
-				if (id == -1){
+				if (id_set == -1){
 					// create
-					charging_info = new ChargingInfo();
+					cap_s = new CapabilitiesSet();
+					cap_s.setId_capability(form.getId_cap());
+					cap_s.setIs_mandatory(form.getCap_type());
+					cap_s.setName(form.getName());
+					int max_id_set = CapabilitiesSet_DAO.get_max_id_set(session);
+					cap_s.setId_set(max_id_set + 1);
+					CapabilitiesSet_DAO.insert(session, cap_s);
+					id_set = cap_s.getId_set();
+					form.setId_set(id_set);
 				}	
 				else{
 					// update
-					charging_info = ChargingInfo_DAO.get_by_ID(session, id);
+					CapabilitiesSet_DAO.update_all_from_set(session, id_set, form.getName());
 				}	
 				
-				// make the changes
-				charging_info.setName(form.getName());
-				charging_info.setPri_ccf(form.getPri_ccf());
-				charging_info.setSec_ccf(form.getSec_ccf());
-				charging_info.setPri_ecf(form.getPri_ecf());
-				charging_info.setSec_ecf(form.getSec_ecf());
-				
-				if (id == -1){
-					ChargingInfo_DAO.insert(session, charging_info);
-					id = charging_info.getId();
-					form.setId(id);
-				}
-				else{
-					ChargingInfo_DAO.update(session, charging_info);
-				}
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + id);
-				
-				
+				forward = new ActionForward(forward.getPath() +"?id_set=" + id_set);
 			}
 			else if (nextAction.equals("refresh")){
-				ChargingInfo charging_info = (ChargingInfo) ChargingInfo_DAO.get_by_ID(session, id);
+				// this cap_set has only the name and id_set configured
+				CapabilitiesSet cap_s = (CapabilitiesSet) CapabilitiesSet_DAO.get_by_set_ID(session, id_set);
 
-				if (!CS_Load.setForm(form, charging_info)){
-					logger.error("The CS withe the ID:" + id + " was not loaded from database!");
+				if (!CapS_Load.setForm(form, cap_s)){
+					logger.error("The CS withe the ID:" + id_set + " was not loaded from database!");
 				}
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + id);
+				forward = new ActionForward(forward.getPath() +"?id_set=" + id_set);
 				
 			}
 			else if (nextAction.equals("delete")){
-				ChargingInfo_DAO.delete_by_ID(session, form.getId());
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+				CapabilitiesSet_DAO.delete_set_by_ID(session, id_set);
 			}
+			else if (nextAction.equals("attach_cap")){
+				CapabilitiesSet cap_s = new CapabilitiesSet();
+				cap_s.setId_set(id_set);
+				cap_s.setName(form.getName());
+				cap_s.setId_capability(form.getId_cap());
+				cap_s.setIs_mandatory(form.getCap_type());
+				
+				CapabilitiesSet_DAO.insert(session, cap_s);
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id_set=" + id_set);
+			}
+			else if (nextAction.equals("detach_cap")){
+				int cnt = CapabilitiesSet_DAO.get_cnt_for_set(session, id_set); 
+				CapabilitiesSet_DAO.delete_capability_from_set(session, id_set, form.getAssociated_ID());
+				if (cnt == 1){
+					forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+				}
+				else{
+					forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+					forward = new ActionForward(forward.getPath() +"?id_set=" + id_set);
+				}
+				
+			}
+			CapS_Load.prepareForward(session, form, request, id_set);
 		}
 		catch(DatabaseException e){
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);

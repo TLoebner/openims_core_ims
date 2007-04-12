@@ -100,7 +100,7 @@ function add_action_for_form(action, associated_ID) {
 						<td>
 							<html:select property="id_capabilities_set" name="IMSU_Form" styleClass="inputtext" size="1" style="width:325px;">
 								<html:option value="-1">none</html:option>
-								<html:optionsCollection name="IMSU_Form" property="select_capabilities_set" label="name" value="id"/>
+								<html:optionsCollection name="IMSU_Form" property="select_capabilities_set" label="name" value="id_set"/>
 							</html:select>
 						</td>	
 					</tr>
