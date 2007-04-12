@@ -1029,7 +1029,7 @@ static str sip_s={"sip:",4};
  */
 int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2) 
 {
-	str dst;
+	str dst={0,0};
 	int len;
 	r_contact *c=0;
 	int proto, port;

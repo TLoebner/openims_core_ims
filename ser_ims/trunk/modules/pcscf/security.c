@@ -226,7 +226,7 @@ void save_contact_ipsec(struct sip_msg *req,struct sip_msg *rpl,
 		ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
 			ealg_setkey,ck_esp,alg_setkey,ik_esp);
 			
-		rc = update_r_contact_sec(puri.host,ipsec->port_uc,puri.proto,
+		rc = update_r_contact_sec(puri.host,ipsec->port_us,puri.proto,
 			&(c->uri),&reg_state,&expires,
 			ipsec);
 
