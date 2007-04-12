@@ -43,18 +43,38 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.CapabilitiesSet;
+import de.fhg.fokus.hss.db.model.Capability;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class CapabilitiesSet_DAO {
+	
+	public static void insert(Session session, CapabilitiesSet cap_s){
+		session.save(cap_s);
+	}
+	
+	public static void update(Session session, CapabilitiesSet cap_s){
+		session.saveOrUpdate(cap_s);
+	}
+	
+	public static void update_all_from_set(Session session, int id_set, String name){
+		Query query = session.createSQLQuery("update capabilities_set set name=? where capabilities_set.id_set=?");
+		query.setString(0, name);
+		query.setInteger(1, id_set);
+		query.executeUpdate();
+	}
 	
 	public static List get_all_from_set(Session session, int id_set){
 		Query query = session.createSQLQuery("select * from capabilities_set cs where cs.id_set=?")
@@ -64,22 +84,150 @@ public class CapabilitiesSet_DAO {
 	}
 
 	public static List get_all_sets(Session session){
-		Query query = session.createSQLQuery("select * from capabilities_set ")
-			.addEntity(CapabilitiesSet.class);
-		return query.list();
+		Query query = session.createSQLQuery("select distinct id_set, name from capabilities_set order by(id_set)")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+
+		List result = new ArrayList();
+		CapabilitiesSet cap_set = null;
+	
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			
+			while (it.hasNext()){
+				Object[] row = (Object[]) it.next();
+				cap_set = new CapabilitiesSet();
+				cap_set.setId_set((Integer)row[0]);
+				cap_set.setName((String)row[1]);
+				result.add(cap_set);
+			}	
+		}
+		return result;
+	}
+
+	public static Object[] get_all(Session session, int firstResult, int maxResults){
+		Query query = session.createSQLQuery("select distinct id_set, name from capabilities_set order by(id_set) ")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+
+		int size = get_cnt(session);
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		
+		Object[] result = new Object[2];
+		result[0] = new Integer(size);
+		
+		List list_result = new ArrayList();
+		CapabilitiesSet cap_set = null;
+	
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			
+			while (it.hasNext()){
+				Object[] row = (Object[]) it.next();
+				cap_set = new CapabilitiesSet();
+				cap_set.setId_set((Integer)row[0]);
+				cap_set.setName((String)row[1]);
+				list_result.add(cap_set);
+			}	
+		}
+		result[1] = list_result;
+		return result;
+	}
+	
+	public static Object[] get_by_Wildcarded_Name(Session session, String name, 
+			int firstResult, int maxResults){
+		
+		Query query;
+		query = session.createSQLQuery("select distinct id_set, name from capabilities_set where name like ? order by(id_set)")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+
+		query.setString(0, "%" + name + "%");
+		int size = get_cnt(session);
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		
+		Object[] result = new Object[2];
+		result[0] = new Integer(size);
+		
+		List list_result = new ArrayList();
+		CapabilitiesSet cap_set = null;
+	
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			
+			while (it.hasNext()){
+				Object[] row = (Object[]) it.next();
+				cap_set = new CapabilitiesSet();
+				cap_set.setId_set((Integer)row[0]);
+				cap_set.setName((String)row[1]);
+				list_result.add(cap_set);
+			}	
+		}
+		result[1] = list_result;
+		return result;
+	}
+	
+	public static int get_max_id_set(Session session){
+		Query query = session.createSQLQuery("select max(id_set) from capabilities_set");
+		Integer result = (Integer) query.uniqueResult();
+		return result.intValue();
+	}
+	
+	public static CapabilitiesSet get_by_set_ID(Session session, int id_set){
+		Query query = session.createSQLQuery("select distinct id_set, name from capabilities_set where id_set=?")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+		query.setInteger(0, id_set);
+		
+		CapabilitiesSet result = null;
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			Object[] row = (Object[]) it.next();
+			
+			result = new CapabilitiesSet();
+			result.setId_set((Integer)row[0]);
+			result.setName((String) row[1]);
+		}
+		return result;
 	}
 	
 	public static int delete_set_by_ID(Session session, int ID){
-		Query query = session.createQuery("delete from capabilities_set where id_set=?");
+		Query query = session.createSQLQuery("delete from capabilities_set where id_set=?");
 		query.setInteger(0, ID);
 		return query.executeUpdate();
 	}
 	
 	public static int delete_capability_from_set(Session session, int id_set, int id_capability){
-		Query query = session.createQuery("delete from capabilities_set where id_set=? and id_capability=?");
+		Query query = session.createSQLQuery("delete from capabilities_set where id_set=? and id_capability=?");
 		query.setInteger(0, id_set);
 		query.setInteger(1, id_capability);
 		return query.executeUpdate();
 	}
 
+	public static int get_cap_cnt(Session session, int id_cap){
+		Query query;
+		query = session.createSQLQuery("select count(*) from capabilities_set where id_capability=?");
+		query.setInteger(0, id_cap);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		return result.intValue();
+	}
+
+	public static int get_cnt_for_set(Session session, int id_set){
+		Query query;
+		query = session.createSQLQuery("select count(*) from capabilities_set where id_set=?");
+		query.setInteger(0, id_set);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		return result.intValue();
+	}
+
+	public static int get_cnt(Session session){
+		Query query;
+		query = session.createSQLQuery("select count(distinct id_set) from capabilities_set");
+		BigInteger result = (BigInteger) query.uniqueResult();
+		return result.intValue();
+	}
+	
+	
 }

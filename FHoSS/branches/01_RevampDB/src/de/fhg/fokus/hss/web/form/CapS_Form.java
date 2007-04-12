@@ -41,12 +41,16 @@
   * 
   */
 
+
 package de.fhg.fokus.hss.web.form;
 
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+
+import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
 import java.util.List;
@@ -59,30 +63,26 @@ import javax.servlet.http.HttpServletRequest;
  */
 
 
-public class IMSU_Form extends ActionForm implements Serializable{
-	private int id;
-	private String name;
-	private String scscf_name;
-	private String diameter_name;
-	private int id_capabilities_set;
-	private int id_preferred_scscf;
+public class CapS_Form extends ActionForm implements Serializable{
 
-	private List select_capabilities_set;
-	private List select_preferred_scscf;
-	private String impi_identity;
-	private String nextAction;
-	private int associated_ID;
+	private String name;
+	private int id_set;
 	
-    public void reset(ActionMapping actionMapping, HttpServletRequest request){
-    	this.id = -1;
+	private int cap_type;
+	private List select_cap_type;
+	private int id_cap;
+
+	private List select_cap;
+	private int associated_ID;
+	private String nextAction;
+	
+	public void reset(ActionMapping actionMapping, HttpServletRequest request){
+    	this.id_set = -1;
     	this.name = null;
-    	this.scscf_name = null;
-    	this.diameter_name = null;
-    	this.id_capabilities_set = -1;
-    	this.id_preferred_scscf = -1;
-    	this.select_capabilities_set = null;
-    	this.select_preferred_scscf = null;
-    	this.impi_identity = null;
+    	this.id_cap = -1;
+    	this.cap_type = 0;
+    	this.select_cap_type = WebConstants.select_cap_type;
+    	this.select_cap = null;
     	this.associated_ID = -1;
     }
 	
@@ -90,43 +90,16 @@ public class IMSU_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("name", new ActionMessage("imsu_form.error.name"));
+        	actionErrors.add("cap_set_form.name", new ActionMessage("cap_set_form.error.name"));
         }
+        
+        if (id_set == -1 && id_cap == -1){
+        	actionErrors.add("cap_set_form.id_cap", new ActionMessage("cap_set_form.error.id_cap"));
+        }
+        
         
         return actionErrors;
     }
-
-	public String getDiameter_name() {
-		return diameter_name;
-	}
-
-	public void setDiameter_name(String diameter_name) {
-		this.diameter_name = diameter_name;
-	}
-
-	public int getId() {
-		return id;
-	}
-
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public int getId_capabilities_set() {
-		return id_capabilities_set;
-	}
-
-	public void setId_capabilities_set(int id_capabilities_set) {
-		this.id_capabilities_set = id_capabilities_set;
-	}
-
-	public int getId_preferred_scscf() {
-		return id_preferred_scscf;
-	}
-
-	public void setId_preferred_scscf(int id_preferred_scscf) {
-		this.id_preferred_scscf = id_preferred_scscf;
-	}
 
 	public String getName() {
 		return name;
@@ -144,36 +117,44 @@ public class IMSU_Form extends ActionForm implements Serializable{
 		this.nextAction = nextAction;
 	}
 
-	public String getScscf_name() {
-		return scscf_name;
+	public int getCap_type() {
+		return cap_type;
 	}
 
-	public void setScscf_name(String scscf_name) {
-		this.scscf_name = scscf_name;
+	public void setCap_type(int cap_type) {
+		this.cap_type = cap_type;
 	}
 
-	public List getSelect_capabilities_set() {
-		return select_capabilities_set;
+	public List getSelect_cap_type() {
+		return select_cap_type;
 	}
 
-	public void setSelect_capabilities_set(List select_capabilities_set) {
-		this.select_capabilities_set = select_capabilities_set;
+	public void setSelect_cap_type(List select_cap_type) {
+		this.select_cap_type = select_cap_type;
 	}
 
-	public List getSelect_preferred_scscf() {
-		return select_preferred_scscf;
+	public int getId_cap() {
+		return id_cap;
 	}
 
-	public void setSelect_preferred_scscf(List select_preferred_scscf) {
-		this.select_preferred_scscf = select_preferred_scscf;
+	public void setId_cap(int id_cap) {
+		this.id_cap = id_cap;
 	}
 
-	public String getImpi_identity() {
-		return impi_identity;
+	public int getId_set() {
+		return id_set;
 	}
 
-	public void setImpi_identity(String impi_identity) {
-		this.impi_identity = impi_identity;
+	public void setId_set(int id_set) {
+		this.id_set = id_set;
+	}
+
+	public List getSelect_cap() {
+		return select_cap;
+	}
+
+	public void setSelect_cap(List select_cap) {
+		this.select_cap = select_cap;
 	}
 
 	public int getAssociated_ID() {

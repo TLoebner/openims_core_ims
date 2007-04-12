@@ -111,6 +111,16 @@ public class IMPU_DAO {
 		return query.list();
 	}
 	
+	public static List get_all_IMPU_for_VN_ID(Session session, int id_vn){
+		Query query;
+		query = session.createSQLQuery("select * from impu" +
+				"	inner join impu_visited_network on impu_visited_network.id_impu=impu.id" +
+				" where impu_visited_network.id_visited_network=?")
+				.addEntity("impu", IMPU.class);
+		query.setInteger(0, id_vn);
+		return query.list();
+	}
+	
 	public static int delete_VisitedNetwork_for_IMPU(Session session, int id_impu, int id_vn){
 		Query query = session.createSQLQuery("delete from impu_visited_network where id_impu=? and id_visited_network=?");
 		query.setInteger(0, id_impu);

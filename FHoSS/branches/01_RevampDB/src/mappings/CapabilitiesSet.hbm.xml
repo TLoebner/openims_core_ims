@@ -11,8 +11,8 @@
 
 	<property name="id_set" type="int" not-null="true" />
 	<property name="name" type="string" not-null="true"/>
-	<property name="is_mandatory" type="int" not-null="true"/>
-	<property name="id_capability" type="int" not-null="true"/>
+	<property name="is_mandatory" type="int" />
+	<property name="id_capability" type="int" />
 	
 </class>
 </hibernate-mapping>

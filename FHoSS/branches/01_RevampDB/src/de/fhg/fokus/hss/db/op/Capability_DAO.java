@@ -47,16 +47,33 @@ package de.fhg.fokus.hss.db.op;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
+import java.math.BigInteger;
 import java.util.List;
 
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.Capability;
 import de.fhg.fokus.hss.db.model.IMSU;
 
 public class Capability_DAO {
 	
+	public static void insert(Session session, Capability cap){
+		session.save(cap);
+	}
+	
+	public static void update(Session session, Capability cap){
+		session.saveOrUpdate(cap);
+	}
+
+	public static int get_cnt(Session session){
+		Query query;
+		query = session.createSQLQuery("select count(*) from capability");
+		BigInteger result = (BigInteger) query.uniqueResult();
+		return result.intValue();
+	}
+
 	public static Capability get_by_ID(Session session, int id){
 		Query query;
 		query = session.createSQLQuery("select * from capability where id=?")
@@ -66,22 +83,52 @@ public class Capability_DAO {
 		return (Capability) query.uniqueResult();
 	}	
 	
-	public static Capability getByName(Session session, String name){
+	public static Capability get_by_Name(Session session, String name){
 		Query query = session.createSQLQuery("select * from capability where name like ?")
 			.addEntity(Capability.class);
 		query.setString(0, name);
 		return (Capability) query.uniqueResult();
 	}
 
-	public static List getAll(Session session){
+	public static Object[] get_by_Wildcarded_Name(Session session, String name, 
+			int firstResult, int maxResults){
+		
+		Query query;
+		query = session.createSQLQuery("select * from capability where name like ?")
+			.addEntity(Capability.class);
+		query.setString(0, "%" + name + "%");
+
+		Object[] result = new Object[2];
+		result[0] = get_cnt(session);
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		result[1] = query.list();
+		return result;
+	}
+	
+	public static List get_all(Session session){
 		Query query = session.createSQLQuery("select * from capability")
 			.addEntity(Capability.class);
 		return query.list();
 	}
 	
-	public static int deleteByID(Session session, int id){
-		Query query = session.createSQLQuery("delete from Capability where id=?");
+	public static Object[] get_all(Session session, int firstResult, int maxResults){
+		Query query;
+		query = session.createSQLQuery("select * from capability")
+			.addEntity(Capability.class);
+		
+		Object[] result = new Object[2];
+		result[0] = new Integer(get_cnt(session));
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		result[1] = query.list();
+		return result;
+	}
+	
+	public static int delete_by_ID(Session session, int id){
+		Query query = session.createSQLQuery("delete from capability where id=?");
 		query.setInteger(0, id);
 		return query.executeUpdate();
 	}
+	
 }

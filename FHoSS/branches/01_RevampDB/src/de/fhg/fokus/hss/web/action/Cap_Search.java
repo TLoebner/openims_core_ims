@@ -57,13 +57,16 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.Capability;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.Capability_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.CS_SearchForm;
+import de.fhg.fokus.hss.web.form.Cap_SearchForm;
 import de.fhg.fokus.hss.web.form.IMPI_SearchForm;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -78,9 +81,9 @@ public class Cap_Search extends Action{
 	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		CS_SearchForm form = (CS_SearchForm) actionForm;
+		Cap_SearchForm form = (Cap_SearchForm) actionForm;
 		Object [] queryResult = null;
-		ChargingInfo uniqueResult = null;
+		Capability uniqueResult = null;
 		ActionForward forward = null;
 		
 		int rowsPerPage = Integer.parseInt(form.getRowsPerPage());
@@ -91,21 +94,21 @@ public class Cap_Search extends Action{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
 		
-			if (form.getId_cs() != null && !form.getId_cs().equals("")){
-				uniqueResult = ChargingInfo_DAO.get_by_ID(session, Integer.parseInt(form.getId_cs()));
+			if (form.getId_cap() != null && !form.getId_cap().equals("")){
+				uniqueResult = Capability_DAO.get_by_ID(session, Integer.parseInt(form.getId_cap()));
 			}
 			else if (form.getName() != null && !form.getName().equals("")){
-				queryResult = ChargingInfo_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
+				queryResult = Capability_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
 			}
 			else{
-				queryResult = ChargingInfo_DAO.get_all(session, firstResult, rowsPerPage);
+				queryResult = Capability_DAO.get_all(session, firstResult, rowsPerPage);
 			}
 		
 			int maxPages = 1;
 			if (queryResult != null){
 				// more than one result
 				maxPages = ((((Integer)queryResult[0]).intValue() - 1) / rowsPerPage) + 1;
-				request.setAttribute("resultList", (List)queryResult[1]);
+				request.setAttribute("resultList", (List) queryResult[1]);
 			}
 			else {
 				List list = new LinkedList();
@@ -125,12 +128,13 @@ public class Cap_Search extends Action{
 			request.setAttribute("rowPerPage", String.valueOf(rowsPerPage));
 			forward = mapping.findForward(WebConstants.FORWARD_SUCCESS);
 			
+			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
 			forward = mapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+		
 			HibernateUtil.closeSession();
 		}
 

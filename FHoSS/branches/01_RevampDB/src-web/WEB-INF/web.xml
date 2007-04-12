@@ -15,6 +15,10 @@
 	    <url-pattern>/pages/services/sp.jsp</url-pattern>
     </filter-mapping>
 
+    <filter-mapping>
+        <filter-name>respFilter</filter-name>
+	    <url-pattern>/pages/network/capability_set.jsp</url-pattern>
+    </filter-mapping>
 
 
 

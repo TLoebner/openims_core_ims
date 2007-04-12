@@ -40,92 +40,62 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
+package de.fhg.fokus.hss.web.form;
 
-package de.fhg.fokus.hss.web.action;
-
-import java.util.List;
+import java.io.Serializable;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
-import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
-import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
-import org.hibernate.Session;
 
-
-import de.fhg.fokus.hss.db.model.Capability;
-import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
-import de.fhg.fokus.hss.db.op.Capability_DAO;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.op.IMPU_DAO;
-import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_Form;
-import de.fhg.fokus.hss.web.util.WebConstants;
-import de.fhg.fokus.hss.web.form.Cap_Form;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-
-public class Cap_Load extends Action {
+public class CapS_SearchForm extends ActionForm implements Serializable{
+	private String id_cap_set;
+	private String name;
 	
-	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
-			HttpServletRequest request, HttpServletResponse reponse) {
-		
-		Cap_Form form = (Cap_Form) actionForm;
-		int id = form.getId();
-
-		HibernateUtil.beginTransaction();
-		Session session = HibernateUtil.getCurrentSession();
-
-		if (id != -1){
-			try{
-				// load
-				Capability cap = Capability_DAO.get_by_ID(session, id);
-				Cap_Load.setForm(form, cap);
-				Cap_Load.prepareForward(session, form, request, id);
-				HibernateUtil.commitTransaction();	
-			}
-			catch(DatabaseException e){
-				e.printStackTrace();
-			}
-			finally{
-				HibernateUtil.closeSession();
-			}
-		}
-		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
-		return forward;
+	private String crtPage;
+	private String rowsPerPage;
+	
+	public void reset(ActionMapping arg0, HttpServletRequest arg1) {
+		this.id_cap_set = null;
+		this.name = null;
+		crtPage = "1";
+  		rowsPerPage = "20";
+  	}
+	
+	public String getCrtPage() {
+		return crtPage;
 	}
-	
-	public static boolean setForm(Cap_Form form, Capability cap){
-		boolean exitCode = false;
-		
-		if (cap != null){
-			exitCode = true;
-			form.setId(cap.getId());
-			form.setName(cap.getName());
-		}
-		return exitCode;
+
+	public void setCrtPage(String crtPage) {
+		this.crtPage = crtPage;
 	}
-	
-	public static boolean testForDelete(Session session, int id){
-		if (CapabilitiesSet_DAO.get_cap_cnt(session, id) > 0)
-			return false;
-		return true;
+
+	public String getRowsPerPage() {
+		return rowsPerPage;
 	}
-	
-	public static void prepareForward(Session session, Cap_Form form, HttpServletRequest request, int id){
-		if (testForDelete(session, id)){
-			request.setAttribute("deleteDeactivation", "false");		
-		}
-		else{
-			request.setAttribute("deleteDeactivation", "true");
-		}
+	public void setRowsPerPage(String rowsPerPage) {
+		this.rowsPerPage = rowsPerPage;
+	}
+
+	public String getId_cap_set() {
+		return id_cap_set;
+	}
+
+	public void setId_cap_set(String id_cap_set) {
+		this.id_cap_set = id_cap_set;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 }

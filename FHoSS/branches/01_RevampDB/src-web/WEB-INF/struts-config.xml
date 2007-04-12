@@ -289,13 +289,13 @@
 		</action>
 
 		<!-- Capabilities Set -->
-		<action path="/Caps_Load" name="Caps_Form" type="de.fhg.fokus.hss.web.action.Caps_Load" validate="false">
+		<action path="/CapS_Load" name="CapS_Form" type="de.fhg.fokus.hss.web.action.CapS_Load" validate="false">
 			<forward name="success" path="/pages/network/capability_set.jsp" />
 			<forward name="failure" path="/pages/errorPage.jsp"/>
 		</action>
 		
-		<action path="/Cap_Submit" name="Cap_Form" type="de.fhg.fokus.hss.web.action.Cap_Submit" 
-			input="/Cap_Load.do" validate="true">
+		<action path="/CapS_Submit" name="CapS_Form" type="de.fhg.fokus.hss.web.action.CapS_Submit" 
+			input="/CapS_Load.do" validate="true">
 			
 			<forward name="success" path="/pages/network/capability_set.jsp" />
 			<forward name="delete" path="/pages/network/capability_set_search.jsp" />									

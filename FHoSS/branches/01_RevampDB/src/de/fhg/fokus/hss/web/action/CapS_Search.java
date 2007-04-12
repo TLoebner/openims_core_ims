@@ -57,13 +57,16 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.CapabilitiesSet;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.CS_SearchForm;
+import de.fhg.fokus.hss.web.form.CapS_SearchForm;
 import de.fhg.fokus.hss.web.form.IMPI_SearchForm;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -78,9 +81,9 @@ public class CapS_Search extends Action{
 	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		CS_SearchForm form = (CS_SearchForm) actionForm;
+		CapS_SearchForm form = (CapS_SearchForm) actionForm;
 		Object [] queryResult = null;
-		ChargingInfo uniqueResult = null;
+		CapabilitiesSet uniqueResult = null;
 		ActionForward forward = null;
 		
 		int rowsPerPage = Integer.parseInt(form.getRowsPerPage());
@@ -91,14 +94,14 @@ public class CapS_Search extends Action{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
 		
-			if (form.getId_cs() != null && !form.getId_cs().equals("")){
-				uniqueResult = ChargingInfo_DAO.get_by_ID(session, Integer.parseInt(form.getId_cs()));
+			if (form.getId_cap_set() != null && !form.getId_cap_set().equals("")){
+				uniqueResult = CapabilitiesSet_DAO.get_by_set_ID(session, Integer.parseInt(form.getId_cap_set()));
 			}
 			else if (form.getName() != null && !form.getName().equals("")){
-				queryResult = ChargingInfo_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
+				queryResult = CapabilitiesSet_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
 			}
 			else{
-				queryResult = ChargingInfo_DAO.get_all(session, firstResult, rowsPerPage);
+				queryResult = CapabilitiesSet_DAO.get_all(session, firstResult, rowsPerPage);
 			}
 		
 			int maxPages = 1;

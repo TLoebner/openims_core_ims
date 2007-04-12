@@ -54,13 +54,11 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
-import de.fhg.fokus.hss.web.form.CS_Form;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.Capability;
+import de.fhg.fokus.hss.db.op.Capability_DAO;
+import de.fhg.fokus.hss.web.form.Cap_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -76,64 +74,58 @@ public class Cap_Submit extends Action{
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
-		CS_Form form = (CS_Form) actionForm;
+		Cap_Form form = (Cap_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
 		int id = form.getId();
-
+		boolean new_created = false;
+		
 		try{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
-
-			// for all the actions we test if the current element can be deleted or not
-			if (id != -1){
-				if (CS_Load.testForDelete(session, form.getId())){
-					request.setAttribute("deleteDeactivation", "false");
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
-			}
 			
 			// all the possible actions
 			if (nextAction.equals("save")){
-				int auth_scheme;
-				ChargingInfo charging_info;
+				Capability cap;
 
 				if (id == -1){
 					// create
-					charging_info = new ChargingInfo();
+					cap = new Capability();
 				}	
 				else{
 					// update
-					charging_info = ChargingInfo_DAO.get_by_ID(session, id);
+					cap = Capability_DAO.get_by_ID(session, id);
+					if (cap == null){
+						cap = new Capability();
+						new_created = true;
+					}
 				}	
 				
 				// make the changes
-				charging_info.setName(form.getName());
-				charging_info.setPri_ccf(form.getPri_ccf());
-				charging_info.setSec_ccf(form.getSec_ccf());
-				charging_info.setPri_ecf(form.getPri_ecf());
-				charging_info.setSec_ecf(form.getSec_ecf());
+				cap.setName(form.getName());
+				if (form.getId() != -1){
+					cap.setId(form.getId());
+				}
 				
-				if (id == -1){
-					ChargingInfo_DAO.insert(session, charging_info);
-					id = charging_info.getId();
+				if (id == -1 || new_created == true){
+					Capability_DAO.insert(session, cap);
+					if (cap.getId() == 0){
+						cap = Capability_DAO.get_by_Name(session, form.getName());
+					}
+					id = cap.getId();
 					form.setId(id);
 				}
 				else{
-					ChargingInfo_DAO.update(session, charging_info);
+					Capability_DAO.update(session, cap);
 				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + id);
-				
-				
 			}
 			else if (nextAction.equals("refresh")){
-				ChargingInfo charging_info = (ChargingInfo) ChargingInfo_DAO.get_by_ID(session, id);
+				Capability cap = (Capability) Capability_DAO.get_by_ID(session, id);
 
-				if (!CS_Load.setForm(form, charging_info)){
+				if (!Cap_Load.setForm(form, cap)){
 					logger.error("The CS withe the ID:" + id + " was not loaded from database!");
 				}
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
@@ -141,15 +133,17 @@ public class Cap_Submit extends Action{
 				
 			}
 			else if (nextAction.equals("delete")){
-				ChargingInfo_DAO.delete_by_ID(session, form.getId());
+				Capability_DAO.delete_by_ID(session, form.getId());
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+
+			Cap_Load.prepareForward(session, form, request, id);
+			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
 		return forward;

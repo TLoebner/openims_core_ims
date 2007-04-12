@@ -157,8 +157,7 @@ public class IMSU_Submit extends Action{
 				}
 			}			
 			
-			List associated_IMPIs_list = IMPI_DAO.get_all_by_IMSU_ID(session, id);
-			request.setAttribute("associated_IMPIs", associated_IMPIs_list);
+			IMSU_Load.prepareForward(session, form, request, id);
 			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){

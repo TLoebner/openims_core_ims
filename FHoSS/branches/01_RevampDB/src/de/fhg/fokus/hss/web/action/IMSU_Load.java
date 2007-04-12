@@ -64,6 +64,7 @@ import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.web.form.Cap_Form;
 import de.fhg.fokus.hss.web.form.IMSU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -82,32 +83,20 @@ public class IMSU_Load extends Action {
 		int id = form.getId();
 		Session session = null;
 		try{
-			List l1;
+			
 			HibernateUtil.beginTransaction();
 			session = HibernateUtil.getCurrentSession();
 			
-			l1 = CapabilitiesSet_DAO.get_all_sets(session);
-			form.setSelect_capabilities_set(l1);
-			
-			l1 = Preferred_SCSCF_Set_DAO.get_all_sets(session);
-			form.setSelect_preferred_scscf(l1);
 			List associated_IMPIs_list = new ArrayList();
 			
 			if (id != -1) {
-				if (IMSU_Load.testForDelete(session, form.getId())){
-					request.setAttribute("deleteDeactivation", "false");
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
 				// load
 				IMSU imsu = IMSU_DAO.get_by_ID(session, id);
 				IMSU_Load.setForm(form, imsu);
 				
-				associated_IMPIs_list = IMPI_DAO.get_all_by_IMSU_ID(session, id);
-				
 			}
-			request.setAttribute("associated_IMPIs", associated_IMPIs_list);
+			IMSU_Load.prepareForward(session, form, request, id);
+			
 		}
 		catch(DatabaseException e){
 			e.printStackTrace();
@@ -143,4 +132,28 @@ public class IMSU_Load extends Action {
 		}
 		return true;
 	}
+	
+	public static void prepareForward(Session session, IMSU_Form form, HttpServletRequest request, int id){
+		List l1 = CapabilitiesSet_DAO.get_all_sets(session);
+		form.setSelect_capabilities_set(l1);
+		
+		l1 = Preferred_SCSCF_Set_DAO.get_all_sets(session);
+		form.setSelect_preferred_scscf(l1);
+		
+		if (id != -1){
+			if (testForDelete(session, id)){
+				request.setAttribute("deleteDeactivation", "false");		
+			}
+			else{
+				request.setAttribute("deleteDeactivation", "true");
+			}
+
+			List associated_IMPIs_list = IMPI_DAO.get_all_by_IMSU_ID(session, id);
+			request.setAttribute("associated_IMPIs", associated_IMPIs_list);
+		}
+		else{
+			request.setAttribute("associated_IMPIs", new ArrayList());
+		}
+	}
+	
 }
