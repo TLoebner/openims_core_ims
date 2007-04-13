@@ -90,7 +90,7 @@ public class SP_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("sp.name", new ActionMessage("sp_form.error.name"));
+        	actionErrors.add("sp.error.name", new ActionMessage("sp.error.name"));
         }
         return actionErrors;
     }

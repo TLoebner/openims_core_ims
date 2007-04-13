@@ -88,7 +88,7 @@ public class IFC_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("ifc.name", new ActionMessage("ifc_form.error.name"));
+        	actionErrors.add("ifc.error.name", new ActionMessage("ifc.error.name"));
         }
         return actionErrors;
     }

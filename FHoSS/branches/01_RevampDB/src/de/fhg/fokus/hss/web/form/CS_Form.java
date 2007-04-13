@@ -81,7 +81,7 @@ public class CS_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("as.name", new ActionMessage("as_form.error.name"));
+        	actionErrors.add("cs.error.name", new ActionMessage("cs.error.name"));
         }
         
         return actionErrors;

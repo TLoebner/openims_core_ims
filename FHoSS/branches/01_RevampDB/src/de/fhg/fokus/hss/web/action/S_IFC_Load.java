@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -61,6 +62,7 @@ import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
@@ -85,27 +87,29 @@ public class S_IFC_Load extends Action {
 		
 
 		S_IFC_Form form = (S_IFC_Form) actionForm;
-		int id = form.getId();
+		int id_set = form.getId_set();
+		
+		try{
+			HibernateUtil.beginTransaction();
+			Session session = HibernateUtil.getCurrentSession();
 
-		HibernateUtil.beginTransaction();
-		Session session = HibernateUtil.getCurrentSession();
-
-		if (id != -1){
-			try{
+			if (id_set != -1){
 				// load
-				Shared_IFC_Set shared_ifc_set = Shared_IFC_Set_DAO.get_by_ID(session, id);
+				Shared_IFC_Set shared_ifc_set = Shared_IFC_Set_DAO.get_by_set_ID(session, id_set);
 				S_IFC_Load.setForm(form, shared_ifc_set);
 			}
-			catch(DatabaseException e){
-				e.printStackTrace();
-			}
-			finally{
-				HibernateUtil.commitTransaction();
-				HibernateUtil.closeSession();
-			}
-		}	
+			prepareForward(session, form, request, id_set);
+			HibernateUtil.commitTransaction();
+		}
+		catch(DatabaseException e){
+			e.printStackTrace();
+		}
+		finally{
+			HibernateUtil.closeSession();
+		}
+		
 		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
+		forward = new ActionForward(forward.getPath() + "?id_set=" + id_set);
 		return forward;
 	}
 	
@@ -114,14 +118,32 @@ public class S_IFC_Load extends Action {
 		
 		if (shared_ifc_set != null){
 			exitCode = true;
-			form.setId(shared_ifc_set.getId());
+			form.setId_set(shared_ifc_set.getId_set());
 			form.setName(shared_ifc_set.getName());
-			form.setPriority(shared_ifc_set.getPriority());
 		}
 		return exitCode;
 	}
 	
-	public static boolean testForDelete(Session session, int id){
+	public static boolean testForDelete(Session session, int id_set){
 		return true;
 	}
+	
+	public static void prepareForward(Session session, S_IFC_Form form, HttpServletRequest request, int id_set){
+		List select_ifc = IFC_DAO.get_all(session);
+		form.setSelect_ifc(select_ifc);
+		
+		if (testForDelete(session, id_set)){
+			request.setAttribute("deleteDeactivation", "false");		
+		}
+		else{
+			request.setAttribute("deleteDeactivation", "true");
+		}
+		
+		List attached_ifc = Shared_IFC_Set_DAO.get_all_from_set(session, id_set);
+		if (attached_ifc != null)
+				request.setAttribute("attached_ifc", attached_ifc);
+		else
+				request.setAttribute("attached_ifc", new ArrayList());
+	}
+	
 }

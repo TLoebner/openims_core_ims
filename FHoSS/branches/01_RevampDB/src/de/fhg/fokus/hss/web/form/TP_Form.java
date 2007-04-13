@@ -110,7 +110,7 @@ public class TP_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("tp.name", new ActionMessage("tp_form.error.name"));
+        	actionErrors.add("tp.error.name", new ActionMessage("tp.error.name"));
         }
         return actionErrors;
     }

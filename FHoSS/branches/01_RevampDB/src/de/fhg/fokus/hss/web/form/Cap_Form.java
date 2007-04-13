@@ -75,7 +75,7 @@ public class Cap_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("cap.name", new ActionMessage("cap_form.error.name"));
+        	actionErrors.add("cap.error.name", new ActionMessage("cap.error.name"));
         }
         return actionErrors;
     }

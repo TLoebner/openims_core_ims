@@ -152,10 +152,10 @@ public class AS_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("as.name", new ActionMessage("as_form.error.name"));
+        	actionErrors.add("as.error.name", new ActionMessage("as.error.name"));
         }
         if (server_name == null || server_name.equals("")){
-        	actionErrors.add("as.server_name", new ActionMessage("as_form.error.server_name"));
+        	actionErrors.add("as.error.server_name", new ActionMessage("as.error.server_name"));
         }
         
         return actionErrors;

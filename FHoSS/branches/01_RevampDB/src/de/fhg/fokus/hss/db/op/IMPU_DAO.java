@@ -139,7 +139,7 @@ public class IMPU_DAO {
 	
 	public static IMPU get_by_Identity(Session session, String identity){
 		Query query;
-		query = session.createSQLQuery("select * from impu where identity like ?")
+		query = session.createSQLQuery("select * from impu where identity=?")
 			.addEntity(IMPU.class);
 		query.setString(0, identity);
 		return (IMPU) query.uniqueResult();
