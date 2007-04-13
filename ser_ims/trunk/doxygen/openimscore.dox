@@ -87,7 +87,6 @@
  * - \ref ICSCF
  * - \ref ISC
  * - \ref PCSCF
- * - \ref SIP2IMS
  * - \ref SCSCF
  * 
  * To help you jumpstart in using this configuration examples, database dumps, start-up 
