@@ -87,13 +87,13 @@ public class S_IFC_Search extends Action{
 			Session session = HibernateUtil.getCurrentSession();
 		
 			if (form.getId_s_ifc() != null && !form.getId_s_ifc().equals("")){
-				uniqueResult = Shared_IFC_Set_DAO.get_by_ID(session, Integer.parseInt(form.getId_s_ifc()));
+				uniqueResult = Shared_IFC_Set_DAO.get_by_set_ID(session, Integer.parseInt(form.getId_s_ifc()));
 			}
 			else if (form.getName() != null && !form.getName().equals("")){
 				queryResult = Shared_IFC_Set_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
 			}
 			else if (form.getId_set() != null && !form.getId_set().equals("")){
-				queryResult = Shared_IFC_Set_DAO.get_all_from_Set(session, Integer.parseInt(form.getId_set()), firstResult, rowsPerPage);
+				queryResult = Shared_IFC_Set_DAO.get_all_from_set(session, Integer.parseInt(form.getId_set()), firstResult, rowsPerPage);
 			}
 			else if (form.getName_ifc() != null && !form.getName_ifc().equals("")){
 				queryResult = Shared_IFC_Set_DAO.get_by_Wildcarded_IFC_Name(session, form.getName_ifc(), firstResult, rowsPerPage);

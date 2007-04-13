@@ -642,6 +642,7 @@ public class SAR {
 							}
 							
 							// add Extension if available
+							
 							if (crt_spt.getRegistration_type() != -1){
 								sb.append(extension_s);
 								sb.append(registration_type_s);
@@ -660,6 +661,7 @@ public class SAR {
 								sb.append(registration_type_e);
 								sb.append(extension_e);
 							}
+							
 							sb.append(spt_e);
 						}
 
@@ -671,7 +673,8 @@ public class SAR {
 					sb.append(app_server_s);
 					
 					sb.append(server_name_s);
-					crt_as.getServer_name();
+					System.out.println("Server name:" + crt_as.getServer_name());
+					sb.append(crt_as.getServer_name());
 					sb.append(server_name_e);
 					if (crt_as.getDefault_handling() != -1){
 						sb.append(default_handling_s);
@@ -679,7 +682,7 @@ public class SAR {
 						sb.append(default_handling_e);
 					}
 					
-					if (crt_as.getService_info() != null){
+					if (crt_as.getService_info() != null && !crt_as.getService_info().equals("")){
 						sb.append(service_info_s);
 						sb.append(crt_as.getService_info());
 						sb.append(service_info_e);

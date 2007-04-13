@@ -32,12 +32,13 @@ function add_action_for_form(action, associated_ID) {
 			document.CapS_Form.submit();
 			break;
 		case 2:
-			document.CapS_Form.nextAction.value="refresh";
-			document.CapS_Form.submit();			
-			break;
-		case 3:
 			document.CapS_Form.nextAction.value="reset";
 			document.CapS_Form.reset();
+			break;
+		
+		case 3:
+			document.CapS_Form.nextAction.value="refresh";
+			document.CapS_Form.submit();			
 			break;
 
 		case 4:

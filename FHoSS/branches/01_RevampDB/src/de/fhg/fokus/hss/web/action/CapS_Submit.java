@@ -151,12 +151,12 @@ public class CapS_Submit extends Action{
 				
 			}
 			CapS_Load.prepareForward(session, form, request, id_set);
+			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
 		return forward;

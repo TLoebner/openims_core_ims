@@ -90,11 +90,11 @@ public class CapS_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("cap_set_form.name", new ActionMessage("cap_set_form.error.name"));
+        	actionErrors.add("cap_set.error.name", new ActionMessage("cap_set.error.name"));
         }
         
         if (id_set == -1 && id_cap == -1){
-        	actionErrors.add("cap_set_form.id_cap", new ActionMessage("cap_set_form.error.id_cap"));
+        	actionErrors.add("cap_set.error.id_cap", new ActionMessage("cap_set.error.id_cap"));
         }
         
         

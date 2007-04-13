@@ -49,6 +49,8 @@ import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
 
 import java.io.Serializable;
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -64,7 +66,8 @@ public class S_IFC_Form extends ActionForm implements Serializable{
 	private int id_set;
 	private int priority;
 	private int id_ifc;
-	
+	private List select_ifc;
+	private int associated_ID;
 	private String nextAction;
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
@@ -73,14 +76,20 @@ public class S_IFC_Form extends ActionForm implements Serializable{
     	this.priority = 0;
     	this.id_ifc = -1;
     	this.nextAction = null;
+    	this.select_ifc = null;
+    	this.associated_ID = -1;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
         if (name == null || name.equals("")){
-        	actionErrors.add("sp.name", new ActionMessage("sp_form.error.name"));
+        	actionErrors.add("s_ifc.error.name", new ActionMessage("s_ifc.error.name"));
         }
+        if (id_set == -1 && id_ifc < 1){
+        	actionErrors.add("s_ifc.error.id_ifc", new ActionMessage("s_ifc.error.id_ifc"));
+        }
+        
         return actionErrors;
     }
     
@@ -130,6 +139,22 @@ public class S_IFC_Form extends ActionForm implements Serializable{
 
 	public void setPriority(int priority) {
 		this.priority = priority;
+	}
+
+	public List getSelect_ifc() {
+		return select_ifc;
+	}
+
+	public void setSelect_ifc(List select_ifc) {
+		this.select_ifc = select_ifc;
+	}
+
+	public int getAssociated_ID() {
+		return associated_ID;
+	}
+
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
 	}
 	
 }

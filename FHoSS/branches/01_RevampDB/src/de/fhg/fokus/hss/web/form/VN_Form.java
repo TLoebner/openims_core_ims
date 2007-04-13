@@ -75,7 +75,7 @@ public class VN_Form extends ActionForm implements Serializable{
         ActionErrors actionErrors = new ActionErrors();
 
         if (identity == null || identity.equals("")){
-        	actionErrors.add("vn.identity", new ActionMessage("vn_form.error.identity"));
+        	actionErrors.add("vn.error.identity", new ActionMessage("vn.error.identity"));
         }
         return actionErrors;
     }

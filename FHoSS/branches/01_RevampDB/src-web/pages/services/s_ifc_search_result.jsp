@@ -6,7 +6,8 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="de.fhg.fokus.hss.util.SecurityPermissions" %>
+<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.util.SecurityPermissions" %>
+
 <jsp:useBean id="resultList" type="java.util.List" scope="request"></jsp:useBean>
 <jsp:useBean id="maxPages" type="java.lang.String" scope="request"></jsp:useBean>
 <jsp:useBean id="currentPage" type="java.lang.String" scope="request"></jsp:useBean>
@@ -37,73 +38,79 @@ function rowsPerPageChanged(){
 
 </head>
 <body>
-
-<center>
-<table>
-<tr>
-	<td><br/><br/><h1>Shared iFC - Search Results </h1><br/><br/></td>
-</tr>
-</table>
-</center>
-
-<center>
-	<table class="as" width="500">
-		<logic:notEmpty name="resultList">
-			<tr class="header">
-				<td class="header"> ID </td>
-				<td class="header"> Name </td>
-				<td class="header"> Priority </td>				
-				<td class="header"> iFC </td>				
-			</tr>
-				
-			<logic:iterate name="resultList" id="s_ifc"
-				type="de.fhg.fokus.hss.db.model.Shared_IFC_Set" indexId="ix">
-				<tr class="<%= ix.intValue()%2 == 0 ? "even" : "odd" %>">
-					<td>
-						<bean:write name="s_ifc" property="id" />
-					</td>
-					<td> 
-						<a href="/hss.web.console/S_IFC_Load.do?id=<bean:write name="s_ifc" property="id" />"> 
-							<bean:write name="s_ifc" property="name" />
-						</a>	
-					</td>
-
-					<td> 
-						<bean:write name="s_ifc" property="priority" />
-					</td>
-
-					<td> 
-						<bean:write name="s_ifc" property="id_ifc" />
-					</td>
-						
+	<center><h1><br/><br/>Shared iFC - Search Results </h1></center>
+	<table align=center valign=middle height=80%>
+	<tr>
+		<td>
+	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="350">	
+				<tr class="header">
+					<td class="header" width="50"> ID </td>
+					<td class="header"> Name </td>
 				</tr>
-			</logic:iterate>
 			
-			<tr>
-				<td colspan="3" class="header">
+				<%
+				if (resultList != null && resultList.size() > 0){
+					Shared_IFC_Set s_ifc_set;
+					int idx = 0;
+					Iterator it = resultList.iterator();
+					
+					while (it.hasNext()){
+						s_ifc_set = (Shared_IFC_Set) it.next();
+				%>		
+					<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
+						<td>
+							<%= s_ifc_set.getId_set() %>
+						</td>
+						<td> 
+							<a href="/hss.web.console/S_IFC_Load.do?id_set=<%= s_ifc_set.getId_set() %>"> 
+								<%= s_ifc_set.getName() %>
+							</a>	
+						</td>
+					</tr>
+				<%		
+			
+						idx++;		
+					} //while
+				} // if
+				else{	
+				%>
+					<tr>
+						<td>
+							<bean:message key="result.emptyResultSet" />
+						</td>
+					</tr>						
+				<%
+				}
+				%>	
+			</table>
+		</td>
+	</tr>		
+	<tr>
+		<td colspan="3" class="header">
 				
-				<html:form action="/S_IFC_Search">
-					<table>
-						<tr>
-							<td>
-								<%
-									int length = Integer.parseInt(maxPages) + 1;
-									int cPage = Integer.parseInt(currentPage) + 1;
-									for (int iy = 1; iy < length; iy++) {
-										if (cPage != iy) {
-									%>
+			<html:form action="/S_IFC_Search">
+				<table align="center">
+				<tr>
+					<td>
+					<%
+							int length = Integer.parseInt(maxPages) + 1;
+							int cPage = Integer.parseInt(currentPage) + 1;
+							for (int iy = 1; iy < length; iy++) {
+								if (cPage != iy) {
+					%>
 									<a href="javascript:submitForm(<%=String.valueOf(iy)%>);"><%=iy%></a>
-								<%
-									} else {
-									%> 
+					<%
+								} else {
+					%> 
 									<font style="color:#FF0000;font-weight: 600;"> <%=String.valueOf(iy)%>
 									</font> 
-								<% }
+					<% 			}
 							}
-							%>
-							</td>
+					%>
+					</td>
 							
-							<td><bean:message key="result.rowsPerPage" /><br>
+					<td>
+						<bean:message key="result.rowsPerPage" /><br>
 							<html:hidden property="crtPage"></html:hidden> 
 							<html:select property="rowsPerPage" onchange="javascript:rowsPerPageChanged();">
 
@@ -115,20 +122,14 @@ function rowsPerPageChanged(){
 								<%= rowPerPage.equals("50") ? "selected" : "" %> >50</option>
 							<option value="100"
 								<%= rowPerPage.equals("100") ? "selected" : "" %> >100</option>
-							</html:select></td>
-						</tr>
-					</table>
-				</html:form></td>
-			</tr>
-		</logic:notEmpty> 
-		
-		<tr><td>
-		<logic:empty name="resultList">
-			<bean:message key="result.emptryResultSet" />
-		</logic:empty></td>
-		</td></tr>
-		</table>		
-</center>
+							</html:select>
+					</td>
+				</tr>
+				</table>
+			</html:form>
+		</td>
+	</tr>
+	</table>
 
 </body>
 </html>
