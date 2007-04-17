@@ -135,6 +135,7 @@ int is_s_dialog_dir(str call_id,enum s_dialog_direction dir);
 s_dialog* get_s_dialog(str call_id,str aor);
 s_dialog* get_s_dialog_dir(str call_id,enum s_dialog_direction dir);
 s_dialog* get_s_dialog_dir_nolock(str call_id,enum s_dialog_direction dir);
+int terminate_s_dialog(s_dialog *d);
 void del_s_dialog(s_dialog *d);
 void free_s_dialog(s_dialog *d);
 void print_s_dialogs(int log_level);

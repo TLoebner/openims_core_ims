@@ -380,6 +380,32 @@ s_dialog* get_s_dialog_dir_nolock(str call_id,enum s_dialog_direction dir)
 	return 0;
 }
 
+/** 
+ * Terminates a dialog - called before del_s_dialog to send out terminatination messages.
+ * @param d - the dialog to terminate
+ * @returns - 1 if the requests were sent and the dialog will be deleted, 0 on error (you will have to delete the
+ * dialog yourself!) 
+ */
+int terminate_s_dialog(s_dialog *d)
+{
+	switch (d->method){
+		case DLG_METHOD_INVITE:
+			if (release_call_s(d)==-1){
+				//dialog has expired and not confirmed
+				del_s_dialog(d);
+			}
+			return 1;
+			break;
+		case DLG_METHOD_SUBSCRIBE:
+			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for SUBSCRIBE dialogs!\n");
+			return 0;
+			break;
+		default:
+			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for method[%d]!\n",d->method);
+			return 0;
+	}
+}
+
 /**
  * Deletes a dialog from the hash table
  * \note Must be called with a lock on the dialogs slot
@@ -845,7 +871,7 @@ int S_drop_all_dialogs(str aor)
 				dn = d->next;
 				if (d->aor.len == aor.len &&
 					strncasecmp(d->aor.s,aor.s,aor.len)==0) {
-					del_s_dialog(d);
+					if (!terminate_s_dialog(d)) del_s_dialog(d);
 					cnt++;
 				}						
 				d = dn;
@@ -1004,16 +1030,7 @@ void dialog_timer(unsigned int ticks, void* param)
 			while(d){
 				dn = d->next;
 				if (d->expires<=d_time_now) {
-					switch (d->method){
-						case DLG_METHOD_INVITE:
-							if (release_call_s(d)==-1){
-								//dialog has expired and not confirmed
-								del_s_dialog(d);
-							}
-							break;
-						default:
-							del_s_dialog(d);
-					}
+					if (!terminate_s_dialog(d)) del_s_dialog(d);
 				}						
 				d = dn;
 			}
