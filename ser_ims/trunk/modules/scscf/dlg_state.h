@@ -49,7 +49,7 @@
  * Serving-CSCF - Dialog State Operations
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Alberto Diez - Changes to handle release_call 
  */
  
 
@@ -59,6 +59,7 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../../locking.h"
+#include "../tm/dlg.h"
 
 /** Enumeration for known dialogs */
 enum s_dialog_method {
@@ -73,7 +74,8 @@ enum s_dialog_state {
 	DLG_STATE_INITIAL=1,
 	DLG_STATE_EARLY=2,
 	DLG_STATE_CONFIRMED=3,
-	DLG_STATE_TERMINATED=4
+	DLG_STATE_TERMINATED_ONE_SIDE=4,
+	DLG_STATE_TERMINATED=5	
 };
 
 /** Enumeration for dialog directions */
@@ -98,8 +100,12 @@ typedef struct _s_dialog {
 	enum s_dialog_state state;			/**< state of the dialog						*/
 	time_t expires;						/**< expiration time for the dialog				*/
 	
-//	dlg_t *dialog;
-	
+	unsigned char is_releasing;			/**< weather this dialog is already being 
+											released or not, or its peer, with count on 
+											tries 										*/	
+	dlg_t *dialog_c;					/**< dialog in direction to callee           	*/
+	dlg_t *dialog_s;					/**< dialog in direction to caller 				*/
+		
 	struct _s_dialog *next;				/**< next dialog in this dialog hash slot 		*/
 	struct _s_dialog *prev;				/**< previous dialog in this dialog hash slot	*/
 } s_dialog;
@@ -127,6 +133,8 @@ s_dialog* add_s_dialog(str call_id,str aor,enum s_dialog_direction dir);
 int is_s_dialog(str call_id,str aor);
 int is_s_dialog_dir(str call_id,enum s_dialog_direction dir);
 s_dialog* get_s_dialog(str call_id,str aor);
+s_dialog* get_s_dialog_dir(str call_id,enum s_dialog_direction dir);
+s_dialog* get_s_dialog_dir_nolock(str call_id,enum s_dialog_direction dir);
 void del_s_dialog(s_dialog *d);
 void free_s_dialog(s_dialog *d);
 void print_s_dialogs(int log_level);

@@ -48,7 +48,8 @@
  *
  * P/I/S-CSCF Module - Main SIP Operations 
  * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \author Alberto Diez - get_from_tag,get_to_tag,get_from_uri added
  * 
  * Copyright (C) 2005 FhG Fokus
  * 		
@@ -60,6 +61,7 @@
 #include "../../data_lump.h"
 #include "../../data_lump_rpl.h"
 #include "../../parser/parse_to.h"
+#include "../../parser/parse_from.h"
 #include "../../parser/parse_expires.h"
 #include "../../parser/parse_via.h"
 #include "../../parser/parse_content.h"
@@ -1962,15 +1964,18 @@ struct via_body* cscf_get_last_via(struct sip_msg *msg)
 
 
 /**
- * Looks for the UE Via in First Via header and returns its body
+ * Looks for the UE Via in First Via header if its a request
+ * or in the last if its a response and returns its body
  * @param msg - the SIP message
  * @returns the via of the UE
  */
 struct via_body* cscf_get_ue_via(struct sip_msg *msg)
 {
 	struct via_body *vb=0;
+		
+	if (msg->first_line.type==SIP_REQUEST) vb = cscf_get_first_via(msg,0);
+	else vb = cscf_get_last_via(msg);
 	
-	vb = cscf_get_first_via(msg,0);
 	if (!vb) return 0;
 	
 	if (vb->port == 0) vb->port=5060;
@@ -2607,4 +2612,65 @@ str cscf_get_last_via_received(struct sip_msg *msg)
 	}			
 	if (via->received) return via->received->value;
 	return received;			
+}
+
+
+/**
+ * Get the from tag
+ * @param msg - the SIP message to look into
+ * @param tag - the pointer to the tag to write to
+ * @returns 0 on error or 1 on success
+ */
+int cscf_get_from_tag(struct sip_msg* msg, str* tag)
+{
+	struct to_body* from;
+	
+	if (!msg || parse_from_header(msg)<0||!msg->from||!msg->from->parsed){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_from_tag: error parsing From header\n");
+		if (tag) {tag->s = 0;tag->len = 0;}
+		return 0;
+	}
+	from = msg->from->parsed;	
+	if (tag) *tag = from->tag_value;	
+	return 1;	
+}
+
+/**
+ * Get the to tag
+ * @param msg  - the SIP Message to look into
+ * @param tag - the pointer to the tag to write to
+ * @returns 0 on error or 1 on success
+ */
+int cscf_get_to_tag(struct sip_msg* msg, str* tag)
+{	
+	if (!msg || !msg->to) {
+		LOG(L_ERR, "ERR:"M_NAME":cscf_get_to_tag(): To header field missing\n");
+		if (tag) {tag->s = 0;tag->len = 0;}
+		return 0;
+	}
+
+	if (tag) *tag = get_to(msg)->tag_value;		
+	return 1;
+ }
+ 
+ 
+/**
+ * Get the local uri from the From header.
+ * @param msg - the message to look into
+ * @param local_uri - ptr to fill with the value
+ * @returns 1 on success or 0 on error
+ */  
+int cscf_get_from_uri(struct sip_msg* msg,str *local_uri)
+{	
+	struct to_body* from;
+
+	if (!msg || parse_from_header(msg)<0 || !msg->from || !msg->from->parsed){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_from_uri: error parsing From header\n");
+		if (local_uri) {local_uri->s = 0;local_uri->len = 0;}
+		return 0;
+	}
+	from = msg->from->parsed;		
+	if (local_uri) *local_uri = from->uri;
+	return 1;
+	
 }

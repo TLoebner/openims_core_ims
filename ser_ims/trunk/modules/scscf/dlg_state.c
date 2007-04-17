@@ -49,18 +49,22 @@
  * Serving-CSCF - Dialog State Operations
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Alberto Diez - Changes to handle release_call
+ * 	
  */
-
  
 #include <time.h>
 
 #include "dlg_state.h"
-
+#include "../tm/tm_load.h"
 #include "../../mem/shm_mem.h"
+#include "../../parser/parse_rr.h"
 
 #include "sip.h"
-#include "../../parser/parse_rr.h"
+#include "release_call.h"
+
+
+extern struct tm_binds tmb;
 
 int s_dialogs_hash_size;						/**< size of the dialog hash table 					*/
 s_dialog_hash_slot *s_dialogs=0;				/**< the hash table									*/
@@ -211,7 +215,7 @@ s_dialog* new_s_dialog(str call_id,str aor, enum s_dialog_direction dir)
 	STR_SHM_DUP(d->call_id,call_id,"shm");
 	STR_SHM_DUP(d->aor,aor,"shm");	
 	d->direction = dir;
-				
+	d->is_releasing = 0;
 	return d;
 error:
 	if (d){
@@ -353,12 +357,37 @@ s_dialog* get_s_dialog_dir(str call_id,enum s_dialog_direction dir)
 }
 
 /**
+ * Finds and returns a dialog from the hash table.
+ * \note the table should be locked already for the call_id in the parameter
+ * @param call_id - call_id of the dialog
+ * @param dir - the direction
+ * @returns the s_dialog* or NULL if not found
+ */
+s_dialog* get_s_dialog_dir_nolock(str call_id,enum s_dialog_direction dir)
+{
+	s_dialog *d=0;
+	unsigned int hash = get_s_dialog_hash(call_id);
+
+	d = s_dialogs[hash].head;
+	while(d){
+		if (d->direction == dir &&
+			d->call_id.len == call_id.len &&
+			strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
+				return d;
+			}
+		d = d->next;
+	}
+	return 0;
+}
+
+/**
  * Deletes a dialog from the hash table
  * \note Must be called with a lock on the dialogs slot
  * @param d - the dialog to delete
  */
 void del_s_dialog(s_dialog *d)
 {
+	LOG(L_INFO,"DBG:"M_NAME":del_s_dialog(): Deleting dialog <%.*s> DIR[%d]\n",d->call_id.len,d->call_id.s,d->direction);
 	if (d->prev) d->prev->next = d->next;
 	else s_dialogs[d->hash].head = d->next;
 	if (d->next) d->next->prev = d->prev;
@@ -376,7 +405,9 @@ void free_s_dialog(s_dialog *d)
 	if (!d) return;
 	if (d->call_id.s) shm_free(d->call_id.s);
 	if (d->aor.s) shm_free(d->aor.s);	
-	if (d->method_str.s) shm_free(d->method_str.s);	
+	if (d->method_str.s) shm_free(d->method_str.s);
+	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
+	if (d->dialog_c) tmb.free_dlg(d->dialog_c);		
 	shm_free(d);
 }
 
@@ -546,6 +577,8 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str call_id;
 	s_dialog *d;
 	str aor;
+	str uri,tag;
+	str ruri;	
 	enum s_dialog_direction dir = get_dialog_direction(str1);
 	
 	if (!find_dialog_aor(msg,dir,&aor)){
@@ -574,6 +607,17 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->state = DLG_STATE_INITIAL;
 	d->expires = d_act_time()+60;
 	
+	cscf_get_from_tag(msg,&tag);
+	cscf_get_from_uri(msg,&uri);
+	ruri=cscf_get_identity_from_ruri(msg);
+	 
+	tmb.new_dlg_uac(&call_id,
+						&tag,
+						d->first_cseq,&uri,
+						&ruri,
+						&d->dialog_c);
+	
+	tmb.new_dlg_uas(msg,99,&d->dialog_s);
 
 	d_unlock(d->hash);
 	
@@ -607,6 +651,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	struct hdr_field *h=0;
 	struct sip_msg *req=0;
 	int expires;
+	str totag;
 
 	enum s_dialog_direction dir = get_dialog_direction(str1);
 		
@@ -664,6 +709,11 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			if (response>=200 && response<300){
 				d->state = DLG_STATE_CONFIRMED;
 				d->expires = d_act_time()+scscf_dialogs_expiration_time;
+				/*I save the dialogs only here because
+				 * i only want to release confirmed dialogs*/
+				cscf_get_to_tag(msg,&totag);
+				tmb.update_dlg_uas(d->dialog_s,response,&totag);
+				tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);				
 			}else
 				if (response>300){
 					d->state = DLG_STATE_TERMINATED;
@@ -954,13 +1004,22 @@ void dialog_timer(unsigned int ticks, void* param)
 			while(d){
 				dn = d->next;
 				if (d->expires<=d_time_now) {
-					del_s_dialog(d);
+					switch (d->method){
+						case DLG_METHOD_INVITE:
+							if (release_call_s(d)==-1){
+								//dialog has expired and not confirmed
+								del_s_dialog(d);
+							}
+							break;
+						default:
+							del_s_dialog(d);
+					}
 				}						
 				d = dn;
 			}
 		d_unlock(i);
 	}
-//	print_s_dialogs(L_INFO);
+	print_s_dialogs(L_INFO);
 }
 
 

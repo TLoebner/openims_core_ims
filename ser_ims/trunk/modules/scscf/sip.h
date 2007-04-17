@@ -173,4 +173,9 @@ int cscf_add_p_charging_vector(struct sip_msg *msg);
 
 str cscf_get_last_via_sent_by(struct sip_msg *msg);
 str cscf_get_last_via_received(struct sip_msg *msg);
+
+int cscf_get_from_tag(struct sip_msg* msg, str* tag);
+int cscf_get_to_tag(struct sip_msg* msg, str* tag);
+int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
+
 #endif /* PIS_CSCF_SIP_H */

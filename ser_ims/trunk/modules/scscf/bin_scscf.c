@@ -977,8 +977,11 @@ int bin_encode_s_dialog(bin_data *x,s_dialog *d)
 	ch = d->state;
 	if (!bin_encode_char(x,ch)) goto error;	
 
-	if (!bin_encode_time_t(x,d->expires)) goto error;	
+	if (!bin_encode_time_t(x,d->expires)) goto error;
 	
+	if (!bin_encode_uchar(x,d->is_releasing)) goto error;
+	if (!bin_encode_dlg_t(x,d->dialog_c)) goto error;	
+	if (!bin_encode_dlg_t(x,d->dialog_s)) goto error;
 	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_encode_s_dialog: Error while encoding.\n");
@@ -1023,6 +1026,10 @@ s_dialog* bin_decode_s_dialog(bin_data *x)
 	d->state = ch;
 	
 	if (!bin_decode_time_t(x, &d->expires)) goto error;
+
+	if (!bin_decode_uchar(x, &d->is_releasing)) goto error;	
+	if (!bin_decode_dlg_t(x,&(d->dialog_c))) goto error;
+	if (!bin_decode_dlg_t(x,&(d->dialog_s))) goto error;
 	
 	d->hash = get_s_dialog_hash(d->call_id);		
 	
