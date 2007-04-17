@@ -44,12 +44,16 @@
 package de.fhg.fokus.hss.db.op;
 
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
+import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -57,20 +61,43 @@ import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
 public class Preferred_SCSCF_Set_DAO {
 	
 	public static List get_all_from_set(Session session, int id_set){
-		Query query = session.createSQLQuery("select * from preferred_set where id_set=?")
+		Query query = session.createSQLQuery("select * from preferred_scscf_set where id_set=?")
 			.addEntity(Preferred_SCSCF_Set.class);
 		query.setInteger(0, id_set);
 		return query.list();
 	}
 
 	public static List get_all_sets(Session session){
-		Query query = session.createSQLQuery("select distinct id_set, name from preferred_set")
-			.addEntity(Preferred_SCSCF_Set.class);
-		return query.list();
+		Query query = session.createSQLQuery("select distinct id_set, name from preferred_scscf_set")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+		
+		return getResult(session, query);
 	}
 	
+	
+	private static List getResult(Session session, Query query){
+		
+		List list_result = new ArrayList();
+		Preferred_SCSCF_Set preferred_scscf_set = null;
+	
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			
+			while (it.hasNext()){
+				Object[] row = (Object[]) it.next();
+				preferred_scscf_set = new Preferred_SCSCF_Set();
+				preferred_scscf_set.setId_set((Integer)row[0]);
+				preferred_scscf_set.setName((String)row[1]);
+				list_result.add(preferred_scscf_set);
+			}	
+		}
+		return list_result;
+	}
+	
+	
 	public static int delete_set_by_set_ID(Session session, int id_set){
-		Query query = session.createSQLQuery("delete from preferred_set where id_set=?");
+		Query query = session.createSQLQuery("delete from preferred_scscf_set where id_set=?");
 		query.setInteger(0, id_set);
 		return query.executeUpdate();
 	}
