@@ -660,6 +660,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
+					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 					break;
 				case DLG_METHOD_INVITE:
 					if (req && req->first_line.u.request.method.len==3 &&
@@ -668,6 +669,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 						d_unlock(d->hash);				
 						return P_drop_dialog(msg,str1,str2);
 					}
+					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 					break;
 				case DLG_METHOD_SUBSCRIBE:
 //					if (req && req->first_line.u.request.method.len==9 &&
@@ -690,8 +692,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					}
 					break;
 			}
-			if (cseq>d->last_cseq) d->last_cseq = cseq;
-			d->expires = d_act_time()+pcscf_dialogs_expiration_time;			
+			if (cseq>d->last_cseq) d->last_cseq = cseq;					
 		}
 	}
 	
