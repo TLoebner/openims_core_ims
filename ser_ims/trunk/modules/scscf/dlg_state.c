@@ -677,7 +677,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	int cseq;
 	struct hdr_field *h=0;
 	struct sip_msg *req=0;
-	int expires;
+	int expires=0;
 	str totag;
 
 	enum s_dialog_direction dir = get_dialog_direction(str1);
@@ -754,6 +754,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
+					d->expires = d_act_time()+scscf_dialogs_expiration_time;
 					break;
 				case DLG_METHOD_INVITE:
 					if (req && req->first_line.u.request.method.len==3 &&
@@ -762,6 +763,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 						d_unlock(d->hash);				
 						return S_drop_dialog(msg,str1,str2);
 					}
+					d->expires = d_act_time()+scscf_dialogs_expiration_time;
 					break;
 				case DLG_METHOD_SUBSCRIBE:
 //					if (req && req->first_line.u.request.method.len==9 &&
@@ -778,14 +780,13 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 							d->state = DLG_STATE_TERMINATED;
 							d_unlock(d->hash);				
 							return S_drop_dialog(msg,str1,str2);
+						}else if (expires>0){
+							d->expires = expires;
 						}
-					}else if (expires>0){
-						d->expires = expires;
 					}
 					break;
 			}
-			if (cseq>d->last_cseq) d->last_cseq = cseq;
-			d->expires = d_act_time()+scscf_dialogs_expiration_time;			
+			if (cseq>d->last_cseq) d->last_cseq = cseq;						
 		}
 	}
 	
