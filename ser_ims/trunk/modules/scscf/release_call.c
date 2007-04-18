@@ -114,22 +114,25 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 	shm_free(*ps->param);
 	*ps->param = 0;		
 
-	LOG(L_INFO,"DBG:"M_NAME":bye_response(): Received a BYE for a call release for <%.*s> DIR[%d].\n",
-		call_id.len,call_id.s,dir);
-	
-	call_id = cscf_get_call_id(ps->rpl,0);
+//	if (ps->rpl && ps->rpl!=(void*) 0xffffffff) call_id = cscf_get_call_id(ps->rpl,0);
+//	else {
+		call_id = t->callid;
+		call_id.s+=9;
+		call_id.len-=11;
+//	}
+
+	LOG(L_INFO,"DBG:"M_NAME":bye_response(): Received a %d response to BYE for a call release for <%.*s> DIR[%d].\n",
+		ps->code, call_id.len,call_id.s,dir);
 	
 	d = get_s_dialog_dir(call_id,dir);
 	if (!d)	{
-		LOG(L_ERR,"ERR:"M_NAME":bye_response(): Received a BYE for a call release but there is no dialog for <%.*s> DIR[%d].\n",
+		LOG(L_ERR,"ERR:"M_NAME":bye_response(): Received a BYE response for a call release but there is no dialog for <%.*s> DIR[%d].\n",
 			call_id.len,call_id.s,dir);
 		return;
 	}
 	
-	if (ps->code>=200 && ps->code<=300)
-	{
-		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE)
-		{
+	if (ps->code>=200 && ps->code<=300)	{
+		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
 			del_s_dialog(d);
 			d_unlock(hash);			 
@@ -137,12 +140,11 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 			hash=d->hash;
 			d->state=DLG_STATE_TERMINATED_ONE_SIDE;
 			d_unlock(hash);
-		}
-		
+		}		
 	} 
-	else if(ps->code>300)
-	{
-		LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a %d response to BYE for a call release. Dialog is dropped.\n",ps->code);
+	else if(ps->code>300) {
+		LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a %d response to BYE for a call release. Dialog is dropped anyway.\n",
+			ps->code);
 		hash=d->hash;
 		del_s_dialog(d);
 		d_unlock(hash);
@@ -160,11 +162,9 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
  */
 void alter_dialog_route_set(dlg_t *d,enum s_dialog_direction dir)
 {
-	rr_t *r,**first;	
+	rr_t *r,*r_new;	
 	str p; /*this is going to point to the scscf uri*/
-		
-	first=&d->route_set;	
-	
+			
 	switch (dir) {
 		case DLG_MOBILE_ORIGINATING:
 			p = scscf_record_route_mo_uri;
@@ -175,22 +175,17 @@ void alter_dialog_route_set(dlg_t *d,enum s_dialog_direction dir)
 		default:
 			return;
 	}
-	LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
-	for(r=d->route_set;r!=NULL;r=r->next) 
-		LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
 		
 	for(r=d->route_set;r!=NULL;r=r->next) {
 		if (r->nameaddr.uri.len>=p.len && 
 			strncasecmp(r->nameaddr.uri.s,p.s,r->nameaddr.uri.len)==0) {
-			LOG(L_CRIT,"Found <%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
-			d->route_set=r->next;
+			r_new = r->next;
 			r->next = NULL;
-			shm_free_rr(first);				
-			break;
+			shm_free_rr(&d->route_set);
+			d->route_set = r_new;				
+			return;
 		}			
 	}	
-	for(r=d->route_set;r!=NULL;r=r->next) 
-		LOG(L_CRIT,"New <%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
 }
 
 

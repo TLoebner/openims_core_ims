@@ -88,25 +88,26 @@ time_t d_time_now;								/**< dialogs current time							*/
  */
 inline unsigned int get_s_dialog_hash(str call_id)
 {
+	if (call_id.len==0) return 0;
 #define h_inc h+=v^(v>>3)
-   char* p;
-   register unsigned v;
-   register unsigned h;
-
-   h=0;
-   for (p=call_id.s; p<=(call_id.s+call_id.len-4); p+=4){
-       v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
-       h_inc;
-   }
-   v=0;
-   for (;p<(call_id.s+call_id.len); p++) {
-       v<<=8;
-       v+=*p;
-   }
-   h_inc;
-
-   h=((h)+(h>>11))+((h>>13)+(h>>23));
-   return (h)%s_dialogs_hash_size;
+	char* p;
+	register unsigned v;
+	register unsigned h;
+  	
+	h=0;
+	for (p=call_id.s; p<=(call_id.s+call_id.len-4); p+=4){
+		v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
+		h_inc;
+	}
+	v=0;
+	for (;p<(call_id.s+call_id.len); p++) {
+		v<<=8;
+		v+=*p;
+	}
+	h_inc;
+	
+	h=((h)+(h>>11))+((h>>13)+(h>>23));
+	return (h)%s_dialogs_hash_size;
 #undef h_inc 
 }
 
