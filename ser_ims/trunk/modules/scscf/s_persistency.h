@@ -59,6 +59,12 @@
 
 #include "bin_scscf.h"
 
+typedef enum {
+	S_AUTH=4,
+	S_DIALOGS=5,
+	S_REGISTRAR=6
+} data_type_t;
+
 
 int make_snapshot_authdata();
 int load_snapshot_authdata();
