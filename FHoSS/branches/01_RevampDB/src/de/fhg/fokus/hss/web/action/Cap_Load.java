@@ -43,7 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.List;
+
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -56,13 +56,9 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.Capability;
-import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.Capability_DAO;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 import de.fhg.fokus.hss.web.form.Cap_Form;
 /**

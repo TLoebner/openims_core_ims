@@ -55,6 +55,7 @@ import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.auth.AuthenticationVector;
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.model.CapabilitiesSet;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
@@ -72,6 +73,25 @@ public class UtilAVP {
 		if (avp != null){
 			return new String(avp.data);
 		}
+		return null;
+	}
+	
+	public static AVP getNextPublicIdentityAVP(DiameterMessage message, AVP last_avp){
+		Iterator it;
+		if (message.avps != null){
+			it = message.avps.iterator();
+			while (it.hasNext()){
+				AVP crt_avp = (AVP) it.next();
+				if (crt_avp != null && crt_avp.code == DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY){
+					if (crt_avp.equals(last_avp))
+						continue;
+					else{
+						return crt_avp;
+					}
+				}
+			}
+		}
+		
 		return null;
 	}
 	
@@ -231,8 +251,36 @@ public class UtilAVP {
 	
 	
 	
-	public static void addServerCapabilities(DiameterMessage message){
-		//....
+	public static void addServerCapabilities(DiameterMessage message, List mandatory_cap_list, List optional_cap_list){
+		
+		AVP server_cap = new AVP(DiameterConstants.AVPCode.IMS_SERVER_CAPABILITIES, true, DiameterConstants.Vendor.V3GPP);
+		
+		Iterator it;
+		CapabilitiesSet row;
+		
+		if (mandatory_cap_list != null){
+			it = mandatory_cap_list.iterator();
+			AVP mand_cap_avp;
+			while (it.hasNext()){
+				row = (CapabilitiesSet) it.next();
+				mand_cap_avp = new AVP (DiameterConstants.AVPCode.IMS_MANDATORY_CAPABILITY, true, DiameterConstants.Vendor.V3GPP);
+				mand_cap_avp.setData(row.getId_capability());
+				server_cap.addChildAVP(mand_cap_avp);
+			}
+		}
+		
+		if (optional_cap_list != null){
+			it = optional_cap_list.iterator();
+			AVP opt_cap_avp;
+			while (it.hasNext()){
+				row = (CapabilitiesSet) it.next();
+				opt_cap_avp = new AVP (DiameterConstants.AVPCode.IMS_OPTIONAL_CAPABILITY, true, DiameterConstants.Vendor.V3GPP);
+				opt_cap_avp.setData(row.getId_capability());
+				server_cap.addChildAVP(opt_cap_avp);
+			}
+		}
+		
+		message.addAVP(server_cap);
 	}
 
 	public static void addResultCode(DiameterMessage message, int resultCode){
@@ -410,5 +458,12 @@ public class UtilAVP {
 				DiameterConstants.Vendor.DIAM);
 		destRealm.setData(realm);
 		message.addAVP(destRealm);
+	}
+	
+	public static void addSIPNumberAuthItems(DiameterMessage message, int cnt){
+		AVP avp = new AVP(DiameterConstants.AVPCode.IMS_SIP_NUMBER_AUTH_ITEMS, true,
+				DiameterConstants.Vendor.V3GPP);
+		avp.setData(cnt);
+		message.addAVP(avp);
 	}
 }

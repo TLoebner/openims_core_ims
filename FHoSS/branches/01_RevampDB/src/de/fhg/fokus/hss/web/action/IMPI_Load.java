@@ -137,7 +137,7 @@ public class IMPI_Load extends Action {
 			form.setSecretKey(impi.getK());
 			form.setAmf(HexCodec.encode(impi.getAmf()));
 			form.setOp(HexCodec.encode(impi.getOp()));
-			form.setSqn(HexCodec.encode(impi.getSqn()));
+			form.setSqn(impi.getSqn());
 			form.setIp(impi.getIp());
 		
 			int auth_scheme = impi.getAuth_scheme();

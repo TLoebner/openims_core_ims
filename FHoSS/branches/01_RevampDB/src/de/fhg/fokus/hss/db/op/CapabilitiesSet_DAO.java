@@ -75,13 +75,22 @@ public class CapabilitiesSet_DAO {
 		query.setInteger(1, id_set);
 		query.executeUpdate();
 	}
-	
+
 	public static List get_all_from_set(Session session, int id_set){
 		Query query = session.createSQLQuery("select * from capabilities_set cs where cs.id_set=?")
 			.addEntity(CapabilitiesSet.class);
 		query.setInteger(0, id_set);
 		return query.list();
 	}
+	
+	public static List get_all_from_set(Session session, int id_set, int is_mandatory){
+		Query query = session.createSQLQuery("select * from capabilities_set cs where cs.id_set=? and is_mandatory=?")
+			.addEntity(CapabilitiesSet.class);
+		query.setInteger(0, id_set);
+		query.setInteger(1, is_mandatory);
+		return query.list();
+	}
+	
 
 	public static List get_all_sets(Session session){
 		Query query = session.createSQLQuery("select distinct id_set, name from capabilities_set order by(id_set)")

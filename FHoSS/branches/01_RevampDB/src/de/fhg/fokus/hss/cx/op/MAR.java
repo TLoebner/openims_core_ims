@@ -78,6 +78,7 @@ import de.fhg.fokus.hss.main.HSSProperties;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.auth.*;
 
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -188,8 +189,12 @@ public class MAR {
 					}
 					UtilAVP.addPublicIdentity(response, publicIdentity);
 					UtilAVP.addUserName(response, privateIdentity);
+					
 					List avList = new LinkedList();
 					avList.add(av);
+					
+					// add the number of auth items (is 1 for synch)
+					UtilAVP.addSIPNumberAuthItems(response, 1);
 					UtilAVP.addAuthVectors(response, avList);
 					UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 					return response;
@@ -223,6 +228,7 @@ public class MAR {
 						
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
+							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
 							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 						}
@@ -235,8 +241,10 @@ public class MAR {
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
 
+						
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
+							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
 							UtilAVP.addResultCode(response, 
 									DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
@@ -259,6 +267,7 @@ public class MAR {
 						
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
+							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
 							UtilAVP.addResultCode(response, 
 									DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
@@ -273,6 +282,7 @@ public class MAR {
 						UtilAVP.addUserName(response, privateIdentity);
 						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
 						if (avList != null){
+							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
 							UtilAVP.addResultCode(response, 
 									DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
@@ -314,7 +324,10 @@ public class MAR {
 
 		        // sqnHE - represent the SQN from the HSS
 		        // sqnMS - represent the SQN from the client side
-		        byte[] sqnHe = impi.getSqn().getBytes();
+		        
+	         
+		        
+		        byte[] sqnHe = HexCodec.decode(impi.getSqn());
 		        sqnHe = DigestAKA.getNextSQN(sqnHe, HSSProperties.IND_LEN);
 
 		        byte [] nonce = new byte[32];
@@ -365,7 +378,7 @@ public class MAR {
 		        	
 		            AuthenticationVector aVector = DigestAKA.getAuthenticationVector(authScheme, 
 		            		secretKey, opC, amf, copySqnHe);
-		            IMPI_DAO.update(session, impi.getId(), new String(sqnHe));
+		            IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqnHe));
 		            
 		            return aVector;
 		        }
@@ -396,7 +409,7 @@ public class MAR {
 	            		secretKey, opC, amf, copySqnHe);
 	            
 	            // update Cxdata
-	            IMPI_DAO.update(session, impi.getId(), new String(sqnHe));
+	            IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqnHe));
 	            return aVector;
 	            
 			} 
@@ -422,7 +435,7 @@ public class MAR {
 			e1.printStackTrace();
 			return avList;
 		}
-        byte [] sqn = impi.getSqn().getBytes();
+        byte [] sqn = HexCodec.decode(impi.getSqn());
 
         // MD5 Authentication Scheme
         if (auth_scheme == CxConstants.AuthScheme.Auth_Scheme_MD5.getCode()){
@@ -466,7 +479,7 @@ public class MAR {
             	System.out.println("secret:" + secretKey.length);
             	System.out.println("opC:" + opC.length);
             	System.out.println("amf:" + amf.length);
-            	System.out.println("SQN:" + copySqnHe.length);
+            	System.out.println("SQN LEN:" + copySqnHe.length);
             	
 				av = DigestAKA.getAuthenticationVector(auth_scheme, secretKey, opC, amf, copySqnHe);
             	System.out.println("authenticate:" + av.getSipAuthenticate().length);
@@ -483,7 +496,8 @@ public class MAR {
             }
             
             if (avList != null && avList.size() != 0){
-            	IMPI_DAO.update(session, impi.getId(), new String(sqn));
+            	IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqn));
+            	System.out.println("The last SQN is:" + HexCodec.encode(sqn));
             }
         }
         
