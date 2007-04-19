@@ -132,7 +132,7 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia)
 	str server_name;
 	int *m_capab=0,m_capab_cnt=0;
 	int *o_capab=0,o_capab_cnt=0;
-	scscf_list *list=0;
+	scscf_entry *list=0;
 	str call_id;	
 	
 	if (!lia){
@@ -186,10 +186,7 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia)
 success:
 	server_name = Cx_get_server_name(lia);
 	if (server_name.len){
-		list = shm_malloc(sizeof(scscf_list));
-		list->scscf_name=server_name;
-		list->score=MAXINT;
-		list->next=0;
+		list = new_scscf_entry(server_name,MAXINT);
 	}else{
 		Cx_get_capabilities(lia,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt);
 		list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt);
@@ -202,7 +199,7 @@ success:
 		return CSCF_RETURN_BREAK;
 	}
 	call_id = cscf_get_call_id(msg,0);
-	if (!call_id.len||!add_s_list(call_id,list)){
+	if (!call_id.len||!add_scscf_list(call_id,list)){
 		cscf_reply_transactional(msg,500,MSG_500_ERROR_SAVING_LIST);	
 		return CSCF_RETURN_BREAK;
 	}

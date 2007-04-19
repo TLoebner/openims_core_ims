@@ -60,26 +60,26 @@
 #include "mod.h"
 
 /** S-CSCF list element */ 
-typedef struct _scscf_list {
+typedef struct _scscf_entry {
 	str scscf_name;	/**< SIP URI of the S-CSCF */
 	int score;		/**< score of the match */
 	
-	struct _scscf_list *next; /**< next S-CSCF in the list */
-} scscf_list;
+	struct _scscf_entry *next; /**< next S-CSCF in the list */
+} scscf_entry;
 
 /** S-CSCF list */
-typedef struct _s_list {
+typedef struct _scscf_list {
 	str call_id;			/**< Call-Id from the request */
-	scscf_list *list;		/**< S-CSCF list */
+	scscf_entry *list;		/**< S-CSCF list */
 	
-	struct _s_list *next;	/**< Next S-CSCF list in the hash slot */
-	struct _s_list *prev;	/**< Previous S-CSCF list in the hash slot */
-} s_list;
+	struct _scscf_list *next;	/**< Next S-CSCF list in the hash slot */
+	struct _scscf_list *prev;	/**< Previous S-CSCF list in the hash slot */
+} scscf_list;
 
 /** hash slot for S-CSCF lists */
 typedef struct {
-	s_list *head;					/**< first S-CSCF list in this slot */
-	s_list *tail;					/**< last S-CSCF list in this slot */
+	scscf_list *head;					/**< first S-CSCF list in this slot */
+	scscf_list *tail;					/**< last S-CSCF list in this slot */
 	gen_lock_t *lock;				/**< slot lock 					*/	
 } i_hash_slot;
 
@@ -95,7 +95,7 @@ typedef struct _scscf_capabilities {
 
 int I_get_capabilities();
 
-scscf_list* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt);
+scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt);
 
 
 inline unsigned int get_call_id_hash(str callid,int hash_size);
@@ -107,14 +107,15 @@ void i_hash_table_destroy();
 inline void i_lock(unsigned int hash);
 inline void i_unlock(unsigned int hash);
 
+scscf_entry* new_scscf_entry(str name, int score);
 
-s_list* new_s_list(str callid,scscf_list *sl);
-int add_s_list(str call_id,scscf_list *sl);
-int is_s_list(str call_id);
-str take_s_list(str call_id);
-void del_s_list(str call_id);
-void free_s_list(s_list *sl);
-void print_s_list(int log_level);
+scscf_list* new_scscf_list(str callid,scscf_entry *sl);
+int add_scscf_list(str call_id,scscf_entry *sl);
+int is_scscf_list(str call_id);
+str take_scscf_entry(str call_id);
+void del_scscf_list(str call_id);
+void free_scscf_list(scscf_list *sl);
+void print_scscf_list(int log_level);
 		
 		
 int I_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);

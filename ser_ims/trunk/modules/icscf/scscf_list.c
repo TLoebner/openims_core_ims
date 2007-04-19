@@ -146,14 +146,13 @@ int I_get_capab_match(scscf_capabilities *c,int *m,int mcnt,int *o,int ocnt)
 	return r;
 }
 
-
 /**
  * Adds the name to the list starting at root, ordered by score.
  * Returns the new root
  */
-static inline scscf_list* I_add_list(scscf_list *root,str name,int score)
+static inline scscf_entry* I_add_to_scscf_list(scscf_entry *root,str name,int score)
 {
-	scscf_list *x,*i;
+	scscf_entry *x,*i;
 
 	//duplicate?
 	for(i=root;i;i=i->next)
@@ -161,17 +160,9 @@ static inline scscf_list* I_add_list(scscf_list *root,str name,int score)
 			strncasecmp(name.s,i->scscf_name.s,name.len)==0)
 				return root;
 
-	x = shm_malloc(sizeof(scscf_list));
-	if (!x) {	
-		LOG(L_ERR,"ERR:"M_NAME":I_add_list: Error allocating %d bytes\n",
-			sizeof(scscf_list));
-		return root;
-	}
-	//TODO - if we want to dinamically reload list of scscf and capab, we should
-	//	duplicate scscf name here
-	x->scscf_name = name;
-	x->score = score;
-	x->next = 0;
+	x = new_scscf_entry(name,score);
+	if (!x) return root;
+	
 	if (!root){
 		return x;
 	}
@@ -198,16 +189,16 @@ static inline scscf_list* I_add_list(scscf_list *root,str name,int score)
  * @param ocnt - optional capabilities list size
  * @returns list of S-CSCFs, terminated with a str={0,0}
  */
-scscf_list* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt)
+scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt)
 {
-	scscf_list *list=0;
+	scscf_entry *list=0;
 	int i,r;
 	
-	if (scscf_name.len) list = I_add_list(list,scscf_name,MAXINT);
+	if (scscf_name.len) list = I_add_to_scscf_list(list,scscf_name,MAXINT);
 	for(i=0;i<SCSCF_Capabilities_cnt;i++){
 		r = I_get_capab_match(SCSCF_Capabilities+i,m,mcnt,o,ocnt);
 		if (r!=-1){
-			 list = I_add_list(list,SCSCF_Capabilities[i].scscf_name,r);
+			 list = I_add_to_scscf_list(list,SCSCF_Capabilities[i].scscf_name,r);
 			 LOG(L_DBG,"DBG:"M_NAME":I_get_capab_ordered: <%.*s> Added to the list\n",
 			 	SCSCF_Capabilities[i].scscf_name.len,SCSCF_Capabilities[i].scscf_name.s);
 		}
@@ -275,13 +266,13 @@ int i_hash_table_init(int hash_size)
 void i_hash_table_destroy()
 {
 	int i;
-	s_list *sl,*nsl;
+	scscf_list *sl,*nsl;
 	for(i=0;i<i_hash_size;i++){
 		i_lock(i);
 			sl = i_hash_table[i].head;
 			while(sl){
 				nsl = sl->next;
-				free_s_list(sl);
+				free_scscf_list(sl);
 				sl = nsl;
 			}
 		i_unlock(i);
@@ -309,17 +300,43 @@ inline void i_unlock(unsigned int hash)
 //	LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
 
-s_list* new_s_list(str call_id,scscf_list *sl)
+scscf_entry* new_scscf_entry(str name, int score)
 {
-	s_list *l;
+	scscf_entry *x=0;
+	x = shm_malloc(sizeof(scscf_entry));
+	if (!x) {	
+		LOG(L_ERR,"ERR:"M_NAME":new_scscf_entry: Error allocating %d bytes\n",
+			sizeof(scscf_entry));
+		return 0;
+	}
+	/* duplicate always the scscf_name because of possible list reloads and scscf_name coming in LIA/UAA */
+	x->scscf_name.s = shm_malloc(name.len);
+	if (!x->scscf_name.s){	
+		LOG(L_ERR,"ERR:"M_NAME":new_scscf_entry: Error allocating %d bytes\n",
+			name.len);
+		shm_free(x);
+		return 0;
+	}
+	memcpy(x->scscf_name.s,name.s,name.len);
+	x->scscf_name.len = name.len;
 	
-	l = shm_malloc(sizeof(s_list));
+	x->score = score;
+	x->next = 0;
+	return x;
+}
+
+
+scscf_list* new_scscf_list(str call_id,scscf_entry *sl)
+{
+	scscf_list *l;
+	
+	l = shm_malloc(sizeof(scscf_list));
 	if (!l) {
-		LOG(L_ERR,"ERR:"M_NAME":new_s_list(): Unable to alloc %d bytes\n",
-			sizeof(s_list));
+		LOG(L_ERR,"ERR:"M_NAME":new_scscf_list(): Unable to alloc %d bytes\n",
+			sizeof(scscf_list));
 		goto error;
 	}
-	memset(l,0,sizeof(s_list));
+	memset(l,0,sizeof(scscf_list));
 	
 	STR_SHM_DUP(l->call_id,call_id,"shm");
 	l->list = sl;
@@ -332,12 +349,12 @@ error:
 	return 0;
 }
 
-int add_s_list(str call_id,scscf_list *sl)
+int add_scscf_list(str call_id,scscf_entry *sl)
 {
-	s_list *l;
+	scscf_list *l;
 	unsigned int hash = get_call_id_hash(call_id,i_hash_size);
 	
-	l = new_s_list(call_id,sl);
+	l = new_scscf_list(call_id,sl);
 	if (!l) return 0;		
 	
 	i_lock(hash);
@@ -351,9 +368,9 @@ int add_s_list(str call_id,scscf_list *sl)
 	return 1;
 }
 
-int is_s_list(str call_id)
+int is_scscf_list(str call_id)
 {
-	s_list *l=0;
+	scscf_list *l=0;
 	unsigned int hash = get_call_id_hash(call_id,i_hash_size);
 
 	i_lock(hash);
@@ -370,11 +387,17 @@ int is_s_list(str call_id)
 	return 0;
 }
 
-str take_s_list(str call_id)
+/**
+ * Takes on S-CSCF name for the respective Call-ID from the respective name list.
+ * Should shm_free the result.s when no longer needed.
+ * @param call_id - the id of the call
+ * @returns the shm_malloced S-CSCF name if found or empty string if list is empty or does not exists 
+ */  
+str take_scscf_entry(str call_id)
 {
 	str scscf={0,0};
-	s_list *l=0;
-	scscf_list *sl;
+	scscf_list *l=0;
+	scscf_entry *sl;
 	unsigned int hash = get_call_id_hash(call_id,i_hash_size);
 
 	i_lock(hash);
@@ -388,16 +411,7 @@ str take_s_list(str call_id)
 					shm_free(l->list);
 					l->list = sl;
 				}
-//				if (!l->list){
-//					if (l->prev) l->prev->next = l->next;
-//					else i_hash_table[hash].head = l->next;
-//					if (l->next) l->next->prev = l->prev;
-//					else i_hash_table[hash].tail = l->prev;					
-//					i_unlock(hash);
-//					free_s_list(l);
-//				}else				
-					i_unlock(hash);
-				return scscf;
+				break;
 			}
 		l = l->next;
 	}
@@ -405,11 +419,12 @@ str take_s_list(str call_id)
 	return scscf;
 }
 
-void del_s_list(str call_id)
+void del_scscf_list(str call_id)
 {
-	s_list *l=0;
+	scscf_list *l=0;
 	unsigned int hash = get_call_id_hash(call_id,i_hash_size);
 
+	i_lock(hash);
 	l = i_hash_table[hash].head;
 	while(l){
 		if (l->call_id.len == call_id.len &&
@@ -419,31 +434,33 @@ void del_s_list(str call_id)
 				if (l->next) l->next->prev = l->prev;
 				else i_hash_table[hash].tail = l->prev;					
 				i_unlock(hash);
-				free_s_list(l);
+				free_scscf_list(l);
 				return;
 			}
 		l = l->next;
 	}
+	i_unlock(hash);
 }
 
-void free_s_list(s_list *sl)
+void free_scscf_list(scscf_list *sl)
 {
-	scscf_list *i;
+	scscf_entry *i;
 	if (!sl) return;
 	if (sl->call_id.s) shm_free(sl->call_id.s);
 	while (sl->list) {
 		i = sl->list->next;
+		if (sl->list->scscf_name.s) shm_free(sl->list->scscf_name.s);
 		shm_free(sl->list);
 		sl->list = i;
 	}
 	shm_free(sl);
 }
 
-void print_s_list(int log_level)
+void print_scscf_list(int log_level)
 {
-	s_list *l;
+	scscf_list *l;
 	int i;
-	scscf_list *sl;
+	scscf_entry *sl;
 	LOG(log_level,"INF:"M_NAME":----------  S-CSCF Lists begin --------------\n");
 	for(i=0;i<i_hash_size;i++){
 		i_lock(i);
@@ -469,13 +486,13 @@ void print_s_list(int log_level)
 int I_trans_in_processing(struct sip_msg* msg, char* str1, char* str2)
 {
 	str call_id;
-	//print_s_list(L_ERR);
+	//print_scscf_list(L_ERR);
 
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 	
-	if (is_s_list(call_id))
+	if (is_scscf_list(call_id))
 		return CSCF_RETURN_TRUE;
 	else 
 		return CSCF_RETURN_FALSE;
@@ -486,19 +503,19 @@ static str route_hdr_e={">\r\n",3};
 
 int I_scscf_select(struct sip_msg* msg, char* str1, char* str2)
 {
-	str call_id,scscf_name;
+	str call_id,scscf_name={0,0};
 	struct sip_msg *req;
 	int result;
 	str hdr={0,0};
 
-	//print_s_list(L_ERR);
+	//print_scscf_list(L_ERR);
 		
 	call_id = cscf_get_call_id(msg,0);
 	LOG(L_DBG,"DBG:"M_NAME":I_scscf_select(): <%.*s>\n",call_id.len,call_id.s);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 	
-	scscf_name = take_s_list(call_id);
+	scscf_name = take_scscf_entry(call_id);
 	if (!scscf_name.len){
 		I_scscf_drop(msg,str1,str2);
 		cscf_reply_transactional(msg,600,MSG_600_FORWARDING_FAILED);			
@@ -547,19 +564,20 @@ int I_scscf_select(struct sip_msg* msg, char* str1, char* str2)
 		if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);	
 		STR_PKG_DUP(msg->dst_uri,scscf_name,"pkg");
 	}
+	if (scscf_name.s) shm_free(scscf_name.s);
 	return result;
 }
 
 int I_scscf_drop(struct sip_msg* msg, char* str1, char* str2)
 {
 	str call_id;
-	//print_s_list(L_ERR);
+	//print_scscf_list(L_ERR);
 	call_id = cscf_get_call_id(msg,0);
 	LOG(L_DBG,"DBG:"M_NAME":I_scscf_drop(): <%.*s>\n",call_id.len,call_id.s);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 	
-	del_s_list(call_id);
+	del_scscf_list(call_id);
 	return CSCF_RETURN_TRUE;
 }
 
