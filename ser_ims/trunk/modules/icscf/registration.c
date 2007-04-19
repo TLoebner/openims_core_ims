@@ -163,7 +163,7 @@ int I_UAA(struct sip_msg* msg, AAAMessage* uaa)
 	str server_name;
 	int *m_capab=0,m_capab_cnt=0;
 	int *o_capab=0,o_capab_cnt=0;
-	scscf_list *list=0;
+	scscf_entry *list=0;
 	str call_id;
 	
 	if (!uaa){
@@ -245,7 +245,7 @@ success:
 		return CSCF_RETURN_BREAK;
 	}
 	call_id = cscf_get_call_id(msg,0);
-	if (!call_id.len||!add_s_list(call_id,list)){
+	if (!call_id.len||!add_scscf_list(call_id,list)){
 		cscf_reply_transactional(msg,500,MSG_500_ERROR_SAVING_LIST);	
 		return CSCF_RETURN_BREAK;
 	}
