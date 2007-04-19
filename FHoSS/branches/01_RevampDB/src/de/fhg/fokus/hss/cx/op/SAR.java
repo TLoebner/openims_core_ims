@@ -50,6 +50,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
+import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.cx.CxExperimentalResultException;
@@ -104,7 +105,6 @@ public class SAR {
 			int serverAssignmentType = UtilAVP.getServerAssignmentType(request);
 			int userDataAlreadyAvailable = UtilAVP.getUserDataAlreadyAvailable(request);
 		
-			System.out.println("0");
 			// 0. check for missing of mandatory AVPs
 			if (vendorSpecificAppID == null || authSessionState == null || originHost == null || originRealm == null ||
 				destinationRealm == null || serverName == null || serverAssignmentType == -1 || 
@@ -121,7 +121,7 @@ public class SAR {
 			// 1. check that the public identity & privateIdentity are known in HSS
 			session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
-			System.out.println("1");
+
 			IMPU impu = IMPU_DAO.get_by_Identity(session, publicIdentity);
 			IMPI impi = IMPI_DAO.get_by_Identity(session, privateIdentity);
 			if (impu == null || impi == null){
@@ -137,8 +137,27 @@ public class SAR {
 				}
 			}
 			System.out.println("2");
-			// 3. skiped
-			// to be completed
+
+			// 3. 
+			switch (serverAssignmentType){
+				case CxConstants.Server_Assignment_Type_Timeout_Deregistration:
+				case CxConstants.Server_Assignment_Type_User_Deregistration:
+				case CxConstants.Server_Assignment_Type_Deregistration_Too_Much_Data:
+				case CxConstants.Server_Assignment_Type_Timeout_Deregistration_Store_Server_Name:					
+				case CxConstants.Server_Assignment_Type_User_Deregistration_Store_Server_Name:
+				case CxConstants.Server_Assignment_Type_Administrative_Deregistration:
+					break;
+					
+				default:
+					AVP avp = request.findAVP(DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY, true, DiameterConstants.Vendor.V3GPP);
+					if (avp != null){
+						AVP next_public_identity = UtilAVP.getNextPublicIdentityAVP(request, avp);
+						if (next_public_identity != null){
+							throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_AVP_OCCURS_TOO_MANY_TIMES);
+						}
+					}
+			}
+			
 			
 			// 4. check if the public identity is a Pubic Service Identifier; if yes, check the activation
 			int impu_type  = impu.getType();

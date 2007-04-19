@@ -121,7 +121,8 @@ public class IMPI_Submit extends Action{
 				impi.setIp(form.getIp());
 				impi.setAmf(HexCodec.decode(form.getAmf()));
 				impi.setOp(HexCodec.decode(form.getOp()));
-				impi.setSqn(new String(HexCodec.decode(form.getSqn())));
+				impi.setSqn(form.getSqn());
+				
 				impi.setId_imsu(form.getId_imsu());
 				//impi.setDefault_auth_scheme()
 				impi.setLine_identifier(form.getLine_identifier());
@@ -138,6 +139,7 @@ public class IMPI_Submit extends Action{
 				}
 				else{
 					IMPI_DAO.update(session, impi);
+					System.out.println("update!!!!!!!!!!!!!!");
 				}
 				
 				if ((auth_scheme & 127) == 127){

@@ -55,7 +55,9 @@ import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.IMPU_VisitedNetwork;
+import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.VisitedNetwork;
+import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
@@ -77,7 +79,6 @@ public class UAR {
 		DiameterMessage response = diameterPeer.newResponse(request);
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
-		
 		
 		try{
 			long time1 = System.currentTimeMillis();
@@ -106,6 +107,9 @@ public class UAR {
 			if (impu == null || impi == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN);
 			}
+			
+			IMSU imsu = IMSU_DAO.get_by_ID(session, impi.getId_imsu());
+			
 			long time2 = System.currentTimeMillis();
 			System.out.println("\n\nDelta:" + (time2-time1));
 
@@ -162,7 +166,11 @@ public class UAR {
 					if (impu.getCan_register() == 0){
 						throw new CxFinalResultException("", 1);
 					}
-					UtilAVP.addServerCapabilities(response);
+
+					List cap_set_mand_list = CapabilitiesSet_DAO.get_all_from_set(session, imsu.getId_capabilities_set(), 1);
+					List cap_set_opt_list = CapabilitiesSet_DAO.get_all_from_set(session, imsu.getId_capabilities_set(), 0);
+					
+					UtilAVP.addServerCapabilities(response, cap_set_mand_list, cap_set_opt_list);
 					UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 					break;	
 			}
@@ -228,6 +236,7 @@ public class UAR {
 						}
 						list = IMPI_IMPU_DAO.get_all_IMPU_of_IMSU_with_User_State(session, 
 								impi.getId_imsu(), CxConstants.IMPU_user_state_Auth_Pending);
+						
 						if (list.size() > 0 && (serverName != null && !serverName.equals(""))){
 							
 							UtilAVP.addServerName(response, serverName);
@@ -236,11 +245,15 @@ public class UAR {
 							break;
 						}
 						
-						//else add capabilities 
-						//to be added....
-						UtilAVP.addServerCapabilities(response);
+						// else add capabilities 
+						
+						List cap_set_mand_list = CapabilitiesSet_DAO.get_all_from_set(session, imsu.getId_capabilities_set(), 1);
+						List cap_set_opt_list = CapabilitiesSet_DAO.get_all_from_set(session, imsu.getId_capabilities_set(), 0);
+						
+						UtilAVP.addServerCapabilities(response, cap_set_mand_list, cap_set_opt_list);
 						UtilAVP.addExperimentalResultCode(response, 
 								DiameterConstants.ResultCode.RC_IMS_DIAMETER_FIRST_REGISTRATION.getCode());
+						
 					}
 					break;
 			}
