@@ -116,7 +116,7 @@ int session_destroy()
  * This function is thread safe.
  * @returns an 1 if success or -1 if error.
  */
-static int generate_sessionID( str *sID, unsigned int end_pad_len)
+int generate_sessionID( str *sID, unsigned int end_pad_len)
 {
 	unsigned int s2;
 

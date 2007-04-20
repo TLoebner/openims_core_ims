@@ -65,6 +65,8 @@
 #define IMS_Dx	16777216	/**< Cx interface between I/S-CSCF and SLF 		*/
 #define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
+#define IMS_Rf  	   3    /**< Rf interface between P/I/S-CSCF and CDF, 
+								according to TS32.299 R7    */ 
 
 /* Vendor ID	*/
 
@@ -156,6 +158,8 @@ enum {
 	AVP_IMS_RR_Bandwidth								= 521,
 	AVP_IMS_RS_Bandwidth								= 522,
 	AVP_IMS_SIP_Forking_Indication						= 523,
+/** Codec-Data is from TS 29.214*/
+	AVP_IMS_Codec_Data									= 524,
 /** 600 to 699 reserved for TS29.229											*/
 	AVP_IMS_Visited_Network_Identifier					= 600,
 	AVP_IMS_Public_Identity								= 601,
@@ -203,9 +207,58 @@ enum {
 	AVP_IMS_Identity_Set								= 708,
 	AVP_IMS_Expiry_Time									= 709,
 	AVP_IMS_Send_Data_Indication						= 710,
-	AVP_IMS_DSAI_Tag									= 711
+	AVP_IMS_DSAI_Tag									= 711,
 	
 /** 800 to 899 reserved for TS29.299											*/
+	AVP_IMS_Event_Type 									= 823,
+	AVP_IMS_SIP_Method									= 824,
+	AVP_IMS_Event										= 825,
+	AVP_IMS_Content_Type								= 826,
+	AVP_IMS_Content_Length								= 827,
+	AVP_IMS_Content_Disposition							= 828,
+	AVP_IMS_Role_Of_Node 								= 829,
+	AVP_IMS_User_Session_Id								= 830,
+	AVP_IMS_Calling_Party_Address						= 831,
+	AVP_IMS_Called_Party_Address						= 832,
+	AVP_IMS_Time_Stamps									= 833,
+	AVP_IMS_SIP_Request_Timestamp						= 834,
+	AVP_IMS_SIP_Response_Timestamp						= 835,
+	AVP_IMS_Application_Server							= 836,
+	AVP_IMS_Application_Provided_Called_Party_Address	= 837,
+	AVP_IMS_Inter_Operator_Identifier					= 838,
+	AVP_IMS_Originating_IOI								= 839,
+	AVP_IMS_Terminating_IOI								= 840,
+	AVP_IMS_IMS_Charging_identifier						= 841,
+	AVP_IMS_SDP_Session_Description						= 842,
+	AVP_IMS_SDP_Media_Component							= 843,
+	AVP_IMS_SDP_Media_Name								= 844,
+	AVP_IMS_SDP_Media_Description						= 845,
+	AVP_IMS_CG_Address									= 846,
+	AVP_IMS_GGSN_Address								= 847,
+	AVP_IMS_Served_Party_IP_Address						= 848,
+	AVP_IMS_Authorized_QoS								= 849,
+	AVP_IMS_Application_Service_Information				= 850,
+	AVP_IMS_Trunk_Group_Id								= 851,
+	AVP_IMS_Incoming_Trunk_Group_Id						= 852,
+	AVP_IMS_Outgoing_Trunk_Group_Id						= 853,
+	AVP_IMS_Bear_Service								= 854,
+	AVP_IMS_Service_Id									= 855,
+	AVP_IMS_Associated_URI								= 856,
+	AVP_IMS_Charged_Party								= 857,
+	AVP_IMS_PoC_Controlling_Address						= 858,
+	AVP_IMS_PoC_Group_Name								= 859,
+	AVP_IMS_Cause										= 860,
+	AVP_IMS_Cause_Code									= 861,
+	
+	/* TODO finish the list... */
+	AVP_IMS_Node_Functionality							= 862,
+	AVP_IMS_Service_Information							= 873,
+	AVP_IMS_IMS_Information								= 876,
+	AVP_IMS_Expires										= 888,
+	AVP_IMS_Message_Body								= 889,
+	AVP_IMS_Service_Specific_Info						= 1249,
+	AVP_IMS_Requested_Party_Address						= 1251,
+	AVP_IMS_Access_Network_Information					= 1263
 };
 
 /** ETSI AVP Codes */ 
@@ -430,6 +483,23 @@ enum{
 /** 5400 to 5419 Reserved for TS29.109	*/
 };
 
-						
+/** Node-Functionality AVP */
+enum {
+	AVP_IMS_S_CSCF										= 0,
+	AVP_IMS_P_CSCF										= 1,
+	AVP_IMS_I_CSCF										= 2,
+	AVP_IMS_MRFC										= 3,
+	AVP_IMS_MGCF										= 4,
+	AVP_IMS_BGCF										= 5,
+	AVP_IMS_AS											= 6
+};
+
+/** Role-Of-Node */
+enum {
+	AVP_IMS_ORIGINATING_ROLE							= 0,
+	AVP_IMS_TERMINATING_ROLE							= 1,
+	AVP_IMS_PROXY_ROLE									= 2,
+	AVP_IMS_B2BUA_ROLE									= 3
+};						
 
 #endif /* __DIAMETER_IMS_H */

@@ -99,5 +99,10 @@ int load_cdp( struct cdp_binds *cdpb)
 	FIND_EXP(AAAAddRequestHandler,"AAAAddRequestHandler",AAAAddRequestHandler_f);
 	FIND_EXP(AAAAddResponseHandler,"AAAAddResponseHandler",AAAAddResponseHandler_f);
 	
+	FIND_EXP(AAACreateAuthSession,"AAACreateAuthSession",AAACreateAuthSession_f);
+	FIND_EXP(AAAGetAuthSession,"AAAGetAuthSession",AAAGetAuthSession_f);
+	//FIND_EXP(AAADropAuthSession,"AAADropAuthSession",AAADropAuthSession_f);
+	FIND_EXP(AAAPrintMessage,"AAAPrintMessage",AAAPrintMessage_f);
+	
 	return 1;
 }
