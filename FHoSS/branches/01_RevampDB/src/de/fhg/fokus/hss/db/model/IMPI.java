@@ -85,10 +85,10 @@ public class IMPI {
 				result |= CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode(); 
 			}
 			if (md5){
-				result |= CxConstants.AuthScheme.Auth_Scheme_Digest.getCode(); 
+				result |= CxConstants.AuthScheme.Auth_Scheme_MD5.getCode(); 
 			}
 			if (digest){
-				result |= CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode(); 
+				result |= CxConstants.AuthScheme.Auth_Scheme_Digest.getCode(); 
 			}
 			if (http_digest){
 				result |= CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode(); 

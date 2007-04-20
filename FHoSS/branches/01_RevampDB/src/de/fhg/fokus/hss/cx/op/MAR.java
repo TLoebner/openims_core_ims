@@ -42,11 +42,9 @@
   */
 package de.fhg.fokus.hss.cx.op;
 
-import java.net.Inet4Address;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,8 +52,6 @@ import java.util.Vector;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
-
-import org.apache.log4j.Logger;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
@@ -153,17 +149,21 @@ public class MAR {
 					else if (data.equals(CxConstants.AuthScheme.Auth_Scheme_Early.getName())){
 						auth_scheme = CxConstants.AuthScheme.Auth_Scheme_Early.getCode();
 					}
+					else if (data.equals(CxConstants.AuthScheme.Auth_Scheme_Unknown.getName())){
+						// if S- does not specify a scheme, the default one will be used!
+						auth_scheme = impi.getDefault_auth_scheme();
+					}
 				}
 				else if (child.code == DiameterConstants.AVPCode.IMS_SIP_AUTHORIZATION){
 					authorization = child.data;
 				}
 			}
-			// 3. check if the Authentication-Scheme is supported
 			
 			if (auth_scheme == -1){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
 			
+			// 3. check if the Authentication-Scheme is supported
 			if ((auth_scheme & impi.getAuth_scheme()) == 0){
 				throw new CxExperimentalResultException(
 						DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_AUTH_SCHEME_NOT_SUPPORTED);
@@ -184,7 +184,7 @@ public class MAR {
 				 
 				if (server_name.equals(scscf_name)){
 					AuthenticationVector av = null;
-					if ((av = synchronize(session, authorization, impi)) == null){
+					if ((av = synchronize(session, authorization, auth_scheme, impi)) == null){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
 					UtilAVP.addPublicIdentity(response, publicIdentity);
@@ -226,7 +226,7 @@ public class MAR {
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
 						
-						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -242,7 +242,7 @@ public class MAR {
 						UtilAVP.addUserName(response, privateIdentity);
 
 						
-						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -265,7 +265,7 @@ public class MAR {
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
 						
-						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -280,7 +280,7 @@ public class MAR {
 					else{
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
-						List avList = MAR.generateAuthVectors(session, impi, auth_scheme, av_count);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -296,9 +296,11 @@ public class MAR {
 			}
 		}	
 		catch(CxExperimentalResultException e){
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
 		catch(CxFinalResultException e){
+			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
 		
@@ -310,7 +312,7 @@ public class MAR {
 		return response;
 	}
 	
-	private static AuthenticationVector synchronize(Session session, byte [] authorization, IMPI impi){
+	private static AuthenticationVector synchronize(Session session, byte [] authorization, int auth_scheme, IMPI impi){
     	logger.info("Handling Synchronization between Mobile Station and Home Environment!");
 
         byte [] secretKey = HexCodec.getBytes(impi.getK(), CxConstants.Auth_Parm_Secret_Key_Size);
@@ -320,12 +322,9 @@ public class MAR {
 	            byte [] op = impi.getOp();
 				byte [] opC = Milenage.generateOpC(secretKey, op);
 				byte [] amf = impi.getAmf();
-		        int authScheme = impi.getAuth_scheme();
 
 		        // sqnHE - represent the SQN from the HSS
 		        // sqnMS - represent the SQN from the client side
-		        
-	         
 		        
 		        byte[] sqnHe = HexCodec.decode(impi.getSqn());
 		        sqnHe = DigestAKA.getNextSQN(sqnHe, HSSProperties.IND_LEN);
@@ -376,13 +375,15 @@ public class MAR {
 		        		copySqnHe[k] = sqnHe[i]; 
 			        }
 		        	
-		            AuthenticationVector aVector = DigestAKA.getAuthenticationVector(authScheme, 
-		            		secretKey, opC, amf, copySqnHe);
+		            AuthenticationVector aVector = 
+		            	DigestAKA.getAuthenticationVector(auth_scheme, secretKey, opC, amf, copySqnHe);
 		            IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqnHe));
 		            
 		            return aVector;
 		        }
-		        	
+		        
+		        // perform sync
+		        
 	        	byte xmac_s[] = Milenage.f1star(secretKey, rand, opC, sqnMs, amf);
 	        	byte mac_s[] = new byte[8];
 	        	k = 0;
@@ -405,8 +406,8 @@ public class MAR {
 		        for (int i = 0; i < 6; i++, k++){
 	        		copySqnHe[k] = sqnHe[i]; 
 		        }
-	            AuthenticationVector aVector = DigestAKA.getAuthenticationVector(authScheme, 
-	            		secretKey, opC, amf, copySqnHe);
+	            AuthenticationVector aVector = 
+	            	DigestAKA.getAuthenticationVector(auth_scheme, secretKey, opC, amf, copySqnHe);
 	            
 	            // update Cxdata
 	            IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqnHe));
@@ -419,9 +420,8 @@ public class MAR {
 			}
 	}
 
-	public static List generateAuthVectors(Session session, IMPI impi, int auth_scheme, int av_cnt){
-        List avList = null;
-
+	public static AuthenticationVector generateAuthVector(Session session, int auth_scheme, IMPI impi){
+		
         byte [] secretKey = HexCodec.getBytes(impi.getK(), CxConstants.Auth_Parm_Secret_Key_Size);
         byte [] amf = impi.getAmf();
 
@@ -433,40 +433,38 @@ public class MAR {
 			opC = Milenage.generateOpC(secretKey, op);
 		} catch (InvalidKeyException e1) {
 			e1.printStackTrace();
-			return avList;
+			return null;
 		}
         byte [] sqn = HexCodec.decode(impi.getSqn());
+		
+        switch (auth_scheme){
+        
+    		case  CxConstants.Auth_Scheme_MD5:
+    			// Authentication Scheme is Digest-MD5
+    			logger.debug("Auth-Scheme is Digest-MD5");
+    			SecureRandom randomAccess;
+    			try {
+    				randomAccess = SecureRandom.getInstance("SHA1PRNG");
+    			} 
+    			catch (NoSuchAlgorithmException e) {
+    				e.printStackTrace();
+    				return null;
+    			}
 
-        // MD5 Authentication Scheme
-        if (auth_scheme == CxConstants.AuthScheme.Auth_Scheme_MD5.getCode()){
-        	// Authentication Scheme is Digest-MD5
-        	logger.debug("Auth-Scheme is Digest-MD5");
-            SecureRandom randomAccess;
-			try {
-				randomAccess = SecureRandom.getInstance("SHA1PRNG");
-			} 
-			catch (NoSuchAlgorithmException e) {
-				e.printStackTrace();
-				return avList;
-			}
-            avList = new LinkedList();
-            for (long ix = 0; ix < av_cnt; ix++){
-                byte[] randBytes = new byte[16];
-            	randomAccess.setSeed(System.currentTimeMillis());
-                randomAccess.nextBytes(randBytes);
+    			byte[] randBytes = new byte[16];
+    			randomAccess.setSeed(System.currentTimeMillis());
+    			randomAccess.nextBytes(randBytes);
                 
-            	AuthenticationVector av = new AuthenticationVector(auth_scheme, randBytes, secretKey);
-            	avList.add(av);
-            }
-        	return avList;
-        }
-        else if (auth_scheme == CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode() || 
-        		auth_scheme == CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode() ){
-        	// Authentication Scheme is AKAv1 or AKAv2
-        	logger.debug("Auth-Scheme is Digest-AKA");
-        	avList = new LinkedList();
-        	
-            for (long ix = 0; ix < av_cnt; ix++){
+    			secretKey = impi.getK().getBytes();
+    			AuthenticationVector av = new AuthenticationVector(auth_scheme, randBytes, secretKey);
+    			return av;
+    		
+    		case CxConstants.Auth_Scheme_AKAv1:
+    		case CxConstants.Auth_Scheme_AKAv2:
+        
+    			// Authentication Scheme is AKAv1 or AKAv2
+        		logger.debug("Auth-Scheme is Digest-AKA");
+        		
             	sqn = DigestAKA.getNextSQN(sqn, HSSProperties.IND_LEN);
     	        byte[] copySqnHe = new byte[6];
     	        int k = 0;
@@ -474,31 +472,44 @@ public class MAR {
             		copySqnHe[k] = sqn[i]; 
     	        }
     	        
-            	AuthenticationVector av;
-            	System.out.println("auth:" + auth_scheme);
-            	System.out.println("secret:" + secretKey.length);
-            	System.out.println("opC:" + opC.length);
-            	System.out.println("amf:" + amf.length);
-            	System.out.println("SQN LEN:" + copySqnHe.length);
+            	//System.out.println("auth:" + auth_scheme);
+            	//System.out.println("secret:" + secretKey.length);
+            	//System.out.println("opC:" + opC.length);
+            	//System.out.println("amf:" + amf.length);
+            	//System.out.println("SQN LEN:" + copySqnHe.length);
             	
 				av = DigestAKA.getAuthenticationVector(auth_scheme, secretKey, opC, amf, copySqnHe);
-            	System.out.println("authenticate:" + av.getSipAuthenticate().length);
-            	System.out.println("auhtorization:" + av.getSipAuthorization().length);
-            	System.out.println("ck:" + av.getConfidentialityityKey().length);
-            	System.out.println("ik:" + av.getIntegrityKey().length);
+            	//System.out.println("authenticate:" + av.getSipAuthenticate().length);
+            	//System.out.println("auhtorization:" + av.getSipAuthorization().length);
+            	//System.out.println("ck:" + av.getConfidentialityityKey().length);
+            	//System.out.println("ik:" + av.getIntegrityKey().length);
 				
-				if (av != null){
-					avList.add(av);
-				}
-				else {
-					break;
-				}
-            }
-            
-            if (avList != null && avList.size() != 0){
-            	IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqn));
-            	System.out.println("The last SQN is:" + HexCodec.encode(sqn));
-            }
+                if (av != null){
+                	IMPI_DAO.update(session, impi.getId(), HexCodec.encode(sqn));
+                	//System.out.println("The last SQN is:" + HexCodec.encode(sqn));
+                }        		
+            	return av;
+            	
+    		case CxConstants.Auth_Scheme_Early:
+    			logger.debug("Auth-Scheme is Early IMS");
+    			av = new AuthenticationVector(auth_scheme, impi.getIp());
+    			return av;
+        }
+        
+        return null;
+		
+	}
+	
+	public static List generateAuthVectors(Session session, int auth_scheme, int av_cnt, IMPI impi){
+        List avList = null;
+
+        avList = new LinkedList();
+        AuthenticationVector av = null;
+        for (long ix = 0; ix < av_cnt; ix++){
+        	av = generateAuthVector(session, auth_scheme, impi);
+        	if (av == null)
+        		break;
+        	avList.add(av);
         }
         
         return avList;

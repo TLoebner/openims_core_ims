@@ -361,18 +361,18 @@ public class UtilAVP {
             		true, DiameterConstants.Vendor.V3GPP);
             
             switch (av.getAuth_scheme()){
-            case 1:
-            	authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_AKAv1.getName());
-            	break;
-            case 2:
-            	authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_AKAv2.getName());
-            	break;
-            case 3:
-            	authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_MD5.getName());
-            	break;
-            case 4:
-            	authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_Early.getName());
-            	break;
+            	case CxConstants.Auth_Scheme_AKAv1:
+            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_AKAv1.getName());
+            		break;
+            	case CxConstants.Auth_Scheme_AKAv2:
+            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_AKAv2.getName());
+            		break;
+            	case CxConstants.Auth_Scheme_MD5:
+            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_MD5.getName());
+            		break;
+            	case CxConstants.Auth_Scheme_Early:
+            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_Early.getName());
+            		break;
             }
             
             authDataItem.addChildAVP(authScheme);
@@ -392,17 +392,22 @@ public class UtilAVP {
                 		DiameterConstants.Vendor.V3GPP);
                 authorization.setData(av.getSipAuthorization());
                 authDataItem.addChildAVP(authorization);
-
-                AVP confidentialityKey = new AVP(DiameterConstants.AVPCode.IMS_CONFIDENTIALITY_KEY, true, 
-                		DiameterConstants.Vendor.V3GPP);
-                confidentialityKey.setData(av.getConfidentialityityKey());
-                authDataItem.addChildAVP(confidentialityKey);
-
-                AVP integrityKey = new AVP(DiameterConstants.AVPCode.IMS_INTEGRITY_KEY, true, 
-                		DiameterConstants.Vendor.V3GPP);
-                integrityKey.setData(av.getIntegrityKey());
-                authDataItem.addChildAVP(integrityKey);
-
+                
+                if (av.getConfidentialityityKey() != null){
+                	AVP confidentialityKey = new AVP(DiameterConstants.AVPCode.IMS_CONFIDENTIALITY_KEY, true, 
+                			DiameterConstants.Vendor.V3GPP);
+                	confidentialityKey.setData(av.getConfidentialityityKey());
+                	authDataItem.addChildAVP(confidentialityKey);
+                
+                }
+                
+                if (av.getIntegrityKey() != null){
+                	AVP integrityKey = new AVP(DiameterConstants.AVPCode.IMS_INTEGRITY_KEY, true, 
+                			DiameterConstants.Vendor.V3GPP);
+                	integrityKey.setData(av.getIntegrityKey());
+                	authDataItem.addChildAVP(integrityKey);
+                }
+                
                 message.addAVP(authDataItem);
             }
 		}

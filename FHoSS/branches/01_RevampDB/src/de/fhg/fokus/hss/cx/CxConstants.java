@@ -125,8 +125,17 @@ public class CxConstants {
 	public static final short IMPU_user_state_Unregistered = 2;
 	public static final short IMPU_user_state_Auth_Pending = 3;
 	
+	public static final int Auth_Scheme_Unknown = 0;
+	public static final int Auth_Scheme_AKAv1 = 1;
+	public static final int Auth_Scheme_AKAv2 = 2;
+	public static final int Auth_Scheme_MD5 = 4;
+	public static final int Auth_Scheme_Digest = 8;
+	public static final int Auth_Scheme_HTTP_Digest_MD5 = 16;		
+	public static final int Auth_Scheme_Early = 32;
+	public static final int Auth_Scheme_NASS_Bundle = 64;
 
 	public enum AuthScheme{
+		Auth_Scheme_Unknown("Unknown", 0),
 		Auth_Scheme_AKAv1("Digest-AKAv1-MD5", 1),
 		Auth_Scheme_AKAv2("Digest-AKAv2-MD5", 2),
 		Auth_Scheme_MD5("Digest-MD5", 4),
@@ -135,7 +144,7 @@ public class CxConstants {
 		Auth_Scheme_Early("Early-IMS", 32),
 		Auth_Scheme_NASS_Bundle("NASS-Bundle", 64);
 		
-		private final int code;
+		public int code;
 		private String name;
 		
 		private AuthScheme(String name, int code){
