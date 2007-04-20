@@ -564,21 +564,21 @@ error:
  * @param msg - the AAAMessage to print
  * \note This function is taken from DISC http://developer.berlios.de/projects/disc/ 
  */
-void AAAPrintMessage( AAAMessage *msg)
+void AAAPrintMessage(AAAMessage *msg)
 {
 	char    buf[1024];
 	AAA_AVP *avp;
 
 	/* print msg info */
-	DBG("DEBUG: AAA_MESSAGE - %p\n",msg);
-	DBG("\tCode = %u\n",msg->commandCode);
-	DBG("\tFlags = %x\n",msg->flags);
+	LOG(L_INFO, "DEBUG: AAA_MESSAGE - %p\n",msg);
+	LOG(L_INFO, "\tCode = %u\n",msg->commandCode);
+	LOG(L_INFO, "\tFlags = %x\n",msg->flags);
 
 	/*print the AVPs */
 	avp = msg->avpList.head;
 	while (avp) {
 		AAAConvertAVPToString(avp,buf,1024);
-		DBG("\n%s\n",buf);
+		LOG(L_INFO,"\n%s\n",buf);
 		avp=avp->next;
 	}
 }

@@ -218,6 +218,9 @@ int diameter_peer_init(char *cfg_filename)
 	/* init the session */
 	if (!session_init()) goto error;
 	
+	/* init the auth session */
+	if (!auth_session_init()) goto error;
+	
 #ifdef CDP_FOR_SER
 	/* init diameter transactions */
 	trans_init();

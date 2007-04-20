@@ -60,6 +60,8 @@
 #include "diameter.h"
 #include "diameter_ims.h"
 #include "peer.h"
+#include "auth.h"
+//#include "acct.h"
 
 #define NO_SCRIPT	-1
 
@@ -132,6 +134,14 @@ typedef AAAReturnCode (*AAAFreeMessage_f)(
 typedef int (*AAAAddRequestHandler_f)(AAARequestHandler_f *f,void *param);
 typedef int (*AAAAddResponseHandler_f)(AAAResponseHandler_f *f,void *param);
 
+typedef AAAAuthSession* (*AAACreateAuthSession_f)(str peer, str call_id, 
+												 int session_state);
+typedef AAAAuthSession* (*AAAGetAuthSession_f)(str call_id);
+//typedef void (*AAADropAuthSession_f)(AAAAuthSession* auth);
+
+//typedef AAAAcctSession (*AAACreateAcctSession_f)();
+
+typedef void (*AAAPrintMessage_f) (AAAMessage *msg);
 
 struct cdp_binds {
 	AAASendMessage_f AAASendMessage;
@@ -159,6 +169,12 @@ struct cdp_binds {
 	
 	AAAAddRequestHandler_f AAAAddRequestHandler;
 	AAAAddResponseHandler_f AAAAddResponseHandler;
+	
+	AAACreateAuthSession_f AAACreateAuthSession;
+	AAAGetAuthSession_f	AAAGetAuthSession;
+	AAAPrintMessage_f AAAPrintMessage;
+	//AAADropAuthSession_f AAADropAuthSession;
+	//AAACreateAcctSession_f AAACreateAcctSession;
 };
 
 

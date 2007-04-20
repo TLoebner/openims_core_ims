@@ -128,7 +128,11 @@ static cmd_export_t cdp_cmds[] = {
 
 	{"AAAAddRequestHandler",		(cmd_function)AAAAddRequestHandler, 	NO_SCRIPT, 0, 0},
 	{"AAAAddResponseHandler",		(cmd_function)AAAAddResponseHandler,	NO_SCRIPT, 0, 0},
-		
+	
+	{"AAACreateAuthSession",		(cmd_function)AAACreateAuthSession,		NO_SCRIPT, 0, 0},
+	{"AAAGetAuthSession",			(cmd_function)AAAGetAuthSession,		NO_SCRIPT, 0, 0},	
+	//{"AAADropAuthSession",			(cmd_function)AAADropAuthSession,		NO_SCRIPT, 0, 0},	
+	{"AAAPrintMessage",				(cmd_function)AAAPrintMessage,			NO_SCRIPT, 0, 0},
 	{ 0, 0, 0, 0, 0 }
 };
 

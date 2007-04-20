@@ -63,6 +63,7 @@
 
 #include "diameter.h"
 #include "utils.h"
+#include "auth.h"
 
 				/* TRANSACTIONS */
 				
@@ -77,6 +78,9 @@ AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_
 int AAADropTransaction(AAATransaction *trans);
 
 AAASessionId AAACreateSession();
+int generate_sessionID( str *sID, unsigned int end_pad_len);
+
+
 int AAADropSession(AAASessionId *s);
 
 

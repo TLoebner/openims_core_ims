@@ -253,6 +253,8 @@ typedef enum {
 	AVP_Class                         =   25,
 	AVP_Session_Timeout               =   27,
 	AVP_Proxy_State                   =   33,
+	AVP_Event_Timestamp				  =   55,
+	AVP_Acct_Interim_Interval		  =   85,
 	AVP_Framed_Interface_Id           =   96,	
 	AVP_Framed_IPv6_Prefix            =   97,
 	AVP_Host_IP_Address               =  257,
@@ -283,6 +285,12 @@ typedef enum {
 	AVP_Destination_Host              =  293,
 	AVP_Termination_Cause             =  295,
 	AVP_Origin_Realm                  =  296,
+	AVP_Accounting_Record_Type		  =  480,
+	AVP_Accounting_Record_Number      =  485,
+	
+	/* defined in IETF 4006 */
+	AVP_Service_Context_Id			  =  461
+	
 }AAA_AVPCodeNr;
 
 
