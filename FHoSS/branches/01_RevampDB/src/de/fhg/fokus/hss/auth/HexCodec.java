@@ -118,9 +118,9 @@ public class HexCodec
     	if (s_len <= len){
     		for (int i = 0; i < s_len; i++)
     			result[i] = s_byte[i];
-    		for (int i=s_len; i < len; i++){
+    		/*for (int i=s_len; i < len; i++){
     			result[i] = 0;
-    		}
+    		}*/
     		return result;
     	}
     	return null;

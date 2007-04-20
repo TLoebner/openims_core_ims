@@ -46,6 +46,10 @@ package de.fhg.fokus.hss.main;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.diam.DiameterConstants;
+import de.fhg.fokus.hss.sh.op.PNR;
+import de.fhg.fokus.hss.sh.op.PUR;
+import de.fhg.fokus.hss.sh.op.SNR;
+import de.fhg.fokus.hss.sh.op.UDR;
 
 import de.fhg.fokus.hss.cx.op.*;
 /**
@@ -53,60 +57,96 @@ import de.fhg.fokus.hss.cx.op.*;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class Task {
-	public int type;
+	public int interface_type;
+	public int command_code;
 	public boolean isRequest;
 	public String FQDN;
 	public DiameterPeer peer;
 	public DiameterMessage message;
 	
-	public Task (int type, boolean isRequest, String FQDN, DiameterPeer peer, DiameterMessage message){
-		this.type = type;
+	public Task (int interface_type, int command_code, boolean isRequest, String FQDN, DiameterPeer peer, DiameterMessage message){
+		this.interface_type = interface_type;
+		this.command_code = command_code;
 		this.isRequest = isRequest;
 		this.FQDN = FQDN;
 		this.peer = peer;
 		this.message = message;
-		
 	}
 	
 	public DiameterMessage execute (){
 		DiameterMessage response = null;
-		switch (type){
-			case DiameterConstants.Command.LIR:
-				System.out.println("Processing LIR!");
-				response = LIR.processRequest(peer, message);
-				peer.sendMessage(FQDN, response);
-				break;
+		
+		if (interface_type == DiameterConstants.Application.Cx){
+			
+			// Cx commands
+			switch (command_code){
+				case DiameterConstants.Command.LIR:
+					System.out.println("Processing LIR!");
+					response = LIR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
+					break;
 				
-			case DiameterConstants.Command.MAR:
-				System.out.println("Processing MAR!");
-				response = MAR.processRequest(peer, message);
-				peer.sendMessage(FQDN, response);
-				break;
+				case DiameterConstants.Command.MAR:
+					System.out.println("Processing MAR!");
+					response = MAR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
+					break;
 				
-			case DiameterConstants.Command.PPR:
-				if (isRequest){
-					PPR.processAnswer(peer, message);
-					
-				}
-				else{
-					PPR.sendRequest(peer, message);
-				}
-				break;
+				case DiameterConstants.Command.PPR:
+					if (isRequest){
+						PPR.processAnswer(peer, message);
+					}
+					else{
+						PPR.sendRequest(peer, message);
+					}
+					break;
 				
-			case DiameterConstants.Command.RTR:
-				//RTR.sendRequest(peer, )
-				break;
-			case DiameterConstants.Command.SAR:
-				System.out.println("Processing SAR!");
-				response = SAR.processRequest(peer, message);
-				peer.sendMessage(FQDN, response);
-				break;
-			case DiameterConstants.Command.UAR:
-				System.out.println("Processing UAR!");
-				response = UAR.processRequest(peer, message);
-				peer.sendMessage(FQDN, response);
-				break;
+				case DiameterConstants.Command.RTR:
+					//RTR.sendRequest(peer, )
+					break;
+				case DiameterConstants.Command.SAR:
+					System.out.println("Processing SAR!");
+					response = SAR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
+					break;
+				case DiameterConstants.Command.UAR:
+					System.out.println("Processing UAR!");
+					response = UAR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
+					break;
+			}
 		}
+		
+		else if (interface_type == DiameterConstants.Application.Sh){
+			// Sh Commands
+			switch(message.commandCode){
+			
+				case DiameterConstants.Command.UDR:
+					response = UDR.processRequest(peer, message);
+					break;
+			
+				case DiameterConstants.Command.PUR:
+					response = PUR.processRequest(peer, message);
+					break;
+			
+				case DiameterConstants.Command.SNR:
+					response = SNR.processRequest(peer, message);
+					break;
+		
+				case DiameterConstants.Command.PNA:
+					if (isRequest){
+						PNR.processAnswer(message);
+					}
+					else{
+						// send request
+					}
+					break;
+			}
+		}
+		else if (interface_type == DiameterConstants.Application.Zh){
+			// Zh commands
+		}
+		
 		return response;
 	}
 }

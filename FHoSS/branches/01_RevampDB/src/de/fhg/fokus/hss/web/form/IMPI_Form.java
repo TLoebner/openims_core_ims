@@ -54,6 +54,7 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.model.IMPI;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -130,6 +131,12 @@ public class IMPI_Form extends ActionForm implements Serializable{
 /*        if (this.id_imsu == -1){
         	actionErrors.add("id_imsu", new ActionMessage("impi_form.error.id_imsu"));
         }*/
+        
+		int auth_scheme = IMPI.generateAuthScheme(aka1, aka2, md5, digest, http_digest, early, nass_bundle, all);	
+        if ((auth_scheme & default_auth_scheme) == 0){
+        	actionErrors.add("", new ActionMessage(""));
+        }
+        
         if (!(this.aka1 || this.aka2 || this.md5 || this.digest || this.http_digest || this.early || this.nass_bundle || this.all )){
         	actionErrors.add("auth_scheme", new ActionMessage("impi_form.error.auth_scheme"));
         }

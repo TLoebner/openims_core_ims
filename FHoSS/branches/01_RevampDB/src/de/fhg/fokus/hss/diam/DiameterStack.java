@@ -46,9 +46,8 @@ package de.fhg.fokus.hss.diam;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.EventListener;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
-import de.fhg.fokus.diameter.DiameterPeer.transaction.TransactionListener;
-import de.fhg.fokus.hss.cx.Cx;
-import de.fhg.fokus.hss.sh.Sh;
+import de.fhg.fokus.hss.main.HSSContainer;
+import de.fhg.fokus.hss.main.Task;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -66,14 +65,14 @@ public class DiameterStack implements EventListener {
 	}
 	
 	public void recvMessage(String FQDN, DiameterMessage request) {
-		if (request.applicationID == DiameterConstants.Application.Cx){
-			Cx.processCxMessage(diameterPeer, FQDN, request);
+		
+		Task task = new Task(request.applicationID, request.commandCode, true, FQDN, diameterPeer, request);
+		try{
+			HSSContainer.getInstance().tasksQueue.put(task);
+			System.out.println("Added task to queue!");
 		}
-		else if (request.applicationID == DiameterConstants.Application.Sh){
-			Sh.processCxMessage(diameterPeer, FQDN, request);
-		}
-		else if (request.applicationID == DiameterConstants.Application.Zh){
-			System.out.println("\n\nZh message received!");
+		catch(InterruptedException e){
+			e.printStackTrace();
 		}
 	}
 }

@@ -105,7 +105,10 @@ public class AuthenticationVector {
 		this.sipAuthorization = sipAuthorization;
 	}
 	
-	
+	public AuthenticationVector(int auth_scheme, String ip) {
+		this.auth_scheme = auth_scheme;
+		this.ip = ip;
+	}	
 	/**
 	 * constructor 
 	 * @param authenticationScheme 
