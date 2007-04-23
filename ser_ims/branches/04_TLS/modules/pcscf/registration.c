@@ -85,6 +85,9 @@ extern int r_hash_size;								/**< records tables parameters 						*/
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
 extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
 
+extern int   pcscf_tls_port;					/**< PORT for TLS server 						*/
+
+
 
 /**
  * Inserts the Path header.
@@ -165,7 +168,8 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 	
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking for <%d://%.*s:%d>\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port);
-	
+
+
 	if (r_is_integrity_protected(vb->host,vb->port,vb->proto)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
@@ -949,6 +953,77 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 }
 
 
+static str sip_s={"sip:",4};
+/**
+ * Forward a response through the TLS
+ * @param msg - the SIP message to forward
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if no 
+ */
+int P_TLS_relay(struct sip_msg * msg, char * str1, char * str2) 
+{
+	str dst;
+	int len, i;
+	struct ip_addr ip;
+	unsigned short int port;
+	
+	if(msg -> first_line.type == SIP_REQUEST) {		
+		/* on request get the destination from the Request-URI */
+		r_contact *c;
+		struct sip_uri uri;
+		str req_uri = msg -> first_line.u.request.uri;
+		if (msg->rcv.dst_port == pcscf_tls_port) return CSCF_RETURN_FALSE;
+		parse_uri(req_uri.s, req_uri.len, &uri);
+		if(uri.port_no == 0)
+			uri.port_no=5060;
+		
+		c = get_r_contact(uri.host, uri.port_no, uri.proto);
+		
+		if(!c || !c->pinhole || !c->sec_cli || c->sec_cli->sec_type != 0) {
+			LOG(L_DBG, "ERR:"M_NAME":P_TLS_relay: we cannot find the pinhole for contact %.*s. Sorry\n", req_uri.len, req_uri.s);
+			if (c) r_unlock(c->hash);
+			return CSCF_RETURN_FALSE;
+		}	
+		ip = c->pinhole->nat_addr;
+		port = c->pinhole->nat_port;
+		r_unlock(c->hash);	
+	} else {
+		/* on response get the destination from the received addr for the corresponding request */
+		struct sip_msg *req;
+		req = cscf_get_request_from_reply(msg);
+		if(req == NULL){
+			LOG(L_ERR, "ERR:"M_NAME":P_TLS_relay: Cannot get request for the transaction\n");
+			return CSCF_RETURN_FALSE;
+		}
+		if (req->rcv.dst_port != pcscf_tls_port) return CSCF_RETURN_FALSE;
+		ip = req->rcv.src_ip;
+		port = req->rcv.src_port;	
+	}
+
+	len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */+ 14 /*;transport=tls"*/;
+	dst.s = pkg_malloc(len);
+	if (!dst.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_TLS_relay: Error allocating %d bytes\n", len);
+		return CSCF_RETURN_FALSE;
+	}
+	strcpy(dst.s, "sip:");
+	dst.len = 4;		
+	dst.len += sprintf(dst.s + 4, "%d", ip.u.addr[0]);		
+	for(i = 1; i < ip.len; i++)
+		dst.len += sprintf(dst.s + dst.len, ".%d", ip.u.addr[i]);
+	dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", port);
+	
+	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+	msg -> dst_uri = dst;
+		
+	LOG(L_INFO, "INFO:"M_NAME":P_TLS_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
+	return CSCF_RETURN_TRUE;
+
+}
+
+
+
 /**
  * Forward a message through the NAT pinhole
  * @param msg - the SIP message to forward
@@ -1000,14 +1075,14 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 	len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
-		LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
+		LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);
 		return CSCF_RETURN_FALSE;
 	}
 	strcpy(dst.s, "sip:");
 	dst.len = 4;		
 	dst.len += sprintf(dst.s + 4, "%d", ip.u.addr[0]);		
 	for(i = 1; i < ip.len; i++)
-		dst.len += sprintf(dst.s + dst.len, ".%d", ip.u.addr[i]);			
+		dst.len += sprintf(dst.s + dst.len, ".%d", ip.u.addr[i]);
 	dst.len += sprintf(dst.s + dst.len, ":%d", port);
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
@@ -1018,8 +1093,6 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 }
 
 
-
-static str sip_s={"sip:",4};
 /**
  * Forward a response through the IPSec SA
  * @param msg - the SIP message to forward
@@ -1036,7 +1109,7 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	str host;
 
 	if (!pcscf_use_ipsec) return CSCF_RETURN_FALSE;
-
+	
 	if(msg -> first_line.type == SIP_REQUEST) {
 		/* on request, get the destination from the Request-URI */
 		struct sip_uri uri;
@@ -1071,8 +1144,8 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 			proto,host.len,host.s,port);
 		if (c) r_unlock(c->hash);
 		return CSCF_RETURN_FALSE;
-	}					
-
+	}
+	
 	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
@@ -1083,9 +1156,11 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	STR_APPEND(dst,sip_s);
 	STR_APPEND(dst,host);	
 	dst.len += sprintf(dst.s + dst.len, ":%d", c->ipsec->port_us);	
-
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
+
+	r_unlock(c->hash);	
+
 	LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	return CSCF_RETURN_TRUE;
 }

@@ -96,15 +96,24 @@ typedef struct _r_ipsec {
 	str ik;						/**< Integrity Key						*/
 } r_ipsec;
 
+typedef struct _r_sec_cli {
+	str sec;
+	int sec_type;
+	int q_value;
+} r_sec_cli;
+
 /** Registrar Contact Structure */
 typedef struct _r_contact {
 	unsigned int hash;			/**< the hash value 					*/
 	
 	str host;					/**< host of the UE						*/
-	unsigned short port;					/**< port of the UE						*/
+	unsigned short port;		/**< port of the UE						*/
 	char transport;				/**< transport for the UE				*/
 	
 	r_ipsec *ipsec;				/**< IPSec SA information, if any		*/
+	
+	r_sec_cli *sec_cli;		    /**< Security-Client Header				*/
+	int is_registered;			/**< 1 if Client is Registerd			*/
 	
 	str uri;					/**< uri of contact						*/		
 	
@@ -164,7 +173,7 @@ r_contact* update_r_contact(str host,int port,int transport,
 	str *uri,enum Reg_States  *reg_state,int *expires,str **service_route,int *service_route_cnt, r_nat_dest ** pinhole);
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
-	r_ipsec *ipsec);
+	r_ipsec *ipsec, r_sec_cli *sec_cli);
 void del_r_contact(r_contact *c);
 void free_r_contact(r_contact *c);
 

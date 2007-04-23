@@ -61,10 +61,11 @@
 #include "registration.h"
 #include "registrar_storage.h"
 
+int P_Verify_Security(struct sip_msg *req,char *str1, char *str2);
+int P_Is_Fist_Register(struct sip_msg *req,char *str1, char *str2);
+int P_TLS_IPSec_401(struct sip_msg *rpl,char *str1, char *str2);
 
-int P_IPSec_401(struct sip_msg *rpl,char *str1, char *str2);
-
-int P_IPSec_200(struct sip_msg *rpl,char *str1, char *str2);
+int P_TLS_IPSec_200(struct sip_msg *rpl,char *str1, char *str2);
 
 
 void P_drop_ipsec(r_contact *c);

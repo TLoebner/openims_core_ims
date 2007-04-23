@@ -471,6 +471,7 @@ r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States
 	STR_SHM_DUP(c->uri,uri,"new_r_contact");		
 	c->reg_state = reg_state;
 	c->expires = expires;	
+	c->is_registered = 0; //not registered
 		
 	if (service_route_cnt && service_route){
 		c->service_route = shm_malloc(service_route_cnt*sizeof(str));
@@ -605,7 +606,7 @@ r_contact* update_r_contact(str host,int port,int transport,
  */
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
-	r_ipsec *ipsec)
+	r_ipsec *ipsec, r_sec_cli *sec_cli)
 {
 	r_contact *c;
 	
@@ -614,6 +615,7 @@ r_contact* update_r_contact_sec(str host,int port,int transport,
 		if (uri&&reg_state){
 			c = add_r_contact(host,port,transport,*uri,*reg_state,*expires,(str*) 0,0,0);
 			c->ipsec = ipsec;
+			c->sec_cli = sec_cli;
 			r_unlock(c->hash);
 			return c;
 		}
@@ -623,15 +625,29 @@ r_contact* update_r_contact_sec(str host,int port,int transport,
 		// even updating the ipsec info is attack vulnerable, as we kill the old tunnel
 		// but! this only happens when coupled with IP spoofing as else there will be a new contact created
 		
-		if (c->ipsec){
-			P_drop_ipsec(c);
-			free_r_ipsec(c->ipsec);
+		if (ipsec){
+			if (c->ipsec)
+			{
+				P_drop_ipsec(c);
+				free_r_ipsec(c->ipsec);
+			}
+			c->ipsec = ipsec;
 		}
-		c->ipsec = ipsec;		
+		
+		if (sec_cli){
+			if (c->sec_cli)
+			{
+				if (c->sec_cli->sec.len) shm_free(c->sec_cli->sec.s);
+				shm_free(c->sec_cli);
+			}
+			c->sec_cli = sec_cli;
+		}
+		
 		r_unlock(c->hash);
 		return c;
 	}
 }
+
 
 /** 
  * Gets the contact structure with the uri the same as the one given.
@@ -697,6 +713,11 @@ void free_r_contact(r_contact *c)
 	}
 	if (c->ipsec)
 		free_r_ipsec(c->ipsec);
+	if (c->sec_cli)
+	{
+		if (c->sec_cli->sec.len) shm_free(c->sec_cli->sec.s);
+		shm_free(c->sec_cli);
+	}
 	shm_free(c);
 }
 

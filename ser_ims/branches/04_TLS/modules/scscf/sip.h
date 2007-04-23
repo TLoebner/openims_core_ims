@@ -56,6 +56,7 @@
 #ifndef PIS_CSCF_SIP_H
 #define PIS_CSCF_SIP_H
 
+
 #include "../../sr_module.h"
 #include "../../parser/contact/parse_contact.h"
 #include "../../parser/parse_rr.h"
@@ -135,7 +136,10 @@ str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h);
 str cscf_get_authorization(struct sip_msg *msg, struct hdr_field **h);
 str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h);
+str cscf_get_next_security_client(struct sip_msg *msg,struct hdr_field *h_in, struct hdr_field **h);
+
 str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h);
+str cscf_get_next_security_verify(struct sip_msg *msg,struct hdr_field *h_in, struct hdr_field **h);
 
 
 int cscf_del_header(struct sip_msg *msg,struct hdr_field *h);

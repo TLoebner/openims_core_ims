@@ -111,6 +111,8 @@ char* pcscf_ipsec_host="127.0.0.1";			/**< IP for protected server 						*/
 int   pcscf_ipsec_port_c=4061;				/**< PORT for protected client 						*/
 int   pcscf_ipsec_port_s=4061;				/**< PORT for protected server 						*/
 
+int   pcscf_tls_port=5061;					/**< PORT for TLS server 						*/
+
 char* pcscf_ipsec_P_Inc_Req	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Inc_Req.sh";		/**< Req E->P */
 char* pcscf_ipsec_P_Out_Rpl	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Out_Rpl.sh";		/**< Rpl E<-P */
 char* pcscf_ipsec_P_Out_Req	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Out_Req.sh";		/**< Req E<-P */
@@ -193,8 +195,10 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_remove_security_verify() - remove the Security-Verify header
  * - P_remove_security_headers() - remove the Security- headers header
  * <p>
- * - P_IPSec_401() - create IPSec Security Associations for the 401 Unauthorized response to REGISTER
- * - P_IPSec_200() - create/drop IPSec Security Associations for the 200 OK response to REGISTER
+ * - P_Verify_Security() - Verify Register Client Security
+ * - P_Is_Fist_Register() - test if is the first Register
+ * - P_TLS_IPSec_401() - create IPSec Security Associations for the 401 Unauthorized response to REGISTER
+ * - P_TLS_IPSec_200() - create/drop IPSec Security Associations for the 200 OK response to REGISTER
  * - P_is_integrity_protected() - checks if the message was received over a secure channel
  * <p>
  * - P_save_location() - save the contacts for the 200 OK response to REGISTER in the local registrar
@@ -209,6 +213,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * as specified in the Path header at registration
  * - P_remove_route() - remove a route header - deprecated, loose_route() should do the job
  * <p>
+ *	 P_TLS_relay() - forward a message through TLS
  * - P_NAT_relay() - forward a message through a NAT
  * - P_SDP_manipulate() - manipulate a SDP to pipe the media through the RTP Proxy (for NAT)
  * <p>
@@ -246,8 +251,10 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_remove_security_verify",	P_remove_security_verify, 	0, 0, REQUEST_ROUTE},	
 	{"P_remove_security_headers",	P_remove_security_headers, 	0, 0, REQUEST_ROUTE},	
 
-	{"P_IPSec_401",					P_IPSec_401, 				0, 0, ONREPLY_ROUTE},
-	{"P_IPSec_200",					P_IPSec_200,				0, 0, ONREPLY_ROUTE},	
+	{"P_Verify_Security",			P_Verify_Security, 			0, 0, REQUEST_ROUTE},
+	{"P_Is_Fist_Register",			P_Is_Fist_Register, 			0, 0, REQUEST_ROUTE},
+	{"P_TLS_IPSec_401",				P_TLS_IPSec_401, 			0, 0, ONREPLY_ROUTE},
+	{"P_TLS_IPSec_200",				P_TLS_IPSec_200,			0, 0, ONREPLY_ROUTE},	
 	{"P_is_integrity_protected",	P_is_integrity_protected, 	0, 0, REQUEST_ROUTE},	
 	{"P_IPSec_relay", 				P_IPSec_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	
@@ -261,6 +268,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_mobile_terminating",		P_mobile_terminating, 		0, 0, REQUEST_ROUTE},
 	{"P_remove_route",				P_remove_route, 			1, 0, REQUEST_ROUTE},
 	
+	{"P_TLS_relay", 				P_TLS_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_NAT_relay", 				P_NAT_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_SDP_manipulate", 			P_SDP_manipulate, 			0, 0, REQUEST_ROUTE | ONREPLY_ROUTE },
 	
@@ -303,6 +311,7 @@ static cmd_export_t pcscf_cmds[]={
  * - ipsec_host - IP of the IPSec host
  * - ipsec_port_c - client port for IPSec
  * - ipsec_port_s - server port for IPSec
+ * - tls_port - server port for IPSec
  * - ipsec_P_Inc_Req - path to IPSec setting script/executable for Incoming Requests
  * - ipsec_P_Out_Rpl - path to IPSec setting script/executable for Outgoing Replies
  * - ipsec_P_Out_Req - path to IPSec setting script/executable for Outgoing Requests
@@ -348,6 +357,7 @@ static param_export_t pcscf_params[]={
 	{"ipsec_port_c",			INT_PARAM, &pcscf_ipsec_port_c},
 	{"ipsec_port_s", 			INT_PARAM, &pcscf_ipsec_port_s},
 	
+	{"tls_port", 				INT_PARAM, &pcscf_tls_port},
 	
 	{"ipsec_P_Inc_Req", 		STR_PARAM,		&pcscf_ipsec_P_Inc_Req},
 	{"ipsec_P_Out_Rpl", 		STR_PARAM,		&pcscf_ipsec_P_Out_Rpl},
