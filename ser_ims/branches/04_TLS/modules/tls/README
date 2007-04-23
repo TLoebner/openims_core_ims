@@ -5,7 +5,7 @@ Andrei Pelinescu-Onciul
 
    iptelorg GmbH
 
-   Copyright © 2007 iptelorg GmbH
+   Copyright  2007 iptelorg GmbH
    Revision History
    Revision $Revision$ $Date$
      _________________________________________________________________
@@ -177,8 +177,7 @@ Creating CA certificate
         chmod 600 demoCA/private/cakey.pem
 
 3. create CA self-signed certificate
-        openssl req -out demoCA/cacert.pem   -x509 -new -key demoCA/private/cak
-ey.pem
+        openssl req -out demoCA/cacert.pem   -x509 -new -key demoCA/private/cakey.pem
 
 
 Creating a server/client certificate

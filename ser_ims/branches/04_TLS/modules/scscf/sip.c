@@ -1829,6 +1829,44 @@ str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h)
 }
 
 /**
+ * Looks for the next Security-Client header and returns its body.
+ * @param msg - the SIP message
+ * @param h_in - the hdr_field returned from a prev call or NULL for the fist call
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-client body
+ */
+str cscf_get_next_security_client(struct sip_msg *msg,struct hdr_field *h_in, struct hdr_field **h)
+{
+	str sec_cli={0,0};
+	struct hdr_field *hdr;
+	*h = 0;
+	if (!h_in)
+	{
+		if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+			LOG(L_ERR,"ERR:"M_NAME":cscf_get_security_client: Error parsing until header Security-Client: \n");
+			return sec_cli;
+		}
+		hdr = msg->headers;
+	}
+	else 
+	{
+		hdr = h_in->next;
+	}	
+	while(hdr){
+		if (hdr->name.len ==15  &&
+			strncasecmp(hdr->name.s,"Security-Client",15)==0)
+		{
+			*h = hdr;
+			sec_cli = hdr->body;
+			break;
+		}
+		hdr = hdr->next;
+	}
+
+	return sec_cli;	
+}
+
+/**
  * Looks for the Security-Verify header header and returns its body.
  * @param msg - the SIP message
  * @param h - the hdr_field to fill with the result
@@ -1844,6 +1882,47 @@ str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h)
 		return sec_vrf;
 	}
 	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len ==15  &&
+			strncasecmp(hdr->name.s,"Security-Verify",15)==0)
+		{
+			*h = hdr;
+			sec_vrf = hdr->body;
+			break;
+		}
+		hdr = hdr->next;
+	}
+	if (!hdr){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_get_security_verify: Message does not contain Security-Verify header.\n");
+		return sec_vrf;
+	}
+
+	return sec_vrf;	
+}
+
+/**
+ * Looks for the next Security-Verify header header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-verify body
+ */
+str cscf_get_next_security_verify(struct sip_msg *msg,struct hdr_field *h_in, struct hdr_field **h)
+{
+	str sec_vrf={0,0};
+	struct hdr_field *hdr;
+	*h = 0;
+	if (!h_in)
+	{
+		if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+			LOG(L_ERR,"ERR:"M_NAME":cscf_get_security_verify: Error parsing until header Security-Verify: \n");
+			return sec_vrf;
+		}
+		hdr = msg->headers;
+	}
+	else
+	{
+		hdr = h_in->next;
+	}
 	while(hdr){
 		if (hdr->name.len ==15  &&
 			strncasecmp(hdr->name.s,"Security-Verify",15)==0)

@@ -98,6 +98,7 @@ int P_remove_route(struct sip_msg *msg,char *str1,char *str2);
 int P_NAT_relay(struct sip_msg *msg,char *str1,char *str2);
 
 int P_IPSec_relay(struct sip_msg *msg,char *str1,char *str2);
+int P_TLS_relay(struct sip_msg * msg, char * str1, char * str2);
 
 int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2);
 
