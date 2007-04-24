@@ -461,10 +461,12 @@ getCallId(struct sip_msg* msg, str *cid)
 static str
 getFromDomain(char** type, struct sip_msg* msg)
 {
-    static char buf[16] = "unknown"; // buf is here for a reason. don't
-    static str notfound = {buf, 7};  // use the constant string directly!
+    static char buf[14] = "open-ims.test"; // buf is here for a reason. don't
+    static str notfound = {buf, 13};  // use the constant string directly!
     static struct sip_uri puri;
     str uri, did;
+    
+    return notfound;
 
     if (get_from_did(&did, msg) == 0) {
 	*type = "local";
@@ -525,9 +527,11 @@ getToDomain(char** type, struct sip_msg* msg)
 static str
 getDestinationDomain(char** type, struct sip_msg* msg)
 {
-    static char buf[16] = "unknown"; // buf is here for a reason. don't
-    static str notfound = {buf, 7};  // use the constant string directly!
+    static char buf[14] = "open-ims.test"; // buf is here for a reason. don't
+    static str notfound = {buf, 13};  // use the constant string directly!
     str did;
+    
+    return notfound;
 
     if (get_to_did(&did, msg) == 0) {
 	*type = "local";

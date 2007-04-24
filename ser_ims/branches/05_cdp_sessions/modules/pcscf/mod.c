@@ -84,7 +84,10 @@
 #include "dlg_state.h"
 #include "sdp_util.h"
 #include "p_persistency.h"
+#include "release_call.h"
 
+#include "offline_charging.h"                       
+#include "policy_control.h"
 
 MODULE_VERSION
 
@@ -177,6 +180,18 @@ int* registrar_step_version; /**< the step version within the current registrar 
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
+
+
+
+char* pcscf_cdf_peer = "cdf.open-ims.test";	/**< FQDN of Charging Data Function (CDF) for offline charging.*/
+str cdf_peer;
+/* offline charging flag */ 
+unsigned int cf_ietf = 0;					 
+unsigned int cf_3gpp = 0;    
+
+char* pcscf_pdf_peer = "pdf.open-ims.test"; /**< FQDN of Policy Dicision Function (PDF) for policy control */
+str pdf_peer; 
+                        
 
 
 /** 
@@ -281,9 +296,21 @@ static cmd_export_t pcscf_cmds[]={
 
 	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
 	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
+	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
+	
+	/* Following 4 functions are used for offline charging.*/ 
+	{"P_ACR_event",					P_ACR_event,				0, 0, REQUEST_ROUTE|FAILURE_ROUTE|ONREPLY_ROUTE},
+	{"P_ACR_start",					P_ACR_start,				0, 0, REQUEST_ROUTE|FAILURE_ROUTE|ONREPLY_ROUTE},
+	{"P_ACR_interim",				P_ACR_interim,				0, 0, REQUEST_ROUTE|FAILURE_ROUTE|ONREPLY_ROUTE},
+	{"P_ACR_stop",					P_ACR_stop, 				0, 0, REQUEST_ROUTE|FAILURE_ROUTE|ONREPLY_ROUTE},
+	{"P_local_policy",				P_local_policy,				0, 0, REQUEST_ROUTE},
 	
 	{"P_follows_via_list",			P_follows_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
+
+	/* For Gq */
+	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
+	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE},
 	
 	{0, 0, 0, 0, 0}
 }; 
@@ -378,7 +405,17 @@ static param_export_t pcscf_params[]={
 	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
 	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
 	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
+	
 	{"pcscf_db_url",					STR_PARAM, &pcscf_db_url},
+
+   	/* address of cdf */
+	{"cdf_peer",				STR_PARAM,		&pcscf_cdf_peer},
+    {"cflag_ietf",				INT_PARAM,      &cf_ietf},
+    {"cflag_3gpp",				INT_PARAM,		&cf_3gpp},
+    
+    /* address of pdf */
+    {"pdf_peer",				STR_PARAM,		&pcscf_pdf_peer},
+	
 	{0,0,0} 
 };
 
@@ -403,6 +440,9 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
 dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
+
+struct cdp_binds cdpb;            		/**< Structure with pointers to cdp funcs 		*/
+struct offline_charging_flag cflag; 	/**< Charging flag */
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -520,6 +560,17 @@ int fix_parameters()
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
 
+	/* Address initialization of CDF for offline charging */
+	cdf_peer.s = pcscf_cdf_peer;
+	cdf_peer.len = strlen(pcscf_cdf_peer);
+	
+	/* Set offline charging flag */
+	cflag.cf_ietf = (cf_ietf) ? cf_ietf : CF_IETF_DEFAULT;
+	cflag.cf_3gpp = (cf_3gpp) ? cf_3gpp : CF_3GPP_DEFAULT;
+	
+	/* Address initialization of PDF for policy control */
+	pdf_peer.s = pcscf_pdf_peer;
+	pdf_peer.len = strlen(pcscf_pdf_peer);
 	return 1;
 }
 
@@ -537,6 +588,8 @@ db_con_t* create_pcscf_db_connection()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
+	load_cdp_f load_cdp;
+	
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
@@ -652,6 +705,22 @@ static int mod_init(void)
 	if (load_dlg(&dialogb) != 0) {
 		return -1;
 	}
+	
+	/* register callbacks, for offline charging */
+	/* listen for all incoming requests  */
+//	if (tmb.register_tmcb( 0, 0, TMCB_REQUEST_IN, on_invite, 0 ) <= 0) {
+//		LOG(L_ERR,"ERROR:"M_NAME":mod_init: cannot register TMCB_REQUEST_IN "
+//		    "callback\n");
+//		goto error;
+//	}	
+	
+	/* bind to the cdp module */
+	if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module\n");
+		goto error;
+	}
+	if (load_cdp(&cdpb) == -1)
+		goto error;
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;

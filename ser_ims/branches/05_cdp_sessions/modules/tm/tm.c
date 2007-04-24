@@ -16,7 +16,7 @@
  * * his fatherly eye watching over us day and night.*
  * *                                                 *
  * * Please, preserve this codework heritage, as     *
- * * it's unlikely for fresh, juicy pieces of code to  *
+ * * it's unlikely for fresh, juicy pieces of code to*
  * * arise to give him the again the chance to       *
  * * demonstrate his clean-up and improvement skills.*
  * *                                                 *
@@ -126,6 +126,7 @@ static int fixup_on_failure(void** param, int param_no);
 static int fixup_on_reply(void** param, int param_no);
 static int fixup_on_branch(void** param, int param_no);
 static int fixup_t_reply(void** param, int param_no);
+static int fixup_t_cancel(void** param, int param_no);
 
 
 /* init functions */
@@ -192,6 +193,10 @@ static int t_any_timeout(struct sip_msg* msg, char*, char*);
 static int t_any_replied(struct sip_msg* msg, char*, char*);
 static int t_is_canceled(struct sip_msg* msg, char*, char*);
 
+/* t_cancel() used in onreply_route block sends CANCEL to all downstreams and
+ * a specific rely defined to the upstream 
+ */  
+inline static int t_cancel(struct sip_msg* msg, char* str, char* str2);
 
 /* by default the fr timers avps are not set, so that the avps won't be
  * searched for nothing each time a new transaction is created */
@@ -285,6 +290,8 @@ static cmd_export_t cmds[]={
 			REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE|BRANCH_ROUTE },
 	{"t_is_canceled",     t_is_canceled,            0, 0,
 			REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE|BRANCH_ROUTE },
+	{"t_cancel",          t_cancel,               	2, fixup_t_cancel,
+			ONREPLY_ROUTE },
 
 	/* not applicable from the script */
 	{"register_tmcb",      (cmd_function)register_tmcb,     NO_SCRIPT,   0, 0},
@@ -475,6 +482,23 @@ static int fixup_proto_hostport2proxy(void** param, int param_no) {
 	} */
 	return fix_param(FPARAM_STRING, param);
 }
+
+
+
+static int fixup_t_cancel(void** param, int param_no)
+{
+	int ret;
+
+	if (param_no == 1) {
+		ret = fix_param(FPARAM_AVP, param);
+		if (ret <= 0) return ret;
+		return fix_param(FPARAM_INT, param);
+	} else if (param_no == 2) {
+	        return fixup_var_str_12(param, 2);
+	}
+    return 0;
+}
+
 
 
 /***************************** init functions *****************************/
@@ -1227,6 +1251,60 @@ int t_any_replied(struct sip_msg* msg, char* foo, char* bar)
 		}
 	}
 	return -1;
+}
+
+
+/** 
+ * Export t_cancel() and use it in onreply_route[] block to cancel a request 
+ * answered with a non 2xx response.
+ *   
+ */
+inline static int t_cancel(struct sip_msg* msg, char* p1, char* p2)
+{
+	struct cell *t;
+	int code, ret = -1;
+	str reason;
+	char* r;
+
+	LOG(L_INFO, "INF: t_cancel: Cancel request: %d.\n", msg->REQ_METHOD);
+	if (t_check( msg , 0 )==-1) {
+		LOG(L_INFO, "no transaction found!\n");
+		 return -1;
+	}
+	
+	t=get_t();
+	if (!t) {
+		LOG(L_ERR, "ERROR: t_reply: cannot send a t_reply to a message "
+			"for which no T-state has been established\n");
+		return -1;
+	}
+
+	if (get_int_fparam(&code, msg, (fparam_t*)p1) < 0) {
+	    code = default_code;
+	}
+	
+	if (get_str_fparam(&reason, msg, (fparam_t*)p2) < 0) {
+	    reason = default_reason;
+	}
+	
+	r = as_asciiz(&reason);
+	if (r == NULL) r = default_reason.s;
+	
+	/* if called from reply_route, make sure that unsafe version
+	 * is called; we are already in a mutex and another mutex in
+	 * the safe version would lead to a deadlock
+	 */
+ 
+	if (rmode==MODE_ONREPLY) {
+		DBG("DEBUG: t_reply_unsafe called from t_cancel.\n");
+		ret = t_reply(t, t->uas.request, code, r);
+	} else {
+		LOG(L_CRIT, "BUG: t_cancel: entered in unsupported mode\n");
+		ret = -1;
+	}
+
+	if (r) pkg_free(r);
+	return ret;
 }
 
 

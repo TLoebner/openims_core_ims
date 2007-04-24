@@ -51,7 +51,9 @@
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
- 
+ /*
+  * Support of release_call functions added by Alberto Díez
+ */
 #include <time.h>
 
 #include "dlg_state.h"
@@ -59,6 +61,7 @@
 #include "../../mem/shm_mem.h"
 
 #include "sip.h"
+#include "release_call.h"
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -74,6 +77,8 @@ extern str pcscf_record_route_mt_uri;		/**< URI for Record-route terminating	*/
 
 extern str pcscf_name_str;					/**< fixed SIP URI of this P-CSCF 		*/
 
+extern struct tm_binds tmb;
+
 /**
  * Computes the hash for a string.
  * @param call_id - input string
@@ -81,6 +86,7 @@ extern str pcscf_name_str;					/**< fixed SIP URI of this P-CSCF 		*/
  */
 inline unsigned int get_p_dialog_hash(str call_id)
 {
+	if (call_id.len==0) return 0;
 #define h_inc h+=v^(v>>3)
    char* p;
    register unsigned v;
@@ -210,7 +216,8 @@ p_dialog* new_p_dialog(str call_id,str host,int port, int transport)
 	STR_SHM_DUP(d->host,host,"shm");	
 	d->port = port;
 	d->transport = transport;
-				
+	
+	d->is_releasing=0;
 	return d;
 error:
 	if (d){
@@ -278,7 +285,23 @@ int is_p_dialog(str call_id,str host,int port, int transport)
 	d_unlock(hash);
 	return 0;
 }
-
+int is_p_dialog_dir(str call_id,enum p_dialog_direction dir)
+{
+	p_dialog *d=0;
+	unsigned int hash = get_p_dialog_hash(call_id);
+		d_lock(hash);
+		d = p_dialogs[hash].head;
+		while(d){
+			if (d->direction==dir && d->call_id.len == call_id.len &&
+						strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
+				d_unlock(hash);
+				return 1;
+			}
+			d=d->next;
+		}
+		d_unlock(hash);
+		return 0;
+}
 /**
  * Finds and returns a dialog from the hash table.
  * \note Locks the hash slot if ok! Call d_unlock(p_dialog->hash) when you are finished)
@@ -312,6 +335,81 @@ p_dialog* get_p_dialog(str call_id,str host,int port, int transport)
 }
 
 /**
+ * Finds and returns a dialog from the hash table.
+ * @param call_id - call_id of the dialog
+ * @param dir - the direction
+ * @returns the p_dialog* or NULL if not found
+ */
+p_dialog* get_p_dialog_dir(str call_id,enum p_dialog_direction dir)
+{
+	p_dialog *d=0;
+	unsigned int hash = get_p_dialog_hash(call_id);
+
+	d_lock(hash);
+		d = p_dialogs[hash].head;
+		while(d){
+			if (d->direction == dir &&
+				d->call_id.len == call_id.len &&
+				strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
+					return d;
+				}
+			d = d->next;
+		}
+	d_unlock(hash);
+	return 0;
+}
+
+
+/**
+ * Finds and returns a dialog from the hash table.
+ * \note the table should be locked already for the call_id in the parameter
+ * @param call_id - call_id of the dialog
+ * @param dir - the direction
+ * @returns the p_dialog* or NULL if not found
+ */
+p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir)
+{
+	p_dialog *d=0;
+	unsigned int hash = get_p_dialog_hash(call_id);
+
+	d = p_dialogs[hash].head;
+	while(d){
+		if (d->direction == dir &&
+			d->call_id.len == call_id.len &&
+			strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
+				return d;
+			}
+		d = d->next;
+	}
+	return 0;
+}
+/** 
+ * Terminates a dialog - called before del_p_dialog to send out terminatination messages.
+ * @param d - the dialog to terminate
+ * @returns - 1 if the requests were sent and the dialog will be deleted, 0 on error (you will have to delete the
+ * dialog yourself!) 
+ */
+int terminate_p_dialog(p_dialog *d)
+{
+	switch (d->method){
+		case DLG_METHOD_INVITE:
+			if (release_call_p(d,(str){0,0})==-1){
+				
+				del_p_dialog(d);
+			}
+			return 1;
+			break;
+		case DLG_METHOD_SUBSCRIBE:
+			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for SUBSCRIBE dialogs!\n");
+			return 0;
+			break;
+		default:
+			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for method[%d]!\n",d->method);
+			return 0;
+	}
+}
+
+/**
  * Deletes and destroys the dialog from the hash table.
  * \note Must be called with a lock on the dialogs slot
  * @param d - the dialog to delete
@@ -341,6 +439,8 @@ void free_p_dialog(p_dialog *d)
 			shm_free(d->routes[i].s);
 		shm_free(d->routes);
 	}
+	tmb.free_dlg(d->dialog_s);
+	tmb.free_dlg(d->dialog_c);
 	shm_free(d);
 }
 
@@ -358,6 +458,7 @@ void print_p_dialogs(int log_level)
 		d_lock(i);
 			d = p_dialogs[i].head;
 			while(d){
+								
 				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t%d://%.*s:%d\tMet:[%d]\tState:[%d] Exp:[%4d]\n",i,				
 					d->call_id.len,d->call_id.s,
 					d->transport,d->host.len,d->host.s,d->port,
@@ -478,6 +579,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	p_dialog *d;
 	str host;
 	int port,transport;
+	str tag,ruri,uri;
 	
 	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
@@ -505,7 +607,36 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->state = DLG_STATE_INITIAL;
 	d->expires = d_act_time()+60;
 	
-
+	switch(str1[0]) {
+		case 'o':
+		case 'O':
+		case '0':
+				d->direction=DLG_MOBILE_ORIGINATING;
+				break;
+		case 't':
+		case 'T':
+		case '1':
+				d->direction=DLG_MOBILE_TERMINATING;
+				break;
+		default:
+				d->direction=DLG_MOBILE_UNKNOWN;
+	}
+	
+			
+	cscf_get_from_tag(msg,&tag);
+	cscf_get_from_uri(msg,&uri);
+	ruri=cscf_get_identity_from_ruri(msg);
+	
+	
+	tmb.new_dlg_uac(&call_id,
+						&tag,
+						d->first_cseq,&uri,
+						&ruri,
+						&d->dialog_c);
+						
+	tmb.new_dlg_uas(msg,99,&d->dialog_s);
+	
+	
 	d_unlock(d->hash);
 	
 	print_p_dialogs(L_INFO);
@@ -593,6 +724,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str host;
 	int port,transport;
 	int expires;
+	str totag;
 	
 	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
@@ -638,15 +770,23 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			strncasecmp(d->method_str.s,((struct cseq_body *)h->parsed)->method.s,d->method_str.len)==0 &&
 			d->state < DLG_STATE_CONFIRMED){
 			/* reply to initial request */
-			if (response<200){
+			if (response<200 && response >100){
 				save_dialog_routes(msg,str1,d);
 				d->state = DLG_STATE_EARLY;
 				d->expires = d_act_time()+300;
+				// doing this here , sounds logical but makes release_call to break if in early200
+				cscf_get_to_tag(msg,&totag);
+				tmb.update_dlg_uas(d->dialog_s,response,&totag);
+				tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);
 			}else
 			if (response>=200 && response<300){
 				save_dialog_routes(msg,str1,d);
 				d->state = DLG_STATE_CONFIRMED;
 				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+				cscf_get_to_tag(msg,&totag);
+				tmb.update_dlg_uas(d->dialog_s,response,&totag);
+				tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);
+				
 			}else
 				if (response>300){
 					d->state = DLG_STATE_TERMINATED;
@@ -660,7 +800,6 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
-					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 					break;
 				case DLG_METHOD_INVITE:
 					if (req && req->first_line.u.request.method.len==3 &&
@@ -669,7 +808,6 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 						d_unlock(d->hash);				
 						return P_drop_dialog(msg,str1,str2);
 					}
-					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 					break;
 				case DLG_METHOD_SUBSCRIBE:
 //					if (req && req->first_line.u.request.method.len==9 &&
@@ -692,7 +830,8 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					}
 					break;
 			}
-			if (cseq>d->last_cseq) d->last_cseq = cseq;					
+			if (cseq>d->last_cseq) d->last_cseq = cseq;
+			d->expires = d_act_time()+pcscf_dialogs_expiration_time;			
 		}
 	}
 	
@@ -1077,12 +1216,15 @@ void dialog_timer(unsigned int ticks, void* param)
 			while(d){
 				dn = d->next;
 				if (d->expires<=d_time_now) {
-					del_p_dialog(d);
+					
+					if (!terminate_p_dialog(d)) del_p_dialog(d);
+					
 				}						
+
 				d = dn;
 			}
 		d_unlock(i);
 	}
-	//print_p_dialogs(L_ERR);
+	print_p_dialogs(L_INFO);
 }
 
