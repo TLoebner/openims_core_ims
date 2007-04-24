@@ -178,4 +178,11 @@ int cscf_get_from_tag(struct sip_msg* msg, str* tag);
 int cscf_get_to_tag(struct sip_msg* msg, str* tag);
 int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
 
+/*
+ *******************************************************************************
+ * Following functions used for for offline charging
+ *******************************************************************************
+ */
+str cscf_get_sip_method(struct sip_msg *msg);
+
 #endif /* PIS_CSCF_SIP_H */

@@ -345,7 +345,17 @@ static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _o
 	rr_t* last, *p, *t;
 	
 	last = 0;
-
+	
+	/*if the route-set has already been set delete it
+	 * and take it again , or dont do anything
+	 * 
+	 * if (*_rs) return 0;
+	 * 
+	 * this is needed because response2dlg is called with 183 now too
+	 * added by Alberto Díez (April 2007)
+	 * */
+	if (*_rs) shm_free_rr(_rs);
+	
 	ptr = _m->record_route;
 	while(ptr) {
 		if (ptr->type == HDR_RECORDROUTE_T) {
@@ -442,7 +452,11 @@ static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 		return -1;
 	}
 	
-	if (get_contact_uri(_m, &contact) < 0) return -2;
+	if (get_contact_uri(_m, &contact) < 0)
+	{ 
+		LOG(L_ERR, "response2dlg(): Error while geting contact\n");
+		return -2;
+	}
 	if (_d->rem_target.s) {
 		shm_free(_d->rem_target.s);
 		_d->rem_target.s = 0; 
@@ -453,8 +467,11 @@ static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 		_d->dst_uri.s = 0; 
 		_d->dst_uri.len = 0;
 	}
-	if (contact.len && str_duplicate(&_d->rem_target, &contact) < 0) return -3;
-	
+	if (contact.len && str_duplicate(&_d->rem_target, &contact) < 0) 
+	{
+		LOG(L_ERR, "response2dlg(): Error while stablishing remote target\n");
+		return -3;
+	}
 	if (get_to_tag(_m, &rtag) < 0) goto err1;
 	if (rtag.len && str_duplicate(&_d->id.rem_tag, &rtag) < 0) goto err1;
 	
@@ -465,11 +482,13 @@ static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 	if (_d->id.rem_tag.s) shm_free(_d->id.rem_tag.s);
 	_d->id.rem_tag.s = 0;
 	_d->id.rem_tag.len = 0;
+	LOG(L_ERR, "response2dlg(): Error while geting route set\n");
 
  err1:
 	if (_d->rem_target.s) shm_free(_d->rem_target.s);
 	_d->rem_target.s = 0;
 	_d->rem_target.len = 0;
+	LOG(L_ERR, "response2dlg(): Error in totag \n");
 	return -4;
 }
 
@@ -500,6 +519,12 @@ static inline int dlg_new_resp_uac(dlg_t* _d, struct sip_msg* _m)
 		      * Send a request to jan@iptel.org if you need to update
 		      * the structures here
 		      */
+		      if (response2dlg(_m,_d)<0) return -1;
+		      _d->state=DLG_EARLY;
+		      /*Alberto ! I need to have structures updated with a 183!!*/
+		      
+		       if(calculate_hooks(_d)<0) return -2;
+		       
 	} else if ((code >= 200) && (code < 299)) {
 		     /* A final response, update the structures and transit
 		      * into DLG_CONFIRMED
@@ -536,9 +561,22 @@ static inline int dlg_early_resp_uac(dlg_t* _d, struct sip_msg* _m)
 	int code;
 	code = _m->first_line.u.reply.statuscode;	
 
-	if (code < 200) {
+	if (code < 200 && code > 100) {
 		     /* We are in early state already, do nothing
 		      */
+		      if (response2dlg(_m, _d) < 0) 
+		      {
+		      	LOG(L_ERR,"dlg_early_resp_uac : there was a problem processing response!\n");
+		      	return -1;
+		      }
+		      /*Alberto! I need to put response2dlg here because
+		       * i might recieve a 183 and i want to save the data
+		       * there */
+		       if (calculate_hooks(_d) < 0) {
+					LOG(L_ERR, "dlg_new_resp_uac(): Error while calculating hooks\n");
+					return -2;
+				}		
+		      
 	} else if ((code >= 200) && (code <= 299)) {
 		/* Warning - we can handle here response for non-initial request (for
 		 * example UPDATE within early INVITE/BYE dialog) and move into
@@ -633,6 +671,7 @@ static inline int dlg_confirmed_resp_uac(dlg_t* _d, struct sip_msg* _m,
 int dlg_response_uac(dlg_t* _d, struct sip_msg* _m, 
 		target_refresh_t is_target_refresh)
 {
+		
 	if (!_d || !_m) {
 		LOG(L_ERR, "dlg_response_uac(): Invalid parameter value\n");
 		return -1;
@@ -648,7 +687,7 @@ int dlg_response_uac(dlg_t* _d, struct sip_msg* _m,
 
 	case DLG_CONFIRMED: 
 		return dlg_confirmed_resp_uac(_d, _m, is_target_refresh);
-
+		break;
 	case DLG_DESTROYED:
 		LOG(L_DBG, "dlg_response_uac(): Cannot handle destroyed dialog\n");
 		return -2;

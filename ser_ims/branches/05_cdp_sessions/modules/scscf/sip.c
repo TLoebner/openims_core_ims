@@ -2674,3 +2674,28 @@ int cscf_get_from_uri(struct sip_msg* msg,str *local_uri)
 	return 1;
 	
 }
+
+/*
+ *******************************************************************************
+ * Following functions used for for offline charging 
+ *******************************************************************************
+ */
+
+/**
+ * Gets SIP method from a SIP request.
+ *
+ * @param msg - the SIP message
+ * @returns method if msg is a request.
+ */
+str cscf_get_sip_method(struct sip_msg *msg)
+{
+	str method={0,0};
+	
+	if (msg->first_line.type!=SIP_REQUEST) {
+		LOG(L_ERR,"INF:"M_NAME":cscf_get_sip_method: This is not a request.\n");
+	} else {
+		method = msg->first_line.u.request.method;
+	}
+	
+	return method;
+}
