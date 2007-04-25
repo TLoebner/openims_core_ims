@@ -197,6 +197,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_add_path_service_routes",	S_add_path_service_routes,	0,0,REQUEST_ROUTE},
 	{"S_add_service_route",			S_add_service_route,		1,0,REQUEST_ROUTE},
 	{"S_check_visited_network_id",	S_check_visited_network_id,	1, fixup_regex_1 ,REQUEST_ROUTE},
+	{"S_add_p_charging_function_addresses", S_add_p_charging_function_addresses, 0, 0, REQUEST_ROUTE},
 
 	{"S_assign_server",				S_assign_server,			1,0,REQUEST_ROUTE},
 	{"S_assign_server_unreg",		S_assign_server_unreg,		1,0,REQUEST_ROUTE},

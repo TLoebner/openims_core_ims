@@ -681,6 +681,10 @@ int bin_encode_r_public(bin_data *x,r_public *p)
 	ch = p->reg_state;
 	if (!bin_encode_char(x,ch)) goto error;
 	if (!bin_encode_ims_subscription(x,p->s)) goto error;
+	if (!bin_encode_str(x,&(p->ccf1))) goto error;
+	if (!bin_encode_str(x,&(p->ccf2))) goto error;
+	if (!bin_encode_str(x,&(p->ecf1))) goto error;
+	if (!bin_encode_str(x,&(p->ecf2))) goto error;
 	
 	k=0;
 	for(c=p->head;c;c=c->next)
@@ -733,6 +737,12 @@ r_public* bin_decode_r_public(bin_data *x)
 	
 	p->s = bin_decode_ims_subscription(x);
 	if (!p->s) goto error;
+
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->ccf1),&st)) goto error;
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->ccf2),&st)) goto error;
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->ecf1),&st)) goto error;
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->ecf2),&st)) goto error;
+	
 	
 	if (!bin_decode_ushort(x,&k)) goto error;
 	for(i=0;i<k;i++){

@@ -104,6 +104,6 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	
 str Cx_get_destination_host(AAAMessage *msg);	
 str Cx_get_user_data(AAAMessage *msg);	
-str Cx_get_charging_info(AAAMessage *msg);
+int Cx_get_charging_info(AAAMessage *msg,str *ccf1,str *ccf2,str *ecf1,str *ecf2);
 
 #endif /* IS_CSCF_CX_AVP_H */

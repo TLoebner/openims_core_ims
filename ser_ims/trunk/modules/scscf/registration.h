@@ -68,6 +68,8 @@ int S_add_path_service_routes(struct sip_msg *msg,char *str1,char *str2 );
 
 int S_add_service_route(struct sip_msg *msg,char *str1,char *str2 );
 
+int S_add_p_charging_function_addresses(struct sip_msg *msg,char *str1,char *str2 );
+
 int S_check_visited_network_id(struct sip_msg *msg,char *str1,char *str2 );
 
 int S_REGISTER_reply(struct sip_msg *msg, int code,  char *text);

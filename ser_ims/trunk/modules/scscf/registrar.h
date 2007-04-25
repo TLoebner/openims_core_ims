@@ -79,7 +79,7 @@ int S_update_contacts(struct sip_msg *msg,char *str1,char *str2);
 int SAR(struct sip_msg *msg, str realm,str public_identity, str private_identity,
 				int assignment_type,int data_available);
 
-int save_location(struct sip_msg *msg,int assignment_type,str *xml);
+int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str *ccf2,str *ecf1,str *ecf2);
 
 
 int S_lookup(struct sip_msg *msg,char *str1,char *str2);
