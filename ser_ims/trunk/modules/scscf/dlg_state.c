@@ -380,7 +380,7 @@ s_dialog* get_s_dialog_dir_nolock(str call_id,enum s_dialog_direction dir)
 	return 0;
 }
 
-static str Reason={"Reason: SIP ;cause=504 ;text=\"Session Time-out on S-CSCF\"\r\n",59};
+static str Reason={"Reason: SIP ;cause=503 ;text=\"Session Time-out on S-CSCF\"\r\n",59};
 /** 
  * Terminates a dialog - called before del_s_dialog to send out terminatination messages.
  * @param d - the dialog to terminate
@@ -604,8 +604,9 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str call_id;
 	s_dialog *d;
 	str aor;
-	str uri,tag;
-	str ruri;	
+	char buf1[256],buf2[256];
+	str uri,tag,ruri,x;	
+	
 	enum s_dialog_direction dir = get_dialog_direction(str1);
 	
 	if (!find_dialog_aor(msg,dir,&aor)){
@@ -635,8 +636,12 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->expires = d_act_time()+60;
 	
 	cscf_get_from_tag(msg,&tag);
-	cscf_get_from_uri(msg,&uri);
-	ruri=cscf_get_identity_from_ruri(msg);
+	cscf_get_from_uri(msg,&x);
+	uri.len = snprintf(buf1,256,"<%.*s>",x.len,x.s);
+	uri.s = buf1;	
+	x=cscf_get_identity_from_ruri(msg);
+	ruri.len = snprintf(buf2,256,"<%.*s>",x.len,x.s);
+	ruri.s = buf2;
 	 
 	tmb.new_dlg_uac(&call_id,
 						&tag,
@@ -869,7 +874,6 @@ int S_drop_all_dialogs(str aor)
 	for(i=0;i<s_dialogs_hash_size;i++){
 		d_lock(i);
 			d = s_dialogs[i].head;
-			d->expires=d_time_now+60;
 			while(d){
 				dn = d->next;
 				if (d->aor.len == aor.len &&
