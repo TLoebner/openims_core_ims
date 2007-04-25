@@ -157,7 +157,7 @@ dp_config* parse_dp_config(char* filename)
 		goto error;
 	}
 
-	k = strlen(root->name);
+	k = xmlStrlen(root->name);
 	if (k>12) k = 12;
 	if (strncasecmp(root->name,"DiameterPeer",k)!=0){
 		LOG(L_ERR,"ERR:parse_dp_config(): XML Root is not <DiameterPeer>\n");
@@ -195,15 +195,15 @@ dp_config* parse_dp_config(char* filename)
 	for(child = root->children; child; child = child->next)
 		if (child->type == XML_ELEMENT_NODE)
 	{
-		if (strlen(child->name)==4 && strncasecmp(child->name,"Peer",4)==0){
+		if (xmlStrlen(child->name)==4 && strncasecmp(child->name,"Peer",4)==0){
 			//PEER
 			x->peers_cnt++;		
 		}
-		if (strlen(child->name)==8 && strncasecmp(child->name,"Acceptor",8)==0){
+		if (xmlStrlen(child->name)==8 && strncasecmp(child->name,"Acceptor",8)==0){
 			//Acceptor
 			x->acceptors_cnt++;		
 		}
-		if (strlen(child->name)==4 && (strncasecmp(child->name,"Auth",4)==0||
+		if (xmlStrlen(child->name)==4 && (strncasecmp(child->name,"Auth",4)==0||
 			strncasecmp(child->name,"Acct",4)==0)){
 			//Application
 			x->applications_cnt++;		
@@ -234,7 +234,7 @@ dp_config* parse_dp_config(char* filename)
 	for(child = root->children; child; child = child->next)
 		if (child->type == XML_ELEMENT_NODE)
 	{
-		if (strlen(child->name)==4 && strncasecmp(child->name,"Peer",4)==0){
+		if (xmlStrlen(child->name)==4 && strncasecmp(child->name,"Peer",4)==0){
 			//PEER
 			xc = xmlGetProp(child,"FQDN");
 			quote_trim_dup(&(x->peers[x->peers_cnt].fqdn),xc);
@@ -244,7 +244,7 @@ dp_config* parse_dp_config(char* filename)
 			x->peers[x->peers_cnt].port = atoi(xc);						
 			x->peers_cnt++;		
 		}
-		if (strlen(child->name)==8 && strncasecmp(child->name,"Acceptor",8)==0){
+		if (xmlStrlen(child->name)==8 && strncasecmp(child->name,"Acceptor",8)==0){
 			//Acceptor
 			xc = xmlGetProp(child,"bind");			
 			quote_trim_dup(&(x->acceptors[x->acceptors_cnt].bind),xc);			
@@ -252,7 +252,7 @@ dp_config* parse_dp_config(char* filename)
 			x->acceptors[x->acceptors_cnt].port = atoi(xc);						
 			x->acceptors_cnt++;		
 		}
-		if (strlen(child->name)==4 && (strncasecmp(child->name,"Auth",4)==0||
+		if (xmlStrlen(child->name)==4 && (strncasecmp(child->name,"Auth",4)==0||
 			strncasecmp(child->name,"Acct",4)==0)){
 			//Application
 			xc = xmlGetProp(child,"id");			
