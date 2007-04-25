@@ -59,7 +59,8 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../../locking.h"
-
+#include "../tm/dlg.h"
+#include "../tm/tm_load.h"
 
 enum p_dialog_method {
 	DLG_METHOD_OTHER=0,
@@ -72,7 +73,8 @@ enum p_dialog_state {
 	DLG_STATE_INITIAL=1,
 	DLG_STATE_EARLY=2,
 	DLG_STATE_CONFIRMED=3,
-	DLG_STATE_TERMINATED=4
+	DLG_STATE_TERMINATED_ONE_SIDE=4,
+	DLG_STATE_TERMINATED=5	
 };
 
 enum p_dialog_direction {
@@ -81,11 +83,10 @@ enum p_dialog_direction {
 	DLG_MOBILE_UNKNOWN=2
 };
 
-
 typedef struct _p_dialog {
 	unsigned int hash;
 	str call_id;
-//	enum p_dialog_direction direction;
+	enum p_dialog_direction direction; /*Needed to locate dialogs easier in release_call*/
 	
 	str host;					/**< host of the UE						*/
 	unsigned short port;					/**< port of the UE						*/
@@ -101,9 +102,12 @@ typedef struct _p_dialog {
 	enum p_dialog_state state;
 	time_t expires;
 	
-	
-//	dlg_t *dialog;
-	
+	unsigned char is_releasing;			/**< weather this dialog is already being 
+	  										released or not, or its peer, with count on 
+											tries 										*/	
+	dlg_t *dialog_s;  /* dialog as UAS*/
+	dlg_t *dialog_c;  /* dialog as UAC*/
+			
 	struct _p_dialog *next,*prev;	
 } p_dialog;
 
@@ -126,7 +130,11 @@ inline void d_unlock(unsigned int hash);
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
 int is_p_dialog(str call_id,str host,int port, int transport);
+int is_p_dialog_dir(str call_id,enum p_dialog_direction dir);
 p_dialog* get_p_dialog(str call_id,str host,int port, int transport);
+p_dialog* get_p_dialog_dir(str call_id,enum p_dialog_direction dir);
+p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir);
+int terminate_p_dialog(p_dialog *d);
 void del_p_dialog(p_dialog *d);
 void free_p_dialog(p_dialog *d);
 void print_p_dialogs(int log_level);

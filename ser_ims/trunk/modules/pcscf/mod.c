@@ -84,6 +84,7 @@
 #include "dlg_state.h"
 #include "sdp_util.h"
 #include "p_persistency.h"
+#include "release_call.h"
 
 
 MODULE_VERSION
@@ -284,7 +285,7 @@ static cmd_export_t pcscf_cmds[]={
 	
 	{"P_follows_via_list",			P_follows_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
-	
+	{"P_release_call_onreply",		P_release_call_onreply,		1,0,  ONREPLY_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
