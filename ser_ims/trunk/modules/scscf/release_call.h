@@ -62,12 +62,12 @@
 #include "../dialog/dlg_mod.h"
 #include "dlg_state.h"
 
-#define MAX_TIMES_TO_TRY_TO_RELEASE 3
+#define MAX_TIMES_TO_TRY_TO_RELEASE 5
 
 
 
-int release_call(str call_id);
-int release_call_s(s_dialog *d);
+int release_call(str call_id,str reason);
+int release_call_s(s_dialog *d,str reason);
 
 
 #endif /*RELEASE_CALL_H_*/
