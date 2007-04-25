@@ -349,7 +349,7 @@ int SAR(struct sip_msg *msg, str realm, str public_identity, str private_identit
 {
 	AAAMessage *saa;
 	int rc=-1,experimental_rc=-1;
-	str xml={0,0};
+	str xml={0,0},ccf1={0,0},ccf2={0,0},ecf1={0,0},ecf2={0,0};
 		
 	if (realm.len==0){
 		realm = cscf_get_realm_from_uri(private_identity);
@@ -415,9 +415,9 @@ success:
 		drop_auth_userdata(private_identity,public_identity);
 	}
 	
-	
+	Cx_get_charging_info(saa,&ccf1,&ccf2,&ecf1,&ecf2);
 	if (msg){
-		int ret =  save_location(msg,assignment_type,&xml);
+		int ret = save_location(msg,assignment_type,&xml,&ccf1,&ccf2,&ecf1,&ecf2);
 		if (saa) cdpb.AAAFreeMessage(&saa);
 		return ret;
 	}else{
@@ -492,7 +492,7 @@ static int r_add_contact(struct sip_msg *msg,str uri,int expires)
  * @returns CSCF_RETURN_TRUE if ok, CSCF_RETURN_FALSE on error or CSCF_RETURN_BREAK on response sent out
  */
 static inline int update_contacts(struct sip_msg* msg, int assignment_type,
-	 unsigned char is_star, ims_subscription **s, str* ua,str *path)
+	 unsigned char is_star, ims_subscription **s, str* ua,str *path, str *ccf1,str *ccf2,str *ecf1,str *ecf2)
 {
 	int i,j,s_used=0;
 	r_public *p;
@@ -525,7 +525,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				for(j=0;j<(*s)->service_profiles[i].public_identities_cnt;j++){
 					pi = &((*s)->service_profiles[i].public_identities[j]);
 					if (!pi->barring){
-						if (!(p=update_r_public(pi->public_identity,&reg_state,s))){
+						if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
 							LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
 								pi->public_identity.len,pi->public_identity.s);
 							goto error;
@@ -565,7 +565,8 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
 				goto error;
 			}
-			if (!(p=get_r_public(public_identity))){
+			//if (!(p=get_r_public(public_identity))){
+			if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: ReRegistration error as <%.*s> not found in registrar\n",
 					public_identity.len,public_identity.s);
 				goto error;
@@ -602,7 +603,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
 				goto error;
 			}
-			p=update_r_public(public_identity,0,s);
+			p=update_r_public(public_identity,0,s,ccf1,ccf2,ecf1,ecf2);
 			if (!p){
 //				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
 //					public_identity.len,public_identity.s);
@@ -649,7 +650,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				for(j=0;j<(*s)->service_profiles[i].public_identities_cnt;j++){
 					pi = &((*s)->service_profiles[i].public_identities[j]);
 					if (!pi->barring){
-						if (!(p=update_r_public(pi->public_identity,&reg_state,s))){
+						if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
 							LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
 								pi->public_identity.len,pi->public_identity.s);
 							goto error;
@@ -769,7 +770,7 @@ error:
  * @param xml - the user data as received in the SAA
  * @returns CSCF_RETURN_TRUE if ok, CSCF_RETURN_FALSE on error or CSCF_RETURN_BREAK on response sent out
  */
-int save_location(struct sip_msg *msg,int assignment_type,str *xml)
+int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str *ccf2,str *ecf1,str *ecf2)
 {
 	ims_subscription *s=0,*s_copy=0;
 	contact_t *ci;
@@ -852,7 +853,7 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml)
 		assignment_type==AVP_IMS_SAR_RE_REGISTRATION)
 		if (!insert_p_associated_uri(msg,s)) goto error;
 	
-	result = update_contacts(msg,assignment_type, b->star,  &s, &ua,&path); 
+	result = update_contacts(msg,assignment_type, b->star,  &s, &ua,&path,ccf1,ccf2,ecf1,ecf2); 
 
 	if (path.s) pkg_free(path.s);
 	return result;
@@ -871,7 +872,7 @@ error:
  */
 int S_update_contacts(struct sip_msg *msg,char *str1,char *str2)
 {
-	return save_location(msg, -1,0);
+	return save_location(msg, -1,0,0,0,0,0);
 }
 
 str route_hdr1={"Route: ",7};

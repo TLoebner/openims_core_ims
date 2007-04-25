@@ -316,6 +316,7 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 	int i,j;
 	ppa_msg	= cdpb.AAACreateResponse(ppr);
 	r_public *pu;
+	str ccf1,ccf2,ecf1,ecf2;
 	
 	if((ppr_data=Cx_get_user_data(ppr)).len != 0){
 		LOG(L_INFO,"INFO:"M_NAME":Cx_PPA(): Received a User_Data PPR!\n");
@@ -323,16 +324,18 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 		print_user_data(L_ALERT,imss);
 		
 		for(i=0;i<imss->service_profiles_cnt;i++)
-			for(j=0;j<imss->service_profiles[i].public_identities_cnt;j++){
+			for(j=0;j<imss->service_profiles[i].public_identities_cnt;j++){				
 				pu = update_r_public(imss->service_profiles[i].public_identities[i].public_identity,
-					0,&imss);
+					0,&imss,0,0,0,0);
 				if (!pu) continue;
 				r_unlock(pu->hash);
 			}			
 	}
 	else{
-		ppr_data=Cx_get_charging_info(ppr);
-		LOG(L_INFO,"INFO:"M_NAME":Cx_PPA(): Received a Charging Info PPR\n");
+		if (Cx_get_charging_info(ppr,&ccf1,&ccf2,&ecf1,&ecf2)){
+			LOG(L_INFO,"INFO:"M_NAME":Cx_PPA(): Received a Charging Info PPR - NOT IMPLEMENTED\n");
+			//TODO find all r_public that should be updated and update
+		}
 	}	
 	
 	Cx_add_result_code(ppa_msg,DIAMETER_SUCCESS);

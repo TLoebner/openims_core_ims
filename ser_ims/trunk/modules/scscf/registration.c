@@ -239,6 +239,94 @@ int S_add_service_route(struct sip_msg *msg,char *str1,char *str2 )
 	return CSCF_RETURN_TRUE;
 }
 
+static str s_p_charging_function_addresses_s = {"P-Charging-Function-Addresses:",30};
+static str s_p_charging_function_addresses_1 = {" ccf=",5};
+static str s_p_charging_function_addresses_2 = {" ecf=",5};
+static str s_p_charging_function_addresses_3 = {";",1};
+static str s_p_charging_function_addresses_e = {"\r\n",2};
+/**
+ * Copies the P-Charging-Function-Addresses header with the saved CF values in the registrar.
+ * @param msg - the SIP REGISTER message to which reply to append
+ * @param str1 - no used
+ * @param str2 - no used
+ * @returns #CSCF_RETURN_TRUE on success or #CSCF_RETURN_FALSE if not added
+ */
+int S_add_p_charging_function_addresses(struct sip_msg *msg,char *str1,char *str2 )
+{
+	str hdr={0,0};
+	int ccnt=0,ecnt=0;
+	str public_identity;	
+	r_public *p=0;
+	int ret = CSCF_RETURN_FALSE;
+	
+	public_identity = cscf_get_public_identity(msg);	
+	LOG(L_INFO,"DBG:"M_NAME":S_add_p_charging_function_addresses: Looking for <%.*s>\n",public_identity.len,public_identity.s);
+	p = get_r_public(public_identity);
+	if (!p) {
+		LOG(L_INFO,"DBG:"M_NAME":S_add_p_charging_function_addresses: No entry in registrar for <%.*s>\n",public_identity.len,public_identity.s);
+		goto done;
+	}
+	
+	ccnt = (p->ccf1.len!=0) + (p->ccf2.len!=0);
+	ecnt = (p->ecf1.len!=0) + (p->ecf2.len!=0);   	
+	if (!(ccnt+ecnt)){
+		LOG(L_INFO,"DBG:"M_NAME":S_add_p_charging_function_addresses: <%.*s> has no charging functions storred \n",public_identity.len,public_identity.s);
+		goto done;
+	}			
+	
+	hdr.len = s_p_charging_function_addresses_s.len + 
+			  s_p_charging_function_addresses_1.len * ccnt + p->ccf1.len + p->ccf2.len +
+			  s_p_charging_function_addresses_2.len * ecnt + p->ecf1.len + p->ecf2.len +
+			  s_p_charging_function_addresses_3.len * (ccnt+ecnt) +			  
+			  s_p_charging_function_addresses_e.len;
+	
+	hdr.s = pkg_malloc(hdr.len);
+	if (!hdr.s){
+		LOG(L_ERR,"ERR:"M_NAME":S_add_p_charging_function_addresses: Error allocating %d bytes\n",hdr.len);
+		goto done;
+	}		
+	hdr.len = 0;
+	STR_APPEND(hdr,s_p_charging_function_addresses_s);
+	ccnt = 0;
+	if (p->ccf1.len) {
+		STR_APPEND(hdr,s_p_charging_function_addresses_1);
+		STR_APPEND(hdr,p->ccf1);		
+		ccnt++;		
+	} 
+	if (p->ccf2.len) {
+		if (ccnt) STR_APPEND(hdr,s_p_charging_function_addresses_3);
+		STR_APPEND(hdr,s_p_charging_function_addresses_1);
+		STR_APPEND(hdr,p->ccf2);		
+		ccnt++;		
+	} 
+	if (p->ecf1.len) {
+		if (ccnt) STR_APPEND(hdr,s_p_charging_function_addresses_3);
+		STR_APPEND(hdr,s_p_charging_function_addresses_2);
+		STR_APPEND(hdr,p->ecf1);		
+		ccnt++;		
+	} 
+	if (p->ecf2.len) {
+		if (ccnt) STR_APPEND(hdr,s_p_charging_function_addresses_3);
+		STR_APPEND(hdr,s_p_charging_function_addresses_2);
+		STR_APPEND(hdr,p->ecf2);		
+		ccnt++;		
+	} 
+	
+	STR_APPEND(hdr,s_p_charging_function_addresses_e);
+	
+	if (!cscf_add_header_rpl(msg,&hdr)) {
+		LOG(L_ERR,"ERR:"M_NAME":S_add_p_charging_function_addresses: Error adding header <%.*s>\n",hdr.len,hdr.s);
+		goto done;
+	}
+	ret = CSCF_RETURN_TRUE;
+	
+done:	
+	if (hdr.s) pkg_free(hdr.s);
+	if (p) r_unlock(p->hash);
+	return ret;
+}
+
+
 /**
  * Replies to a REGISTER and also adds the need headers
  * Path and Service-Route are added.

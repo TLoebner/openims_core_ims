@@ -177,7 +177,7 @@ enum {
 	AVP_IMS_Reason_Info									= 617,
 	AVP_IMS_Charging_Information						= 618,
 	AVP_IMS_Primary_Event_Charging_Function_Name		= 619,
-	AVP_IMS_Secodary_Event_Charging_Function_Name		= 620,
+	AVP_IMS_Secondary_Event_Charging_Function_Name		= 620,
 	AVP_IMS_Primary_Charging_Collection_Function_Name	= 621,
 	AVP_IMS_Secondary_Charging_Collection_Function_Name	= 622,
 	AVP_IMS_User_Authorization_Type						= 623,

@@ -687,14 +687,34 @@ r_public* add_r_public(str aor,enum Reg_States reg_state,ims_subscription *s)
  * @param s - the new subscription attached, NULL if no update necessary
  * @returns the update r_public or NULL on error
  */
-r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **s)
+r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **s,
+	str *ccf1, str *ccf2, str *ecf1, str *ecf2)
 {
 	r_public *p;
 
 	p = get_r_public(aor);
 	if (!p){
-		if (reg_state && *reg_state && *reg_state!=NOT_REGISTERED && s)
-			return add_r_public(aor,*reg_state,*s);
+		if (reg_state && *reg_state && *reg_state!=NOT_REGISTERED && s){
+			p = add_r_public(aor,*reg_state,*s);
+			if (!p) return p;			
+			if (ccf1) {
+				if (p->ccf1.s) shm_free(p->ccf1.s);
+				STR_SHM_DUP(p->ccf1,*ccf1,"SHM CCF1");
+			}
+			if (ccf2) {
+				if (p->ccf2.s) shm_free(p->ccf2.s);
+				STR_SHM_DUP(p->ccf2,*ccf2,"SHM CCF2");
+			}
+			if (ecf1) {
+				if (p->ecf1.s) shm_free(p->ecf1.s);
+				STR_SHM_DUP(p->ecf1,*ecf1,"SHM ECF1");
+			}
+			if (ecf2) {
+				if (p->ecf2.s) shm_free(p->ecf2.s);
+				STR_SHM_DUP(p->ecf2,*ecf2,"SHM ECF2");
+			}
+			return p;
+		}
 		else return 0;
 	}else{
 		if (reg_state) p->reg_state = *reg_state;
@@ -712,6 +732,22 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 			lock_get(p->s->lock);
 				p->s->ref_count++;
 			lock_release(p->s->lock);
+		}
+		if (ccf1) {
+			if (p->ccf1.s) shm_free(p->ccf1.s);
+			STR_SHM_DUP(p->ccf1,*ccf1,"SHM CCF1");
+		}
+		if (ccf2) {
+			if (p->ccf2.s) shm_free(p->ccf2.s);
+			STR_SHM_DUP(p->ccf2,*ccf2,"SHM CCF2");
+		}
+		if (ecf1) {
+			if (p->ecf1.s) shm_free(p->ecf1.s);
+			STR_SHM_DUP(p->ecf1,*ecf1,"SHM ECF1");
+		}
+		if (ecf2) {
+			if (p->ecf2.s) shm_free(p->ecf2.s);
+			STR_SHM_DUP(p->ecf2,*ecf2,"SHM ECF2");
 		}
 		return p;
 	}
@@ -813,6 +849,11 @@ void free_r_public(r_public *p)
 			free_user_data(p->s);
 		}else lock_release(p->s->lock);
 	}
+	if (p->ccf1.s) shm_free(p->ccf1.s);
+	if (p->ccf2.s) shm_free(p->ccf2.s);
+	if (p->ecf1.s) shm_free(p->ecf1.s);
+	if (p->ecf2.s) shm_free(p->ecf2.s);
+	
 	c = p->head;
 	while(c){
 		n = c->next;
@@ -851,6 +892,11 @@ void print_r(int log_level)
 			while(p){
 				LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] P: <"ANSI_BLUE"%.*s"ANSI_GREEN"> R["ANSI_MAGENTA"%2d"ANSI_GREEN"] Early-IMS: <"ANSI_YELLOW"%.*s"ANSI_GREEN"> \n",i,
 					p->aor.len,p->aor.s,p->reg_state,p->early_ims_ip.len,p->early_ims_ip.s);
+				
+				if (p->ccf1.len) LOG(log_level,ANSI_GREEN"INF:"M_NAME":         CCF1: <"ANSI_MAGENTA"%.*s"ANSI_GREEN"> CCF2: <"ANSI_MAGENTA"%.*s"ANSI_GREEN"> \n",
+					p->ccf1.len,p->ccf1.s,p->ccf2.len,p->ccf2.s);
+				if (p->ecf1.len) LOG(log_level,ANSI_GREEN"INF:"M_NAME":         ECF1: <"ANSI_MAGENTA"%.*s"ANSI_GREEN"> ECF2: <"ANSI_MAGENTA"%.*s"ANSI_GREEN"> \n",
+					p->ecf1.len,p->ecf1.s,p->ecf2.len,p->ecf2.s);
 					
 				c = p->head;
 				while(c){

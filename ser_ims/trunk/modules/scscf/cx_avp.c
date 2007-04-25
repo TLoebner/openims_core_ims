@@ -913,10 +913,41 @@ inline str Cx_get_user_data(AAAMessage *msg)
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline str Cx_get_charging_info(AAAMessage *msg)
-{	
-	return Cx_get_avp(msg,
+inline int Cx_get_charging_info(AAAMessage *msg,str *ccf1,str *ccf2,str *ecf1,str *ecf2)
+{		
+	AAA_AVP_LIST list;
+	AAA_AVP *avp;
+	str grp;
+	grp = Cx_get_avp(msg,
 		AVP_IMS_Charging_Information,
 		IMS_vendor_id_3GPP,
 		__FUNCTION__);
+	if (!grp.s) return 0;
+
+	list = cdpb.AAAUngroupAVPS(grp);
+	
+	if (ccf1){
+		avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Primary_Charging_Collection_Function_Name,
+			IMS_vendor_id_3GPP,0);
+		if (avp) *ccf1 = avp->data;
+	}		
+	if (ccf2){
+		avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Secondary_Charging_Collection_Function_Name,
+			IMS_vendor_id_3GPP,0);
+		if (avp) *ccf2 = avp->data;
+	}		
+	if (ecf1){
+		avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Primary_Event_Charging_Function_Name,
+			IMS_vendor_id_3GPP,0);
+		if (avp) *ecf1 = avp->data;
+	}		
+	if (ecf2){
+		avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Secondary_Event_Charging_Function_Name,
+			IMS_vendor_id_3GPP,0);
+		if (avp) *ecf2 = avp->data;
+	}		
+		
+	cdpb.AAAFreeAVPList(&list);
+	return 1;		
+		
 }

@@ -114,6 +114,7 @@ typedef struct _r_public {
 	str early_ims_ip;			/**< IP Address for Early-IMS Auth		*/
 	enum Reg_States reg_state;	/**< registration state					*/
 	ims_subscription *s;		/**< subscription to which it belongs 	*/
+	str ccf1,ccf2,ecf1,ecf2;	/**< charging functions					*/
 
 	r_contact *head,*tail;		/**< list of contacts					*/
 	r_subscriber *shead,*stail;	/**< list of subscribers attached		*/
@@ -172,7 +173,8 @@ r_public* get_r_public(str aor);
 int get_r_public_expires(str aor);
 r_public* get_r_public_nolock(str aor);
 r_public* add_r_public(str aor,enum Reg_States reg_state,ims_subscription *s);
-r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **s);
+r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **s,
+	str *ccf1, str *ccf2, str *ecf1, str *ecf2);
 void r_public_expire(str public_id);
 void r_private_expire(str private_id);
 void del_r_public(r_public *p);
