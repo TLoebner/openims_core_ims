@@ -353,7 +353,7 @@ int peer_connect(peer *p)
 	int pid;
 	unsigned char servip[4];
 	struct sockaddr_in servaddr;
-	unsigned int option;
+	unsigned int option = 1;
 	struct hostent *host=0;
 
 	host = gethostbyname(p->fqdn.s);
