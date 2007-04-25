@@ -87,6 +87,9 @@ int bin_encode_p_dialog(bin_data *x,p_dialog *d)
 	
 	if (!bin_encode_str(x,&(d->call_id))) goto error;
 	
+	c = d->direction;
+	if (!bin_encode_uchar(x,c)) goto error;
+	
 	if (!bin_encode_str(x,&(d->host))) goto error;
 	if (!bin_encode_ushort(x,d->port)) goto error;
 	
@@ -108,6 +111,10 @@ int bin_encode_p_dialog(bin_data *x,p_dialog *d)
 	if (!bin_encode_uchar(x,c)) goto error;	
 
 	if (!bin_encode_time_t(x,d->expires)) goto error;		
+	
+	if (!bin_encode_uchar(x,d->is_releasing)) goto error;
+	if (!bin_encode_dlg_t(x,d->dialog_c)) goto error;	
+	if (!bin_encode_dlg_t(x,d->dialog_s)) goto error;
 	
 	return 1;
 error:
@@ -137,10 +144,13 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->call_id),&s)) goto error;
 
+	if (!bin_decode_uchar(x,	&c)) goto error;
+	d->direction = c;
+
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->host),&s)) goto error;
 	if (!bin_decode_ushort(x,	&d->port)) goto error;
 	
-	if (!bin_decode_char(x,	&c)) goto error;
+	if (!bin_decode_uchar(x,	&c)) goto error;
 	d->transport = c;
 
 	if (!bin_decode_ushort(x,	&d->routes_cnt)) goto error;
@@ -166,6 +176,10 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	d->state = c;
 	
 	if (!bin_decode_time_t(x,	&d->expires)) goto error;
+	
+	if (!bin_decode_uchar(x, &d->is_releasing)) goto error;
+	if (!bin_decode_dlg_t(x,&(d->dialog_c))) goto error;
+	if (!bin_decode_dlg_t(x,&(d->dialog_s))) goto error;
 	
 	d->hash = get_p_dialog_hash(d->call_id);		
 	
