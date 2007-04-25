@@ -63,7 +63,6 @@
 #include "sip.h"
 #include "release_call.h"
 
-
 extern struct tm_binds tmb;
 
 int s_dialogs_hash_size;						/**< size of the dialog hash table 					*/
@@ -381,6 +380,7 @@ s_dialog* get_s_dialog_dir_nolock(str call_id,enum s_dialog_direction dir)
 	return 0;
 }
 
+static str Reason={"Reason: SIP ;cause=504 ;text=\"Session Time-out on S-CSCF\"\r\n",59};
 /** 
  * Terminates a dialog - called before del_s_dialog to send out terminatination messages.
  * @param d - the dialog to terminate
@@ -391,7 +391,7 @@ int terminate_s_dialog(s_dialog *d)
 {
 	switch (d->method){
 		case DLG_METHOD_INVITE:
-			if (release_call_s(d)==-1){
+			if (release_call_s(d,Reason)==-1){
 				//dialog has expired and not confirmed
 				del_s_dialog(d);
 			}
@@ -869,6 +869,7 @@ int S_drop_all_dialogs(str aor)
 	for(i=0;i<s_dialogs_hash_size;i++){
 		d_lock(i);
 			d = s_dialogs[i].head;
+			d->expires=d_time_now+60;
 			while(d){
 				dn = d->next;
 				if (d->aor.len == aor.len &&

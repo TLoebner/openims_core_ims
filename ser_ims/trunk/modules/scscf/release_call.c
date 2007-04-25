@@ -68,16 +68,26 @@ extern str scscf_record_route_mt_uri;
 
 
 static str bye_s={"BYE",3};
-str bye_headers_s={"Content-length: 0\r\n",19};
+static str default_reason_s={"Reason: SIP ;cause=503 ;text=\"Session Terminated\"\r\n",51};
 /**
  * This function sends a bye in the specified dialog 
  * the callback function and parameter are the specified arguments
  * @param d - the dlg_t to send it on
- * @param cbp the callback function
+ * @param cb -the callback function
+ * @param dir -the direction to identify this s_dialog
+ * @param reason - a reason header to include - see the 
  * @returns 1 on success or 0 on failure
  */
-int send_bye(dlg_t *d,transaction_cb cb,enum s_dialog_direction dir)
+int send_bye(dlg_t *d,transaction_cb cb,enum s_dialog_direction dir,str reason)
 {
+	str bye_header_s;
+	if (reason.len!=0){
+		bye_header_s.s=reason.s;
+		bye_header_s.len=reason.len;
+	} else {
+		bye_header_s.s=default_reason_s.s;
+		bye_header_s.len=default_reason_s.len;
+	}
 				
 	if(d!=NULL)	{
 		enum s_dialog_direction *cbp;
@@ -87,7 +97,7 @@ int send_bye(dlg_t *d,transaction_cb cb,enum s_dialog_direction dir)
 			return 0;
 		}		
 		*cbp = dir;
-		dialogb.request_inside(&bye_s, &bye_headers_s, 0, d,cb,cbp);
+		dialogb.request_inside(&bye_s, &bye_header_s, 0, d,cb,cbp);
 		return 1;
 	}	
 	return 0;
@@ -113,17 +123,14 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 	dir = *((enum s_dialog_direction *) *(ps->param));
 	shm_free(*ps->param);
 	*ps->param = 0;		
-
-//	if (ps->rpl && ps->rpl!=(void*) 0xffffffff) call_id = cscf_get_call_id(ps->rpl,0);
-//	else {
-		call_id = t->callid;
-		call_id.s+=9;
-		call_id.len-=11;
-//	}
+		
+	call_id = t->callid;
+  	call_id.s+=9;
+  	call_id.len-=11;
 
 	LOG(L_INFO,"DBG:"M_NAME":bye_response(): Received a %d response to BYE for a call release for <%.*s> DIR[%d].\n",
 		ps->code, call_id.len,call_id.s,dir);
-	
+			
 	d = get_s_dialog_dir(call_id,dir);
 	if (!d)	{
 		LOG(L_ERR,"ERR:"M_NAME":bye_response(): Received a BYE response for a call release but there is no dialog for <%.*s> DIR[%d].\n",
@@ -131,9 +138,10 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 		return;
 	}
 	
-	if (ps->code>=200 && ps->code<=300)	{
+	if (ps->code>=200 && ps->code<=300){
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
+			LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a response to second BYE. Dialog is dropped.\n");
 			del_s_dialog(d);
 			d_unlock(hash);			 
 		} else {
@@ -143,8 +151,7 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 		}		
 	} 
 	else if(ps->code>300) {
-		LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a %d response to BYE for a call release. Dialog is dropped anyway.\n",
-			ps->code);
+		LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a %d response to BYE for a call release. Dialog is dropped.\n",ps->code);
 		hash=d->hash;
 		del_s_dialog(d);
 		d_unlock(hash);
@@ -193,9 +200,10 @@ void alter_dialog_route_set(dlg_t *d,enum s_dialog_direction dir)
  * Given a call-id, locate if its terminating,orginating or both
  * release the dialog involved and drop the dialog
  * @param callid - the Call-ID to release
+ * @param reason - the Reason header to include in messages
  * @returns 0 on error, 1 on success  
  */ 
-int release_call(str callid)
+int release_call(str callid,str reason)
 {
 	s_dialog *d=0;
 	unsigned int hash;
@@ -204,13 +212,13 @@ int release_call(str callid)
 	d = get_s_dialog_dir(callid,DLG_MOBILE_ORIGINATING);
 	if (d) {				
 		hash = d->hash;
-		if (release_call_s(d)>0) res = 1;		
+		if (release_call_s(d,reason)>0) res = 1;		
 		goto done;		
 	}
 	d = get_s_dialog_dir(callid,DLG_MOBILE_TERMINATING);
 	if (d) {				
 		hash = d->hash;
-		if (release_call_s(d)>0) res = 1;		
+		if (release_call_s(d,reason)>0) res = 1;		
 		goto done;
 	} 
 	
@@ -229,9 +237,10 @@ done:
  * This function is already called with a lock in d
  * after returning d should be unlocked.
  * @param d - pointer to the s_dialog structure
+ * @param reason - Reason header to include
  * @returns -1 if dialog the dialog is not confirmed, 0 on error or 1 on success
  */
-int release_call_s(s_dialog *d)
+int release_call_s(s_dialog *d,str reason)
 {
 	enum s_dialog_direction odir;
 	s_dialog *o;
@@ -276,8 +285,8 @@ int release_call_s(s_dialog *d)
 		
 		/*first generate the bye for called user*/
 		/*then generate the bye for the calling user*/
-		send_bye(d->dialog_c,bye_response,d->direction);
-		send_bye(d->dialog_s,bye_response,d->direction);
+		send_bye(d->dialog_c,bye_response,d->direction,reason);
+		send_bye(d->dialog_s,bye_response,d->direction,reason);
 		
 		/*the dialog is droped by the callback-function when recieves the two replies */
 	}	 
