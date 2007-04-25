@@ -138,7 +138,7 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 		return;
 	}
 	
-	if (ps->code>=200 && ps->code<=300){
+	if (ps->code>=200){
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
 			LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a response to second BYE. Dialog is dropped.\n");
@@ -149,13 +149,7 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 			d->state=DLG_STATE_TERMINATED_ONE_SIDE;
 			d_unlock(hash);
 		}		
-	} 
-	else if(ps->code>300) {
-		LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a %d response to BYE for a call release. Dialog is dropped.\n",ps->code);
-		hash=d->hash;
-		del_s_dialog(d);
-		d_unlock(hash);
-	}	
+	} 	
 }
 
 
