@@ -4,11 +4,13 @@
 package de.fhg.fokus.hss.main;
 
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Set;
 
 import org.hibernate.Query;
 import org.hibernate.Session;
+import org.xml.sax.InputSource;
 
 import de.fhg.fokus.hss.auth.HexCodec;
 import de.fhg.fokus.hss.db.model.IMPI;
@@ -20,6 +22,8 @@ import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.sh.data.ShData;
+import de.fhg.fokus.hss.sh.data.ShDataParser;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -35,6 +39,21 @@ public class Tester extends Thread{
 		}
 		System.out.println("Tester class!");
 		
+		
+		
+		InputSource input;// = new InputSource(new FileReader("files//online1.xml"));
+		String inputString = 
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+			"<Sh-Data xmlns=\"urn:ietf:params:xml:ns:pidf\" >" +
+			"</Sh-Data>";
+		
+		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
+		ShDataParser parser = new ShDataParser(input);
+		  		
+		ShData shData = parser.getShData();
+		System.out.println(shData.toString());		
+		
+		/*
 		long time1 = System.currentTimeMillis();
 		Session session = HibernateUtil.getCurrentSession();
 		HibernateUtil.getCurrentSession().beginTransaction();

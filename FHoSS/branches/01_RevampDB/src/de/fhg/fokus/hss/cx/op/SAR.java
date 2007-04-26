@@ -136,7 +136,6 @@ public class SAR {
 					throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITIES_DONT_MATCH);
 				}
 			}
-			System.out.println("2");
 
 			// 3. 
 			switch (serverAssignmentType){
@@ -166,7 +165,6 @@ public class SAR {
 					throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN);
 				}
 			}
-			System.out.println("4");
 			// 5. check the server assignment type received in the request
 			switch (serverAssignmentType){
 				
@@ -229,7 +227,6 @@ public class SAR {
 				case CxConstants.Server_Assignment_Type_Deregistration_Too_Much_Data:
 				case CxConstants.Server_Assignment_Type_Administrative_Deregistration:
 					
-					System.out.println("5 dereg");
 					List impuList = UtilAVP.getAllIMPU(session, request);
 					if (impuList == null){
 						impuList = IMPI_IMPU_DAO.get_all_Default_IMPU_of_Set_by_IMPI(session, impi.getId());
@@ -244,20 +241,15 @@ public class SAR {
 						
 						switch (crt_impu.getUser_state()){
 							case CxConstants.IMPU_user_state_Registered:
-								System.out.println("before count");
 								int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, crt_impu.getId());
 								if (reg_cnt == 1){
 									// set the user_state to Not-Registered
-									System.out.println("before set user state");
 									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, true);
 									// clear the scscf_name & origin_host
-									System.out.println("before update");
 									IMSU_DAO.update(session, impi.getId_imsu(), "", "");
-									System.out.println("after update");
 								}
 								else{
-									System.out.println("cnt  0");
 									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, false);
 									
@@ -396,7 +388,6 @@ public class SAR {
 			}
 		}
 		catch(CxExperimentalResultException e){
-			System.out.println("Experimental code!!!!!");
 			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
@@ -408,7 +399,6 @@ public class SAR {
 			HibernateUtil.commitTransaction();
 			session.close();
 		}
-		System.out.println("SAR finished!");
 		return response;
 	}
 	

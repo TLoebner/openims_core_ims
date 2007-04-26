@@ -81,8 +81,6 @@ public class UAR {
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
 		
 		try{
-			long time1 = System.currentTimeMillis();
-			System.out.println("Start:" + time1);
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
 		
@@ -110,9 +108,6 @@ public class UAR {
 			
 			IMSU imsu = IMSU_DAO.get_by_ID(session, impi.getId_imsu());
 			
-			long time2 = System.currentTimeMillis();
-			System.out.println("\n\nDelta:" + (time2-time1));
-
 			// 2. check association
 			IMPI_IMPU impi_impu = IMPI_IMPU_DAO.get_by_IMPI_and_IMPU_ID(session, impi.getId(), impu.getId());
 			if (impi_impu == null){

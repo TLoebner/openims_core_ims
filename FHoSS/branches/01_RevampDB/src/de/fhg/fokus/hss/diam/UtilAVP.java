@@ -52,6 +52,7 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
+import de.fhg.fokus.diameter.DiameterPeer.data.AVPDecodeException;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.auth.AuthenticationVector;
 import de.fhg.fokus.hss.cx.CxConstants;
@@ -470,5 +471,48 @@ public class UtilAVP {
 				DiameterConstants.Vendor.V3GPP);
 		avp.setData(cnt);
 		message.addAVP(avp);
+	}
+	
+	// methods for fields used by Sh Interface
+	
+	public static Vector getAllDataReference(DiameterMessage message){
+		
+		Vector result = null;
+		if (message.avps != null && message.avps.size() > 0){
+			Iterator it = message.avps.iterator();
+			AVP avp;
+			while (it.hasNext()){
+				avp = (AVP) it.next();
+				if (avp.code == DiameterConstants.AVPCode.IMS_DATA_REFERENCE && 
+						avp.flag_mandatory == true && 
+						avp.vendor_id == DiameterConstants.Vendor.V3GPP){
+					if (result == null){
+						result = new Vector();
+					}
+					result.add(new Integer(avp.int_data));
+				}
+			}
+		}
+		return result;
+	}
+	
+	public static AVP getUserIdentity(DiameterMessage message){
+		// return the public identity or the MSISDN
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_USER_IDENTITY, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		if (avp != null){
+			try {
+				avp.ungroup();
+				if (avp.childs != null && avp.childs.size() > 0){
+					AVP child_avp = (AVP) avp.childs.get(0);
+					return child_avp;
+				}
+			} 
+			catch (AVPDecodeException e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
 	}
 }

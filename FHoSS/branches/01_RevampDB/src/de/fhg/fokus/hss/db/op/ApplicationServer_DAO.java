@@ -138,6 +138,21 @@ public class ApplicationServer_DAO {
 		return result;
 	}
 	
+	public static ApplicationServer get_by_Server_Name(Session session, String server_name){
+		Query query = session.createSQLQuery("select * from application_server where server_name like ?")
+			.addEntity(ApplicationServer.class);
+		query.setString(0, server_name);
+		return (ApplicationServer) query.uniqueResult();
+	}
+	
+	public static ApplicationServer get_by_Name(Session session, String name){
+		Query query = session.createSQLQuery("select * from application_server where name like ?")
+			.addEntity(ApplicationServer.class);
+		query.setString(0, name);
+		return (ApplicationServer) query.uniqueResult();
+	}
+	
+	
 /*	public static List joinTest(){
 		HibernateUtil.beginTransaction();
 		Session session = HibernateUtil.getCurrentSession();

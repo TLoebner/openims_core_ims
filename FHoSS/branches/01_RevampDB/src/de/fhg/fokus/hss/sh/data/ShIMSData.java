@@ -40,33 +40,57 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
+package de.fhg.fokus.hss.sh.data;
 
-package de.fhg.fokus.hss.main;
+import java.util.Vector;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+public class ShIMSData {
+	private String scscfName;
+	private Vector<InitialFilterCriteria> ifcList;
+	private int imsUserState;
+	private ChargingInformation chgInformation;
 	
-	private HSSContainer appContainer;
-	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
+	public ShIMSData(){}
+
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		
+		return sBuffer.toString();
 	}
 	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
-		}
+	public ChargingInformation getChgInformation() {
+		return chgInformation;
+	}
+
+	public void setChgInformation(ChargingInformation chgInformation) {
+		this.chgInformation = chgInformation;
+	}
+
+	public Vector<InitialFilterCriteria> getIfcList() {
+		return ifcList;
+	}
+
+	public void setIfcList(Vector<InitialFilterCriteria> ifcList) {
+		this.ifcList = ifcList;
+	}
+
+	public int getImsUserState() {
+		return imsUserState;
+	}
+
+	public void setImsUserState(int imsUserState) {
+		this.imsUserState = imsUserState;
+	}
+
+	public String getScscfName() {
+		return scscfName;
+	}
+
+	public void setScscfName(String scscfName) {
+		this.scscfName = scscfName;
 	}
 }

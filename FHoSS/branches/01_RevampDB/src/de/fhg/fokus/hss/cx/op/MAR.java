@@ -228,7 +228,7 @@ public class MAR {
 						
 						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
 						if (avList != null){
-							UtilAVP.addSIPNumberAuthItems(response, av_count);
+							UtilAVP.addSIPNumberAuthItems(response, avList.size());
 							UtilAVP.addAuthVectors(response, avList);
 							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 						}
@@ -325,8 +325,15 @@ public class MAR {
 
 		        // sqnHE - represent the SQN from the HSS
 		        // sqnMS - represent the SQN from the client side
+				byte[] sqnHe = null;
+				try{
+					sqnHe = HexCodec.decode(impi.getSqn());	
+				}
+				catch(Exception e){
+					e.printStackTrace();
+					return null;
+				}
 		        
-		        byte[] sqnHe = HexCodec.decode(impi.getSqn());
 		        sqnHe = DigestAKA.getNextSQN(sqnHe, HSSProperties.IND_LEN);
 
 		        byte [] nonce = new byte[32];
@@ -435,8 +442,16 @@ public class MAR {
 			e1.printStackTrace();
 			return null;
 		}
-        byte [] sqn = HexCodec.decode(impi.getSqn());
 		
+        byte [] sqn;
+        try{
+        	sqn = HexCodec.decode(impi.getSqn());
+        }
+        catch(Exception e){
+        	e.printStackTrace();
+        	return null;
+        }
+        
         switch (auth_scheme){
         
     		case  CxConstants.Auth_Scheme_MD5:
@@ -503,12 +518,13 @@ public class MAR {
 	public static List generateAuthVectors(Session session, int auth_scheme, int av_cnt, IMPI impi){
         List avList = null;
 
-        avList = new LinkedList();
         AuthenticationVector av = null;
         for (long ix = 0; ix < av_cnt; ix++){
         	av = generateAuthVector(session, auth_scheme, impi);
         	if (av == null)
         		break;
+        	if (avList == null)
+                avList = new LinkedList();
         	avList.add(av);
         }
         

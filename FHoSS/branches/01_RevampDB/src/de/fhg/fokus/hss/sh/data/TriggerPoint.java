@@ -40,33 +40,53 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
+package de.fhg.fokus.hss.sh.data;
 
-package de.fhg.fokus.hss.main;
+import java.util.Iterator;
+import java.util.Vector;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+public class TriggerPoint {
+	private int conditionTypeCNF = 1;
+	private Vector<SPT> sptList = null;
 	
-	private HSSContainer appContainer;
-	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
-	}
-	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
+	public TriggerPoint(){}
+
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.TriggerPoint_s);
+
+		sBuffer.append(ShDataTags.ConditionTypeCNF_s);
+		sBuffer.append(conditionTypeCNF);
+		sBuffer.append(ShDataTags.ConditionTypeCNF_e);
+		
+		if (sptList != null && sptList.size() > 0){
+			Iterator<SPT> it = sptList.iterator();
+			while (it.hasNext()){
+				SPT spt = it.next();
+				sBuffer.append(spt.toString());
 			}
 		}
+		sBuffer.append(ShDataTags.TriggerPoint_e);		
+		return sBuffer.toString();
+	}
+	
+	public int getConditionTypeCNF() {
+		return conditionTypeCNF;
+	}
+
+	public void setConditionTypeCNF(int conditionTypeCNF) {
+		this.conditionTypeCNF = conditionTypeCNF;
+	}
+
+	public Vector<SPT> getSptList() {
+		return sptList;
+	}
+
+	public void setSptList(Vector<SPT> sptList) {
+		this.sptList = sptList;
 	}
 }

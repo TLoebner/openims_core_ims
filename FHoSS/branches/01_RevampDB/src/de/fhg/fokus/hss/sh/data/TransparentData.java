@@ -40,33 +40,50 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
-
-package de.fhg.fokus.hss.main;
+package de.fhg.fokus.hss.sh.data;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+
+public class TransparentData {
+	private String serviceIndication;
+	private int sqn;
+	/** can have any value; tag used is Service-Data */
+	private String serviceData;
 	
-	private HSSContainer appContainer;
+	public TransparentData(){}
+
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		
+		return sBuffer.toString();
+	}
 	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
+	public String getServiceData() {
+		return serviceData;
+	}
+
+	public void setServiceData(String serviceData) {
+		this.serviceData = serviceData;
+	}
+
+	public String getServiceIndication() {
+		return serviceIndication;
+	}
+
+	public void setServiceIndication(String serviceIndication) {
+		this.serviceIndication = serviceIndication;
+	}
+
+	public int getSqn() {
+		return sqn;
+	}
+
+	public void setSqn(int sqn) {
+		this.sqn = sqn;
 	}
 	
 	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
-		}
-	}
 }

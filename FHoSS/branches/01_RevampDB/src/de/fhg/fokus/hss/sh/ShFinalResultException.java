@@ -1,4 +1,4 @@
-/*
+ /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -41,32 +41,32 @@
   * 
   */
 
-package de.fhg.fokus.hss.main;
-
+package de.fhg.fokus.hss.sh;
+import de.fhg.fokus.hss.diam.DiameterConstants;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+public class ShFinalResultException extends Exception {
+
+	private int errorCode;
 	
-	private HSSContainer appContainer;
-	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
+	public ShFinalResultException(String message, int errorCode){
+		super(message);
+		this.errorCode = errorCode;
+	}
+
+	public ShFinalResultException(DiameterConstants.ResultCode resultCode){
+		super (resultCode.getName());
+		this.errorCode = resultCode.getCode();
 	}
 	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
-		}
+	public int getErrorCode() {
+		return errorCode;
 	}
+
+	public void setErrorCode(int errorCode) {
+		this.errorCode = errorCode;
+	}
+
 }

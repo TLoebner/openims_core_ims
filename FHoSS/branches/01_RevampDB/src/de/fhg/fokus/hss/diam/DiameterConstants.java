@@ -230,6 +230,7 @@ public class DiameterConstants
         
         // Sh AVPs
         public static final int IMS_USER_IDENTITY = 700;
+        public static final int IMS_MSISDN = 701;
         public static final int IMS_PUBLIC_IDENTITY_SH = 601;
         public static final int IMS_SERVER_NAME_SH = 602;
         public static final int IMS_USER_DATA_SH = 702;
@@ -263,6 +264,9 @@ public class DiameterConstants
     	DIAMETER_NO_COMMON_SECURITY("Diameter_No_Common_Security", 5017),
     	DIAMETER_INVALID_AVP_VALUE("Diameter_invalid_AVP_Value", 5040),
 
+    	/** RFC 4006 */
+    	DIAMETER_USER_UNKNOWN("Diameter_User_Unknown", 5030),
+    	
 		/** 1001 to 1999	Informational			*/
 		/** 2001 to 2999	Success					*/
 		/**	2001 to 2020 Reserved for TS29.229		*/
