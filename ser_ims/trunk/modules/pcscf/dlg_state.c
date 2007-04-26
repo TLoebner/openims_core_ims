@@ -632,7 +632,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	cscf_get_from_uri(msg,&x);
 	uri.len = snprintf(buf1,256,"<%.*s>",x.len,x.s);
 	uri.s = buf1;	
-	x=cscf_get_identity_from_ruri(msg);
+	cscf_get_to_uri(msg,&x);
 	ruri.len = snprintf(buf2,256,"<%.*s>",x.len,x.s);
 	ruri.s = buf2;
 		
@@ -646,7 +646,6 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	tmb.new_dlg_uas(msg,99,&d->dialog_s);
 		
 	d_unlock(d->hash);
-	
 	print_p_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
@@ -782,7 +781,6 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				save_dialog_routes(msg,str1,d);
 				d->state = DLG_STATE_EARLY;
 				d->expires = d_act_time()+300;
-				// doing this here , sounds logical but makes release_call to break if in early200
 				cscf_get_to_tag(msg,&totag);
 				tmb.update_dlg_uas(d->dialog_s,response,&totag);
 				tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);

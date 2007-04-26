@@ -639,7 +639,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	cscf_get_from_uri(msg,&x);
 	uri.len = snprintf(buf1,256,"<%.*s>",x.len,x.s);
 	uri.s = buf1;	
-	x=cscf_get_identity_from_ruri(msg);
+	cscf_get_to_uri(msg,&x);
 	ruri.len = snprintf(buf2,256,"<%.*s>",x.len,x.s);
 	ruri.s = buf2;
 	 
