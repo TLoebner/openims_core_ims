@@ -566,7 +566,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				goto error;
 			}
 			//if (!(p=get_r_public(public_identity))){
-			if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
+			if (!(p=update_r_public(public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: ReRegistration error as <%.*s> not found in registrar\n",
 					public_identity.len,public_identity.s);
 				goto error;
