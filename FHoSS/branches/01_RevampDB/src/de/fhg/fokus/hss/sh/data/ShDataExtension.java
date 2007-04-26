@@ -41,32 +41,63 @@
   * 
   */
 
-package de.fhg.fokus.hss.main;
+package de.fhg.fokus.hss.sh.data;
+
+import java.util.Iterator;
+import java.util.Vector;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+public class ShDataExtension {
+	private PublicIdentity registeredIdentities = null;
+	private PublicIdentity implicitIdentities = null;
+	private PublicIdentity allIdentities = null;
+	private PublicIdentity aliasIdentities = null;
+	private Vector<TransparentData> aliasesRepositoryDataList = null;
 	
-	private HSSContainer appContainer;
-	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
-	}
-	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.ShDataExtension_s);
+		if (registeredIdentities != null){
+			sBuffer.append(ShDataTags.RegisteredIdentities_s);
+			sBuffer.append(registeredIdentities.toString());
+			sBuffer.append(ShDataTags.RegisteredIdentities_e);
 		}
+		
+		if (implicitIdentities != null){
+			sBuffer.append(ShDataTags.ImplicitIdentities_s);
+			sBuffer.append(implicitIdentities.toString());
+			sBuffer.append(ShDataTags.ImplicitIdentities_e);
+		}
+
+		if (allIdentities != null){
+			sBuffer.append(ShDataTags.AllIdentities_s);
+			sBuffer.append(allIdentities.toString());
+			sBuffer.append(ShDataTags.AllIdentities_e);
+		}
+		
+		if (aliasIdentities != null){
+			sBuffer.append(ShDataTags.AliasesIdentities_s);
+			sBuffer.append(aliasIdentities.toString());
+			sBuffer.append(ShDataTags.AliasesIdentities_e);
+		}
+		
+		if (aliasesRepositoryDataList != null && aliasesRepositoryDataList.size() > 0){
+			sBuffer.append(ShDataTags.AliasesRepositoryData_s);
+			Iterator<TransparentData> it = aliasesRepositoryDataList.iterator();
+			TransparentData transparentData;
+			while (it.hasNext()){
+				transparentData = it.next();
+				sBuffer.append(transparentData.toString());
+			}
+			sBuffer.append(ShDataTags.AliasesRepositoryData_e);
+		}
+		
+		sBuffer.append(ShDataTags.ShDataExtension_e);
+		return sBuffer.toString();
 	}
+	
+	
 }

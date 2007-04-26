@@ -41,32 +41,76 @@
   * 
   */
 
-package de.fhg.fokus.hss.main;
+package de.fhg.fokus.hss.sh.data;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+
+public class InitialFilterCriteria {
+	private int priority = 1;
+	private TriggerPoint triggerPoint = null;
+	private ApplicationServer applicationServer = null;
+	private int profilePartIndicator = -1;
 	
-	private HSSContainer appContainer;
-	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
-	}
-	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
+	public InitialFilterCriteria(){}
+
+
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.InitialFilterCriteria_s);
+		
+		sBuffer.append(ShDataTags.Priority_s);
+		sBuffer.append(priority);
+		sBuffer.append(ShDataTags.Priority_e);
+		
+		if (triggerPoint != null){
+			sBuffer.append(triggerPoint.toString());
 		}
+		if (applicationServer != null){
+			sBuffer.append(applicationServer.toString());
+		}
+		if (profilePartIndicator != -1){
+			sBuffer.append(ShDataTags.ProfilePartIndicator_s);
+			sBuffer.append(profilePartIndicator);
+			sBuffer.append(ShDataTags.ProfilePartIndicator_e);
+		}
+		
+		sBuffer.append(ShDataTags.InitialFilterCriteria_e);
+		return sBuffer.toString();
 	}
+
+	public ApplicationServer getApplicationServer() {
+		return applicationServer;
+	}
+
+	public void setApplicationServer(ApplicationServer applicationServer) {
+		this.applicationServer = applicationServer;
+	}
+
+	public int getPriority() {
+		return priority;
+	}
+
+	public void setPriority(int priority) {
+		this.priority = priority;
+	}
+
+	public int getProfilePartIndicator() {
+		return profilePartIndicator;
+	}
+
+	public void setProfilePartIndicator(int profilePartIndicator) {
+		this.profilePartIndicator = profilePartIndicator;
+	}
+
+	public TriggerPoint getTriggerPoint() {
+		return triggerPoint;
+	}
+
+	public void setTriggerPoint(TriggerPoint triggerPoint) {
+		this.triggerPoint = triggerPoint;
+	}
+	
 }

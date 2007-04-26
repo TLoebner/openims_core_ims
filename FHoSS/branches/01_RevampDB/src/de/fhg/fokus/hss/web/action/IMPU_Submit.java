@@ -61,6 +61,7 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.cx.op.RTR;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
@@ -75,6 +76,8 @@ import de.fhg.fokus.hss.db.op.IMPU_VisitedNetwork_DAO;
 import de.fhg.fokus.hss.db.op.SP_DAO;
 import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.diam.DiameterStack;
+import de.fhg.fokus.hss.main.HSSContainer;
 import de.fhg.fokus.hss.web.form.IMPU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -278,18 +281,6 @@ public class IMPU_Submit extends Action{
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 				
 			}
-			else if (nextAction.equals("ppr")){
-				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
-
-				System.out.println("We have the ppr here!");
-			}
-			else if (nextAction.equals("rtr")){
-				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
-
-				System.out.println("We have the rtr here!");
-			}		
 			
 			// add parameters to request & refresh select properties
 			if (IMPU_Load.testForDelete(session, form.getId())){
@@ -321,6 +312,34 @@ public class IMPU_Submit extends Action{
 		finally{
 			HibernateUtil.closeSession();
 		}
+		
+		if (nextAction.equals("ppr")){
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+
+			System.out.println("We have the ppr here!");
+		}
+		else if (nextAction.equals("rtr")){
+			
+			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
+			
+			IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
+			List impiList = new ArrayList();
+			impiList.add(impi);
+			HibernateUtil.commitTransaction();
+			session.close();
+			
+			DiameterStack stack = HSSContainer.getInstance().diamStack;
+			RTR.sendRequest(stack.diameterPeer, null, impiList,
+					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			
+			System.out.println("We have the rtr here!");
+		}		
+		
+		
 		
 		return forward;
 	}

@@ -40,33 +40,19 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
-
-package de.fhg.fokus.hss.main;
+package de.fhg.fokus.hss.sh.data;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
-	
-	private HSSContainer appContainer;
-	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
+public class PSLocationInformation {
+
+
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		
+		return sBuffer.toString();
 	}
-	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
-		}
-	}
+
 }

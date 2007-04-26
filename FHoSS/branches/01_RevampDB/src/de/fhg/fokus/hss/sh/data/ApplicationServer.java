@@ -40,33 +40,66 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
-
-package de.fhg.fokus.hss.main;
+package de.fhg.fokus.hss.sh.data;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class Worker extends Thread{
+public class ApplicationServer {
+	private String serverName = null;
+	private int defaultHandling = -1;
+	private String serviceInfo = null;
 	
-	private HSSContainer appContainer;
+	public ApplicationServer(){}
+
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
 	
-	public Worker(HSSContainer appContainer){
-		this.appContainer = appContainer;
+		sBuffer.append(ShDataTags.ApplicationServer_s);
+		if (serverName != null){
+			sBuffer.append(ShDataTags.ServerName_s);
+			sBuffer.append(serverName);
+			sBuffer.append(ShDataTags.ServerName_e);
+		}
+			
+		if (defaultHandling > -1){
+			sBuffer.append(ShDataTags.DefaultHandling_s);
+			sBuffer.append(defaultHandling);
+			sBuffer.append(ShDataTags.Defaulthandling_e);
+		}
+		
+		if (serviceInfo != null){
+			sBuffer.append(ShDataTags.ServiceInfo_s);
+			sBuffer.append(serviceInfo);
+			sBuffer.append(ShDataTags.ServiceInfo_e);
+		}
+				
+		sBuffer.append(ShDataTags.ApplicationServer_e);
+		return sBuffer.toString();
 	}
 	
-	
-	public void run(){
-		Task task;
-		while (true){
-			try {
-				task = (Task) appContainer.tasksQueue.take();
-				task.execute();
-			} 
-			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
-				e.printStackTrace();
-			}
-		}
+	public int getDefaultHandling() {
+		return defaultHandling;
+	}
+
+	public void setDefaultHandling(int defaultHandling) {
+		this.defaultHandling = defaultHandling;
+	}
+
+	public String getServerName() {
+		return serverName;
+	}
+
+	public void setServerName(String serverName) {
+		this.serverName = serverName;
+	}
+
+	public String getServiceInfo() {
+		return serviceInfo;
+	}
+
+	public void setServiceInfo(String serviceInfo) {
+		this.serviceInfo = serviceInfo;
 	}
 }
