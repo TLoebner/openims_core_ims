@@ -595,14 +595,14 @@ str AAAGroupAVPS(AAA_AVP_LIST avps)
 
 	if (!buf.len) return buf;
 	/* allocate some memory */
-	buf.s = (unsigned char*)shm_malloc( buf.len );
+	buf.s = (char*)shm_malloc( buf.len );
 	if (!buf.s) {
 		LOG(L_ERR,"ERROR:hss3g_group_avps: no more free memory!\n");
 		return buf;
 	}
 	memset(buf.s, 0, buf.len);
 	/* fill in the buffer */
-	p = buf.s;
+	p = (unsigned char*) buf.s;
 	for(avp=avps.head;avp;avp=avp->next) {
 		/* AVP HEADER */
 		/* avp code */

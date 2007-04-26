@@ -133,6 +133,7 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	int len,i;
 	str s;
 	char c;
+	unsigned char uc;
 	
 	len = sizeof(p_dialog);
 	d = (p_dialog*) shm_malloc(len);
@@ -144,14 +145,14 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->call_id),&s)) goto error;
 
-	if (!bin_decode_uchar(x,	&c)) goto error;
-	d->direction = c;
+	if (!bin_decode_uchar(x,	&uc)) goto error;
+	d->direction = uc;
 
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->host),&s)) goto error;
 	if (!bin_decode_ushort(x,	&d->port)) goto error;
 	
-	if (!bin_decode_uchar(x,	&c)) goto error;
-	d->transport = c;
+	if (!bin_decode_uchar(x,	&uc)) goto error;
+	d->transport = uc;
 
 	if (!bin_decode_ushort(x,	&d->routes_cnt)) goto error;
 

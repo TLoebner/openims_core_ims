@@ -80,7 +80,7 @@ extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp fun
 int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 {
 	int result=CSCF_RETURN_FALSE;
-	str public_identity;
+	str public_identity={0,0};
 	str realm;
 	AAAMessage *lia=0;
 		

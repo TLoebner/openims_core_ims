@@ -78,7 +78,7 @@ int init_memory(int show_status);
 void destroy_memory(int show_status);
 
 
-extern int *listening_socks;
+extern unsigned int *listening_socks;
 
 extern int *shutdownx;				/**< whether a shutdown is in progress		*/
 extern gen_lock_t *shutdownx_lock; /**< lock used on shutdown				*/

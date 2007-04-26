@@ -806,8 +806,8 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 			}
 			r = (rr_t*) h->parsed;
 			id = r->nameaddr; 
-			free_rr((rr_t**)(&h->parsed));
-			h->parsed=0;
+			free_rr(&r);
+			h->parsed=r;
 			//LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
 			return id.uri;
 		}
@@ -1741,6 +1741,7 @@ str cscf_get_authorization(struct sip_msg *msg,struct hdr_field **h)
 {
 	str auth={0,0};
 	*h = 0;
+	auth_body_t *body;
 	if (parse_headers(msg,HDR_AUTHORIZATION_F,0)!=0) {
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_authorization: Error parsing until header Authorization: \n");
 		return auth;
@@ -1751,8 +1752,11 @@ str cscf_get_authorization(struct sip_msg *msg,struct hdr_field **h)
 		return auth;
 	}
 	msg->authorization->type = HDR_AUTHORIZATION_T;
-	if (msg->authorization->parsed)
-		free_credentials((auth_body_t**)&(msg->authorization->parsed));
+	if (msg->authorization->parsed){
+		body = (auth_body_t*)msg->authorization->parsed;
+		free_credentials(&body);
+		msg->authorization->parsed = body;
+	}
 	
 	auth = msg->authorization->body;	
 	*h = msg->authorization;
@@ -2253,8 +2257,8 @@ name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h
 			}
 			r = (rr_t*) h->parsed;
 			id = r->nameaddr; 
-			free_rr((rr_t**)(&h->parsed));
-			h->parsed=0;
+			free_rr(&r);
+			h->parsed=r;
 			if (hr) *hr = h;			
 			return id;
 		}

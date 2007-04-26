@@ -324,7 +324,7 @@ void receive_loop(int sock)
     	}
     	LOG(L_DBG,"DBG:receive_loop():[%d] Recv message complete\n",sock);
     	
-    	dmsg = AAATranslateMessage(msg,msg_len,1);
+    	dmsg = AAATranslateMessage((unsigned char*)msg,(unsigned int)msg_len,1);
     	
     	/*shm_free(msg);*/
 
