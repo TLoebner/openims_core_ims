@@ -2674,3 +2674,24 @@ int cscf_get_from_uri(struct sip_msg* msg,str *local_uri)
 	return 1;
 	
 }
+
+/**
+ * Get the local uri from the To header.
+ * @param msg - the message to look into
+ * @param local_uri - ptr to fill with the value
+ * @returns 1 on success or 0 on error
+ */  
+int cscf_get_to_uri(struct sip_msg* msg,str *local_uri)
+{	
+	struct to_body* to=	NULL;
+
+	if (!msg || !msg->to || !msg->to->parsed || parse_headers(msg,HDR_TO_F,0)==-1 ){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_to_uri: error parsing TO header\n");
+		if (local_uri) {local_uri->s = 0;local_uri->len = 0;}
+		return 0;
+	}
+	to = msg->to->parsed;		
+	if (local_uri) *local_uri = to->uri;
+	return 1;
+	
+}

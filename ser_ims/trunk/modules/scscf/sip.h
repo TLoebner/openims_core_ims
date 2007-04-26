@@ -177,5 +177,5 @@ str cscf_get_last_via_received(struct sip_msg *msg);
 int cscf_get_from_tag(struct sip_msg* msg, str* tag);
 int cscf_get_to_tag(struct sip_msg* msg, str* tag);
 int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
-
+int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
 #endif /* PIS_CSCF_SIP_H */
