@@ -226,7 +226,7 @@ static inline char ifc_tBool2char(xmlChar *x)
 static inline char ifc_tDefaultHandling2char(xmlChar *x)
 {
 	char r;	
-	r = strtol(x, (char **)NULL, 10);
+	r = strtol((char*)x, (char **)NULL, 10);
 	if (errno==EINVAL){
 		while(x[0]){
 			if (x[0]=='c'||x[0]=='C') return 0;//SESSION_CONTINUED
@@ -249,7 +249,7 @@ static inline char ifc_tDefaultHandling2char(xmlChar *x)
 static inline char ifc_tDirectionOfRequest2char(xmlChar *x)
 {
 	int r;	
-	r = strtol(x, (char **)NULL, 10);
+	r = strtol((char*)x, (char **)NULL, 10);
 	if (errno==EINVAL){
 		while(x[0]){
 			if (x[0]=='o'||x[0]=='O') return 0;//ORIGINATING_SESSION
@@ -274,7 +274,7 @@ static inline char ifc_tProfilePartIndicator2char(xmlChar *x)
 {
 	int r;	
 	if (x==0||x[0]==0) return -1;
-	r = strtol(x, (char **)NULL, 10);
+	r = strtol((char*)x, (char **)NULL, 10);
 	if (errno==EINVAL){
 		while(x[0]){
 			if (x[0]=='r'||x[0]=='R') return 0;//REGISTERED
@@ -305,7 +305,7 @@ static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_iden
 				case 'I': case 'i':
 					if (!pi->public_identity.len){
 						x = xmlNodeListGetString(doc,child->xmlChildrenNode,1);
-						space_trim_dup(&(pi->public_identity),x);
+						space_trim_dup(&(pi->public_identity),(char*)x);
 						xmlFree(x);
 					}					
 					break;
@@ -340,11 +340,11 @@ static int parse_sip_header(xmlDocPtr doc,xmlNodePtr node,ims_sip_header *sh)
 			switch (child->name[0]) {
 				case 'H':case 'h':	//Header
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					len = strlen(x);		
+					len = strlen((char*)x);		
 					memcpy(c,x,len);
 					c[len++]=':';
 					c[len]=0;
-					space_trim_dup(&(sh->header),x);
+					space_trim_dup(&(sh->header),(char*)x);
 					parse_hname2(c,c+(len<4?4:len),&hf);
 					sh->type=(short)hf.type;
 					//LOG(L_CRIT,"[%.*s(%d)]\n",sh->header.len,sh->header.s,sh->type);
@@ -352,7 +352,7 @@ static int parse_sip_header(xmlDocPtr doc,xmlNodePtr node,ims_sip_header *sh)
 					break;
 				case 'C':case 'c':	//Content
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					space_quotes_trim_dup(&(sh->content),x);
+					space_quotes_trim_dup(&(sh->content),(char*)x);
 					xmlFree(x);
 					break;
 			}
@@ -378,12 +378,12 @@ static int parse_session_desc(xmlDocPtr doc,xmlNodePtr node,ims_session_desc *sd
 			switch (child->name[0]) {
 				case 'L':case 'l':	//Line
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					space_trim_dup(&(sd->line),x);
+					space_trim_dup(&(sd->line),(char*)x);
 					xmlFree(x);
 					break;
 				case 'C':case 'c':	//Content
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					space_quotes_trim_dup(&(sd->content),x);
+					space_quotes_trim_dup(&(sd->content),(char*)x);
 					xmlFree(x);
 					break;
 			}
@@ -423,7 +423,7 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,unsigned shor
 					break;
 				case 'G':case 'g': //Group
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					spt->group=atoi(x);
+					spt->group=atoi((char*)x);
 					xmlFree(x);
 					break;
 				case 'R':case 'r': {//RequestUri/RegistrationType
@@ -431,12 +431,12 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,unsigned shor
 						case 'Q':case 'q':
 							spt->type=IFC_REQUEST_URI;
 							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							space_trim_dup(&(spt->request_uri),x);
+							space_trim_dup(&(spt->request_uri),(char*)x);
 							xmlFree(x);
 							break;
 						case 'G':case 'g':
 							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							switch(atoi(x)){
+							switch(atoi((char*)x)){
 								case 0:
 									spt->registration_type |= IFC_INITIAL_REGISTRATION;
 									break;
@@ -455,7 +455,7 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,unsigned shor
 				case 'M':case 'm': //method
 					spt->type=IFC_METHOD;
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					space_trim_dup(&(spt->method),x);
+					space_trim_dup(&(spt->method),(char*)x);
 					xmlFree(x);
 					break;
 				case 'S':case 's': {//SIPHeader/SessionCase/SessionDescription
@@ -489,7 +489,7 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,unsigned shor
 			switch (child->name[0]) {
 				case 'G':case 'g': //Group
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					group=atoi(x);
+					group=atoi((char*)x);
 					xmlFree(x);
 					if (group != spt->group){
 						spt2 = spt_to + *spt_cnt;
@@ -626,12 +626,12 @@ static int parse_application_server(xmlDocPtr doc,xmlNodePtr node,ims_applicatio
 					switch (child->name[4]) {
 						case 'E':case 'e':  //ServerName
 							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							space_trim_dup(&(as->server_name),x);
-							xmlFree(x);
+							space_trim_dup(&(as->server_name),(char*)x);
+							xmlFree((char*)x);
 							break;
 						case 'I':case 'i':  //ServiceInfo
 							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							space_trim_dup(&(as->service_info),x);
+							space_trim_dup(&(as->service_info),(char*)x);
 							xmlFree(x);
 							break;
 					}
@@ -669,7 +669,7 @@ static int parse_filter_criteria(xmlDocPtr doc,xmlNodePtr node,ims_filter_criter
 			switch (child->name[3]) {
 				case 'O':case 'o':	//Priority
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					fc->priority=atoi(x);
+					fc->priority=atoi((char*)x);
 					xmlFree(x);
 					break;
 				case 'G':case 'g':	//TriggerPoint
@@ -721,7 +721,7 @@ static int parse_cn_service_auth(xmlDocPtr doc,xmlNodePtr node,ims_cn_service_au
 			switch (child->name[0]) {
 				case 'S':case 's':	//BarringIndication
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					cn->subscribed_media_profile_id=atoi(x);
+					cn->subscribed_media_profile_id=atoi((char*)x);
 					xmlFree(x);
 					return 1;
 					break;
@@ -811,7 +811,7 @@ static int parse_service_profile(xmlDocPtr doc, xmlNodePtr root, ims_service_pro
 					break;
 				case 'S':case 's':	//SharedIFCSet
 					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-					sp->shared_ifc_set[sp->shared_ifc_set_cnt++]=atoi(x);
+					sp->shared_ifc_set[sp->shared_ifc_set_cnt++]=atoi((char*)x);
 					xmlFree(x);
 					break;								
 			}	
@@ -832,7 +832,7 @@ static ims_subscription* parse_ims_subscription(xmlDocPtr doc, xmlNodePtr root)
 	unsigned short sp_cnt=0;
 	
 	if (!root) return 0;
-	while(root->type!=XML_ELEMENT_NODE || strcasecmp(root->name,"IMSSubscription")!=0){
+	while(root->type!=XML_ELEMENT_NODE || strcasecmp((char*)root->name,"IMSSubscription")!=0){
 		root = root->next;
 	}
 	if (!root) {
@@ -851,7 +851,7 @@ static ims_subscription* parse_ims_subscription(xmlDocPtr doc, xmlNodePtr root)
 				case 'P':case 'p':  /* Private Identity */
 					if (!s->private_identity.len){
 						x = xmlNodeListGetString(doc,child->xmlChildrenNode,1);
-						space_trim_dup(&(s->private_identity),x);
+						space_trim_dup(&(s->private_identity),(char*)x);
 						xmlFree(x);
 					}
 					break;

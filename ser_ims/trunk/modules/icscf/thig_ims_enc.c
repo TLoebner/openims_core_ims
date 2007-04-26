@@ -157,7 +157,7 @@ str thig_encrypt(str src)
 	enc_text.len = my_text.len;
 
 	printstr("String bef :",my_text);
-	if (blockEncrypt(&ci2,&ki, my_text.s,my_text.len*8,enc_text.s) != my_text.len*8){
+	if (blockEncrypt(&ci2,&ki,(unsigned char*)my_text.s,my_text.len*8,(unsigned char*)enc_text.s) != my_text.len*8){
 		LOG(L_ERR,"DBG:"M_NAME":encrypt: Error in encryption phase\n");
 		goto error;
 	}
@@ -209,7 +209,7 @@ str thig_decrypt(str encoded)
 	
 	printstr("String bef :",my_text);
 
-	if (blockDecrypt(&ci2,&ki,my_text.s,my_text.len*8,dec_text.s) != my_text.len*8){
+	if (blockDecrypt(&ci2,&ki,(unsigned char*)my_text.s,my_text.len*8,(unsigned char*)dec_text.s) != my_text.len*8){
 		LOG(L_ERR,"DBG:"M_NAME":decrypt: Error in encryption phase\n");
 		goto error;
 	}

@@ -191,9 +191,9 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 				return id.uri;	
 			}
 			r = (rr_t*) h->parsed;
-			id = r->nameaddr; 
-			free_rr((rr_t**)(&h->parsed));
-			h->parsed=0;
+			id = r->nameaddr;			
+			free_rr(&r);
+			h->parsed=r;
 			//LOG(L_RIT,"%.*s",id.uri.len,id.uri.s);
 			return id.uri;
 		}

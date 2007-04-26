@@ -85,7 +85,9 @@ void dp_del_pid(pid_t pid);
  */
 void acceptor_process(dp_config *cfg)
 {
-	int i,sock,k;
+	int i,k;
+	unsigned int sock;
+	
 	LOG(L_INFO,"INFO:Acceptor process starting up...\n");
 	listening_socks = pkg_malloc((cfg->acceptors_cnt+1)*sizeof(int));
 	if (!listening_socks){

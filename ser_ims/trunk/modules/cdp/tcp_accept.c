@@ -76,7 +76,7 @@
 int dp_add_pid(pid_t pid);
 
 
-int *listening_socks=0;	/**< array of sockets listening for connections */
+unsigned int *listening_socks=0;	/**< array of sockets listening for connections */
 
 
 extern int h_errno;

@@ -729,7 +729,7 @@ r_notification* r_notification_parse(str xml)
 		goto error;
 	}
 
-	reginfo_state = xmlGetProp(root,"state");
+	reginfo_state = xmlGetProp(root,(xmlChar*)"state");
 	LOG(L_DBG,"DBG:"M_NAME":r_notification_parse: reginfo_state <%s>\n",
 			reginfo_state);
 	if (reginfo_state[0]=='f'||reginfo_state[0]=='F')
@@ -748,15 +748,15 @@ r_notification* r_notification_parse(str xml)
 		}
 		memset(r,0,sizeof(r_registration));
 		
-		x = xmlGetProp(child,"id");
-		space_trim_dup(&(r->id),x);
+		x = xmlGetProp(child,(xmlChar*)"id");
+		space_trim_dup(&(r->id),(char*)x);
 		xmlFree(x);
 
-		x = xmlGetProp(child,"aor");
-		space_trim_dup(&(r->aor),x);
+		x = xmlGetProp(child,(xmlChar*)"aor");
+		space_trim_dup(&(r->aor),(char*)x);
 		xmlFree(x);
 		
-		x = xmlGetProp(child,"state");
+		x = xmlGetProp(child,(xmlChar*)"state");
 		
 		if (x[0]=='a'||x[0]=='A') 
 			r->state = IMS_REGINFO_ACTIVE;
@@ -775,18 +775,18 @@ r_notification* r_notification_parse(str xml)
 			}
 			memset(rc,0,sizeof(r_regcontact));
 			
-			x = xmlGetProp(nephew,"id");
-			space_trim_dup(&(rc->id),x);
+			x = xmlGetProp(nephew,(xmlChar*)"id");
+			space_trim_dup(&(rc->id),(char*)x);
 			xmlFree(x);
 				
-			x = xmlGetProp(nephew,"state");
+			x = xmlGetProp(nephew,(xmlChar*)"state");
 			if (x[0]=='a'||x[0]=='A') 
 				rc->state = IMS_REGINFO_ACTIVE;
 			else 
 				rc->state = IMS_REGINFO_TERMINATED;
 			xmlFree(x);
 			
-			x = xmlGetProp(nephew,"event");
+			x = xmlGetProp(nephew,(xmlChar*)"event");
 			switch(x[0]){
 				case 'r':case 'R':
 					switch (x[2]){
@@ -826,9 +826,9 @@ r_notification* r_notification_parse(str xml)
 			}
 			xmlFree(x);
 
-			x = xmlGetProp(nephew,"expires");			
+			x = xmlGetProp(nephew,(xmlChar*)"expires");			
 			if (x) {
-				rc->expires = atoi(x);
+				rc->expires = atoi((char*)x);
 				xmlFree(x);
 			}
 			
@@ -837,7 +837,7 @@ r_notification* r_notification_parse(str xml)
 				node =node->next;
 			if (node) {
 				x = xmlNodeGetContent(node);
-				space_trim_dup(&(rc->uri),x);
+				space_trim_dup(&(rc->uri),(char*)x);
 				xmlFree(x);
 			}
 			

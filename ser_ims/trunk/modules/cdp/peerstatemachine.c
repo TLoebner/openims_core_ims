@@ -529,7 +529,7 @@ void I_Snd_CER(peer *p)
 //	AAA_AVP *avp;
 	unsigned long ip;
 	struct sockaddr_in addr;
-	int addrlen;
+	socklen_t addrlen;
 	char x[6];
 	
 	cer = AAANewMessage(Code_CE,0,0,0);
@@ -808,7 +808,7 @@ void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 	AAAMessage *cea;
 	unsigned int ip;
 	struct sockaddr_in addr;
-	int addrlen;
+	socklen_t addrlen;
 	char x[6];
 	
 	cea = AAANewMessage(Code_CE,0,0,cer);	

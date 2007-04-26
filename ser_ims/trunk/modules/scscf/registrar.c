@@ -1016,13 +1016,13 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 				if (c->path.len) {
 					dst=c->path;
 					i=0;
-					while(i<dst.len>=0 && dst.s[i]!='<')
+					while(i<dst.len && dst.s[i]!='<')
 						i++;
 					i++;
 					dst.s += i;
 					dst.len -= i;
 					i=0;					
-					while(i<dst.len>=0 && (dst.s[i]!='>'))
+					while(i<dst.len && (dst.s[i]!='>'))
 						i++;
 					dst.len = i;
 				}
