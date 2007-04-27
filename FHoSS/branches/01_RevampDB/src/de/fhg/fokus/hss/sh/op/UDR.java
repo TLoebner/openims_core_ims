@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.sh.op;
 
+import java.util.List;
 import java.util.Vector;
 
 import org.hibernate.Session;
@@ -53,15 +54,19 @@ import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.UtilAVP;
 import de.fhg.fokus.hss.sh.ShConstants;
 import de.fhg.fokus.hss.sh.ShExperimentalResultException;
 import de.fhg.fokus.hss.sh.ShFinalResultException;
 
+import de.fhg.fokus.hss.sh.data.*;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -71,13 +76,14 @@ public class UDR {
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
 		DiameterMessage response = diameterPeer.newResponse(request);
 		Session session = null;
+		boolean dbException = false;
 		
 		// add Auth-Session-State and Vendor-Specific-Application-ID
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Sh);
 
 		try{
-
+			
 			// -0- check for mandatory fields in the message
 			String vendor_specific_ID = UtilAVP.getVendorSpecificApplicationID(request);
 			String auth_session_state = UtilAVP.getAuthSessionState(request);
@@ -92,9 +98,14 @@ public class UDR {
 					dest_realm == null || user_identity_avp == null || data_ref_vector == null || data_ref_vector.size() == 0){
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
-
+			session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 			// -1-
 			ApplicationServer as = ApplicationServer_DAO.get_by_Server_Name(session, origin_host);
+			if (as == null){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_READ);
+			}
+			
 			for (int i = 0; i < data_ref_vector.size(); i++){
 				int crt_data_ref = (Integer) data_ref_vector.get(i); 
 
@@ -133,10 +144,43 @@ public class UDR {
 			// -5- include the data pertinent to the requested Data Reference
 			//
 			
-			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 			
+			ShData shData = new ShData();
+			
+			for (int i = 0; i < data_ref_vector.size(); i++){
+				int crt_data_ref = (Integer) data_ref_vector.get(i); 
+				ShIMSData shIMSData = null;
+				
+				switch (crt_data_ref){
+					case  ShConstants.Data_Ref_IMS_User_State:
+						shIMSData = shData.getShIMSData();
+						if (shIMSData == null){
+							shIMSData = new ShIMSData();
+							shData.setShIMSData(shIMSData);
+						}
+						shIMSData.setImsUserState(impu.getUser_state());
+						break;
+						
+					case  ShConstants.Data_Ref_SCSCF_Name:
+						shIMSData = shData.getShIMSData();
+						if (shIMSData == null){
+							shIMSData = new ShIMSData();
+							shData.setShIMSData(shIMSData);
+						}
+						
+						List impiList = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, impu.getId());
+						if (impiList != null && impiList.size() > 0){
+							IMPI impi = (IMPI)impiList.get(0);
+							 shIMSData.setScscfName(IMSU_DAO.get_SCSCF_Name_by_IMSU_ID(session, impi.getId_imsu()));
+						}
+				}
+				
+			}
+			UtilAVP.addUserData(response, shData.toString());
+			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 		}
 		catch (DatabaseException e){
+			dbException = true;
 			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
 			e.printStackTrace();
 		}
@@ -149,7 +193,10 @@ public class UDR {
 			e.printStackTrace();
 		}*/
 		finally{
-			HibernateUtil.commitTransaction();
+			// commit transaction only when a Database doesn't occured
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			session.close();
 		}
 		

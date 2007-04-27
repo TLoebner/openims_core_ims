@@ -189,5 +189,66 @@ public class ShDataTags {
 	public static final String AliasesRepositoryData_s = "<AliasesRepositoryData>";
 	public static final String AliasesRepositoryData_e = "</AliasesRepositoryData>";
 	
+	// RepositoryData
+	public static final String ServiceIndication = "ServiceIndication";
+	public static final String ServiceIndication_s = "<ServiceIndication>";
+	public static final String ServiceIndication_e = "</ServiceIndication>";
+	public static final String SequenceNumber = "SequenceNumber";
+	public static final String SequenceNumber_s = "<SequenceNumber>";
+	public static final String SequenceNumber_e = "</SequenceNumber>";
+	public static final String ServiceData = "ServiceData";
+	public static final String ServiceData_s = "<ServiceData>";
+	public static final String ServiceData_e = "</ServiceData>";
+	
+	// CSLocationInformation, additional fields
+	public static final String LocationNumber = "LocationNumber";
+	public static final String LocationNumber_s = "<LocationNumber>";
+	public static final String LocationNumber_e = "</LocationNumber>";
+	public static final String CellGlobalId = "CellGlobalId";
+	public static final String CellGlobalId_s = "<CellGlobalId>";
+	public static final String CellGlobalId_e = "</CellGlobalId>";
+	public static final String ServiceAreaId = "ServiceAreaId";
+	public static final String ServiceAreaId_s = "<ServiceAreaId>";
+	public static final String ServiceAreaId_e = "</ServiceAreaId>";
+	public static final String LocationAreaId = "LocationAreaId";
+	public static final String LocationAreaId_s = "<LocationAreaId>";
+	public static final String LocationAreaId_e = "</LocationAreaId>";
+	public static final String GeographicalInformation = "GeographicalInformation";
+	public static final String GeographicalInformation_s = "<GeographicalInformation>";
+	public static final String GeographicalInformation_e = "</GeographicalInformation>";
+	public static final String GeodeticInformation = "GeodeticInformation";
+	public static final String GeodeticInformation_s = "<GeodeticInformation>";
+	public static final String GeodeticInformation_e = "</GeodeticInformation>";
+	public static final String VLRNumber = "VLRNumber";
+	public static final String VLRNumber_s = "<VLRNumber>";
+	public static final String VLRNumber_e = "</VLRNumber>";
+	public static final String MSCNumber = "MSCNumber";
+	public static final String MSCNumber_s = "<MSCNumber>";
+	public static final String MSCNumber_e = "</MSCNumber>";
+	public static final String CurrentLocationRetrieved = "CurrentLocationRetrieved";
+	public static final String CurrentLocationRetrieved_s= "<CurrentLocationRetrieved>";
+	public static final String CurrentLocationRetrieved_e = "</CurrentLocationRetrieved>";
+	public static final String AgeOfLocationInformation = "AgeOfLocationInformation";
+	public static final String AgeOfLocationInformation_s = "<AgeOfLocationInformation>";
+	public static final String AgeOfLocationInformation_e= "</AgeOfLocationInformation>";
+	
+	// PSLocationInformation, additional fields
+	public static final String RoutingAreaId = "RoutingAreaId";
+	public static final String RoutingAreaId_s = "<RoutingAreaId>";
+	public static final String RoutingAreaId_e = "</RoutingAreaId>";
+	public static final String SGSNNumber = "SGSNNumber";
+	public static final String SGSNNumber_s = "<SGSNNumber>";
+	public static final String SGSNNumber_e= "</SGSNNumber>";
+	
+	// ShIMSData
+	public static final String SCSCFName = "SCSCFName";
+	public static final String SCSCFName_s = "<SCSCFName>";
+	public static final String SCSCFName_e = "</SCSCFName>";
+	public static final String IFCs = "IFCs";
+	public static final String IFCs_s = "<IFCs>";
+	public static final String IFCs_e = "</IFCs>";
+	public static final String IMSUserState = "IMSUserState";
+	public static final String IMSUserState_s = "<IMSUserState>";
+	public static final String IMSUserState_e = "</IMSUserState>";
 	
 }

@@ -66,12 +66,10 @@ public class ShDataParser extends DefaultHandler {
 	private ShData shData;
 	
 	private PublicIdentity publicIdentifiers;
-	private TransparentData repositoryData;
+	private RepositoryData repositoryData;
 	private ShIMSData shIMSData;
 	private CSLocationInformation csLocationInformation;
 	private PSLocationInformation psLocationInformation;
-	private CSUserState csUserState;
-	private PSUserState psUserState;
 	private ShDataExtension shDataExtension;
 	
 	public ShDataParser(InputSource inputSource){
@@ -139,7 +137,7 @@ public class ShDataParser extends DefaultHandler {
     		publicIdentifiers = new PublicIdentity();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.RepositoryData)){
-    		repositoryData = new TransparentData();
+    		repositoryData = new RepositoryData();
     		shData.addRepositoryData(repositoryData);
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.Sh_IMS_Data)){
@@ -152,10 +150,8 @@ public class ShDataParser extends DefaultHandler {
     		psLocationInformation = new PSLocationInformation();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.CSUserState)){
-    		csUserState = new CSUserState();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.PSUserState)){
-    		psUserState = new PSUserState();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.ShDataExtension)){
     		shDataExtension = new ShDataExtension();
@@ -190,12 +186,8 @@ public class ShDataParser extends DefaultHandler {
     		psLocationInformation = null;
     	}
     	else if (localName.equals(ShDataTags.CSUserState)){
-    		shData.setCsUserState(csUserState);
-    		csUserState = null;
     	}
     	else if (localName.equals(ShDataTags.PSUserState)){
-    		shData.setPsUserState(psUserState);
-    		psUserState = null;
     	}
     	else if (localName.equals(ShDataTags.ShDataExtension)){
     		shData.setShDataExtension(shDataExtension);

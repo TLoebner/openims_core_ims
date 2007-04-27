@@ -55,7 +55,7 @@ public class ShDataExtension {
 	private PublicIdentity implicitIdentities = null;
 	private PublicIdentity allIdentities = null;
 	private PublicIdentity aliasIdentities = null;
-	private Vector<TransparentData> aliasesRepositoryDataList = null;
+	private Vector<AliasesRepositoryData> aliasesRepositoryDataList = null;
 	
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
@@ -86,8 +86,8 @@ public class ShDataExtension {
 		
 		if (aliasesRepositoryDataList != null && aliasesRepositoryDataList.size() > 0){
 			sBuffer.append(ShDataTags.AliasesRepositoryData_s);
-			Iterator<TransparentData> it = aliasesRepositoryDataList.iterator();
-			TransparentData transparentData;
+			Iterator<AliasesRepositoryData> it = aliasesRepositoryDataList.iterator();
+			AliasesRepositoryData transparentData;
 			while (it.hasNext()){
 				transparentData = it.next();
 				sBuffer.append(transparentData.toString());
