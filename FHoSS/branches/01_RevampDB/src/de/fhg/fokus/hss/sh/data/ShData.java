@@ -50,20 +50,20 @@ import java.util.Vector;
  */
 public class ShData {
 
-	private PublicIdentity publicIdentifiers;
-	private Vector<TransparentData> repositoryDataList;
-	private ShIMSData shIMSData;
-	private CSLocationInformation csLocationInformation;
-	private PSLocationInformation psLocationInformation;
-	private CSUserState csUserState;
-	private PSUserState psUserState;
+	private PublicIdentity publicIdentifiers = null;
+	private Vector<RepositoryData> repositoryDataList = null;
+	private ShIMSData shIMSData = null;
+	private CSLocationInformation csLocationInformation = null;
+	private PSLocationInformation psLocationInformation = null;
+	private int csUserState = -1;
+	private int psUserState = -1;
 	private ShDataExtension shDataExtension;
 	
 	public ShData(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
-		sBuffer.append("<Sh-Data>");
+		sBuffer.append(ShDataTags.ShData_s);
 		
 		// append all the child elements
 		if (publicIdentifiers != null){
@@ -83,22 +83,26 @@ public class ShData {
 		if (psLocationInformation != null){
 			sBuffer.append(psLocationInformation.toString());
 		}
-		if (csUserState != null){
-			sBuffer.append(csUserState.toString());
+		if (csUserState != -1){
+			sBuffer.append(ShDataTags.CSUserState_s);
+			sBuffer.append(csUserState);
+			sBuffer.append(ShDataTags.CSUserState_e);
 		}
-		if (psUserState != null){
-			sBuffer.append(psUserState.toString());
+		if (psUserState != -1){
+			sBuffer.append(ShDataTags.PSUserState_s);
+			sBuffer.append(psUserState);
+			sBuffer.append(ShDataTags.CSUserState_e);
 		}
 		if (shDataExtension != null){
 			sBuffer.append(shDataExtension.toString());
 		}
-		sBuffer.append("</Sh-Data>");
+		sBuffer.append(ShDataTags.ShData_e);
 		return sBuffer.toString();
 	}
 	
-	public void addRepositoryData(TransparentData data){
+	public void addRepositoryData(RepositoryData data){
 		if (repositoryDataList == null){
-			repositoryDataList = new Vector<TransparentData>();
+			repositoryDataList = new Vector<RepositoryData>();
 		}
 		repositoryDataList.add(data);
 	}
@@ -112,14 +116,6 @@ public class ShData {
 		this.csLocationInformation = csLocationInformation;
 	}
 
-	public CSUserState getCsUserState() {
-		return csUserState;
-	}
-
-	public void setCsUserState(CSUserState csUserState) {
-		this.csUserState = csUserState;
-	}
-
 	public PSLocationInformation getPsLocationInformation() {
 		return psLocationInformation;
 	}
@@ -128,12 +124,24 @@ public class ShData {
 		this.psLocationInformation = psLocationInformation;
 	}
 
-	public PSUserState getPsUserState() {
+	public int getCsUserState() {
+		return csUserState;
+	}
+
+	public void setCsUserState(int csUserState) {
+		this.csUserState = csUserState;
+	}
+
+	public int getPsUserState() {
 		return psUserState;
 	}
 
-	public void setPsUserState(PSUserState psUserState) {
+	public void setPsUserState(int psUserState) {
 		this.psUserState = psUserState;
+	}
+
+	public Vector<RepositoryData> getRepositoryDataList() {
+		return repositoryDataList;
 	}
 
 	public PublicIdentity getPublicIdentifiers() {
@@ -144,11 +152,11 @@ public class ShData {
 		this.publicIdentifiers = publicIdentifiers;
 	}
 
-	public Vector<TransparentData> getRepositoryData() {
+	public Vector<RepositoryData> getRepositoryData() {
 		return repositoryDataList;
 	}
 
-	public void setRepositoryDataList(Vector<TransparentData> repositoryDataList) {
+	public void setRepositoryDataList(Vector<RepositoryData> repositoryDataList) {
 		this.repositoryDataList = repositoryDataList;
 	}
 

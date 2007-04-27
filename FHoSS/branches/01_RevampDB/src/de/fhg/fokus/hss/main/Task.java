@@ -122,12 +122,13 @@ public class Task {
 			switch(message.commandCode){
 			
 				case DiameterConstants.Command.UDR:
-					
 					response = UDR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
 					break;
 			
 				case DiameterConstants.Command.PUR:
 					response = PUR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
 					break;
 			
 				case DiameterConstants.Command.SNR:

@@ -47,17 +47,36 @@ package de.fhg.fokus.hss.sh.data;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class TransparentData {
-	private String serviceIndication;
-	private int sqn;
+public class AliasesRepositoryData {
+	private String serviceIndication = null;
+	private int sqn = 1;
 	/** can have any value; tag used is Service-Data */
-	private String serviceData;
+	private String serviceData = null;
 	
-	public TransparentData(){}
+	public AliasesRepositoryData(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.AliasesRepositoryData_s);
+		if (serviceIndication != null){
+			sBuffer.append(ShDataTags.ServiceIndication_s);
+			sBuffer.append(serviceIndication);
+			sBuffer.append(ShDataTags.ServiceIndication_e);
+		}
 		
+		if (sqn > 0){
+			sBuffer.append(ShDataTags.SequenceNumber_s);
+			sBuffer.append(sqn);
+			sBuffer.append(ShDataTags.SequenceNumber_e);
+		}
+		
+		if (serviceData != null){
+			sBuffer.append(ShDataTags.ServiceData_s);
+			sBuffer.append(serviceData);
+			sBuffer.append(ShDataTags.ServiceData_e);
+		}
+		
+		sBuffer.append(ShDataTags.AliasesRepositoryData_e);
 		return sBuffer.toString();
 	}
 	

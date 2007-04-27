@@ -55,7 +55,6 @@ public class Worker extends Thread{
 		this.appContainer = appContainer;
 	}
 	
-	
 	public void run(){
 		Task task;
 		while (true){

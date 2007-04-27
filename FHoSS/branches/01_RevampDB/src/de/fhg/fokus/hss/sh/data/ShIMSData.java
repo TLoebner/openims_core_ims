@@ -49,16 +49,40 @@ import java.util.Vector;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class ShIMSData {
-	private String scscfName;
+	private String scscfName = null;
 	private Vector<InitialFilterCriteria> ifcList;
-	private int imsUserState;
-	private ChargingInformation chgInformation;
+	private int imsUserState = -1;
+	private ChargingInformation chgInformation = null;
 	
 	public ShIMSData(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.Sh_IMS_Data_s);
 		
+		if (scscfName != null){
+			sBuffer.append(ShDataTags.SCSCFName_s);
+			sBuffer.append(scscfName);
+			sBuffer.append(ShDataTags.SCSCFName_e);
+		}
+		if (ifcList != null && ifcList.size() > 0) {
+			sBuffer.append(ShDataTags.IFCs_s);
+			InitialFilterCriteria ifc;
+			for (int i = 0; i < ifcList.size(); i++){
+				ifc = ifcList.get(i);
+				sBuffer.append(ifc.toString());
+			}
+			sBuffer.append(ShDataTags.IFCs_e);
+		}
+		if (imsUserState != -1){
+			sBuffer.append(ShDataTags.IMSUserState_s);
+			sBuffer.append(imsUserState);
+			sBuffer.append(ShDataTags.IMSUserState_e);
+		}
+		if (chgInformation != null){
+			sBuffer.append(chgInformation.toString());
+		}
+		sBuffer.append(ShDataTags.Sh_IMS_Data_e);
 		return sBuffer.toString();
 	}
 	
