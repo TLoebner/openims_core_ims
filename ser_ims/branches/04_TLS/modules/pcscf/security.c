@@ -512,7 +512,13 @@ int P_Verify_Security(struct sip_msg *req,char *str1, char *str2)
 
 	r_act_time();
 	if (!c){
-		//first register use tls
+		//first register
+		return CSCF_RETURN_TRUE;
+	}
+
+	if (!r_valid_contact(c) || !c->sec_cli){
+		c->is_registered = 1;
+		r_unlock(c->hash);
 		return CSCF_RETURN_TRUE;
 	}
 
@@ -520,13 +526,6 @@ int P_Verify_Security(struct sip_msg *req,char *str1, char *str2)
 	if (!sec_cli.len)
 	{	
 		LOG(L_ERR,"ERR:"M_NAME":P_Verify_Security: No Security-Verify header found.\n");
-		c->is_registered = 1;
-		r_unlock(c->hash);
-		goto error; 
-	}
-
-	if (!r_valid_contact(c) || !c->sec_cli){
-		LOG(L_ERR,"ERR:"M_NAME":P_Verify_Security: Contact expired or no TLS/IPSEC info\n");
 		c->is_registered = 1;
 		r_unlock(c->hash);
 		goto error;
@@ -841,7 +840,7 @@ int P_TLS_IPSec_200(struct sip_msg *rpl,char *str1, char *str2)
 	sec_cli = cscf_get_pref_client_sec_verify(req, &q_cli, &sec_type);
 	if (!sec_cli.len)
 	{	
-		LOG(L_ERR,"DBG:"M_NAME":P_TLS_IPSec_200: Security-Verify header found.\n");
+		LOG(L_DBG,"DBG:"M_NAME":P_TLS_IPSec_200: No Security-Verify header found.\n");
 		goto error;
 	}
 	
