@@ -83,7 +83,6 @@ public class UDR {
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Sh);
 
 		try{
-			
 			// -0- check for mandatory fields in the message
 			String vendor_specific_ID = UtilAVP.getVendorSpecificApplicationID(request);
 			String auth_session_state = UtilAVP.getAuthSessionState(request);
@@ -197,7 +196,7 @@ public class UDR {
 			if (!dbException){
 				HibernateUtil.commitTransaction();
 			}
-			session.close();
+			HibernateUtil.closeSession();
 		}
 		
 		return response;

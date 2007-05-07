@@ -397,7 +397,7 @@ public class SAR {
 		}
 		finally{
 			HibernateUtil.commitTransaction();
-			session.close();
+			HibernateUtil.closeSession();
 		}
 		return response;
 	}

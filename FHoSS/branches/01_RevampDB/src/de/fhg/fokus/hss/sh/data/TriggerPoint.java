@@ -74,6 +74,13 @@ public class TriggerPoint {
 		return sBuffer.toString();
 	}
 	
+	public void addSPT(SPT spt){
+		if (sptList == null){
+			sptList = new Vector<SPT>();
+		}
+		sptList.add(spt);
+		
+	}
 	public int getConditionTypeCNF() {
 		return conditionTypeCNF;
 	}

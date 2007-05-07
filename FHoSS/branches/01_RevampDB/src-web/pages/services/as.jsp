@@ -146,7 +146,7 @@ function add_action_for_form(action, associated_ID) {
 					</tr>
 					<tr bgcolor="#FFCC66">
 						<td> IMS User State </td>				
-						<td><html:checkbox property="udr_user_state" styleClass="inputbox" />	</td>										
+						<td><html:checkbox property="udr_ims_user_state" styleClass="inputbox" />	</td>										
 						<td> </td>										
 						<td> </td>										
 					</tr>

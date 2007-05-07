@@ -42,47 +42,105 @@
   */
 package de.fhg.fokus.hss.sh.data;
 
+import java.util.Vector;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class PublicIdentity {
-	private String imsPublicIdentity;
-	private String msisdn;
-	private PublicIdentityExtension extension;
+	private Vector<String> publicIdentityList = null;
+	private Vector<String> msisdnList = null;
+
+	// Extension
+	private int identityType = -1;
+	private String wildcardedPSI = null;
 	
 	public PublicIdentity(){}
 
-
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.PublicIdentifiers_s);
+		if (publicIdentityList != null && publicIdentityList.size() > 0){
+			for (int i = 0; i < publicIdentityList.size(); i++){
+				sBuffer.append(ShDataTags.IMSPublicIdentity_s);
+				sBuffer.append(publicIdentityList.get(i));
+				sBuffer.append(ShDataTags.IMSPublicIdentity_e);
+			}
+		}
 		
+		if (msisdnList != null && msisdnList.size() > 0){
+			for (int i = 0; i < msisdnList.size(); i++){
+				sBuffer.append(ShDataTags.MSISDN_s);
+				sBuffer.append(msisdnList.get(i));
+				sBuffer.append(ShDataTags.MSISDN_e);
+			}
+		}
+		
+		if (identityType != -1 || wildcardedPSI != null){
+			sBuffer.append(ShDataTags.Extension_s);
+			if (identityType != -1){
+				sBuffer.append(ShDataTags.IdentityType_s);
+				sBuffer.append(identityType);
+				sBuffer.append(ShDataTags.IdentityType_e);
+			}
+
+			if (wildcardedPSI != null){
+				sBuffer.append(ShDataTags.WildcardedPSI_s);
+				sBuffer.append(wildcardedPSI);
+				sBuffer.append(ShDataTags.WildcardedPSI_e);
+			}
+			sBuffer.append(ShDataTags.Extension_e);
+		}
+		
+		sBuffer.append(ShDataTags.PublicIdentifiers_e);
 		return sBuffer.toString();
 	}
 
-	public PublicIdentityExtension getExtension() {
-		return extension;
+	public void addPublicIdentity(String publicIdentity){
+		if (publicIdentityList == null){
+			publicIdentityList = new Vector<String>();
+		}
+		publicIdentityList.add(publicIdentity);
 	}
 
-	public void setExtension(PublicIdentityExtension extension) {
-		this.extension = extension;
-	}
-
-	public String getImsPublicIdentity() {
-		return imsPublicIdentity;
-	}
-
-	public void setImsPublicIdentity(String imsPublicIdentity) {
-		this.imsPublicIdentity = imsPublicIdentity;
-	}
-
-	public String getMsisdn() {
-		return msisdn;
-	}
-
-	public void setMsisdn(String msisdn) {
-		this.msisdn = msisdn;
+	public void addMSISDN(String msisdn){
+		if (msisdnList == null){
+			msisdnList = new Vector<String>();
+		}
+		msisdnList.add(msisdn);
 	}
 	
+	public int getIdentityType() {
+		return identityType;
+	}
+
+	public void setIdentityType(int identityType) {
+		this.identityType = identityType;
+	}
+
+	public Vector<String> getMsisdnList() {
+		return msisdnList;
+	}
+
+	public void setMsisdnList(Vector<String> msisdnList) {
+		this.msisdnList = msisdnList;
+	}
+
+	public Vector<String> getPublicIdentityList() {
+		return publicIdentityList;
+	}
+
+	public void setPublicIdentityList(Vector<String> publicIdentityList) {
+		this.publicIdentityList = publicIdentityList;
+	}
+
+	public String getWildcardedPSI() {
+		return wildcardedPSI;
+	}
+
+	public void setWildcardedPSI(String wildcardedPSI) {
+		this.wildcardedPSI = wildcardedPSI;
+	}
 	
 }

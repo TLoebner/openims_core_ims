@@ -54,6 +54,9 @@ public class ShIMSData {
 	private int imsUserState = -1;
 	private ChargingInformation chgInformation = null;
 	
+	// Extensions
+	private int psiActivation = -1;
+	private Vector<DSAI> dsaiList = null;
 	public ShIMSData(){}
 
 	public String toString(){
@@ -82,8 +85,42 @@ public class ShIMSData {
 		if (chgInformation != null){
 			sBuffer.append(chgInformation.toString());
 		}
+		
+		if (psiActivation != -1 || (dsaiList != null && dsaiList.size() > 0)){
+			sBuffer.append(ShDataTags.Extension_s);
+			// Extensions
+			if (psiActivation != -1){
+				sBuffer.append(ShDataTags.PSIActivation_s);
+				sBuffer.append(psiActivation);
+				sBuffer.append(ShDataTags.PSIActivation_e);
+			}
+		
+			if (dsaiList != null && dsaiList.size() > 0){
+				sBuffer.append(ShDataTags.Extension_s);	
+				for (int i = 0; i < dsaiList.size(); i++){
+					DSAI dsai = dsaiList.get(i);
+					sBuffer.append(dsai.toString());
+				}
+				sBuffer.append(ShDataTags.Extension_e);
+			}
+			sBuffer.append(ShDataTags.Extension_e);
+		}
 		sBuffer.append(ShDataTags.Sh_IMS_Data_e);
 		return sBuffer.toString();
+	}
+	
+	public void addInitialFilterCriteria(InitialFilterCriteria ifc){
+		if (ifcList == null){
+			ifcList = new Vector();
+		}
+		ifcList.add(ifc);
+	}
+	
+	public void addDSAI(DSAI dsai){
+		if (dsaiList == null){
+			dsaiList = new Vector();
+		}
+		dsaiList.add(dsai);
 	}
 	
 	public ChargingInformation getChgInformation() {
@@ -117,4 +154,21 @@ public class ShIMSData {
 	public void setScscfName(String scscfName) {
 		this.scscfName = scscfName;
 	}
+
+	public Vector<DSAI> getDsaiList() {
+		return dsaiList;
+	}
+
+	public void setDsaiList(Vector<DSAI> dsaiList) {
+		this.dsaiList = dsaiList;
+	}
+
+	public int getPsiActivation() {
+		return psiActivation;
+	}
+
+	public void setPsiActivation(int psiActivation) {
+		this.psiActivation = psiActivation;
+	}
+	
 }

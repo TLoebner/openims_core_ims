@@ -79,9 +79,9 @@ public class ShDataExtension {
 		}
 		
 		if (aliasIdentities != null){
-			sBuffer.append(ShDataTags.AliasesIdentities_s);
+			sBuffer.append(ShDataTags.AliasIdentities_s);
 			sBuffer.append(aliasIdentities.toString());
-			sBuffer.append(ShDataTags.AliasesIdentities_e);
+			sBuffer.append(ShDataTags.AliasIdentities_e);
 		}
 		
 		if (aliasesRepositoryDataList != null && aliasesRepositoryDataList.size() > 0){
@@ -97,6 +97,47 @@ public class ShDataExtension {
 		
 		sBuffer.append(ShDataTags.ShDataExtension_e);
 		return sBuffer.toString();
+	}
+
+	public Vector<AliasesRepositoryData> getAliasesRepositoryDataList() {
+		return aliasesRepositoryDataList;
+	}
+
+	public void setAliasesRepositoryDataList(
+			Vector<AliasesRepositoryData> aliasesRepositoryDataList) {
+		this.aliasesRepositoryDataList = aliasesRepositoryDataList;
+	}
+
+	public PublicIdentity getAliasIdentities() {
+		return aliasIdentities;
+	}
+
+	public void setAliasIdentities(PublicIdentity aliasIdentities) {
+		this.aliasIdentities = aliasIdentities;
+	}
+
+	public PublicIdentity getAllIdentities() {
+		return allIdentities;
+	}
+
+	public void setAllIdentities(PublicIdentity allIdentities) {
+		this.allIdentities = allIdentities;
+	}
+
+	public PublicIdentity getImplicitIdentities() {
+		return implicitIdentities;
+	}
+
+	public void setImplicitIdentities(PublicIdentity implicitIdentities) {
+		this.implicitIdentities = implicitIdentities;
+	}
+
+	public PublicIdentity getRegisteredIdentities() {
+		return registeredIdentities;
+	}
+
+	public void setRegisteredIdentities(PublicIdentity registeredIdentities) {
+		this.registeredIdentities = registeredIdentities;
 	}
 	
 	
