@@ -43,16 +43,53 @@
 
 package de.fhg.fokus.hss.sh.op;
 
+import org.hibernate.Session;
+
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.diam.DiameterConstants;
+import de.fhg.fokus.hss.diam.UtilAVP;
+import de.fhg.fokus.hss.sh.ShExperimentalResultException;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class PUR {
-	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage message){
-		return null;
+	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
+		DiameterMessage response = diameterPeer.newResponse(request);
+		boolean dbException = false;
+		
+		Session session = HibernateUtil.getCurrentSession();
+		HibernateUtil.beginTransaction();
+
+		try{
+			
+		}
+		catch (DatabaseException e){
+			dbException = true;
+			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
+			e.printStackTrace();
+		}
+/*		catch(ShExperimentalResultException e){
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			e.printStackTrace();
+		}
+		catch(ShFinalResultException e){
+			UtilAVP.addResultCode(response, e.getErrorCode());
+			e.printStackTrace();
+		}
+*/
+		finally{
+			// commit transaction only when a Database doesn't occured
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+		return response;
 	}
 
 }

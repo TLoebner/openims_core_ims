@@ -196,8 +196,7 @@ public class RTR {
 		}
 		finally{
 			HibernateUtil.commitTransaction();
-			if (session != null)
-				session.close();
+			HibernateUtil.closeSession();
 		}
 	}
 	

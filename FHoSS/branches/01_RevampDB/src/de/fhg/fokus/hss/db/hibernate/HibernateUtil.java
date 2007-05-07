@@ -117,7 +117,9 @@ public class HibernateUtil{
         Session s = (Session) threadSession.get();
         try{
         	if (s != null){
-        		s.close();
+        		if (s.isOpen() == true){
+        			s.close();
+        		}
         		threadSession.set(null);            
         	}
         }

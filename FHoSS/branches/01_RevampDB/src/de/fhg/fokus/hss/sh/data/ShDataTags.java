@@ -182,9 +182,9 @@ public class ShDataTags {
 	public static final String AllIdentities = "AllIdentities";
 	public static final String AllIdentities_s = "<AllIdentities>";
 	public static final String AllIdentities_e = "</AllIdentities>";
-	public static final String AliasesIdentities = "AliasesIdentities";
-	public static final String AliasesIdentities_s = "<AliasesIdentities>";
-	public static final String AliasesIdentities_e = "</AliasesIdentities>";
+	public static final String AliasIdentities = "AliasIdentities";
+	public static final String AliasIdentities_s = "<AliasIdentities>";
+	public static final String AliasIdentities_e = "</AliasIdentities>";
 	public static final String AliasesRepositoryData = "AliasesRepositoryData";
 	public static final String AliasesRepositoryData_s = "<AliasesRepositoryData>";
 	public static final String AliasesRepositoryData_e = "</AliasesRepositoryData>";
@@ -250,5 +250,44 @@ public class ShDataTags {
 	public static final String IMSUserState = "IMSUserState";
 	public static final String IMSUserState_s = "<IMSUserState>";
 	public static final String IMSUserState_e = "</IMSUserState>";
+
+	// DSAI
+
+	public static final String Extension = "Extension";
+	public static final String Extension_s = "<Extension>";
+	public static final String Extension_e = "</Extension>";
+
+	public static final String DSAI = "DSAI";
+	public static final String DSAI_s = "<DSAI>";
+	public static final String DSAI_e = "</DSAI>";
+
+	public static final String DSAI_Tag = "DSAI-Tag";
+	public static final String DSAI_Tag_s = "<DSAI-Tag>";
+	public static final String DSAI_Tag_e = "</DSAI-Tag>";
+
+	public static final String DSAI_Value = "DSAI-Value";
+	public static final String DSAI_Value_s = "<DSAI-Value>";
+	public static final String DSAI_Value_e = "</DSAI-Value>";
+
+	// PSIActivation
+	public static final String PSIActivation = "PSIActivation";
+	public static final String PSIActivation_s = "<PSIActivation>";
+	public static final String PSIActivation_e = "</PSIActivation>";
 	
+	// other tags
+	public static final String IMSPublicIdentity = "IMSPublicIdentity";
+	public static final String IMSPublicIdentity_s = "<IMSPublicIdentity>";
+	public static final String IMSPublicIdentity_e = "</IMSPublicIdentity>";
+	
+	public static final String MSISDN = "MSISDN";
+	public static final String MSISDN_s = "<MSISDN>";
+	public static final String MSISDN_e = "</MSISDN>";
+	
+	public static final String IdentityType = "IdentityType";
+	public static final String IdentityType_s = "<IdentityType>";
+	public static final String IdentityType_e = "</IdentityType>";
+	
+	public static final String WildcardedPSI = "WildcardedPSI";
+	public static final String WildcardedPSI_s = "<WildcardedPSI>";
+	public static final String WildcardedPSI_e = "</WildcardedPSI>";
 }

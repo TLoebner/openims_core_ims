@@ -91,8 +91,8 @@ public class MAR {
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
 		
 		try{
-			HibernateUtil.beginTransaction();
 			session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 			
 			String publicIdentity = UtilAVP.getPublicIdentity(request);
 			String privateIdentity = UtilAVP.getUserName(request);
@@ -306,7 +306,7 @@ public class MAR {
 		
 		finally{
 			HibernateUtil.commitTransaction();
-			session.close();
+			HibernateUtil.closeSession();
 		}
 		
 		return response;

@@ -45,14 +45,228 @@ public class Tester extends Thread{
 		String inputString = 
 			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
 			"<Sh-Data xmlns=\"urn:ietf:params:xml:ns:pidf\" >" +
+			"<PublicIdentifiers>" +
+				"<IMSPublicIdentity>" +
+					"<PublicIdentity>" +
+						"sip:alice@open-ims.test" + 
+					"</PublicIdentity>" +
+				"</IMSPublicIdentity>" +
+				"<IMSPublicIdentity>" +
+					"<PublicIdentity>" +
+						"sip:alice2@open-ims.test" + 
+					"</PublicIdentity>" +
+				"</IMSPublicIdentity>" +
+				"<MSISDN>" +
+					"msisdn_id" +
+				"</MSISDN>" +
+				"<MSISDN>" +
+					"msisdn_id2" +
+				"</MSISDN>" +
+				"<IdentityType>" +
+					"1" + 
+				"</IdentityType>" +
+				"<WildcardedPSI>" +
+					"wildcarded-psi" + 
+				"</WildcardedPSI>" +
+			"</PublicIdentifiers>" +
+			
+			"<RepositoryData>" +
+				"<ServiceIndication>" + "service_indication" + "</ServiceIndication>" +
+				"<SequenceNumber>" + "6" + "</SequenceNumber>" +
+				"<ServiceData>" + "service_data" + "</ServiceData>" +
+			"</RepositoryData>" +
+			
+			"<Sh-IMS-Data>" +
+				"<SCSCFName>" + "scscf_name" + "</SCSCFName>" +
+				"<IMSUSerState>" + "1" + "</IMSUSerState>" +
+				"<IFCs>" +
+					"<InitialFilterCriteria>" +
+						"<Priority>" + "1" + "</Priority>" +
+						"<TriggerPoint>" +
+							"<ConditionTypeCNF>" + "1" + "</ConditionTypeCNF>" +
+							"<SPT>" +
+								"<ConditionNegated>" + "1" + "</ConditionNegated>" +
+								"<Group>" + "1" + "</Group>" +
+								"<RequestURI>" + "publish" + "</RequestURI>" +  
+							"</SPT>" +
+
+							"<SPT>" +
+								"<ConditionNegated>" + "1" + "</ConditionNegated>" +
+								"<Group>" + "1" + "</Group>" +
+								"<SIPHeader>" +
+									"<Header>" +
+										"Event" + 
+									"</Header>" +
+									"<Content>" +
+										"presence" + 
+									"</Content>" +
+								"</SIPHeader>" +
+							"</SPT>" +
+							"<SPT>" +
+								"<ConditionNegated>" + "1" + "</ConditionNegated>" +
+								"<Group>" + "1" + "</Group>" +
+								"<SessionDescription>" +
+									"<Line>" +
+										"sdp_line" + 
+									"</Line>" +
+									"<Content>" +
+										"sdp_content" + 
+									"</Content>" +
+								"</SessionDescription>" +
+							"</SPT>" +
+
+						"</TriggerPoint>" +
+						"<ApplicationServer>" +
+							"<ServerName>" + "AS" + "</ServerName>" +
+							"<DefaultHandling>" + "2" + "</DefaultHandling>" +
+							"<ServiceInfo>" + "serviceinfo" + "</ServiceInfo>" +
+						"</ApplicationServer>" +
+						"<ProfilePartIndicator>" + "1" + "</ProfilePartIndicator>" +
+					"</InitialFilterCriteria>" + 
+				"</IFCs>" +
+				"<ChargingInformation>" +
+					"<PrimaryEventChargingFunctionName>" + "p_ecf" + "</PrimaryEventChargingFunctionName>" +
+					"<SecondaryEventChargingFunctionName>" + "s_ecf" + "</SecondaryEventChargingFunctionName>" +
+					"<PrimaryChargingCollectionFunctionName>" + "p_ccf" + "</PrimaryChargingCollectionFunctionName>" +
+					"<SecondaryChargingCollectionFunctionName>" + "s_ccf" + "</SecondaryChargingCollectionFunctionName>" +
+				"</ChargingInformation>" +
+				"<Extension>" +
+					"<PSIActivation>" + "1" + "</PSIActivation>" + 
+					"<Extension>" +
+						"<DSAI>" +
+							"<DSAI-Tag>" +
+								"dsai-tag" + 
+							"</DSAI-Tag>" +
+							"<DSAI-Value>" +
+								"5" + 
+							"</DSAI-Value>" +
+						"</DSAI>" +
+						"<DSAI>" +
+							"<DSAI-Tag>" +
+								"dsai-tag2" + 
+							"</DSAI-Tag>" +
+							"<DSAI-Value>" +
+								"8" + 
+							"</DSAI-Value>" +
+						"</DSAI>" +
+					"</Extension>" +	
+				"</Extension>" +
+			"</Sh-IMS-Data>" +
+			
+			"<CSLocationInformation>" +
+				"<LocationNumber>" + "1" + "</LocationNumber>" +
+				"<CellGlobalId>" + "1" + "</CellGlobalId>" +
+				"<ServiceAreaId>" + "1" + "</ServiceAreaId>" +
+				"<LocationAreaId>" + "1" + "</LocationAreaId>" +
+				"<GeographicalInformation>" + "1" + "</GeographicalInformation>" +
+				"<GeodeticInformation>" + "1" + "</GeodeticInformation>" +
+				"<VLRNumber>" + "1" + "</VLRNumber>" +
+				"<MSCNumber>" + "1" + "</MSCNumber>" +
+				"<CurrentLocationRetrieved>" + "1" + "</CurrentLocationRetrieved>" +
+				"<AgeOfLocationInformation>" + "1" + "</AgeOfLocationInformation>" +
+			"</CSLocationInformation>" +
+
+			"<PSLocationInformation>" +
+				"<CellGlobalId>" + "1" + "</CellGlobalId>" +
+				"<ServiceAreaId>" + "1" + "</ServiceAreaId>" +
+				"<LocationAreaId>" + "1" + "</LocationAreaId>" +
+				"<RoutingAreaId>" + "1" + "</RoutingAreaId>" +
+				"<GeographicalInformation>" + "1" + "</GeographicalInformation>" +
+				"<GeodeticInformation>" + "1" + "</GeodeticInformation>" +
+				"<SGSNNumber>" + "1" + "</SGSNNumber>" +
+				"<CurrentLocationRetrieved>" + "1" + "</CurrentLocationRetrieved>" +
+				"<AgeOfLocationInformation>" + "1" + "</AgeOfLocationInformation>" +
+			"</PSLocationInformation>" +
+			"<CSUserState>" +
+				"1" + 
+			"</CSUserState>" +
+			"<PSUserState>" +
+				"2" +
+			"</PSUserState>" +
+			"<Sh-Data-Extension>" +
+				"<RegisteredIdentities>" +
+					"<PublicIdentifiers>" +
+						"<IMSPublicIdentity>" +
+							"<PublicIdentity>" +
+								"sip:bob@open-ims.test" + 
+							"</PublicIdentity>" +
+						"</IMSPublicIdentity>" +
+						"<IMSPublicIdentity>" +
+							"<PublicIdentity>" +
+								"sip:bob2@open-ims.test" + 
+							"</PublicIdentity>" +
+						"</IMSPublicIdentity>" +
+					"</PublicIdentifiers>" +
+				"</RegisteredIdentities>" +
+				
+				"<ImplicitIdentities>" +
+				"<PublicIdentifiers>" +
+					"<IMSPublicIdentity>" +
+						"<PublicIdentity>" +
+							"sip:implicit@open-ims.test" + 
+						"</PublicIdentity>" +
+					"</IMSPublicIdentity>" +
+					"<IMSPublicIdentity>" +
+						"<PublicIdentity>" +
+							"sip:implicit2@open-ims.test" + 
+						"</PublicIdentity>" +
+					"</IMSPublicIdentity>" +
+				"</PublicIdentifiers>" +
+				"</ImplicitIdentities>" +
+
+				"<AllIdentities>" +
+				"<PublicIdentifiers>" +
+					"<IMSPublicIdentity>" +
+						"<PublicIdentity>" +
+							"sip:all@open-ims.test" + 
+						"</PublicIdentity>" +
+					"</IMSPublicIdentity>" +
+					"<IMSPublicIdentity>" +
+						"<PublicIdentity>" +
+							"sip:all2@open-ims.test" + 
+						"</PublicIdentity>" +
+					"</IMSPublicIdentity>" +
+				"</PublicIdentifiers>" +
+				"</AllIdentities>" +
+
+				"<AliasIdentities>" +
+				"<PublicIdentifiers>" +
+					"<IMSPublicIdentity>" +
+						"<PublicIdentity>" +
+							"sip:all@open-ims.test" + 
+						"</PublicIdentity>" +
+					"</IMSPublicIdentity>" +
+					"<IMSPublicIdentity>" +
+						"<PublicIdentity>" +
+							"sip:all2@open-ims.test" + 
+						"</PublicIdentity>" +
+					"</IMSPublicIdentity>" +
+				"</PublicIdentifiers>" +
+				"</AliasIdentities>" +
+				
+				"<AliasesRepositoryData>" +
+					"<ServiceIndication>" + "aliases_service_indication" + "</ServiceIndication>" +
+					"<SequenceNumber>" + "7" + "</SequenceNumber>" +
+					"<ServiceData>" + "aliases_service_data" + "</ServiceData>" +
+				"</AliasesRepositoryData>" +
+
+				"<AliasesRepositoryData>" +
+					"<ServiceIndication>" + "aliases2_service_indication" + "</ServiceIndication>" +
+					"<SequenceNumber>" + "27" + "</SequenceNumber>" +
+					"<ServiceData>" + "aliases2_service_data" + "</ServiceData>" +
+				"</AliasesRepositoryData>" +
+			"</Sh-Data-Extension>" +
 			"</Sh-Data>";
 		
 		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
 		ShDataParser parser = new ShDataParser(input);
-		  		
+/*		  		
 		ShData shData = parser.getShData();
-		System.out.println(shData.toString());		
-		
+		if (shData != null)
+			System.out.println(shData.toString());		
+		else
+			System.out.println("The output was null!");
+*/			
 		/*
 		long time1 = System.currentTimeMillis();
 		Session session = HibernateUtil.getCurrentSession();

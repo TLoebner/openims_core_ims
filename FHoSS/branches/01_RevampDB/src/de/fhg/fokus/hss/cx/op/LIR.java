@@ -78,8 +78,9 @@ public class LIR {
 		
 		Session session = null;
 		try{
-			// obtain the hibernate session
+			// obtain the hibernate session & transaction
 			session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 			
 			// get the needed AVPs
 			String publicIdentity = UtilAVP.getPublicIdentity(request);
@@ -179,7 +180,7 @@ public class LIR {
 		}
 		finally{
 			HibernateUtil.commitTransaction();
-			session.close();
+			HibernateUtil.closeSession();
 		}
 		
 		return response;

@@ -3,6 +3,8 @@
  */
 package de.fhg.fokus.hss.sh.data;
 
+import java.util.Vector;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -17,7 +19,7 @@ public class SPT {
 	private int sessionCase = -1;
 	private String sessionDescLine = null;
 	private String sessionDescContent = null;
-	private int registrationTypeExtension = -1; 
+	private Vector<Integer> registrationTypeList = null; 
 	
 	public SPT(){}
 
@@ -83,15 +85,26 @@ public class SPT {
 			sBuffer.append(ShDataTags.SessionDescription_e);
 		}
 		
-		if (registrationTypeExtension != -1){
-			sBuffer.append(ShDataTags.RegistrationType_s);
-			sBuffer.append(registrationTypeExtension);
-			sBuffer.append(ShDataTags.RegistrationType_e);
+		if (registrationTypeList != null){
+			sBuffer.append(ShDataTags.Extension_s);
+			for (int i = 0; i < registrationTypeList.size(); i++){
+				sBuffer.append(ShDataTags.RegistrationType_s);
+				sBuffer.append(registrationTypeList.get(i));
+				sBuffer.append(ShDataTags.RegistrationType_e);
+			}
+			sBuffer.append(ShDataTags.Extension_e);
 		}
 
 		sBuffer.append(ShDataTags.SPT_e);
 		
 		return sBuffer.toString();
+	}
+	
+	public void addRegistrationType(int regType){
+		if (registrationTypeList == null){
+			registrationTypeList = new Vector<Integer>();
+		}
+		registrationTypeList.add(regType);
 	}
 	
 	public int getConditionNegated() {
@@ -166,14 +179,13 @@ public class SPT {
 		this.sipHeader = sipHeader;
 	}
 
-	public int getRegistrationTypeExtension() {
-		return registrationTypeExtension;
+	public Vector<Integer> getRegistrationTypeExtension() {
+		return registrationTypeList;
 	}
 
-	public void setRegistrationTypeExtension(int registrationTypeExtension) {
-		this.registrationTypeExtension = registrationTypeExtension;
+	public void setRegistrationTypeExtension(
+			Vector<Integer> registrationTypeExtension) {
+		this.registrationTypeList = registrationTypeExtension;
 	}
-	
-	
-	
+
 }
