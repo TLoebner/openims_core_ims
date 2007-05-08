@@ -70,7 +70,70 @@ unsigned int role_of_node = AVP_IMS_ORIGINATING_ROLE;
 unsigned int node_functionality = AVP_IMS_P_CSCF;
 
 
-AAAMessage* Rf_ACR_event(struct sip_msg *msg) 
+/* 
+ * SIP Request Method --> Event Type:
+ * 
+ * <Event-Type> = [SIP-Method]
+ *                [Event]
+ *                [Expires]
+ * 
+ */
+int add_event_type(struct sip_msg* msg, AAA_AVP_LIST* outl, AAA_AVP_LIST* inl)
+{
+	str method = cscf_get_sip_method(msg);
+	if (!Rf_add_sip_method(inl, method)) goto error;
+			
+	str event = cscf_get_event(msg);
+	if (event.len) 
+		if (!Rf_add_event(inl, event)) goto error;
+		
+		
+	int expires = cscf_get_expires_hdr(msg);	
+	if (expires >= 0) 
+		if (!Rf_add_expires(inl, expires)) goto error;
+		
+			
+	if (!Rf_add_event_type(outl, inl)) goto error;
+
+	return 1;
+
+error:
+	return 0;	
+
+}
+
+
+
+/* 
+ * P-Charging-Vector: orig-ioi -> Originating-IOI
+ * P-Charging-Vector: term-ioi -> Terminating-IOI
+ * 
+ * <Inter-Operator-Identifier> = [Originating-IOI]
+ * 								 [Terminating-IOI]
+ *
+ */
+int add_inter_operator_identifier(struct sip_msg* msg, AAA_AVP_LIST* outl, 
+		AAA_AVP_LIST* inl)
+{
+	str orig_ioi = cscf_get_p_charging_vector_orig_ioi(msg);
+	if (orig_ioi.len)
+		if (!Rf_add_originating_ioi(inl, orig_ioi)) goto error;
+		
+	str term_ioi = cscf_get_p_charging_vector_term_ioi(msg);
+	if (term_ioi.len)
+		if (!Rf_add_terminating_ioi(inl, term_ioi)) goto error;
+
+	if (!Rf_add_inter_operator_identifier(outl, inl)) goto error;
+
+	return 1;
+
+error:
+	return 0;
+	
+}
+
+
+AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res) 
 {
 	AAAMessage *acr = 0;
 	AAASessionId sessId = {0,0};
@@ -81,12 +144,12 @@ AAAMessage* Rf_ACR_event(struct sip_msg *msg)
 	
 	if (!acr) goto error;
 	
-	/*---------- 1. Add mandatory AVPs ----------*/
+	/*---------- 1. Add mandatory AVPs, tags are not checked ----------*/
 	
 	/* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
 	
 	/* Add Destination-Realm AVP */
-	str realm = cscf_get_realm_from_ruri(msg);
+	str realm = cscf_get_realm_from_ruri(req);
 	if (!Rf_add_destination_realm(acr, realm)) goto error;
 	
 	/* Add Accounting-Record-Type AVP */
@@ -144,42 +207,21 @@ AAAMessage* Rf_ACR_event(struct sip_msg *msg)
 	AAA_AVP_LIST ls_tmp;
 	ls_tmp.head=0; ls_tmp.tail = 0;
 	
-	/* Following AVPs are created by P-CSCF directly. */
-	if(!Rf_add_role_of_node(&ls_ims, role_of_node)) goto error;
-	if(!Rf_add_node_functionality(&ls_ims, node_functionality)) goto error;
-	
-	
 	/* To decide which AVP should be created based on the charging flag. */
 	
-	/* SIP Request Method --> Event Type:
-	 * 
-	 * <Event-Type> = [SIP-Method]
-	 *                [Event]
-	 *                [Expires]
-	 * 
-	 */
-	if ((cflag.cf_3gpp & CF_3GPP_EVENT_TYPE) &&
-		(msg->first_line.type == SIP_REQUEST)) {
-		
-		str method = cscf_get_sip_method(msg);
-		if (!Rf_add_sip_method(&ls_tmp, method)) goto error;
-			
-		str event = cscf_get_event(msg);
-		if (event.len) 
-			if (!Rf_add_event(&ls_tmp, event)) goto error;
-		
-		
-		int expires = cscf_get_expires_hdr(msg);	
-		if (expires >= 0) 
-			if (!Rf_add_expires(&ls_tmp, expires)) goto error;
-		
-			
-		if (!Rf_add_event_type(&ls_ims, &ls_tmp)) goto error;
-	}
+	/* SIP Request Method --> Event Type */
+	if (cflag.cf_3gpp & CF_3GPP_EVENT_TYPE) 
+		if (!add_event_type(req, &ls_ims, &ls_tmp)) goto error; 
+	
+	/* Role of Node created by P-CSCF directly. */
+	if(!Rf_add_role_of_node(&ls_ims, role_of_node)) goto error;
+	
+	/* Node functionality created by P-CSCF directly */
+	if(!Rf_add_node_functionality(&ls_ims, node_functionality)) goto error;
 	
 	/*  Call-ID --> User-Session-ID AVP */
 	if (cflag.cf_3gpp & CF_3GPP_USER_SESSION_ID) {
-		str user_session_id = cscf_get_call_id(msg, 0);
+		str user_session_id = cscf_get_call_id(req, 0);
 		if (user_session_id.len)
 			if (!Rf_add_user_session_id(&ls_ims, user_session_id)) goto error;
 	}
@@ -188,43 +230,89 @@ AAAMessage* Rf_ACR_event(struct sip_msg *msg)
 	/*
 	 * Obtained from P-Asserted-Identity of non-REGISTER SIP request.
 	 * 
-	 * TODO may appear serveral times when the P-Asserted-Identity header
+	 * TODO may appear several times when the P-Asserted-Identity header
 	 * contains both a SIP URI and a TEL URI.
 	 */
 	if ((cflag.cf_3gpp & CF_3GPP_CALLING_PARTY_ADDRESS) && 
-		(msg->first_line.type == SIP_REQUEST) && 
-		(msg->REQ_METHOD != METHOD_REGISTER)) {
-		str calling_addr = cscf_get_asserted_identity(msg);
+		(req->REQ_METHOD != METHOD_REGISTER)) {
+		str calling_addr = cscf_get_asserted_identity(req);
 		if (calling_addr.len)
 			if (!Rf_add_calling_party_address(&ls_ims, calling_addr)) goto error; 
-			
 	}
 	
 	/* Requst URI / To URI --> Called-Party-Address AVP */
-	/* if REG from To URI
+	/* 
+	 * If REG from To URI
 	 * otherwise from Request URI
 	 */
-	if ((cflag.cf_3gpp & CF_3GPP_CALLED_PARTY_ADDRESS) &&
-		(msg->first_line.type == SIP_REQUEST)) {
+	if (cflag.cf_3gpp & CF_3GPP_CALLED_PARTY_ADDRESS) {
 		
 		str called_addr;
 		
-		if (msg->REQ_METHOD & METHOD_REGISTER) {
-			called_addr = cscf_get_public_identity(msg);
+		if (req->REQ_METHOD & METHOD_REGISTER) {
+			called_addr = cscf_get_public_identity(req);
 		} else {
-			called_addr = cscf_get_public_identity_from_requri(msg);
+			called_addr = cscf_get_public_identity_from_requri(req);
 		}
 		
 		if (called_addr.len)
 			if (!Rf_add_called_party_address(&ls_ims, called_addr)) goto error;
 	}
 	
-	/* P-Charging-Vector: icid-value -> IMS-Charging-Identifier AVP */
-//	if (cflag.cf_3gpp & CF_3GPP_IMS_CHARGING_IDENTIFER) {
-//		str icid = cscf_get_p_charging_vector_icid(msg);
-//	}
+	/* P-Associated-URI --> Asssocited URI AVP */
+	/* 
+	 * If REG, from P-Associated-URIs in 200 OK
+	 * TODO may appear several times, when the P-Associated-URI header contains
+	 * more than one public user identity.
+	 */
+	if ((cflag.cf_3gpp & CF_3GPP_ASSOCIATED_URI) &&
+		(req->REQ_METHOD & METHOD_REGISTER)) {
 		
+		str associated_uri;
+		if (cscf_get_first_p_associated_uri(res, &associated_uri))
+			if (associated_uri.len)
+				if (!Rf_add_associated_uri(&ls_ims, associated_uri)) goto error; 	
+			
+		//str **associated_uri;
+		//int cnt;
+		//int i;
+		
+		//if (cscf_get_p_associated_uri(res, associated_uri, &cnt)) {
+		//	for (i=0; i < cnt; i++) {
+		//		if ((*associated_uri)[i].len) {
+		//			if (!Rf_add_associated_uri(&ls_ims, (*associated_uri)[i])) goto error; 	
+		//		}
+		//	}
+		//}
+		//pkg_free(associated_uri);
+	}
 	
+	/* P-Charging-Vector: icid-value -> IMS-Charging-Identifier AVP */
+	if (cflag.cf_3gpp & CF_3GPP_IMS_CHARGING_IDENTIFIER) {
+		str icid = cscf_get_p_charging_vector_icid(req);
+		if (icid.len)
+			if (!Rf_add_ims_charging_identifier(&ls_ims, icid)) goto error; 
+	}
+	
+	/* 
+	 * P-Charging-Vector: orig-ioi -> Originating-IOI
+	 * P-Charging-Vector: term-ioi -> Terminating-IOI
+	 */
+	if (cflag.cf_3gpp & CF_3GPP_INTER_OPERATOR_IDENTIFIER)
+		if (!add_inter_operator_identifier(req, &ls_ims, &ls_tmp)) goto error;
+	
+	/* Cause-Code AVP */
+	/* If this function is called, registration successful */
+	if (cflag.cf_3gpp & CF_3GPP_CAUSE_CODE)
+		if (!Rf_add_cause_code(&ls_ims, -1)) goto error;
+		
+	/* P-Access-Network-Info -> Access-Network-Information AVP */
+	if (cflag.cf_3gpp & CF_3GPP_ACCESS_NETWORK_INFORMATION) {
+		str access_network_info = cscf_get_p_access_network_info(req);	
+		if (access_network_info.len)
+			if (!Rf_add_access_network_information(&ls_ims, access_network_info))
+				goto error;
+	}
 	
 	if (!Rf_add_ims_information(&ls_ser, &ls_ims)) goto error;
 	if (!Rf_add_service_information(acr, &ls_ser)) goto error;
@@ -245,15 +333,21 @@ error:
 
 }
 
-AAAMessage* Rf_ACR_start(struct sip_msg *msg) {
-	return 0;
-}
- 
-AAAMessage* Rf_ACR_interim(struct sip_msg *msg) {
+
+
+AAAMessage* Rf_ACR_start(struct sip_msg* req, struct sip_msg* res) 
+{
 	return 0;
 }
 
-AAAMessage* Rf_ACR_stop(struct sip_msg *msg) {
+ 
+AAAMessage* Rf_ACR_interim(struct sip_msg* req, struct sip_msg* res) 
+{
+	return 0;
+}
+
+AAAMessage* Rf_ACR_stop(struct sip_msg *req, struct sip_msg* res) 
+{
 	return 0;
 }
 

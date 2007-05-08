@@ -183,6 +183,10 @@ int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
  * Following functions used for for offline charging
  *******************************************************************************
  */
-str cscf_get_sip_method(struct sip_msg *msg);
+str cscf_get_sip_method(struct sip_msg* msg);
+str cscf_get_p_charging_vector_icid(struct sip_msg* msg);
+str cscf_get_p_charging_vector_orig_ioi(struct sip_msg* msg);
+str cscf_get_p_charging_vector_term_ioi(struct sip_msg* msg);
+str cscf_get_p_access_network_info(struct sip_msg* msg);
 
 #endif /* PIS_CSCF_SIP_H */

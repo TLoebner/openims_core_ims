@@ -70,7 +70,13 @@ int Rf_add_expires(AAA_AVP_LIST* list, unsigned int data);
 int Rf_add_user_session_id(AAA_AVP_LIST* list, str data);
 int Rf_add_calling_party_address(AAA_AVP_LIST* list, str data);
 int Rf_add_called_party_address(AAA_AVP_LIST* list, str data);
-
+int Rf_add_associated_uri(AAA_AVP_LIST* list, str data);
+int Rf_add_ims_charging_identifier(AAA_AVP_LIST* list, str data);
+int Rf_add_originating_ioi(AAA_AVP_LIST* list, str data);
+int Rf_add_terminating_ioi(AAA_AVP_LIST* list, str data);
+int Rf_add_inter_operator_identifier(AAA_AVP_LIST* outl, AAA_AVP_LIST* inl);
+int Rf_add_cause_code(AAA_AVP_LIST* list, unsigned int data);
+int Rf_add_access_network_information(AAA_AVP_LIST* list, str data);
 /* GET AVPS */
 //str Cx_get_session_id(AAAMessage *msg);
 //str Cx_get_user_name(AAAMessage *msg);

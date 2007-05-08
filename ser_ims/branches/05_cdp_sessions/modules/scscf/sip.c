@@ -806,8 +806,8 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 			}
 			r = (rr_t*) h->parsed;
 			id = r->nameaddr; 
-			free_rr((rr_t**)(&h->parsed));
-			h->parsed=0;
+			free_rr(&r);
+			h->parsed=r;
 			//LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
 			return id.uri;
 		}
@@ -1741,6 +1741,7 @@ str cscf_get_authorization(struct sip_msg *msg,struct hdr_field **h)
 {
 	str auth={0,0};
 	*h = 0;
+	auth_body_t *body;
 	if (parse_headers(msg,HDR_AUTHORIZATION_F,0)!=0) {
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_authorization: Error parsing until header Authorization: \n");
 		return auth;
@@ -1751,8 +1752,11 @@ str cscf_get_authorization(struct sip_msg *msg,struct hdr_field **h)
 		return auth;
 	}
 	msg->authorization->type = HDR_AUTHORIZATION_T;
-	if (msg->authorization->parsed)
-		free_credentials((auth_body_t**)&(msg->authorization->parsed));
+	if (msg->authorization->parsed){
+		body = (auth_body_t*)msg->authorization->parsed;
+		free_credentials(&body);
+		msg->authorization->parsed = body;
+	}
 	
 	auth = msg->authorization->body;	
 	*h = msg->authorization;
@@ -2201,7 +2205,8 @@ int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id)
 	}
 	r = (rr_t*)h->parsed;
 	h->type = HDR_ROUTE_T;
-
+	
+	
 	if (r) {
 		*public_id=r->nameaddr.uri;
 		return 1;
@@ -2253,8 +2258,8 @@ name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h
 			}
 			r = (rr_t*) h->parsed;
 			id = r->nameaddr; 
-			free_rr((rr_t**)(&h->parsed));
-			h->parsed=0;
+			free_rr(&r);
+			h->parsed=r;
 			if (hr) *hr = h;			
 			return id;
 		}
@@ -2675,9 +2680,32 @@ int cscf_get_from_uri(struct sip_msg* msg,str *local_uri)
 	
 }
 
+/**
+ * Get the local uri from the To header.
+ * @param msg - the message to look into
+ * @param local_uri - ptr to fill with the value
+ * @returns 1 on success or 0 on error
+ */  
+int cscf_get_to_uri(struct sip_msg* msg,str *local_uri)
+{	
+	struct to_body* to=	NULL;
+
+	if (!msg || !msg->to || !msg->to->parsed || parse_headers(msg,HDR_TO_F,0)==-1 ){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_to_uri: error parsing TO header\n");
+		if (local_uri) {local_uri->s = 0;local_uri->len = 0;}
+		return 0;
+	}
+	to = msg->to->parsed;		
+	if (local_uri) *local_uri = to->uri;
+	return 1;
+	
+}
+
+
+
 /*
  *******************************************************************************
- * Following functions used for for offline charging 
+ * Following functions used for message offline charging 
  *******************************************************************************
  */
 
@@ -2698,4 +2726,91 @@ str cscf_get_sip_method(struct sip_msg *msg)
 	}
 	
 	return method;
+}
+
+
+
+static str p_charging_vector={"P-Charging-Vector",17};
+static str p_charging_vector_icid={"icid-value=\"",12};
+static str p_charging_vector_orig_ioi={"orig-ioi=\"",10};
+static str p_charging_vector_term_ioi={"term-ioi=\"",10};
+
+/* Get parameter from P-Charging-Vector header
+ * msg - SIP message
+ * param - param name 
+ * return parameter found
+ */
+str cscf_get_p_charging_vector_param(struct sip_msg* msg, str* param)
+{
+	str value = {0,0};
+	struct hdr_field* h = NULL;
+	
+	h = cscf_get_header(msg, p_charging_vector);
+	if(!h) return value;
+	
+	int i,k;
+	
+	k = h->body.len - param->len;
+	for(i=0;i<k;i++)
+	 if (strncasecmp(h->body.s+i,param->s,
+	 		param->len)==0){
+		value.s = h->body.s+ i + param->len;
+		i+=param->len;
+		while(i<h->body.len && h->body.s[i]!='\"'){
+			i++;
+			value.len++;
+		}
+		break;
+	 }
+	
+	if (!value.len){
+		LOG(L_DBG, "ERR:"M_NAME":cscf_get_p_charging_vector: \
+			parameter %.*s not found.\n", param->len, param->s);
+		return value;
+	}
+   	LOG(L_DBG, "DBG:"M_NAME":cscf_get_p_charging_vector: parameter: %.*s.\n",value.len,value.s);
+	return value;	
+}
+
+
+str cscf_get_p_charging_vector_icid(struct sip_msg* msg)
+{
+	return cscf_get_p_charging_vector_param(msg, &p_charging_vector_icid);
+}
+
+
+
+str cscf_get_p_charging_vector_orig_ioi(struct sip_msg* msg)
+{
+	return cscf_get_p_charging_vector_param(msg, &p_charging_vector_orig_ioi);
+}
+
+
+
+str cscf_get_p_charging_vector_term_ioi(struct sip_msg* msg)
+{
+	return cscf_get_p_charging_vector_param(msg, &p_charging_vector_term_ioi);
+}
+
+
+
+static str p_access_network_info={"P-Access-Network-Info",21};
+
+
+
+/* Get P-Access-Network-Info header
+ * msg - SIP message
+ * param - param name 
+ * return parameter found
+ */
+str cscf_get_p_access_network_info(struct sip_msg* msg)
+{
+	str value = {0,0};
+	struct hdr_field* h = NULL;
+	
+	h = cscf_get_header(msg, p_access_network_info);
+	if(!h) 
+		return value;
+	else 
+		return h->body;
 }

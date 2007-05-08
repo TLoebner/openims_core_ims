@@ -49,9 +49,9 @@
 #include "../../sr_module.h"
 #include "../cdp/cdp_load.h"
 
-AAAMessage* Rf_ACR_event(struct sip_msg 	*msg);
-AAAMessage* Rf_ACR_start(struct sip_msg 	*msg);
-AAAMessage* Rf_ACR_interim(struct sip_msg 	*msg);
-AAAMessage* Rf_ACR_stop(struct sip_msg 		*msg);
+AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res);
+AAAMessage* Rf_ACR_start(struct sip_msg* msg, struct sip_msg* res);
+AAAMessage* Rf_ACR_interim(struct sip_msg* msg, struct sip_msg* res);
+AAAMessage* Rf_ACR_stop(struct sip_msg *msg, struct sip_msg* res);
 
 #endif /*RF_H_*/

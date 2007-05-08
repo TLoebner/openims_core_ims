@@ -566,3 +566,154 @@ inline int Rf_add_service_information(AAAMessage* msg, AAA_AVP_LIST* list)
 		AVP_FREE_DATA,
 		__FUNCTION__);
 }
+
+
+
+/** 
+ * Creates and adds Associated_URI AVP to a Diameter msg 
+ *
+ * @param msg - the Diameter message to add to.
+ * @param list - point at a list of AVPs 
+ * @returns 1 on success or = on error
+ */
+inline int Rf_add_associated_uri(AAA_AVP_LIST* list, str data)
+{
+	return
+	Rf_add_avp_list(list,
+		data.s,data.len,
+		AVP_IMS_Associated_URI,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+/** 
+ * Creates and adds IMS-Charging-Identifier AVP to an AVP list 
+ * @param list - the AVP list to add to.
+ * @param data - the value for the AVP payload. 
+ * @return 1 on successs or 0 on error
+ */
+inline int Rf_add_ims_charging_identifier(AAA_AVP_LIST* list, str data)
+{
+	return
+	Rf_add_avp_list(list,
+		data.s,data.len,
+		AVP_IMS_IMS_Charging_identifier,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+/** 
+ * Creates and adds Originating-IOI AVP to an AVP list 
+ * @param list - the AVP list to add to.
+ * @param data - the value for the AVP payload. 
+ * @return 1 on successs or 0 on error
+ */
+inline int Rf_add_originating_ioi(AAA_AVP_LIST* list, str data)
+{
+	return
+	Rf_add_avp_list(list,
+		data.s,data.len,
+		AVP_IMS_Originating_IOI,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+/** 
+ * Creates and adds Terminating-IOI AVP to an AVP list 
+ * @param list - the AVP list to add to.
+ * @param data - the value for the AVP payload. 
+ * @return 1 on successs or 0 on error
+ */
+inline int Rf_add_terminating_ioi(AAA_AVP_LIST* list, str data)
+{
+	return
+	Rf_add_avp_list(list,
+		data.s,data.len,
+		AVP_IMS_Terminating_IOI,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+/** 
+ * Creates and adds Inter-Operator-Identifier AVP to an AVP list. 
+ *
+ * @param outl - points at this Event-Type AVP.
+ * @param inl - AVPs list containing member AVPs. 
+ * @return 1 on successs or 0 on error
+ */
+inline int Rf_add_inter_operator_identifier(AAA_AVP_LIST* outl, AAA_AVP_LIST* inl)
+{
+	str group;
+	
+	group = cdpb.AAAGroupAVPS(*inl);
+	cdpb.AAAFreeAVPList(inl);
+	
+	return 
+	Rf_add_avp_list(outl,
+		group.s, group.len,
+		AVP_IMS_Inter_Operator_Identifier,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_FREE_DATA,
+		__FUNCTION__);
+}
+
+
+
+/** 
+ * Creates and adds Cause-Code AVP to an AVP list. 
+ * @param list - the AVP list to add to. 
+ * @param data - the value for the AVP payload.
+ * @return 1 on success or 0 on error 
+ */
+inline int Rf_add_cause_code(AAA_AVP_LIST* list, unsigned int data)
+{
+	char x[4];
+	set_4bytes(x, data);
+	
+	
+	return
+	Rf_add_avp_list(list,
+		x,4,
+		AVP_IMS_Cause_Code,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+/** 
+ * Creates and adds Access-Network-Information AVP to an AVP list 
+ * @param list - the AVP list to add to.
+ * @param data - the value for the AVP payload. 
+ * @return 1 on successs or 0 on error
+ */
+inline int Rf_add_access_network_information(AAA_AVP_LIST* list, str data)
+{
+	return
+	Rf_add_avp_list(list,
+		data.s,data.len,
+		AVP_IMS_Access_Network_Information,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
