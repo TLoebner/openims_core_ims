@@ -150,8 +150,8 @@ void isc_failure(struct cell *t,int type,struct tmcb_params *ps)
 	LOG(L_INFO,"INFO:"M_NAME":isc_failure: reached with s=%d;h=%d;d=%d\n",
 		mark->skip,mark->handling,mark->direction);	
 
-	/* non 408 */
-	if (ps->code!=408 && ps->code!=480) {
+	/* non (408 or 5xx) */
+	if (!(ps->code==408 || (ps->code>=500 && ps->code<600))) {
 		if (ps->code>=200){
 			LOG( L_INFO,"INFO:"M_NAME":isc_failure: reached with reply %d. Aborting as AS responded.\n",ps->code);
 			*ps->param=0;
