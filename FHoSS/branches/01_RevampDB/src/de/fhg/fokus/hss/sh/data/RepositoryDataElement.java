@@ -40,53 +40,60 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
-
-package de.fhg.fokus.hss.db.model;
+package de.fhg.fokus.hss.sh.data;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class RepositoryData {
-	private int id;
-	private int sqn;
-	private int id_impu;
-	private String service_indication;
-	private String rep_data;
 
-	public RepositoryData(){}
+public class RepositoryDataElement {
+	private String serviceIndication = null;
+	private int sqn = 1;
+	/** can have any value; tag used is Service-Data */
+	private String serviceData = null;
+	
+	public RepositoryDataElement(){}
 
-	public int getId() {
-		return id;
+	public String toString(){
+		StringBuffer sBuffer = new StringBuffer();
+		sBuffer.append(ShDataTags.RepositoryData_s);
+		if (serviceIndication != null){
+			sBuffer.append(ShDataTags.ServiceIndication_s);
+			sBuffer.append(serviceIndication);
+			sBuffer.append(ShDataTags.ServiceIndication_e);
+		}
+		
+		if (sqn > 0){
+			sBuffer.append(ShDataTags.SequenceNumber_s);
+			sBuffer.append(sqn);
+			sBuffer.append(ShDataTags.SequenceNumber_e);
+		}
+		
+		if (serviceData != null){
+			sBuffer.append(ShDataTags.ServiceData_s);
+			sBuffer.append(serviceData);
+			sBuffer.append(ShDataTags.ServiceData_e);
+		}
+		
+		sBuffer.append(ShDataTags.RepositoryData_e);
+		return sBuffer.toString();
+	}
+	
+	public String getServiceData() {
+		return serviceData;
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public void setServiceData(String serviceData) {
+		this.serviceData = serviceData;
 	}
 
-	public int getId_impu() {
-		return id_impu;
+	public String getServiceIndication() {
+		return serviceIndication;
 	}
 
-	public void setId_impu(int id_impu) {
-		this.id_impu = id_impu;
-	}
-
-
-	public String getService_indication() {
-		return service_indication;
-	}
-
-	public void setService_indication(String service_indication) {
-		this.service_indication = service_indication;
-	}
-
-	public String getRep_data() {
-		return rep_data;
-	}
-
-	public void setRep_data(String rep_data) {
-		this.rep_data = rep_data;
+	public void setServiceIndication(String serviceIndication) {
+		this.serviceIndication = serviceIndication;
 	}
 
 	public int getSqn() {
@@ -96,5 +103,6 @@ public class RepositoryData {
 	public void setSqn(int sqn) {
 		this.sqn = sqn;
 	}
+	
 	
 }

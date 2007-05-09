@@ -43,21 +43,41 @@
 
 package de.fhg.fokus.hss.sh.op;
 
+import java.io.ByteArrayInputStream;
+import java.util.Vector;
+
+import org.apache.log4j.Logger;
 import org.hibernate.Session;
+import org.xml.sax.InputSource;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
+import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.model.RepositoryData;
+import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.op.RepositoryData_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.UtilAVP;
+import de.fhg.fokus.hss.sh.ShConstants;
 import de.fhg.fokus.hss.sh.ShExperimentalResultException;
+import de.fhg.fokus.hss.sh.ShFinalResultException;
+import de.fhg.fokus.hss.sh.data.RepositoryDataElement;
+import de.fhg.fokus.hss.sh.data.ShDataElement;
+import de.fhg.fokus.hss.sh.data.ShDataParser;
+import de.fhg.fokus.hss.sh.data.ShIMSDataElement;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class PUR {
+	private static Logger logger = Logger.getLogger(PUR.class);
+	
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
 		DiameterMessage response = diameterPeer.newResponse(request);
 		boolean dbException = false;
@@ -66,6 +86,164 @@ public class PUR {
 		HibernateUtil.beginTransaction();
 
 		try{
+			if (request.flagProxiable == false){
+				logger.warn("You should notice that the Proxiable flag for PUR request was not set!");
+			}
+			// set the proxiable flag for the response
+			response.flagProxiable = true;
+			
+			// -0- check for mandatory fields in the message
+			String vendor_specific_ID = UtilAVP.getVendorSpecificApplicationID(request);
+			String auth_session_state = UtilAVP.getAuthSessionState(request);
+			String origin_host = UtilAVP.getOriginatingHost(request);
+			String origin_realm = UtilAVP.getOriginatingRealm(request);
+			String dest_realm = UtilAVP.getDestinationRealm(request);
+			String user_identity = UtilAVP.getShUserIdentity(request);
+			int data_reference = UtilAVP.getDataReference(request);
+			String user_data = UtilAVP.getShUserData(request);
+			
+			
+			if (vendor_specific_ID == null || auth_session_state == null || origin_host == null || origin_realm == null ||
+					dest_realm == null || user_identity == null || data_reference == -1 || user_data == null){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
+			}
+			
+			// - 1 - check if the AS is allowed to update information, by checking the combination of AS identity and Data-Reference
+			
+			// in the AS table, the server address is always saved with the sip scheme included!
+			String sip_origin_host = origin_host;
+			if (!origin_host.substring(0, 4).equals("sip:")){
+				sip_origin_host = "sip:" + origin_host;
+			}
+			System.out.println("AS server name: " + sip_origin_host);
+			ApplicationServer as = ApplicationServer_DAO.get_by_Server_Name(session, sip_origin_host);
+			
+			if (as == null){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED);
+			}
+			
+			if ((data_reference == ShConstants.Data_Ref_Repository_Data && as.getPur_rep_data() == 0) ||
+					(data_reference == ShConstants.Data_Ref_PSI_Activation && as.getPur_psi_activation() == 0) ||
+					(data_reference == ShConstants.Data_Ref_DSAI && as.getPur_dsai() == 0) ||
+					(data_reference == ShConstants.Data_Ref_Aliases_Repository_Data && as.getPur_aliases_rep_data() == 0)){
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED);
+			}
+
+			// - 2 - check for user identity existence
+			
+			IMPU impu = IMPU_DAO.get_by_Identity(session, user_identity);
+			if (impu == null){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_USER_UNKNOWN);				
+			}
+			
+			// - 3 - check if the user identity apply to the Data-Reference, as specified in table 7.6.1 (TS 29.328)
+			if (data_reference == ShConstants.Data_Ref_PSI_Activation && impu.getType() != CxConstants.Identity_Type.Distinct_PSI.code){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED);
+			}
+			
+			// - 3a - 
+			if (data_reference == ShConstants.Data_Ref_Aliases_Repository_Data && impu.getType() != CxConstants.Identity_Type.Public_User_Identity.code){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED);
+			}
+			
+			InputSource input = new InputSource(new ByteArrayInputStream(user_data.getBytes()));
+			ShDataParser parser = new ShDataParser(input);
+			ShDataElement shData = parser.getShData();
+			
+			if (shData == null){
+				// we have some sort of error caused by an invalid input document
+				throw new ShFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
+			}
+			
+			// - 4 - check Data-Reference for PSIActivation
+			if (data_reference == ShConstants.Data_Ref_PSI_Activation){
+				ShIMSDataElement shIMSData = shData.getShIMSData();
+				if (shIMSData == null){
+					throw new ShFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
+				}
+				// save the new PSIActivation value
+				impu.setPsi_activation(shIMSData.getPsiActivation());
+				IMPU_DAO.update(session, impu);
+				UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+			}
+			else if (data_reference == ShConstants.Data_Ref_DSAI){
+				// - 4a - 
+				//...
+			}
+			else{
+				// - 5 - check for update in progress
+
+				// - 6 - 
+				// currently, one update at a time
+				
+				if (shData.getRepositoryDataList() == null){
+					throw new ShFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
+				}
+				
+				RepositoryDataElement repDataElement = shData.getRepositoryDataList().get(0);
+				RepositoryData repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, 
+						impu.getIdentity(), repDataElement.getServiceIndication());
+				
+				if (repData != null){
+					if (repDataElement.getSqn() == 0 || (repDataElement.getSqn() - 1) != (repData.getSqn() % 65535)){
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_TRANSPARENT_DATA_OUT_OF_SYNC);		
+					}
+					
+					// check for Service-Data
+					if (repDataElement.getServiceData() != null){
+						if (repDataElement.getServiceData().length() > as.getRep_data_size_limit()){
+							// repository data received is more than the HSS can offer
+							throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_TOO_MUCH_DATA);	
+						}
+						
+						// perform the update in the database
+						repData.setRep_data(repDataElement.getServiceData());
+						repData.setSqn(repDataElement.getSqn());
+						RepositoryData_DAO.update(session, repData);
+						
+						// this will trigger the notification for the corresponding subscriptions
+						//....
+						
+					}
+					else{
+						// Service-Data was not received , the data stored in the HSS repository will be removed!
+						RepositoryData_DAO.delete_by_ID(session, repData.getId());
+						
+						// this will trigger the notification for the corresponding subscriptions
+						//....
+						
+						// this will determine the deletion of the corres[ponding subscriptions
+						//....
+						
+					}
+				}
+				else{
+					// repository data is not yet stored in the HSS
+					if (repDataElement.getSqn() != 0){
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_TRANSPARENT_DATA_OUT_OF_SYNC);						
+					}
+					
+					if (repDataElement.getServiceData() == null){
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED);						
+					}
+					
+					if (repDataElement.getServiceData().length() > as.getRep_data_size_limit()){
+						// repository data received is more than the HSS can offer
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_TOO_MUCH_DATA);	
+					}
+					
+					// store the data in the HSS
+					repData = new RepositoryData();
+					repData.setId_impu(impu.getId());
+					repData.setRep_data(repDataElement.getServiceData());
+					repData.setService_indication(repDataElement.getServiceIndication());
+					repData.setSqn(repDataElement.getSqn());
+					RepositoryData_DAO.insert(session, repData);
+				}
+				UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+			}
+			
+			
 			
 		}
 		catch (DatabaseException e){
@@ -73,7 +251,7 @@ public class PUR {
 			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
 			e.printStackTrace();
 		}
-/*		catch(ShExperimentalResultException e){
+		catch(ShExperimentalResultException e){
 			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
@@ -81,7 +259,7 @@ public class PUR {
 			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
-*/
+
 		finally{
 			// commit transaction only when a Database doesn't occured
 			if (!dbException){

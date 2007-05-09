@@ -9,7 +9,7 @@ import java.util.Vector;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class SPT {
+public class SPTElement {
 	private int conditionNegated = -1;
 	private int groupID = -1;
 	private String requestURI = null;
@@ -21,7 +21,7 @@ public class SPT {
 	private String sessionDescContent = null;
 	private Vector<Integer> registrationTypeList = null; 
 	
-	public SPT(){}
+	public SPTElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();

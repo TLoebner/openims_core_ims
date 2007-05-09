@@ -46,7 +46,7 @@ package de.fhg.fokus.hss.sh.data;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class PSLocationInformation {
+public class PSLocationInformationElement {
 
 	private String cellGlobalID = null;
 	private String serviceAreaID = null;

@@ -63,22 +63,21 @@ public class ShDataParser extends DefaultHandler {
 	private StringBuffer accumulator;
 	//private String element;
 
-	private ShData shData = null;
-	private PublicIdentity publicIdentity = null;
-	private RepositoryData repositoryData = null;
-	private AliasesRepositoryData aliasesRepData = null;
-	private ShIMSData shIMSData = null;
-	private CSLocationInformation csLocationInformation = null;
-	private PSLocationInformation psLocationInformation = null;
-	private ShDataExtension shDataExtension = null;
-	private ChargingInformation chgInformation = null;
+	private ShDataElement shData = null;
+	private PublicIdentityElement publicIdentity = null;
+	private RepositoryDataElement repositoryData = null;
+	private AliasesRepositoryDataElement aliasesRepData = null;
+	private ShIMSDataElement shIMSData = null;
+	private CSLocationInformationElement csLocationInformation = null;
+	private PSLocationInformationElement psLocationInformation = null;
+	private ShDataExtensionElement shDataExtension = null;
+	private ChargingInformationElement chgInformation = null;
 	
-	private InitialFilterCriteria ifc = null;
-	private TriggerPoint tp = null;
-	private ApplicationServer as = null;
-	private SPT spt = null;
-	
-	private DSAI dsai = null;
+	private InitialFilterCriteriaElement ifc = null;
+	private TriggerPointElement tp = null;
+	private ApplicationServerElement as = null;
+	private SPTElement spt = null;	
+	private DSAIElement dsai = null;
 	
 	// flags
 	private boolean registeredIdentities = false;
@@ -94,11 +93,11 @@ public class ShDataParser extends DefaultHandler {
 		initParser();
 	}
 	
-	public ShData getShData() {
+	public ShDataElement getShData() {
 		return shData;
 	}
 
-	public void setShData(ShData shData) {
+	public void setShData(ShDataElement shData) {
 		this.shData = shData;
 	}
 
@@ -154,25 +153,25 @@ public class ShDataParser extends DefaultHandler {
                              String qname, Attributes attr) {
     	accumulator.setLength(0);
     	if (localName.equalsIgnoreCase(ShDataTags.ShData)){
-    		shData = new ShData();
+    		shData = new ShDataElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.PublicIdentifiers)){
-    		publicIdentity = new PublicIdentity();
+    		publicIdentity = new PublicIdentityElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.RepositoryData)){
-    		repositoryData = new RepositoryData();
+    		repositoryData = new RepositoryDataElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.Sh_IMS_Data)){
-    		shIMSData = new ShIMSData();
+    		shIMSData = new ShIMSDataElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.CSLocationInformation)){
-    		csLocationInformation = new CSLocationInformation();
+    		csLocationInformation = new CSLocationInformationElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.PSLocationInformation)){
-    		psLocationInformation = new PSLocationInformation();
+    		psLocationInformation = new PSLocationInformationElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.ShDataExtension)){
-    		shDataExtension = new ShDataExtension();
+    		shDataExtension = new ShDataExtensionElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.RegisteredIdentities)){
     		registeredIdentities = true;
@@ -190,22 +189,22 @@ public class ShDataParser extends DefaultHandler {
     		ifcs = true;
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.ChargingInformation)){
-    		chgInformation = new ChargingInformation();
+    		chgInformation = new ChargingInformationElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.ApplicationServer)){
-    		as = new ApplicationServer();
+    		as = new ApplicationServerElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.InitialFilterCriteria)){
-    		ifc = new InitialFilterCriteria();
+    		ifc = new InitialFilterCriteriaElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.TriggerPoint)){
-    		tp = new TriggerPoint();
+    		tp = new TriggerPointElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.SPT)){
-    		spt = new SPT();
+    		spt = new SPTElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.DSAI)){
-    		dsai = new DSAI();
+    		dsai = new DSAIElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.SIPHeader)){
     		sipHeader = true;
@@ -593,7 +592,7 @@ public class ShDataParser extends DefaultHandler {
     		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
     		ShDataParser parser = new ShDataParser(input);
     		  		
-    		ShData shData = parser.getShData();
+    		ShDataElement shData = parser.getShData();
     		if (shData != null)
     			System.out.println(shData.toString());
 

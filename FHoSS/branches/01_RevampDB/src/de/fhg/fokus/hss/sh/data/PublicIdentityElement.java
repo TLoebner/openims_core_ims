@@ -48,7 +48,7 @@ import java.util.Vector;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class PublicIdentity {
+public class PublicIdentityElement {
 	private Vector<String> publicIdentityList = null;
 	private Vector<String> msisdnList = null;
 
@@ -56,7 +56,7 @@ public class PublicIdentity {
 	private int identityType = -1;
 	private String wildcardedPSI = null;
 	
-	public PublicIdentity(){}
+	public PublicIdentityElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();

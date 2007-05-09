@@ -50,12 +50,12 @@ import java.util.Vector;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShDataExtension {
-	private PublicIdentity registeredIdentities = null;
-	private PublicIdentity implicitIdentities = null;
-	private PublicIdentity allIdentities = null;
-	private PublicIdentity aliasIdentities = null;
-	private Vector<AliasesRepositoryData> aliasesRepositoryDataList = null;
+public class ShDataExtensionElement {
+	private PublicIdentityElement registeredIdentities = null;
+	private PublicIdentityElement implicitIdentities = null;
+	private PublicIdentityElement allIdentities = null;
+	private PublicIdentityElement aliasIdentities = null;
+	private Vector<AliasesRepositoryDataElement> aliasesRepositoryDataList = null;
 	
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
@@ -86,8 +86,8 @@ public class ShDataExtension {
 		
 		if (aliasesRepositoryDataList != null && aliasesRepositoryDataList.size() > 0){
 			sBuffer.append(ShDataTags.AliasesRepositoryData_s);
-			Iterator<AliasesRepositoryData> it = aliasesRepositoryDataList.iterator();
-			AliasesRepositoryData transparentData;
+			Iterator<AliasesRepositoryDataElement> it = aliasesRepositoryDataList.iterator();
+			AliasesRepositoryDataElement transparentData;
 			while (it.hasNext()){
 				transparentData = it.next();
 				sBuffer.append(transparentData.toString());
@@ -99,46 +99,47 @@ public class ShDataExtension {
 		return sBuffer.toString();
 	}
 
-	public Vector<AliasesRepositoryData> getAliasesRepositoryDataList() {
+	public Vector<AliasesRepositoryDataElement> getAliasesRepositoryDataList() {
 		return aliasesRepositoryDataList;
 	}
 
 	public void setAliasesRepositoryDataList(
-			Vector<AliasesRepositoryData> aliasesRepositoryDataList) {
+			Vector<AliasesRepositoryDataElement> aliasesRepositoryDataList) {
 		this.aliasesRepositoryDataList = aliasesRepositoryDataList;
 	}
 
-	public PublicIdentity getAliasIdentities() {
+	public PublicIdentityElement getAliasIdentities() {
 		return aliasIdentities;
 	}
 
-	public void setAliasIdentities(PublicIdentity aliasIdentities) {
+	public void setAliasIdentities(PublicIdentityElement aliasIdentities) {
 		this.aliasIdentities = aliasIdentities;
 	}
 
-	public PublicIdentity getAllIdentities() {
+	public PublicIdentityElement getAllIdentities() {
 		return allIdentities;
 	}
 
-	public void setAllIdentities(PublicIdentity allIdentities) {
+	public void setAllIdentities(PublicIdentityElement allIdentities) {
 		this.allIdentities = allIdentities;
 	}
 
-	public PublicIdentity getImplicitIdentities() {
+	public PublicIdentityElement getImplicitIdentities() {
 		return implicitIdentities;
 	}
 
-	public void setImplicitIdentities(PublicIdentity implicitIdentities) {
+	public void setImplicitIdentities(PublicIdentityElement implicitIdentities) {
 		this.implicitIdentities = implicitIdentities;
 	}
 
-	public PublicIdentity getRegisteredIdentities() {
+	public PublicIdentityElement getRegisteredIdentities() {
 		return registeredIdentities;
 	}
 
-	public void setRegisteredIdentities(PublicIdentity registeredIdentities) {
+	public void setRegisteredIdentities(PublicIdentityElement registeredIdentities) {
 		this.registeredIdentities = registeredIdentities;
 	}
+
 	
 	
 }

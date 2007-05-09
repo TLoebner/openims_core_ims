@@ -35,7 +35,7 @@
 		<mapping resource="mappings/SPT.hbm.xml"/>										
 		<mapping resource="mappings/TP.hbm.xml"/>										
 		<mapping resource="mappings/VisitedNetwork.hbm.xml"/>												
-		
+		<mapping resource="mappings/RepositoryData.hbm.xml"/>				
 		
 	</session-factory>
 	
