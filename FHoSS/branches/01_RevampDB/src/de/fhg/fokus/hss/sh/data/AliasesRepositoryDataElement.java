@@ -47,17 +47,17 @@ package de.fhg.fokus.hss.sh.data;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class RepositoryData {
+public class AliasesRepositoryDataElement {
 	private String serviceIndication = null;
 	private int sqn = 1;
 	/** can have any value; tag used is Service-Data */
 	private String serviceData = null;
 	
-	public RepositoryData(){}
+	public AliasesRepositoryDataElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
-		sBuffer.append(ShDataTags.RepositoryData_s);
+		sBuffer.append(ShDataTags.AliasesRepositoryData_s);
 		if (serviceIndication != null){
 			sBuffer.append(ShDataTags.ServiceIndication_s);
 			sBuffer.append(serviceIndication);
@@ -76,7 +76,7 @@ public class RepositoryData {
 			sBuffer.append(ShDataTags.ServiceData_e);
 		}
 		
-		sBuffer.append(ShDataTags.RepositoryData_e);
+		sBuffer.append(ShDataTags.AliasesRepositoryData_e);
 		return sBuffer.toString();
 	}
 	

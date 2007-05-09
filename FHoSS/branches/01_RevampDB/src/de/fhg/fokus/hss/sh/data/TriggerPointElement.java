@@ -42,67 +42,58 @@
   */
 package de.fhg.fokus.hss.sh.data;
 
+import java.util.Iterator;
+import java.util.Vector;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-
-public class AliasesRepositoryData {
-	private String serviceIndication = null;
-	private int sqn = 1;
-	/** can have any value; tag used is Service-Data */
-	private String serviceData = null;
+public class TriggerPointElement {
+	private int conditionTypeCNF = 1;
+	private Vector<SPTElement> sptList = null;
 	
-	public AliasesRepositoryData(){}
+	public TriggerPointElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
-		sBuffer.append(ShDataTags.AliasesRepositoryData_s);
-		if (serviceIndication != null){
-			sBuffer.append(ShDataTags.ServiceIndication_s);
-			sBuffer.append(serviceIndication);
-			sBuffer.append(ShDataTags.ServiceIndication_e);
-		}
+		sBuffer.append(ShDataTags.TriggerPoint_s);
+
+		sBuffer.append(ShDataTags.ConditionTypeCNF_s);
+		sBuffer.append(conditionTypeCNF);
+		sBuffer.append(ShDataTags.ConditionTypeCNF_e);
 		
-		if (sqn > 0){
-			sBuffer.append(ShDataTags.SequenceNumber_s);
-			sBuffer.append(sqn);
-			sBuffer.append(ShDataTags.SequenceNumber_e);
+		if (sptList != null && sptList.size() > 0){
+			Iterator<SPTElement> it = sptList.iterator();
+			while (it.hasNext()){
+				SPTElement spt = it.next();
+				sBuffer.append(spt.toString());
+			}
 		}
-		
-		if (serviceData != null){
-			sBuffer.append(ShDataTags.ServiceData_s);
-			sBuffer.append(serviceData);
-			sBuffer.append(ShDataTags.ServiceData_e);
-		}
-		
-		sBuffer.append(ShDataTags.AliasesRepositoryData_e);
+		sBuffer.append(ShDataTags.TriggerPoint_e);		
 		return sBuffer.toString();
 	}
 	
-	public String getServiceData() {
-		return serviceData;
+	public void addSPT(SPTElement spt){
+		if (sptList == null){
+			sptList = new Vector<SPTElement>();
+		}
+		sptList.add(spt);
+		
+	}
+	public int getConditionTypeCNF() {
+		return conditionTypeCNF;
 	}
 
-	public void setServiceData(String serviceData) {
-		this.serviceData = serviceData;
+	public void setConditionTypeCNF(int conditionTypeCNF) {
+		this.conditionTypeCNF = conditionTypeCNF;
 	}
 
-	public String getServiceIndication() {
-		return serviceIndication;
+	public Vector<SPTElement> getSptList() {
+		return sptList;
 	}
 
-	public void setServiceIndication(String serviceIndication) {
-		this.serviceIndication = serviceIndication;
+	public void setSptList(Vector<SPTElement> sptList) {
+		this.sptList = sptList;
 	}
-
-	public int getSqn() {
-		return sqn;
-	}
-
-	public void setSqn(int sqn) {
-		this.sqn = sqn;
-	}
-	
-	
 }

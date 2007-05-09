@@ -46,7 +46,7 @@ package de.fhg.fokus.hss.sh.data;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class CSLocationInformation {
+public class CSLocationInformationElement {
 	// !-warning- restrictions apply to each of the following fields as specified by TS 29.328
 	
 	private String locationNumber = null;
@@ -60,7 +60,7 @@ public class CSLocationInformation {
 	private int currentLocationRetrieved = -1;
 	private int ageOfLocationInformation = -1;
 	
-	public CSLocationInformation(){}
+	public CSLocationInformationElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();

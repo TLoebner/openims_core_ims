@@ -495,9 +495,20 @@ public class UtilAVP {
 		}
 		return result;
 	}
+
+	public static int getDataReference(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_DATA_REFERENCE, true, 
+				DiameterConstants.Vendor.V3GPP);
+		
+		if (avp != null){
+			return avp.int_data;
+		}
+		
+		return -1;
+	}
 	
-	public static AVP getUserIdentity(DiameterMessage message){
-		// return the public identity or the MSISDN
+	public static String getShUserIdentity(DiameterMessage message){
+		// return the Public Identity or the MSISDN AVP
 		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_USER_IDENTITY, true, 
 				DiameterConstants.Vendor.V3GPP);
 
@@ -506,12 +517,32 @@ public class UtilAVP {
 				avp.ungroup();
 				if (avp.childs != null && avp.childs.size() > 0){
 					AVP child_avp = (AVP) avp.childs.get(0);
-					return child_avp;
+					return new String(child_avp.data);
 				}
 			} 
 			catch (AVPDecodeException e) {
 				e.printStackTrace();
 			}
+		}
+		return null;
+	}
+	
+	public static String getServiceIndication(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_SERVICE_INDICATION, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		if (avp != null){
+			return new String(avp.data);
+		}
+		return null;
+	}
+
+	public static String getShUserData(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_USER_DATA_SH, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		if (avp != null){
+			return new String(avp.data);
 		}
 		return null;
 	}

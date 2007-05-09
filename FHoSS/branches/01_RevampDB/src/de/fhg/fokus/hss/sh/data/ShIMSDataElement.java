@@ -48,16 +48,16 @@ import java.util.Vector;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShIMSData {
+public class ShIMSDataElement {
 	private String scscfName = null;
-	private Vector<InitialFilterCriteria> ifcList;
+	private Vector<InitialFilterCriteriaElement> ifcList;
 	private int imsUserState = -1;
-	private ChargingInformation chgInformation = null;
+	private ChargingInformationElement chgInformation = null;
 	
 	// Extensions
 	private int psiActivation = -1;
-	private Vector<DSAI> dsaiList = null;
-	public ShIMSData(){}
+	private Vector<DSAIElement> dsaiList = null;
+	public ShIMSDataElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
@@ -70,7 +70,7 @@ public class ShIMSData {
 		}
 		if (ifcList != null && ifcList.size() > 0) {
 			sBuffer.append(ShDataTags.IFCs_s);
-			InitialFilterCriteria ifc;
+			InitialFilterCriteriaElement ifc;
 			for (int i = 0; i < ifcList.size(); i++){
 				ifc = ifcList.get(i);
 				sBuffer.append(ifc.toString());
@@ -98,7 +98,7 @@ public class ShIMSData {
 			if (dsaiList != null && dsaiList.size() > 0){
 				sBuffer.append(ShDataTags.Extension_s);	
 				for (int i = 0; i < dsaiList.size(); i++){
-					DSAI dsai = dsaiList.get(i);
+					DSAIElement dsai = dsaiList.get(i);
 					sBuffer.append(dsai.toString());
 				}
 				sBuffer.append(ShDataTags.Extension_e);
@@ -109,33 +109,33 @@ public class ShIMSData {
 		return sBuffer.toString();
 	}
 	
-	public void addInitialFilterCriteria(InitialFilterCriteria ifc){
+	public void addInitialFilterCriteria(InitialFilterCriteriaElement ifc){
 		if (ifcList == null){
 			ifcList = new Vector();
 		}
 		ifcList.add(ifc);
 	}
 	
-	public void addDSAI(DSAI dsai){
+	public void addDSAI(DSAIElement dsai){
 		if (dsaiList == null){
 			dsaiList = new Vector();
 		}
 		dsaiList.add(dsai);
 	}
 	
-	public ChargingInformation getChgInformation() {
+	public ChargingInformationElement getChgInformation() {
 		return chgInformation;
 	}
 
-	public void setChgInformation(ChargingInformation chgInformation) {
+	public void setChgInformation(ChargingInformationElement chgInformation) {
 		this.chgInformation = chgInformation;
 	}
 
-	public Vector<InitialFilterCriteria> getIfcList() {
+	public Vector<InitialFilterCriteriaElement> getIfcList() {
 		return ifcList;
 	}
 
-	public void setIfcList(Vector<InitialFilterCriteria> ifcList) {
+	public void setIfcList(Vector<InitialFilterCriteriaElement> ifcList) {
 		this.ifcList = ifcList;
 	}
 
@@ -155,11 +155,11 @@ public class ShIMSData {
 		this.scscfName = scscfName;
 	}
 
-	public Vector<DSAI> getDsaiList() {
+	public Vector<DSAIElement> getDsaiList() {
 		return dsaiList;
 	}
 
-	public void setDsaiList(Vector<DSAI> dsaiList) {
+	public void setDsaiList(Vector<DSAIElement> dsaiList) {
 		this.dsaiList = dsaiList;
 	}
 

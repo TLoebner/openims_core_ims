@@ -40,77 +40,83 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
-
 package de.fhg.fokus.hss.sh.data;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-
-public class InitialFilterCriteria {
-	private int priority = 1;
-	private TriggerPoint triggerPoint = null;
-	private ApplicationServer applicationServer = null;
-	private int profilePartIndicator = -1;
+public class ChargingInformationElement {
+	private String priECFName = null;
+	private String secECFName = null;
+	private String priCCFName = null;
+	private String secCCFName = null;
 	
-	public InitialFilterCriteria(){}
-
+	public ChargingInformationElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
-		sBuffer.append(ShDataTags.InitialFilterCriteria_s);
+		sBuffer.append(ShDataTags.ChargingInformation_s);
 		
-		sBuffer.append(ShDataTags.Priority_s);
-		sBuffer.append(priority);
-		sBuffer.append(ShDataTags.Priority_e);
-		
-		if (triggerPoint != null){
-			sBuffer.append(triggerPoint.toString());
-		}
-		if (applicationServer != null){
-			sBuffer.append(applicationServer.toString());
-		}
-		if (profilePartIndicator != -1){
-			sBuffer.append(ShDataTags.ProfilePartIndicator_s);
-			sBuffer.append(profilePartIndicator);
-			sBuffer.append(ShDataTags.ProfilePartIndicator_e);
+		if (priECFName != null){
+			sBuffer.append(ShDataTags.PrimaryEventChargingFunctionName_s);
+			sBuffer.append(priECFName);
+			sBuffer.append(ShDataTags.PrimaryEventChargingFunctionName_e);
 		}
 		
-		sBuffer.append(ShDataTags.InitialFilterCriteria_e);
+		if (secECFName != null){
+			sBuffer.append(ShDataTags.SecondaryEventChargingFunctionName_s);
+			sBuffer.append(secECFName);
+			sBuffer.append(ShDataTags.SecondaryEventChargingFunctionName_e);
+		}
+
+		if (priCCFName != null){
+			sBuffer.append(ShDataTags.PrimaryChargingCollectionFunctionName_s);
+			sBuffer.append(priCCFName);
+			sBuffer.append(ShDataTags.PrimaryChargingCollectionFunctionName_e);
+		}
+		
+		if (secCCFName != null){
+			sBuffer.append(ShDataTags.SecondaryChargingCollectionFunctionName_s);
+			sBuffer.append(secCCFName);
+			sBuffer.append(ShDataTags.SecondaryChargingCollectionFunctionName_e);
+		}
+		
+		sBuffer.append(ShDataTags.ChargingInformation_e);
 		return sBuffer.toString();
 	}
 
-	public ApplicationServer getApplicationServer() {
-		return applicationServer;
+	public String getPriCCFName() {
+		return priCCFName;
 	}
 
-	public void setApplicationServer(ApplicationServer applicationServer) {
-		this.applicationServer = applicationServer;
+	public void setPriCCFName(String priCCFName) {
+		this.priCCFName = priCCFName;
 	}
 
-	public int getPriority() {
-		return priority;
+	public String getPriECFName() {
+		return priECFName;
 	}
 
-	public void setPriority(int priority) {
-		this.priority = priority;
+	public void setPriECFName(String priECFName) {
+		this.priECFName = priECFName;
 	}
 
-	public int getProfilePartIndicator() {
-		return profilePartIndicator;
+	public String getSecCCFName() {
+		return secCCFName;
 	}
 
-	public void setProfilePartIndicator(int profilePartIndicator) {
-		this.profilePartIndicator = profilePartIndicator;
+	public void setSecCCFName(String secCCFName) {
+		this.secCCFName = secCCFName;
 	}
 
-	public TriggerPoint getTriggerPoint() {
-		return triggerPoint;
+	public String getSecECFName() {
+		return secECFName;
 	}
 
-	public void setTriggerPoint(TriggerPoint triggerPoint) {
-		this.triggerPoint = triggerPoint;
+	public void setSecECFName(String secECFName) {
+		this.secECFName = secECFName;
 	}
+	
 	
 }

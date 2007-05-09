@@ -40,66 +40,66 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
-package de.fhg.fokus.hss.sh.data;
+
+package de.fhg.fokus.hss.db.op;
+
+import org.hibernate.Query;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.model.RepositoryData;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ApplicationServer {
-	private String serverName = null;
-	private int defaultHandling = -1;
-	private String serviceInfo = null;
+public class RepositoryData_DAO {
 	
-	public ApplicationServer(){}
+	public static void insert(Session session, RepositoryData repData){
+		session.save(repData);
+	}
+	
+	public static void update(Session session, RepositoryData repData){
+		session.saveOrUpdate(repData);
+	}
 
-	public String toString(){
-		StringBuffer sBuffer = new StringBuffer();
-	
-		sBuffer.append(ShDataTags.ApplicationServer_s);
-		if (serverName != null){
-			sBuffer.append(ShDataTags.ServerName_s);
-			sBuffer.append(serverName);
-			sBuffer.append(ShDataTags.ServerName_e);
-		}
-			
-		if (defaultHandling > -1){
-			sBuffer.append(ShDataTags.DefaultHandling_s);
-			sBuffer.append(defaultHandling);
-			sBuffer.append(ShDataTags.Defaulthandling_e);
+	public static RepositoryData get_by_ID(Session session, int id){
+		Query query;
+		query = session.createSQLQuery("select * from repository_data where id=?")
+			.addEntity(RepositoryData.class);
+		query.setInteger(0, id);
+		
+		RepositoryData result = null;
+		try{
+			result = (RepositoryData) query.uniqueResult();
+		} 
+		catch(Exception e){
+			e.printStackTrace();
+			result = null;
 		}
 		
-		if (serviceInfo != null){
-			sBuffer.append(ShDataTags.ServiceInfo_s);
-			sBuffer.append(serviceInfo);
-			sBuffer.append(ShDataTags.ServiceInfo_e);
-		}
-				
-		sBuffer.append(ShDataTags.ApplicationServer_e);
-		return sBuffer.toString();
+		return result; 
 	}
 	
-	public int getDefaultHandling() {
-		return defaultHandling;
+	public static RepositoryData get_by_IMPU_and_ServiceIndication(Session session, String impu_identity, String service_indication){
+		Query query;
+		query = session.createSQLQuery("select * from repository_data " +
+				"	inner join impu on impu.id=repository_data.id_impu" +
+				"		where impu.identity=? and repository_data.service_indication=?")
+			.addEntity(RepositoryData.class);
+		query.setString(0, impu_identity);
+		query.setString(1, service_indication);
+		return (RepositoryData) query.uniqueResult();
 	}
-
-	public void setDefaultHandling(int defaultHandling) {
-		this.defaultHandling = defaultHandling;
+	
+	public static int delete_by_ID(Session session, int id){
+		Query query = session.createSQLQuery("delete from repository_data where id=?");
+		query.setInteger(0, id);
+		return query.executeUpdate();
 	}
-
-	public String getServerName() {
-		return serverName;
-	}
-
-	public void setServerName(String serverName) {
-		this.serverName = serverName;
-	}
-
-	public String getServiceInfo() {
-		return serviceInfo;
-	}
-
-	public void setServiceInfo(String serviceInfo) {
-		this.serviceInfo = serviceInfo;
-	}
+	
+	public static int delete_by_Name(Session session, String name){
+		Query query = session.createSQLQuery("delete from repository_data where name=?");
+		query.setString(0, name);
+		return query.executeUpdate();
+	}	
 }

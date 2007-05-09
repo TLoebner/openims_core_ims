@@ -134,8 +134,8 @@ public class IMPU_Submit extends Action{
 				else{
 					impu.setBarring(0);
 				}
-				impu.setType(0);
-				impu.setId_implicit_set(0);
+				impu.setType(form.getType());
+				
 				impu.setWildcard_psi(form.getWildcard_psi());
 				impu.setDisplay_name(form.getDisplay_name());
 			

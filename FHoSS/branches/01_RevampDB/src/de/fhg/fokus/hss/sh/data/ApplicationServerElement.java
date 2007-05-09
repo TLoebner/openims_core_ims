@@ -46,77 +46,60 @@ package de.fhg.fokus.hss.sh.data;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ChargingInformation {
-	private String priECFName = null;
-	private String secECFName = null;
-	private String priCCFName = null;
-	private String secCCFName = null;
+public class ApplicationServerElement {
+	private String serverName = null;
+	private int defaultHandling = -1;
+	private String serviceInfo = null;
 	
-	public ChargingInformation(){}
+	public ApplicationServerElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
-		sBuffer.append(ShDataTags.ChargingInformation_s);
-		
-		if (priECFName != null){
-			sBuffer.append(ShDataTags.PrimaryEventChargingFunctionName_s);
-			sBuffer.append(priECFName);
-			sBuffer.append(ShDataTags.PrimaryEventChargingFunctionName_e);
+	
+		sBuffer.append(ShDataTags.ApplicationServer_s);
+		if (serverName != null){
+			sBuffer.append(ShDataTags.ServerName_s);
+			sBuffer.append(serverName);
+			sBuffer.append(ShDataTags.ServerName_e);
+		}
+			
+		if (defaultHandling > -1){
+			sBuffer.append(ShDataTags.DefaultHandling_s);
+			sBuffer.append(defaultHandling);
+			sBuffer.append(ShDataTags.Defaulthandling_e);
 		}
 		
-		if (secECFName != null){
-			sBuffer.append(ShDataTags.SecondaryEventChargingFunctionName_s);
-			sBuffer.append(secECFName);
-			sBuffer.append(ShDataTags.SecondaryEventChargingFunctionName_e);
+		if (serviceInfo != null){
+			sBuffer.append(ShDataTags.ServiceInfo_s);
+			sBuffer.append(serviceInfo);
+			sBuffer.append(ShDataTags.ServiceInfo_e);
 		}
-
-		if (priCCFName != null){
-			sBuffer.append(ShDataTags.PrimaryChargingCollectionFunctionName_s);
-			sBuffer.append(priCCFName);
-			sBuffer.append(ShDataTags.PrimaryChargingCollectionFunctionName_e);
-		}
-		
-		if (secCCFName != null){
-			sBuffer.append(ShDataTags.SecondaryChargingCollectionFunctionName_s);
-			sBuffer.append(secCCFName);
-			sBuffer.append(ShDataTags.SecondaryChargingCollectionFunctionName_e);
-		}
-		
-		sBuffer.append(ShDataTags.ChargingInformation_e);
+				
+		sBuffer.append(ShDataTags.ApplicationServer_e);
 		return sBuffer.toString();
 	}
-
-	public String getPriCCFName() {
-		return priCCFName;
-	}
-
-	public void setPriCCFName(String priCCFName) {
-		this.priCCFName = priCCFName;
-	}
-
-	public String getPriECFName() {
-		return priECFName;
-	}
-
-	public void setPriECFName(String priECFName) {
-		this.priECFName = priECFName;
-	}
-
-	public String getSecCCFName() {
-		return secCCFName;
-	}
-
-	public void setSecCCFName(String secCCFName) {
-		this.secCCFName = secCCFName;
-	}
-
-	public String getSecECFName() {
-		return secECFName;
-	}
-
-	public void setSecECFName(String secECFName) {
-		this.secECFName = secECFName;
-	}
 	
-	
+	public int getDefaultHandling() {
+		return defaultHandling;
+	}
+
+	public void setDefaultHandling(int defaultHandling) {
+		this.defaultHandling = defaultHandling;
+	}
+
+	public String getServerName() {
+		return serverName;
+	}
+
+	public void setServerName(String serverName) {
+		this.serverName = serverName;
+	}
+
+	public String getServiceInfo() {
+		return serviceInfo;
+	}
+
+	public void setServiceInfo(String serviceInfo) {
+		this.serviceInfo = serviceInfo;
+	}
 }

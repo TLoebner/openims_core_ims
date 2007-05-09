@@ -8,7 +8,7 @@ package de.fhg.fokus.hss.sh.data;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class DSAI {
+public class DSAIElement {
 	private String tag = null;
 	private int value = -1;
 	

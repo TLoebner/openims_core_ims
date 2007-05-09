@@ -164,9 +164,9 @@ public class CxConstants {
 	//tIdentityType
 	public enum Identity_Type{
 		Public_User_Identity("Public_User_Identity", 0),
-		Distinct_PSI("Distinct_PSI", 1),
-		Wildcarded_PSI("Wildcarded_PSI", 2);
-
+		Wildcarded_PSI("Wildcarded_PSI", 1),
+		Distinct_PSI("Distinct_PSI", 2);
+		
 		public int code;
 		public String name;
 		

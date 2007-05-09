@@ -48,18 +48,18 @@ import java.util.Vector;
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShData {
+public class ShDataElement {
 
-	private PublicIdentity publicIdentifiers = null;
-	private Vector<RepositoryData> repositoryDataList = null;
-	private ShIMSData shIMSData = null;
-	private CSLocationInformation csLocationInformation = null;
-	private PSLocationInformation psLocationInformation = null;
+	private PublicIdentityElement publicIdentifiers = null;
+	private Vector<RepositoryDataElement> repositoryDataList = null;
+	private ShIMSDataElement shIMSData = null;
+	private CSLocationInformationElement csLocationInformation = null;
+	private PSLocationInformationElement psLocationInformation = null;
 	private int csUserState = -1;
 	private int psUserState = -1;
-	private ShDataExtension shDataExtension;
+	private ShDataExtensionElement shDataExtension;
 	
-	public ShData(){}
+	public ShDataElement(){}
 
 	public String toString(){
 		StringBuffer sBuffer = new StringBuffer();
@@ -100,27 +100,27 @@ public class ShData {
 		return sBuffer.toString();
 	}
 	
-	public void addRepositoryData(RepositoryData data){
+	public void addRepositoryData(RepositoryDataElement data){
 		if (repositoryDataList == null){
-			repositoryDataList = new Vector<RepositoryData>();
+			repositoryDataList = new Vector<RepositoryDataElement>();
 		}
 		repositoryDataList.add(data);
 	}
 	
 	// getters & setters
-	public CSLocationInformation getCsLocationInformation() {
+	public CSLocationInformationElement getCsLocationInformation() {
 		return csLocationInformation;
 	}
 
-	public void setCsLocationInformation(CSLocationInformation csLocationInformation) {
+	public void setCsLocationInformation(CSLocationInformationElement csLocationInformation) {
 		this.csLocationInformation = csLocationInformation;
 	}
 
-	public PSLocationInformation getPsLocationInformation() {
+	public PSLocationInformationElement getPsLocationInformation() {
 		return psLocationInformation;
 	}
 
-	public void setPsLocationInformation(PSLocationInformation psLocationInformation) {
+	public void setPsLocationInformation(PSLocationInformationElement psLocationInformation) {
 		this.psLocationInformation = psLocationInformation;
 	}
 
@@ -140,39 +140,35 @@ public class ShData {
 		this.psUserState = psUserState;
 	}
 
-	public Vector<RepositoryData> getRepositoryDataList() {
+	public Vector<RepositoryDataElement> getRepositoryDataList() {
 		return repositoryDataList;
 	}
 
-	public PublicIdentity getPublicIdentifiers() {
+	public PublicIdentityElement getPublicIdentifiers() {
 		return publicIdentifiers;
 	}
 
-	public void setPublicIdentifiers(PublicIdentity publicIdentifiers) {
+	public void setPublicIdentifiers(PublicIdentityElement publicIdentifiers) {
 		this.publicIdentifiers = publicIdentifiers;
 	}
 
-	public Vector<RepositoryData> getRepositoryData() {
-		return repositoryDataList;
-	}
-
-	public void setRepositoryDataList(Vector<RepositoryData> repositoryDataList) {
+	public void setRepositoryDataList(Vector<RepositoryDataElement> repositoryDataList) {
 		this.repositoryDataList = repositoryDataList;
 	}
 
-	public ShDataExtension getShDataExtension() {
+	public ShDataExtensionElement getShDataExtension() {
 		return shDataExtension;
 	}
 
-	public void setShDataExtension(ShDataExtension shDataExtension) {
+	public void setShDataExtension(ShDataExtensionElement shDataExtension) {
 		this.shDataExtension = shDataExtension;
 	}
 
-	public ShIMSData getShIMSData() {
+	public ShIMSDataElement getShIMSData() {
 		return shIMSData;
 	}
 
-	public void setShIMSData(ShIMSData shIMSData) {
+	public void setShIMSData(ShIMSDataElement shIMSData) {
 		this.shIMSData = shIMSData;
 	}
 	
