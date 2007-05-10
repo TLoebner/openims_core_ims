@@ -106,4 +106,6 @@ int S_originating_barred(struct sip_msg *msg,char *str1,char *str2);
 
 int S_terminating_barred(struct sip_msg *msg,char *str1,char *str2);
 
+int S_add_p_asserted_identity(struct sip_msg *msg,char *str1,char *str2);
+
 #endif //S_CSCF_REGISTRAR_H_

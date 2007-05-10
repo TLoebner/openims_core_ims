@@ -97,7 +97,9 @@ char* icscf_db_capabilities_table="s_cscf_capabilities";	/**< S-CSCF capabilitie
 
 char* icscf_aaa_peer="hss.open-ims.test";					/**< Diameter Peer FQDN (HSS) */
 
-int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists */
+int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists	*/
+
+char* icscf_default_realm="open-ims.test";					/**< default realm for LIR if none available	*/
 
 /* P-Charging-Vector parameters */
 extern char* cscf_icid_value_prefix;			/**< hexadecimal prefix for the icid-value - must be unique on each node */
@@ -115,6 +117,7 @@ str icscf_thig_port_str;	/**< fixed port for THIG */
 str icscf_thig_param_str;	/**< fixed THIG parameter name */
 str icscf_thig_path_str;	/**< fixed Path header */
 str icscf_thig_rr_str;		/**< fixed Record-route header */
+str icscf_default_realm_str;/**< fixed default realm */
 str aaa_peer;				/**< fixed Diameter Peer FQDN (HSS) */
 
 extern str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
@@ -194,6 +197,8 @@ static param_export_t icscf_params[]={
 	{"db_capabilities_table", 	STR_PARAM, &icscf_db_capabilities_table},
 	{"aaa_peer", 				STR_PARAM, &icscf_aaa_peer},
 	{"hash_size", 				INT_PARAM, &icscf_hash_size},	
+
+	{"default_realm", 			STR_PARAM, &icscf_default_realm},	
 
 	{"thig_name", 				STR_PARAM, &icscf_thig_name},
 	{"thig_host", 				STR_PARAM, &icscf_thig_host},
@@ -283,6 +288,9 @@ static int fix_parameters()
 				
 	aaa_peer.s = icscf_aaa_peer;
 	aaa_peer.len = strlen(icscf_aaa_peer);
+
+	icscf_default_realm_str.s = icscf_default_realm; 
+	icscf_default_realm_str.len = strlen(icscf_default_realm);
 
 	cscf_icid_value_prefix_str.s = cscf_icid_value_prefix;
 	cscf_icid_value_prefix_str.len = strlen(cscf_icid_value_prefix);

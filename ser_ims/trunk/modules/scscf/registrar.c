@@ -1322,6 +1322,95 @@ error:
 	return ret;	
 }
 
+static str p_asserted_identity_s={"P-Asserted-Identity: <",22};
+static str p_asserted_identity_e={">\r\n",3};
+static str p_asserted_identity_param={";user=phone",11};
+static str p_asserted_identity_tel={"tel:",4};
+static str route_header={"Route",5};
+/**
+ * Adds suplimentary P-Asserted-Identity.
+ * - if the original header is a SIP URI like sip:+(...) then adds a tel:+(...);user=phone		
+ * - if the original header is a TEL URL then it adds an alias SIP URI
+ * @param msg - the message to operate on
+ * @returns #CSCF_RETURN_TRUE if added, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_ERROR on error
+ */
+int S_add_p_asserted_identity(struct sip_msg *msg,char *str1,char *str2)
+{
+	str public_identity;	
+	r_public *p;
+	str asserted_id_h;
+	struct hdr_field* route;
+	int i,j;
+
+	LOG(L_DBG,"DBG:"M_NAME":S_add_p_asserted_identity: Looking if registered\n");
+	/* First check the parameters */
+	if (msg->first_line.type!=SIP_REQUEST){
+		LOG(L_ERR,"ERR:"M_NAME":S_add_p_asserted_identity: This message is not a request\n");
+		goto error;
+	}
+	
+	//get first route header
+	route =	cscf_get_header(msg,route_header);
+	if(route && strncasecmp(route->body.s,"sip:iscmark",11)==0){
+		 LOG(L_ERR, "DBG"M_NAME":S_add_p_asserted_identity: Request came from AS\n");
+		 return CSCF_RETURN_FALSE;
+	}
+	public_identity = cscf_get_asserted_identity(msg);
+	
+	//check if it is a sip:+ uri
+	if(strncasecmp(public_identity.s,"sip:+",5)==0){
+		asserted_id_h.len = p_asserted_identity_s.len+public_identity.len+p_asserted_identity_param.len+p_asserted_identity_e.len;
+		asserted_id_h.s = pkg_malloc(asserted_id_h.len);
+		if (!asserted_id_h.s){
+			LOG(L_ERR, "ERR"M_NAME":S_add_p_asserted_identity: Error allocating %d bytes\n",asserted_id_h.len);
+            asserted_id_h.len=0;
+			goto error;
+		}else{
+			asserted_id_h.len = 0;
+			str aux;
+			aux.len=public_identity.len-4;
+			aux.s=public_identity.s+4;
+			STR_APPEND(asserted_id_h,p_asserted_identity_s);
+			STR_APPEND(asserted_id_h,p_asserted_identity_tel);
+			STR_APPEND(asserted_id_h,aux);
+			STR_APPEND(asserted_id_h,p_asserted_identity_param);
+			STR_APPEND(asserted_id_h,p_asserted_identity_e);
+			if (!cscf_add_header_first(msg,&asserted_id_h,HDR_OTHER_T))
+				pkg_free(asserted_id_h.s);
+				return CSCF_RETURN_TRUE;
+			}
+	}else{
+	//check if it is a tel uri
+		p = get_r_public(public_identity);
+		if (!p||!p->s) goto error;
+		
+		for(i=0;i<p->s->service_profiles_cnt;i++)
+			for(j=0;j<p->s->service_profiles[i].public_identities_cnt;j++)
+				if (strncasecmp(p->s->service_profiles[i].public_identities[j].public_identity.s,"tel:",4)==0){
+					asserted_id_h.len = p_asserted_identity_s.len+p->s->service_profiles[i].public_identities[j].public_identity.len+p_asserted_identity_e.len;
+					asserted_id_h.s = pkg_malloc(asserted_id_h.len);
+					if (!asserted_id_h.s){
+						LOG(L_ERR, "ERR"M_NAME":S_add_p_asserted_identity: Error allocating %d bytes\n", asserted_id_h.len);
+						asserted_id_h.len=0;
+						goto error;
+					}else{
+						asserted_id_h.len = 0;
+						STR_APPEND(asserted_id_h,p_asserted_identity_s);
+						STR_APPEND(asserted_id_h,p->s->service_profiles[i].public_identities[j].public_identity);
+						STR_APPEND(asserted_id_h,p_asserted_identity_e);
+						if (!cscf_add_header_first(msg,&asserted_id_h,HDR_OTHER_T))
+							pkg_free(asserted_id_h.s);
+					}			
+					r_unlock(p->hash);
+					return CSCF_RETURN_TRUE;
+				}
+		r_unlock(p->hash);
+	}
+
+error:
+	return CSCF_RETURN_ERROR;
+}
+
 /**
  * Finds if the originating user (in P-Asserted-Identity) is not registered at this S-CSCF
  * @param msg - the SIP message
