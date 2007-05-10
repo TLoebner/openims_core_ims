@@ -69,10 +69,12 @@
 #define MSG_403_UNKOWN_EXPERIMENTAL_RC "Forbidden - HSS responded with unknown Experimental Result Code"
 
 #define MSG_404_NOT_REGISTERED "Not Found - HSS Identity not registered"
+#define MSG_480_NOT_REGISTERED "Temporarily Unavailable - HSS Identity not registered"
 
 #define MSG_480_DIAMETER_ERROR "Temporarily Unavailable - Diameter Cx interface failed"
 #define MSG_480_DIAMETER_TIMEOUT_LIA "Temporarily unavailable - TimeOut in LIR/A HSS"
 #define MSG_480_DIAMETER_MISSING_AVP_LIA "Temporarily unavailable - Missing AVP in LIA from HSS"
+
 
 #define MSG_604_USER_UNKNOWN "Does not exist anywhere - HSS User Unknown"
 
