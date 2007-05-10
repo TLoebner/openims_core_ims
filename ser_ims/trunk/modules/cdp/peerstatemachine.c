@@ -533,7 +533,7 @@ void I_Snd_CER(peer *p)
 	char x[6];
 	
 	cer = AAANewMessage(Code_CE,0,0,0);
-	
+	if (!cer) return;
 	cer->hopbyhopId = next_hopbyhop();
 	cer->endtoendId = next_endtoend();
 	addrlen = sizeof(struct sockaddr_in);
@@ -634,7 +634,8 @@ void Snd_DWR(peer *p)
 {
 	AAAMessage *dwr=0;
 	
-	dwr = AAANewMessage(Code_DW,0,0,0);	
+	dwr = AAANewMessage(Code_DW,0,0,0);
+	if (!dwr) return;	
 	dwr->hopbyhopId = next_hopbyhop();
 	dwr->endtoendId = next_endtoend();
 	if (p->state==I_Open)
@@ -656,12 +657,14 @@ void Snd_DWA(peer *p,AAAMessage *dwr,int result_code,int sock)
 	AAAMessage *dwa;
 	char x[4];	
 
-	dwa = AAANewMessage(Code_DW,0,0,dwr);	
+	dwa = AAANewMessage(Code_DW,0,0,dwr);
+	if (!dwa) goto done;	
 
 	set_4bytes(x,result_code);
 	AAACreateAndAddAVPToMessage(dwa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
 	
 	peer_send_msg(p,dwa);
+done:	
 	AAAFreeMessage(&dwr);
 }
 
@@ -676,6 +679,7 @@ void Snd_DPR(peer *p)
 	char x[4];
 	
 	dpr = AAANewMessage(Code_DP,0,0,0);	
+	if (!dpr) return;
 	dpr->hopbyhopId = next_hopbyhop();
 	dpr->endtoendId = next_endtoend();
 
@@ -701,8 +705,7 @@ void Snd_DPA(peer *p,AAAMessage *dpr,int result_code,int sock)
 	AAAMessage *dpa;
 
 	dpa = AAANewMessage(Code_DP,0,0,dpr);	
-	
-	peer_send_msg(p,dpa);
+	if (dpa) peer_send_msg(p,dpa);
 	AAAFreeMessage(&dpr);
 }
 
@@ -812,7 +815,8 @@ void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 	char x[6];
 	
 	cea = AAANewMessage(Code_CE,0,0,cer);	
-
+	if (!cea) goto done;
+	
 	addrlen = sizeof(struct sockaddr_in);
 	if (getsockname(sock,(struct sockaddr*) &addr, &addrlen) == -1) { 
 		LOG(L_ERR,"ERROR:Snd_CEA(): Error on finding local host address > %s\n",strerror(errno));
@@ -834,6 +838,7 @@ void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 	Snd_CE_add_applications(cea,p);
 
 	peer_send(p,sock,cea,1);
+done:	
 	AAAFreeMessage(&cer);
 }
 
