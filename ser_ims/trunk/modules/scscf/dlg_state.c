@@ -630,6 +630,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	d->method = get_dialog_method(msg->first_line.u.request.method);
 	STR_SHM_DUP(d->method_str,msg->first_line.u.request.method,"shm");
+	if (!d->method_str.s) goto error;
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
@@ -656,6 +657,9 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 //	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
+error:
+	if (d) d_unlock(d->hash);
+	return CSCF_RETURN_FALSE;	
 }
 
 

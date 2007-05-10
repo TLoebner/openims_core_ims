@@ -283,6 +283,7 @@ AAAMessage* Cx_RTA(AAAMessage * rtr)
 	str private_id;
 	
 	rta_msg	= cdpb.AAACreateResponse(rtr);//session ID?
+	if (!rta_msg) return 0;
 
 	avp = Cx_get_next_public_identity(rtr,0,AVP_IMS_Public_Identity,IMS_vendor_id_3GPP,__FUNCTION__);	
 	if(avp==0){
@@ -314,9 +315,11 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 	str ppr_data;
 	ims_subscription *imss;
 	int i,j;
-	ppa_msg	= cdpb.AAACreateResponse(ppr);
 	r_public *pu;
 	str ccf1,ccf2,ecf1,ecf2;
+
+	ppa_msg	= cdpb.AAACreateResponse(ppr);
+	if (!ppa_msg) return 0;	
 	
 	if((ppr_data=Cx_get_user_data(ppr)).len != 0){
 		LOG(L_INFO,"INFO:"M_NAME":Cx_PPA(): Received a User_Data PPR!\n");
