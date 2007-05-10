@@ -157,7 +157,7 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia)
 					return CSCF_RETURN_BREAK;
 
 				case RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED:
-					cscf_reply_transactional(msg,404,MSG_404_NOT_REGISTERED);
+					cscf_reply_transactional(msg,480,MSG_480_NOT_REGISTERED);
 					return CSCF_RETURN_BREAK;
 					
 				case RC_IMS_DIAMETER_UNREGISTERED_SERVICE:
