@@ -184,6 +184,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - S_update_dialog() - update a dialog - drops the dialogs if terminated
  * - S_record_route() - record routes
  * - S_is_record_routed() - check if we already record-routed
+ * - S_add_p_asserted_identity() - adds the P-Asserted-Identity aliases if the original P-Asserted-Identity was a TEL URI
  */
 static cmd_export_t scscf_cmds[]={
 	{"load_scscf",					(cmd_function)load_scscf, 	NO_SCRIPT, 0, 0},
@@ -228,6 +229,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_update_dialog",				S_update_dialog,			1,0,REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"S_record_route",				S_record_route,				1,0,REQUEST_ROUTE},	
 	{"S_is_record_routed",			S_is_record_routed,			1,0,REQUEST_ROUTE},	
+	{"S_add_p_asserted_identity",	S_add_p_asserted_identity,	0,0,REQUEST_ROUTE},	
 	
 	{0, 0, 0, 0, 0}
 };

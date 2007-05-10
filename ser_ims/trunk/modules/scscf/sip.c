@@ -320,13 +320,21 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 		return pu;
 	}
 	
-	pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
-	pu.s = shm_malloc(pu.len+1);
-	sprintf(pu.s,"sip:%.*s@%.*s",
-		msg->parsed_uri.user.len,	
-		msg->parsed_uri.user.s,	
-		msg->parsed_uri.host.len,	
-		msg->parsed_uri.host.s);	
+	if(msg->parsed_uri.type==TEL_URI_T){
+		pu.len = 4 + msg->parsed_uri.user.len ;
+		pu.s = shm_malloc(pu.len+1);
+		sprintf(pu.s,"tel:%.*s",
+			msg->parsed_uri.user.len,
+			msg->parsed_uri.user.s);
+	}else{
+		pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
+		pu.s = shm_malloc(pu.len+1);
+		sprintf(pu.s,"sip:%.*s@%.*s",
+			msg->parsed_uri.user.len,	
+			msg->parsed_uri.user.s,	
+			msg->parsed_uri.host.len,	
+			msg->parsed_uri.host.s);
+	}	
 	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity_from_requri: <%.*s> \n",
 		pu.len,pu.s);	

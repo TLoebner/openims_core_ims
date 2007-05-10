@@ -66,8 +66,10 @@
 #include "cx_avp.h"
 #include "registration.h"
 
-extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 		*/
-extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp funcs 		*/
+extern struct tm_binds tmb;				/**< Structure with pointers to tm funcs 		*/
+extern struct cdp_binds cdpb;           /**< Structure with pointers to cdp funcs 		*/
+
+extern str icscf_default_realm_str;		/**< fixed default realm */
 
 /**
  * Perform Location-Information-Request.
@@ -81,10 +83,11 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 {
 	int result=CSCF_RETURN_FALSE;
 	str public_identity={0,0};
-	str realm;
-	AAAMessage *lia=0;
-		
+	str realm={0,0};
+	AAAMessage *lia=0;	
+	
 	realm = cscf_get_realm_from_ruri(msg);
+	if(!realm.len) realm = icscf_default_realm_str;
 	
 	LOG(L_DBG,"DBG:"M_NAME":I_LIR: Starting ...\n");
 	/* check if we received what we should */
@@ -101,7 +104,9 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 		result=CSCF_RETURN_BREAK;
 		goto done;		
 	}
+
 	lia = Cx_LIR(msg,public_identity,realm);
+	
 	if (!lia){
 		LOG(L_ERR,"ERR:"M_NAME":I_LIR: Error creating/sending LIR\n");
 		cscf_reply_transactional(msg,480,MSG_480_DIAMETER_ERROR);
