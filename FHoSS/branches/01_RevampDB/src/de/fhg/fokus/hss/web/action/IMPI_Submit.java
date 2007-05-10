@@ -50,6 +50,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.util.*;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.Globals;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
@@ -57,6 +58,7 @@ import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
 import org.apache.struts.action.ActionMessages;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -83,22 +85,20 @@ import de.fhg.fokus.hss.diam.*;
  */
 
 public class IMPI_Submit extends Action{
+	private static Logger logger = Logger.getLogger(IMPI_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
-		
-		// get the input parameters
-		
-		String test = (String) request.getAttribute("associated_IMPU_ID");
 		
 		IMPI_Form form = (IMPI_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
 		int id = form.getId();
 		
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 
 			if (nextAction.equals("save")){
 				int auth_scheme;
@@ -178,10 +178,6 @@ public class IMPI_Submit extends Action{
 				}
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
-				
-				// reload the associated IMPUs
-//				List list = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
-//				form.setAssociated_impu_set(list);
 			}
 			else if (nextAction.equals("add_imsu")){
 				IMPI impi = (IMPI) IMPI_DAO.get_by_ID(session, id);
@@ -221,6 +217,8 @@ public class IMPI_Submit extends Action{
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
 		
+			// actions performed in all the situations 
+
 			// reload the associated IMPUs
 			List list = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, id);
 			if (list == null){
@@ -246,36 +244,77 @@ public class IMPI_Submit extends Action{
 	    	
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-			return forward;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		
+		// if we have PPR or RTR
 		if (nextAction.equals("ppr")){
-			System.out.println("We have the ppr here!");
+			// PPR
+			logger.info("We are sending a PPR message for the user!");
+
+			// [to be completed]
+			//...
+			
 			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		}
 		else if (nextAction.equals("rtr")){
-			System.out.println("We have the rtr here!");
+			// RTR
+			logger.info("We are sending a RTR message for the user!");
 			
-			Session session = HibernateUtil.getCurrentSession();
-			HibernateUtil.beginTransaction();
-			
+			dbException = false;
 			DiameterStack stack = HSSContainer.getInstance().diamStack;
-			IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
-			List impiList = new ArrayList();
-			impiList.add(impi);
-			RTR.sendRequest(stack.diameterPeer, null, impiList,
+			List impiList = new ArrayList();;
+			try{
+				Session session = HibernateUtil.getCurrentSession();
+				HibernateUtil.beginTransaction();
+				
+				IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
+				impiList.add(impi);
+			}
+			catch(DatabaseException e){
+				logger.error("Database Exception occured!\nReason:" + e.getMessage());
+				e.printStackTrace();
+				dbException = true;
+				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			}
+			
+			catch (HibernateException e){
+				logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+				e.printStackTrace();
+				dbException = true;
+				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			}
+			finally{
+				if (!dbException){
+					HibernateUtil.commitTransaction();
+				}
+				HibernateUtil.closeSession();
+			}			
+			if (!dbException){
+				RTR.sendRequest(stack.diameterPeer, null, impiList,
 					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
-			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}
 		}		
-		
 		
 		return forward;
 	}

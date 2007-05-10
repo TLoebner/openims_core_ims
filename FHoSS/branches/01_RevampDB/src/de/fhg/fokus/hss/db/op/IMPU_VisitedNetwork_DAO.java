@@ -45,6 +45,7 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -59,6 +60,7 @@ import de.fhg.fokus.hss.db.model.VisitedNetwork;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class IMPU_VisitedNetwork_DAO {
+	private static Logger logger = Logger.getLogger(IMPU_VisitedNetwork_DAO.class);
 	
 	public static void insert(Session session, IMPU_VisitedNetwork impu_vn){
 		session.save(impu_vn);
@@ -74,7 +76,17 @@ public class IMPU_VisitedNetwork_DAO {
 			.addEntity(IMPU_VisitedNetwork.class);
 		query.setInteger(0, id_impu);
 		query.setInteger(1, id_visited_network);
-		return (IMPU_VisitedNetwork) query.uniqueResult();
+
+		IMPU_VisitedNetwork result = null;
+		try{
+			result = (IMPU_VisitedNetwork) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static List get_all_VN_by_IMPU_ID(Session session, int id_impu){

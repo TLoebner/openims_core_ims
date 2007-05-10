@@ -54,6 +54,7 @@ import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -78,16 +79,15 @@ public class AS_Submit extends Action{
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
 		AS_Form form = (AS_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
 		int id = form.getId();
-
+		
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
-			
+			HibernateUtil.beginTransaction();
 			
 			// for all the actions we test if the current element can be deleted or not
 			if (id != -1){
@@ -100,7 +100,6 @@ public class AS_Submit extends Action{
 			}			
 			
 			if (nextAction.equals("save")){
-				int auth_scheme;
 				ApplicationServer as;
 
 				if (id == -1){
@@ -121,16 +120,12 @@ public class AS_Submit extends Action{
 				if (form.getService_info() != null){
 					as.setService_info(form.getService_info());
 				}
-				else{
-					as.setService_info("asasas");
-				}
 				
 				as.setRep_data_size_limit(form.getRep_data_size_limit());
 				as.setUdr(form.isUdr()?1:0);
 				as.setPur(form.isPur()?1:0);
 				as.setSnr(form.isSnr()?1:0);
 				
-				System.out.println("TEST CHECKED:" + form.isUdr_rep_data());
 				as.setUdr_rep_data(form.isUdr_rep_data()?1:0);
 				as.setUdr_impu(form.isUdr_impu()?1:0);
 				as.setUdr_ims_user_state(form.isUdr_ims_user_state()?1:0);
@@ -228,13 +223,24 @@ public class AS_Submit extends Action{
 					request.setAttribute("deleteDeactivation", "true");
 				}
 			}			
-			
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		return forward;

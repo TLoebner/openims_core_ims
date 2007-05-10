@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -53,6 +54,7 @@ import de.fhg.fokus.hss.db.model.RepositoryData;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class RepositoryData_DAO {
+	private static Logger logger = Logger.getLogger(RepositoryData_DAO.class);
 	
 	public static void insert(Session session, RepositoryData repData){
 		session.save(repData);
@@ -74,7 +76,6 @@ public class RepositoryData_DAO {
 		} 
 		catch(Exception e){
 			e.printStackTrace();
-			result = null;
 		}
 		
 		return result; 
@@ -88,7 +89,16 @@ public class RepositoryData_DAO {
 			.addEntity(RepositoryData.class);
 		query.setString(0, impu_identity);
 		query.setString(1, service_indication);
-		return (RepositoryData) query.uniqueResult();
+		
+		RepositoryData result = null;
+		try{
+			result = (RepositoryData) query.uniqueResult();
+		} 
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		
+		return result; 
 	}
 	
 	public static int delete_by_ID(Session session, int id){

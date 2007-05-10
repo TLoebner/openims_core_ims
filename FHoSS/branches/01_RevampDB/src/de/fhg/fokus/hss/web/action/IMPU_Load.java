@@ -43,29 +43,21 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
-import org.apache.struts.Globals;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
-import org.apache.struts.action.ActionMessage;
-import org.apache.struts.action.ActionMessages;
-import org.hibernate.LockMode;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPU;
-import de.fhg.fokus.hss.db.model.SP;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
@@ -83,6 +75,7 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class IMPU_Load extends Action {
+	private static Logger logger = Logger.getLogger(IMPU_Load.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse)
@@ -90,13 +83,14 @@ public class IMPU_Load extends Action {
 
 		IMPU_Form form = (IMPU_Form) actionForm;
 		int id = form.getId();
-
-
-		if (form.getSelect_charging_info() == null || form.getSelect_sp() == null || form.getSelect_identity_type() == null){
-			// create
+		ActionForward forward = null;
+		
+		boolean dbException = false;
+		try{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 			
+			// actions performed in all the situations
 			List sp_list;
 			sp_list = SP_DAO.get_all(session);
 			form.setSelect_sp(sp_list);
@@ -110,46 +104,53 @@ public class IMPU_Load extends Action {
 			List vn_list;
 			vn_list = VisitedNetwork_DAO.get_all(session);
 			form.setSelect_vn(vn_list);
-			
-			HibernateUtil.commitTransaction();
-			
-		}
-		int already_assigned_impi_id = form.getAlready_assigned_impi_id();
-		System.out.println("Already assigned IMPI id:" + already_assigned_impi_id);
-		
-		if (id != -1){
-			
-			// load all the parameters into the form
-			HibernateUtil.beginTransaction();
-			Session session = HibernateUtil.getCurrentSession();
 
-			// add the value of deleteDeactivation	
-			if (IMPU_Load.testForDelete(session, form.getId())){
-				request.setAttribute("deleteDeactivation", "false");
+			if (id != -1){
+				// add the value of deleteDeactivation	
+				if (IMPU_Load.testForDelete(session, form.getId())){
+					request.setAttribute("deleteDeactivation", "false");
+				}
+				else{
+					request.setAttribute("deleteDeactivation", "true");
+				}
+				
+				IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
+				
+				List implicitset_IMPUs = IMPU_DAO.get_all_from_set(session, impu.getId_implicit_set());
+				request.setAttribute("implicitset_IMPUs", implicitset_IMPUs);
+				
+				List associated_IMPIs = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, id);
+				request.setAttribute("associated_IMPIs", associated_IMPIs);
+				
+				List visitedNetworks = IMPU_DAO.get_all_VisitedNetworks_by_IMPU_ID(session, id);
+				request.setAttribute("visitedNetworks", visitedNetworks);
+				
+				IMPU_Load.setForm(form, impu);
 			}
-			else{
-				request.setAttribute("deleteDeactivation", "true");
+
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id=" + id);
+		}	
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
 			}
-			
-			IMPU impu = (IMPU) session.load(IMPU.class, form.getId());
-			
-			List implicitset_IMPUs = IMPU_DAO.get_all_from_set(session, impu.getId_implicit_set());
-			request.setAttribute("implicitset_IMPUs", implicitset_IMPUs);
-			
-			List associated_IMPIs = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, id);
-			request.setAttribute("associated_IMPIs", associated_IMPIs);
-			
-			List visitedNetworks = IMPU_DAO.get_all_VisitedNetworks_by_IMPU_ID(session, id);
-			request.setAttribute("visitedNetworks", visitedNetworks);
-			
-			IMPU_Load.setForm(form, impu);
-			
-			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
 	}
 

@@ -45,6 +45,7 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -59,6 +60,7 @@ import de.fhg.fokus.hss.db.model.SP_IFC;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class SP_IFC_DAO {
+	private static Logger logger = Logger.getLogger(SP_IFC_DAO.class);
 	
 	public static void insert(Session session, SP_IFC sp_ifc){
 		session.save(sp_ifc);
@@ -74,7 +76,17 @@ public class SP_IFC_DAO {
 			.addEntity(SP_IFC.class);
 		query.setInteger(0, id_sp);
 		query.setInteger(1, id_ifc);
-		return (SP_IFC) query.uniqueResult();
+		
+		SP_IFC result = null;
+		try{
+			result = (SP_IFC) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static List get_IFC_by_SP_ID(Session session, int id_sp){

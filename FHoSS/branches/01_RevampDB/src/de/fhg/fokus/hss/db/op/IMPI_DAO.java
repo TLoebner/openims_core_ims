@@ -45,18 +45,19 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
-import org.hibernate.ObjectNotFoundException;
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
+
 import de.fhg.fokus.hss.db.model.IMPI;
-import de.fhg.fokus.hss.db.model.IMSU;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class IMPI_DAO {
-
+	private static Logger logger = Logger.getLogger(IMPI_DAO.class);
+	
 	public static void insert(Session session, IMPI impi){
 		session.save(impi);
 	}
@@ -65,40 +66,6 @@ public class IMPI_DAO {
 		session.saveOrUpdate(impi);
 	}	
 
-/*	public static IMPI insert(Session session, String identity, String key, int auth_scheme, String ip, 
-			byte[] amf, byte[] op, String sqn, int id_imsu){
-		
-		IMPI impi = new IMPI();
-		impi.setIdentity(identity);
-		impi.setK(key);
-		impi.setAuth_scheme(auth_scheme);
-		impi.setIp(ip);
-		impi.setAmf(amf);
-		impi.setOp(op);
-		impi.setSqn(sqn);
-		impi.setId_imsu(id_imsu);
-		session.save(impi);
-		
-		return impi;
-	}
-	
-	public static IMPI update(Session session, int id, String identity, String key, int auth_scheme, String ip,   
-			byte[] amf, byte[] op, String sqn, int id_imsu){
-		
-		IMPI impi = (IMPI) session.load(IMPI.class, id);
-		impi.setIdentity(identity);
-		impi.setK(key);
-		impi.setAuth_scheme(auth_scheme);
-		impi.setIp(ip);
-		impi.setAmf(amf);
-		impi.setOp(op);
-		impi.setSqn(sqn);
-		impi.setId_imsu(id_imsu);
-		session.saveOrUpdate(impi);
-		
-		return impi;
-	}
-*/
 	public static IMPI update(Session session, int id, String sqn){
 		
 		IMPI impi = (IMPI) session.load(IMPI.class, id);
@@ -122,7 +89,17 @@ public class IMPI_DAO {
 		query = session.createSQLQuery("select * from impi where identity like ?")
 			.addEntity(IMPI.class);
 		query.setString(0, identity);
-		return (IMPI) query.uniqueResult();
+		IMPI result = null;
+		
+		try{
+			result = (IMPI) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static Object[] get_by_Wildcarded_Identity(Session session, String identity, 

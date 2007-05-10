@@ -225,7 +225,6 @@ public class ShDataParser extends DefaultHandler {
     	if (localName.equals(ShDataTags.ShData)){
     	}
     	else if (localName.equals(ShDataTags.PublicIdentifiers)){
-    		System.out.println("PublicIdentifiers!");
     		if (shDataExtension != null && registeredIdentities){
     			shDataExtension.setRegisteredIdentities(publicIdentity);
     			registeredIdentities = false;
@@ -244,7 +243,6 @@ public class ShDataParser extends DefaultHandler {
     		}
     		else{
     			shData.setPublicIdentifiers(publicIdentity);
-    			System.out.println("PublicIdentifiers! BUN");
     		}
     		publicIdentity = null;
     	}

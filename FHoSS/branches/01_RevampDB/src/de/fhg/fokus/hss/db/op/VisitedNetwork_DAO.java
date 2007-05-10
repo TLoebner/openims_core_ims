@@ -45,6 +45,7 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -57,6 +58,7 @@ import de.fhg.fokus.hss.db.model.VisitedNetwork;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class VisitedNetwork_DAO {
+	private static Logger logger = Logger.getLogger(VisitedNetwork_DAO.class);
 	
 	public static void insert(Session session, VisitedNetwork visited_network){
 		session.save(visited_network);
@@ -81,7 +83,17 @@ public class VisitedNetwork_DAO {
 		query = session.createSQLQuery("select * from visited_network where identity like ?")
 			.addEntity(VisitedNetwork.class);
 		query.setString(0, identity);
-		return (VisitedNetwork) query.uniqueResult();
+		VisitedNetwork result = null;
+		
+		try{
+			result = (VisitedNetwork) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 
 	public static Object[] get_by_Wildcarded_Identity(Session session, String identity, 

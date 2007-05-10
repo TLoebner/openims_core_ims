@@ -46,6 +46,7 @@ package de.fhg.fokus.hss.db.op;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -60,6 +61,8 @@ import de.fhg.fokus.hss.db.model.IMPU;
  */
 
 public class DB_Op {
+	private static Logger logger = Logger.getLogger(DB_Op.class);
+	
 	public static void setUserState(Session session, int id_impi, int id_impu_implicitset, short user_state,
 			boolean apply_on_IMPU){
 

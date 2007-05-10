@@ -45,18 +45,19 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.model.TP;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class ChargingInfo_DAO {
-
+	private static Logger logger = Logger.getLogger(ChargingInfo_DAO.class);
+	
 	public static void insert(Session session, ChargingInfo charging_info){
 		session.save(charging_info);
 	}
@@ -78,7 +79,17 @@ public class ChargingInfo_DAO {
 		Query query = session.createSQLQuery("select * from charging_info where name like ?")
 			.addEntity(ChargingInfo.class);
 		query.setString(0, name);
-		return (ChargingInfo) query.uniqueResult();
+		ChargingInfo result = null;
+		
+		try{
+			result = (ChargingInfo) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+
+		return result;
 	}
 
 	public static Object[] get_by_Wildcarded_Name(Session session, String name, 

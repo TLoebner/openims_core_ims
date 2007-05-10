@@ -46,6 +46,7 @@ package de.fhg.fokus.hss.db.op;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -60,7 +61,7 @@ import de.fhg.fokus.hss.db.model.VisitedNetwork;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class IMPU_DAO {
-	
+	private static Logger logger = Logger.getLogger(IMPU_DAO.class);
 	public static void insert(Session session, IMPU impu){
 		session.save(impu);
 	}
@@ -153,7 +154,17 @@ public class IMPU_DAO {
 		query = session.createSQLQuery("select * from impu where identity=?")
 			.addEntity(IMPU.class);
 		query.setString(0, identity);
-		return (IMPU) query.uniqueResult();
+		
+		IMPU result = null;
+		try{
+			result = (IMPU) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+
+		return result;
 	}
 	
 	public static Object[] get_by_Wildcarded_Identity(Session session, String identity, int firstResult, int maxResults){

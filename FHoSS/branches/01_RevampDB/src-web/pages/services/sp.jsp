@@ -198,7 +198,12 @@ function add_action_for_form(action, associated_ID) {
 								<td>  
 									<%
 										SP_IFC sp_ifc = SP_IFC_DAO.get_by_SP_and_IFC_ID(hibSession, id, ifc.getId());
-										out.println(sp_ifc.getPriority());
+										if (sp_ifc != null){
+											out.println(sp_ifc.getPriority());
+										}
+										else{
+											out.println("Error, SP_IFC is NULL!");
+										}
 									%>
 								</td>
 								

@@ -49,25 +49,18 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
-import org.hibernate.Query;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.Capability;
-import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.model.IMPI;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.Capability_DAO;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_SearchForm;
 import de.fhg.fokus.hss.web.form.Cap_SearchForm;
-import de.fhg.fokus.hss.web.form.IMPI_SearchForm;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -77,8 +70,9 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class Cap_Search extends Action{
+	private static Logger logger = Logger.getLogger(Cap_Search.class);
 	
-	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
+	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
 		Cap_SearchForm form = (Cap_SearchForm) actionForm;
@@ -89,7 +83,8 @@ public class Cap_Search extends Action{
 		int rowsPerPage = Integer.parseInt(form.getRowsPerPage());
 		int currentPage = Integer.parseInt(form.getCrtPage()) - 1;
 		int firstResult = currentPage * rowsPerPage;		
-
+		
+		boolean dbException = false;
 		try{
 			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
@@ -126,15 +121,26 @@ public class Cap_Search extends Action{
 			request.setAttribute("maxPages", String.valueOf(maxPages));
 			request.setAttribute("currentPage", String.valueOf(currentPage));
 			request.setAttribute("rowPerPage", String.valueOf(rowsPerPage));
-			forward = mapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 			
-			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
-			forward = mapping.findForward(WebConstants.FORWARD_FAILURE);
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-		
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 

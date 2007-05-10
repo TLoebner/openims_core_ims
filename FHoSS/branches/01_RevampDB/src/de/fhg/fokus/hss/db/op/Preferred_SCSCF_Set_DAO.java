@@ -48,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -59,6 +60,8 @@ import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class Preferred_SCSCF_Set_DAO {
+	
+	private static Logger logger = Logger.getLogger(Preferred_SCSCF_Set_DAO.class);
 	
 	public static List get_all_from_set(Session session, int id_set){
 		Query query = session.createSQLQuery("select * from preferred_scscf_set where id_set=?")

@@ -45,6 +45,7 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -55,7 +56,7 @@ import de.fhg.fokus.hss.db.model.SPT;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class SPT_DAO {
-	
+	private static Logger logger = Logger.getLogger(SPT_DAO.class);
 	public static void insert(Session session, SPT spt){
 		session.save(spt);
 	}

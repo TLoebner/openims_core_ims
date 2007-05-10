@@ -50,14 +50,13 @@ package de.fhg.fokus.hss.db.op;
 import java.math.BigInteger;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
-
-import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.Capability;
-import de.fhg.fokus.hss.db.model.IMSU;
 
 public class Capability_DAO {
+	private static Logger logger = Logger.getLogger(Capability_DAO.class);
 	
 	public static void insert(Session session, Capability cap){
 		session.save(cap);
@@ -87,7 +86,20 @@ public class Capability_DAO {
 		Query query = session.createSQLQuery("select * from capability where name like ?")
 			.addEntity(Capability.class);
 		query.setString(0, name);
-		return (Capability) query.uniqueResult();
+		
+		
+		Capability result = null;
+		
+		try{
+			result = (Capability) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
+		
 	}
 
 	public static Object[] get_by_Wildcarded_Name(Session session, String name, 

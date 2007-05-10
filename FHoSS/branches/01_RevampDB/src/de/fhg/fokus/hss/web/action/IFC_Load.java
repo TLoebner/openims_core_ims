@@ -48,14 +48,14 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-
-import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.IFC_DAO;
@@ -63,9 +63,7 @@ import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.op.TP_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.form.IFC_Form;
-import de.fhg.fokus.hss.web.form.TP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -75,15 +73,18 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class IFC_Load extends Action {
+	private static Logger logger = Logger.getLogger(IFC_Load.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
 		IFC_Form form = (IFC_Form) actionForm;
 		int id = form.getId();
-
-		Session session = HibernateUtil.getCurrentSession();
+		ActionForward forward = null;
+		
+		boolean dbException = false;
 		try{
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
 			if (id != -1){
@@ -94,18 +95,30 @@ public class IFC_Load extends Action {
 				}			
 			}
 			prepareForward(session, form, request, id);
-			HibernateUtil.commitTransaction();
+
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id=" + id);
 		}	
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 			
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
 	}
 	
