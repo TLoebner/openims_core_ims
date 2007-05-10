@@ -43,15 +43,15 @@
 
 package de.fhg.fokus.hss.web.action;
 
-
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -68,34 +68,49 @@ import de.fhg.fokus.hss.web.form.Cap_Form;
 
 
 public class Cap_Load extends Action {
+	private static Logger logger = Logger.getLogger(Cap_Load.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
 		Cap_Form form = (Cap_Form) actionForm;
 		int id = form.getId();
-
-		HibernateUtil.beginTransaction();
+		ActionForward forward = null;
+		
+		boolean dbException = false;
 		Session session = HibernateUtil.getCurrentSession();
-
-		if (id != -1){
-			try{
+		HibernateUtil.beginTransaction();
+		
+		try{
+			if (id != -1){
 				// load
 				Capability cap = Capability_DAO.get_by_ID(session, id);
 				Cap_Load.setForm(form, cap);
 				Cap_Load.prepareForward(session, form, request, id);
-				HibernateUtil.commitTransaction();	
 			}
-			catch(DatabaseException e){
-				e.printStackTrace();
-			}
-			finally{
-				HibernateUtil.closeSession();
-			}
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id=" + id);			
+		}
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+		
 		return forward;
 	}
 	

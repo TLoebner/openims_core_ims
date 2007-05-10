@@ -45,13 +45,11 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.db.model.IFC;
-import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.SP;
-import de.fhg.fokus.hss.db.model.TP;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -59,7 +57,7 @@ import de.fhg.fokus.hss.db.model.TP;
  */
 
 public class SP_DAO {
-	
+	private static Logger logger = Logger.getLogger(SP_DAO.class);
 	public static SP insert(Session session, String name, int cn_service_auth){
 		SP sp  = new SP();
 		sp.setName(name);
@@ -94,7 +92,17 @@ public class SP_DAO {
 		query = session.createSQLQuery("select * from sp where name like ?")
 			.addEntity(SP.class);
 		query.setString(0, name);
-		return (SP) query.uniqueResult();
+	
+		SP result = null;
+		try{
+			result = (SP) query.uniqueResult();
+		} 
+		catch(Exception e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static Object[] get_by_Wildcarded_Identity(Session session, String identity, 

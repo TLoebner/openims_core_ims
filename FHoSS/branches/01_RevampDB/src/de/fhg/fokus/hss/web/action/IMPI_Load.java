@@ -45,15 +45,16 @@ package de.fhg.fokus.hss.web.action;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -65,7 +66,6 @@ import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
-import de.fhg.fokus.hss.web.form.IMSU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 import de.fhg.fokus.hss.auth.HexCodec;
 
@@ -76,24 +76,23 @@ import de.fhg.fokus.hss.auth.HexCodec;
 
 
 public class IMPI_Load extends Action {
+	private static Logger logger = Logger.getLogger(IMPI_Load.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
-		
 
 		IMPI_Form form = (IMPI_Form) actionForm;
 		int id = form.getId();
 		List associated_IMPUs = new ArrayList();
 		IMSU associated_IMSU = null;
+		ActionForward forward = null;
 		
-		HibernateUtil.beginTransaction();
-		Session session = HibernateUtil.getCurrentSession();
-		
+		boolean dbException = false;
 		try{
-			List imsuList= IMSU_DAO.get_all(session);		
-			//form.setSelect_imsu(imsuList);
+			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
+
 	    	form.setSelect_auth_scheme(WebConstants.select_auth_scheme);
-			
 			if (id != -1){
 				// load
 				IMPI impi = IMPI_DAO.get_by_ID(session, id); 
@@ -116,14 +115,29 @@ public class IMPI_Load extends Action {
 				request.setAttribute("deleteDeactivation", "true");
 			}
 			
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id=" + id);
 		}
-		finally{
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		
+		
 		return forward;
 	}
 	
@@ -174,7 +188,6 @@ public class IMPI_Load extends Action {
 				}
 				
 			}		
-			//form.setAssociated_impu_set(associated_IMPUs);
 		}
 		return exitCode;
 	}	

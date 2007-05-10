@@ -46,10 +46,9 @@ package de.fhg.fokus.hss.db.op;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
-import org.hibernate.Hibernate;
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -63,7 +62,8 @@ import de.fhg.fokus.hss.db.model.IMPU;
  */
 
 public class IMPI_IMPU_DAO {
-
+	private static Logger logger = Logger.getLogger(IMPI_IMPU_DAO.class);
+	
 	public static void insert(Session session, int id_impi, int id_impu, int user_state){
 		IMPI_IMPU impi_impu = new IMPI_IMPU();
 		impi_impu.setId_impi(id_impi);

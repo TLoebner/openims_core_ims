@@ -107,8 +107,8 @@ public class HSSContainer {
 	
 	public static void main(String args[]){
 		HSSContainer hssContainer = HSSContainer.getInstance();
-		Tester t = new Tester();
-		t.start();
+		//Tester t = new Tester();
+		//t.start();
 		
 		waitForExit();
 		try{

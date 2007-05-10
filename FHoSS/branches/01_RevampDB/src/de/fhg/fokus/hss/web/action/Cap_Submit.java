@@ -51,6 +51,7 @@ import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -69,7 +70,7 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 public class Cap_Submit extends Action{
 	
-	private static Logger logger = Logger.getLogger(AS_Submit.class);
+	private static Logger logger = Logger.getLogger(Cap_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
@@ -80,9 +81,10 @@ public class Cap_Submit extends Action{
 		int id = form.getId();
 		boolean new_created = false;
 		
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 			
 			// all the possible actions
 			if (nextAction.equals("save")){
@@ -136,14 +138,26 @@ public class Cap_Submit extends Action{
 				Capability_DAO.delete_by_ID(session, form.getId());
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
-
 			Cap_Load.prepareForward(session, form, request, id);
-			HibernateUtil.commitTransaction();
+		
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		return forward;

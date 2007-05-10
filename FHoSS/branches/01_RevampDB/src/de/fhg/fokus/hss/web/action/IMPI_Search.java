@@ -43,18 +43,18 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
-import org.hibernate.Query;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.IMPI;
@@ -70,8 +70,9 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class IMPI_Search extends Action{
+	private static Logger logger = Logger.getLogger(IMPI_Search.class);
 	
-	public ActionForward execute(ActionMapping mapping, ActionForm actionForm,
+	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
 		IMPI_SearchForm form = (IMPI_SearchForm) actionForm;
@@ -83,9 +84,10 @@ public class IMPI_Search extends Action{
 		int currentPage = Integer.parseInt(form.getCrtPage()) - 1;
 		int firstResult = currentPage * rowsPerPage;		
 		
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 		
 			if (form.getImpi_id() != null && !form.getImpi_id().equals("")){
 				uniqueResult = IMPI_DAO.get_by_ID(session, Integer.parseInt(form.getImpi_id()));
@@ -117,14 +119,26 @@ public class IMPI_Search extends Action{
 			request.setAttribute("maxPages", String.valueOf(maxPages));
 			request.setAttribute("currentPage", String.valueOf(currentPage));
 			request.setAttribute("rowPerPage", String.valueOf(rowsPerPage));
-			forward = mapping.findForward(WebConstants.FORWARD_SUCCESS);
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 		}
 		catch(DatabaseException e){
-			forward = mapping.findForward(WebConstants.FORWARD_FAILURE);
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		

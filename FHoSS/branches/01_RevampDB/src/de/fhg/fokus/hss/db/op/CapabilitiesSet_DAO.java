@@ -48,18 +48,19 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.CapabilitiesSet;
-import de.fhg.fokus.hss.db.model.Capability;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class CapabilitiesSet_DAO {
+	private static Logger logger = Logger.getLogger(CapabilitiesSet_DAO.class);
 	
 	public static void insert(Session session, CapabilitiesSet cap_s){
 		session.save(cap_s);
@@ -180,8 +181,13 @@ public class CapabilitiesSet_DAO {
 	
 	public static int get_max_id_set(Session session){
 		Query query = session.createSQLQuery("select max(id_set) from capabilities_set");
-		Integer result = (Integer) query.uniqueResult();
-		return result.intValue();
+		Integer result = null;
+		result = (Integer) query.uniqueResult();
+				
+		if (result == null)
+			return 0;
+		else
+			return result.intValue();
 	}
 	
 	public static CapabilitiesSet get_by_set_ID(Session session, int id_set){

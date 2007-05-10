@@ -45,6 +45,7 @@ package de.fhg.fokus.hss.db.op;
 
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -55,6 +56,7 @@ import de.fhg.fokus.hss.db.model.ApplicationServer;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class ApplicationServer_DAO {
+	private static Logger logger = Logger.getLogger(ApplicationServer_DAO.class);
 	
 	public static void insert(Session session, ApplicationServer as){
 		session.save(as);
@@ -142,35 +144,35 @@ public class ApplicationServer_DAO {
 		Query query = session.createSQLQuery("select * from application_server where server_name like ?")
 			.addEntity(ApplicationServer.class);
 		query.setString(0, server_name);
-		return (ApplicationServer) query.uniqueResult();
+		ApplicationServer result = null;
+		
+		try{
+			result = (ApplicationServer) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static ApplicationServer get_by_Name(Session session, String name){
 		Query query = session.createSQLQuery("select * from application_server where name like ?")
 			.addEntity(ApplicationServer.class);
 		query.setString(0, name);
-		return (ApplicationServer) query.uniqueResult();
+		
+		ApplicationServer result = null;
+		
+		try{
+			result = (ApplicationServer) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
-	
-/*	public static List joinTest(){
-		HibernateUtil.beginTransaction();
-		Session session = HibernateUtil.getCurrentSession();
-		Query query = session.createQuery("from IMPU, IMPI");
-		List l = query.list();
-		Iterator pairsIt = l.iterator();
-		System.out.println("\n\nBegin the test!!!");
-		
-		while (pairsIt.hasNext()){
-			Object [] result = (Object[])pairsIt.next();
-			IMPU impu = (IMPU) result[0];
-			IMPI impi = (IMPI) result[1];
-			System.out.println("IMPU is: " + impu.getIdentity() + "IMPI is: " + impi.getIdentity());
-		}
-		HibernateUtil.commitTransaction();		
-		session.close();
-		System.out.println("Test ended!!!\n\n");
-		
-		return null;
-	}*/ 
 }

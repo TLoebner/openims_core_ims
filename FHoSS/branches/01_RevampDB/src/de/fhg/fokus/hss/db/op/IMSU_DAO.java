@@ -44,6 +44,7 @@
 package de.fhg.fokus.hss.db.op;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -56,7 +57,7 @@ import de.fhg.fokus.hss.db.model.IMSU;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class IMSU_DAO {
-	
+	private static Logger logger = Logger.getLogger(IMSU_DAO.class);
 	public static void insert(Session session, IMSU imsu){
 		session.save(imsu);
 	}
@@ -99,7 +100,17 @@ public class IMSU_DAO {
 		query = session.createSQLQuery("select * from imsu where name like ?")
 			.addEntity(IMSU.class);
 		query.setString(0, name);
-		return (IMSU) query.uniqueResult();
+		
+		IMSU result = null;
+		try{
+			result = (IMSU) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 	public static Object[] get_by_Wildcarded_Name(Session session, String name, int firstResult, int maxResults){

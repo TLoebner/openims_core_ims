@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -61,6 +62,8 @@ import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class SP_Shared_IFC_Set_DAO {
+	private static Logger logger = Logger.getLogger(SP_Shared_IFC_Set_DAO.class);
+	
 	public static void insert(Session session, SP_Shared_IFC_Set sp_shared_ifc){
 		session.save(sp_shared_ifc);
 	}
@@ -75,7 +78,17 @@ public class SP_Shared_IFC_Set_DAO {
 			.addEntity(Shared_IFC_Set.class);
 		query.setInteger(0, id_sp);
 		query.setInteger(1, id_shared_ifc_set);
-		return (SP_Shared_IFC_Set) query.uniqueResult();
+		
+		SP_Shared_IFC_Set result = null;
+		try{
+			result = (SP_Shared_IFC_Set) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 /*	public static List getJoinResult(Session session, int id_sp){

@@ -44,19 +44,17 @@
 package de.fhg.fokus.hss.web.action;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.struts.Globals;
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
-import org.apache.struts.action.ActionMessage;
-import org.apache.struts.action.ActionMessages;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -67,7 +65,6 @@ import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.IMPU_VisitedNetwork;
 import de.fhg.fokus.hss.db.model.SP;
-import de.fhg.fokus.hss.db.model.VisitedNetwork;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
@@ -88,34 +85,21 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class IMPU_Submit extends Action{
+	private static Logger logger = Logger.getLogger(IMPU_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
 		ActionForward forward = null;
-		
 		IMPU_Form form = (IMPU_Form) actionForm;
 		String nextAction = form.getNextAction();
 		int id = form.getId();
 		
-				
+		boolean dbException = false;
 		try{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
-			// refresh the SP and the Charging-Info list
-			List sp_list = SP_DAO.get_all(session);
-			form.setSelect_sp(sp_list);
-			
-			List chg_list = ChargingInfo_DAO.get_all(session);
-			form.setSelect_charging_info(chg_list);
-			
-			List vn_list = VisitedNetwork_DAO.get_all(session);
-			form.setSelect_vn(vn_list);
-
-			// refresh the select_identity_type
-			form.setSelect_identity_type(WebConstants.select_identity_type);		
-			
 			// apply the coresponding action
 			if (nextAction.equals("save")){
 				IMPU impu = null;
@@ -281,6 +265,19 @@ public class IMPU_Submit extends Action{
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 				
 			}
+
+			// refresh the SP and the Charging-Info list
+			List sp_list = SP_DAO.get_all(session);
+			form.setSelect_sp(sp_list);
+			
+			List chg_list = ChargingInfo_DAO.get_all(session);
+			form.setSelect_charging_info(chg_list);
+			
+			List vn_list = VisitedNetwork_DAO.get_all(session);
+			form.setSelect_vn(vn_list);
+
+			// refresh the select_identity_type
+			form.setSelect_identity_type(WebConstants.select_identity_type);		
 			
 			// add parameters to request & refresh select properties
 			if (IMPU_Load.testForDelete(session, form.getId())){
@@ -302,44 +299,76 @@ public class IMPU_Submit extends Action{
 				request.setAttribute("visitedNetworks", visitedNetworks);
 			}
 						
-			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		
+		// PPR & RTR
 		if (nextAction.equals("ppr")){
+			logger.info("We are sending a PPR message for the user!");
+
 			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 
-			System.out.println("We have the ppr here!");
 		}
 		else if (nextAction.equals("rtr")){
+			logger.info("We are sending a RTR message for the user!");
 			
-			Session session = HibernateUtil.getCurrentSession();
-			HibernateUtil.beginTransaction();
-			
-			IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
 			List impiList = new ArrayList();
-			impiList.add(impi);
-			HibernateUtil.commitTransaction();
-			session.close();
+			dbException = false;
+			try{
+				Session session = HibernateUtil.getCurrentSession();
+				HibernateUtil.beginTransaction();
+				
+				IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
+				impiList.add(impi);
+			}
+			catch(DatabaseException e){
+				logger.error("Database Exception occured!\nReason:" + e.getMessage());
+				e.printStackTrace();
+				dbException = true;
+				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			}
 			
-			DiameterStack stack = HSSContainer.getInstance().diamStack;
-			RTR.sendRequest(stack.diameterPeer, null, impiList,
+			catch (HibernateException e){
+				logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+				e.printStackTrace();
+				dbException = true;
+				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			}
+			finally{
+				if (!dbException){
+					HibernateUtil.commitTransaction();
+				}
+				HibernateUtil.closeSession();
+			}
+			
+			if (!dbException){
+				DiameterStack stack = HSSContainer.getInstance().diamStack;
+				RTR.sendRequest(stack.diameterPeer, null, impiList,
 					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
-			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			
-			System.out.println("We have the rtr here!");
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}
 		}		
-		
-		
 		
 		return forward;
 	}

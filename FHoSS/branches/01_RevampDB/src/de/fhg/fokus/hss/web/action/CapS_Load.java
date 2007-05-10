@@ -49,24 +49,20 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.db.model.CapabilitiesSet;
-import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.Capability_DAO;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.op.IMPU_DAO;
-import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_Form;
 import de.fhg.fokus.hss.web.form.CapS_Form;
-import de.fhg.fokus.hss.web.form.Cap_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -76,6 +72,7 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class CapS_Load extends Action {
+	private static Logger logger = Logger.getLogger(CapS_Load.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
@@ -84,6 +81,7 @@ public class CapS_Load extends Action {
 		int id = form.getId_set();
 		ActionForward forward = null;
 		
+		boolean dbException = false;
 		try{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
@@ -100,11 +98,22 @@ public class CapS_Load extends Action {
 			forward = new ActionForward(forward.getPath() + "?id_set=" + id);
 		}
 		catch(DatabaseException e){
-			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		
@@ -141,10 +150,12 @@ public class CapS_Load extends Action {
 			request.setAttribute("deleteDeactivation", "true");
 		}
 		List attached_cap = CapabilitiesSet_DAO.get_all_from_set(session, id);
-		if (attached_cap != null)
+		if (attached_cap != null){
 				request.setAttribute("attached_cap", attached_cap);
-		else
+		}
+		else{
 				request.setAttribute("attached_cap", new ArrayList());
+		}
 	}
 	
 }

@@ -22,7 +22,6 @@ import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.sh.data.ShData;
 import de.fhg.fokus.hss.sh.data.ShDataParser;
 
 /**
