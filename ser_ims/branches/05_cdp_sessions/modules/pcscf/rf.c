@@ -65,11 +65,18 @@ extern struct offline_charging_flag cflag;
 extern str cdf_peer;	
 
 /* default configuration of pcscf, used to generate AVPs. */
-str service_context_id = {"32260@3gpp.org", 14};
-unsigned int role_of_node = AVP_IMS_ORIGINATING_ROLE;
-unsigned int node_functionality = AVP_IMS_P_CSCF;
+static str service_context_id = {"32260@3gpp.org", 14};
+static unsigned int role_of_node = AVP_IMS_ORIGINATING_ROLE;
+static unsigned int node_functionality = AVP_IMS_P_CSCF;
+static unsigned int offset = 2208988800; /* seconds between 01.01.1900, 01.01.1970 */
 
 
+
+/*
+ *******************************************************************************
+ * Auxiliary functions to create grouped AVPs
+ *******************************************************************************
+ */
 /* 
  * SIP Request Method --> Event Type:
  * 
@@ -133,6 +140,46 @@ error:
 }
 
 
+
+/* 
+ * Timestamp from REQ -> SIP-Request-Timestamp
+ * Timestamp from RES -> SIP-Response-Timestamp
+ * 
+ * <Time-Stamps> = [SIP-Request-Timestamp]
+ * 				   [SIP-Response-Timestamp]
+ *
+ */
+int add_time_stamps(struct sip_msg* req, struct sip_msg* res,
+								  AAA_AVP_LIST* outl, AAA_AVP_LIST* inl)
+{
+	
+	unsigned int req_t, res_t;
+	
+	/*
+	 * TODO SIP request/respons should have Timestamp header
+	 * in order to create this AVP 
+	 */
+	//req_t = cscf_get_timestamp(req);
+	//res_t = cscf_get_timestamp(res);
+	req_t = 0;
+	res_t = 0;
+	
+	if (!Rf_add_sip_request_timestamp(inl, req_t + offset)) goto error;
+	if (!Rf_add_sip_response_timestamp(inl, res_t + offset)) goto error;
+	if (!Rf_add_time_stamps(outl, inl)) goto error;
+
+	return 1;
+
+error:
+	return 0;
+	
+}
+
+/*
+ *******************************************************************************
+ * Rf_ACR_event/start/interim/stop
+ *******************************************************************************
+ */
 AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res) 
 {
 	AAAMessage *acr = 0;
@@ -161,7 +208,14 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 	/* Add Acct-Application-Id AVP */
 	if (!Rf_add_acct_application_id(acr, IMS_Rf)) goto error;
 	
-	/* add Service-Context-Id, see TS32.299 V740 7.1.7 */
+	/* Add Event-Timestamp AVP */
+	if (cflag.cf_ietf & CF_IETF_EVENT_TIME_STAMP) {
+		time_t tm;
+		time(&tm);
+		if (!Rf_add_event_timestamp(acr, tm + offset)) goto error;
+	}
+	
+	/* Add Service-Context-Id, see TS32.299 V740 7.1.7 */
 	if (!Rf_add_service_context_id(acr, service_context_id)) goto error; 
 
 	
@@ -169,7 +223,7 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 	/*---------- 2. Create and add Service-Information AVP ----------*/
 	
 	/*
-	 *  See 3GPP TS32.299 V7.4.0:
+	 *  See 3GPP TS32.299 V7.5.0:
 	 * 
 	 *  <Service-Information> = [IMS-Information]
 	 * 								 [Event-Type]
@@ -178,6 +232,8 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 	 * 								 [User-Session-Id]
 	 * 								*[Calling-Party-Address]
 	 * 								 [Called-Party-Address]
+	 * 								 [Called-Asserted-Identity]
+	 * 								 [Requested-Party-Address]
 	 * 								*[Associated-URI]	
 	 * 								 [Time-Stamps]
 	 * 								*[Application-Server-Information]	
@@ -194,7 +250,7 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 	 * 								*[Message-Body]
 	 * 								 [Cause-Code]
 	 * 								 [Access-Network-Information]
-	 *
+	 *								*[Early-Media-Description]
 	 */
 	 			 	
 	AAA_AVP_LIST ls_ims; /* AVP list for member AVPs in IMS-Information AVP */
@@ -287,6 +343,17 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 		//pkg_free(associated_uri);
 	}
 	
+	/* Add Timestamps AVP */
+	if (cflag.cf_3gpp & CF_3GPP_TIME_STAMPS)
+		if (!add_time_stamps(req, res, &ls_ims, &ls_tmp)) goto error;
+	
+	/* Inter-Operator-Identifier AVP is got from P-Charging-Vector
+	 *   	P-Charging-Vector: orig-ioi -> Originating-IOI
+	 * 		P-Charging-Vector: term-ioi -> Terminating-IOI
+	 */
+	if (cflag.cf_3gpp & CF_3GPP_INTER_OPERATOR_IDENTIFIER)
+		if (!add_inter_operator_identifier(req, &ls_ims, &ls_tmp)) goto error;
+	
 	/* P-Charging-Vector: icid-value -> IMS-Charging-Identifier AVP */
 	if (cflag.cf_3gpp & CF_3GPP_IMS_CHARGING_IDENTIFIER) {
 		str icid = cscf_get_p_charging_vector_icid(req);
@@ -294,12 +361,12 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 			if (!Rf_add_ims_charging_identifier(&ls_ims, icid)) goto error; 
 	}
 	
-	/* 
-	 * P-Charging-Vector: orig-ioi -> Originating-IOI
-	 * P-Charging-Vector: term-ioi -> Terminating-IOI
-	 */
-	if (cflag.cf_3gpp & CF_3GPP_INTER_OPERATOR_IDENTIFIER)
-		if (!add_inter_operator_identifier(req, &ls_ims, &ls_tmp)) goto error;
+	/* IP from Contact -> Served-Party-IP-Address */
+	if (cflag.cf_3gpp & CF_3GPP_SERVED_PARTY_IP_ADDRESS) {
+		str ip_contact = cscf_get_ip_contact(req);
+		if (ip_contact.len)
+			if (!Rf_add_served_party_ip_address(&ls_ims, ip_contact)) goto error;
+	}
 	
 	/* Cause-Code AVP */
 	/* If this function is called, registration successful */
@@ -330,7 +397,6 @@ error:
 	if (sessId.s) cdpb.AAADropSession(&sessId);
 	if (acr) cdpb.AAAFreeMessage(&acr);
 	return 0;
-
 }
 
 

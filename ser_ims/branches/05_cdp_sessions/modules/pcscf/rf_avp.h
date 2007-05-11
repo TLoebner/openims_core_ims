@@ -77,6 +77,13 @@ int Rf_add_terminating_ioi(AAA_AVP_LIST* list, str data);
 int Rf_add_inter_operator_identifier(AAA_AVP_LIST* outl, AAA_AVP_LIST* inl);
 int Rf_add_cause_code(AAA_AVP_LIST* list, unsigned int data);
 int Rf_add_access_network_information(AAA_AVP_LIST* list, str data);
+int Rf_add_served_party_ip_address(AAA_AVP_LIST* list, str data);
+int Rf_add_event_timestamp(AAAMessage* msg, unsigned int data);
+int Rf_add_sip_request_timestamp(AAA_AVP_LIST* list, unsigned int data);
+int Rf_add_sip_response_timestamp(AAA_AVP_LIST* list, unsigned int data);
+int Rf_add_time_stamps(AAA_AVP_LIST* outl, AAA_AVP_LIST* inl);
+
+
 /* GET AVPS */
 //str Cx_get_session_id(AAAMessage *msg);
 //str Cx_get_user_name(AAAMessage *msg);

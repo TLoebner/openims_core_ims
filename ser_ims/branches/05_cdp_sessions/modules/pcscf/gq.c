@@ -57,18 +57,6 @@ extern struct cdp_binds cdpb;
 /**< FQDN of PDF, defined in mod.c */
 extern str pdf_peer;	
 
-/* show value of a str */
-void print(str *s)
-{
-	char* t = malloc(sizeof(char)*(s->len+1));
-	memset(t, '\0', s->len+1);
-	strncpy(t, s->s, s->len);
-	LOG(L_INFO, "string value: %s\n", t);
-	free(t);
-}
-
-
-
 /** get destination realm from pdf_peer */
 inline str get_destination_realm(str s)
 {
@@ -231,7 +219,7 @@ AAAMessage* Gq_STR(struct sip_msg* msg, int tag)
 	if (!auth) goto error;
 	
 	/* Create a STR prototype */
-	//print(auth.sid);
+	//LOG(L_INFO, "%.*s\n", auth.sid->len, auth.sid->s);
 	dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, auth->sid);
 	
 	/* Add Destination-Realm AVP */
