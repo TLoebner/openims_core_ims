@@ -49,10 +49,12 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -64,7 +66,6 @@ import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.Cap_Form;
 import de.fhg.fokus.hss.web.form.IMSU_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -75,19 +76,19 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class IMSU_Load extends Action {
+	private static Logger logger = Logger.getLogger(IMSU_Load.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
 		IMSU_Form form = (IMSU_Form) actionForm;
 		int id = form.getId();
-		Session session = null;
+		ActionForward forward = null;
+		
+		boolean dbException = false;
 		try{
-			
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
-			session = HibernateUtil.getCurrentSession();
-			
-			List associated_IMPIs_list = new ArrayList();
 			
 			if (id != -1) {
 				// load
@@ -96,18 +97,30 @@ public class IMSU_Load extends Action {
 				
 			}
 			IMSU_Load.prepareForward(session, form, request, id);
-			
+
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id=" + id);
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
-		}
-		finally{
-			HibernateUtil.commitTransaction();
-			session.close();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		
+		
 		return forward;
 	}
 	

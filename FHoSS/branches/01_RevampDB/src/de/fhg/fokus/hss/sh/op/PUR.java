@@ -122,6 +122,10 @@ public class PUR {
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED);
 			}
 			
+			if (as.getPur() == 0){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED);
+			}
+			
 			if ((data_reference == ShConstants.Data_Ref_Repository_Data && as.getPur_rep_data() == 0) ||
 					(data_reference == ShConstants.Data_Ref_PSI_Activation && as.getPur_psi_activation() == 0) ||
 					(data_reference == ShConstants.Data_Ref_DSAI && as.getPur_dsai() == 0) ||

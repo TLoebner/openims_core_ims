@@ -133,6 +133,10 @@ public class UDR {
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_READ);
 			}
 			
+			if (as.getUdr() == 0){
+				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_READ);				
+			}
+			
 			for (int i = 0; i < data_ref_vector.size(); i++){
 				int crt_data_ref = (Integer) data_ref_vector.get(i); 
 
