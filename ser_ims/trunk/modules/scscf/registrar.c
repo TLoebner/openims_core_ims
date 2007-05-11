@@ -1356,6 +1356,7 @@ int S_add_p_asserted_identity(struct sip_msg *msg,char *str1,char *str2)
 		 return CSCF_RETURN_FALSE;
 	}
 	public_identity = cscf_get_asserted_identity(msg);
+	if(!public_identity.len) goto error;
 	
 	//check if it is a sip:+ uri
 	if(strncasecmp(public_identity.s,"sip:+",5)==0){
