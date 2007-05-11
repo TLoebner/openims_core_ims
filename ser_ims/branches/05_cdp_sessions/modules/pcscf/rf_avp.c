@@ -687,7 +687,6 @@ inline int Rf_add_cause_code(AAA_AVP_LIST* list, unsigned int data)
 	char x[4];
 	set_4bytes(x, data);
 	
-	
 	return
 	Rf_add_avp_list(list,
 		x,4,
@@ -717,3 +716,109 @@ inline int Rf_add_access_network_information(AAA_AVP_LIST* list, str data)
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
 }
+
+
+/*
+ * IP address version 4
+ */
+inline int Rf_add_served_party_ip_address(AAA_AVP_LIST* list, str data)
+{
+	char x[6];
+	char buf[4];
+	char* p;
+	int i;
+	
+	x[0] = 0; 
+	x[1] = 1; /* IPv4 */
+ 	memset(buf,'\0',4);
+	for (i=0; i<3; i++) {
+		p = strchr(data.s, '.');
+		
+		strncpy(buf, data.s, p - data.s);
+		x[i+2] = atoi(buf);
+		data.len = data.len-(p-data.s)-1;
+		data.s = p+1;
+		memset(buf,'\0',4);
+	}
+	strncpy(buf, data.s, data.len);
+	x[5] = atoi(buf);
+	 
+	return
+	Rf_add_avp_list(list,
+		x,6,
+		AVP_IMS_Served_Party_IP_Address,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+inline int Rf_add_event_timestamp(AAAMessage* msg, unsigned int data)
+{
+	char x[4];
+	set_4bytes(x, data);
+	
+	return
+	Rf_add_avp(msg, x,4,
+		AVP_Event_Timestamp,
+		AAA_AVP_FLAG_MANDATORY,
+		0,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+inline int Rf_add_sip_request_timestamp(AAA_AVP_LIST* list, unsigned int data)
+{
+	char x[4];
+	set_4bytes(x, data);
+	
+	return
+	Rf_add_avp_list(list,
+		x,4,
+		AVP_IMS_SIP_Request_Timestamp,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+int Rf_add_sip_response_timestamp(AAA_AVP_LIST* list, unsigned int data)
+{
+	char x[4];
+	set_4bytes(x, data);
+	
+	return
+	Rf_add_avp_list(list,
+		x,4,
+		AVP_IMS_SIP_Response_Timestamp,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+}
+
+
+
+int Rf_add_time_stamps(AAA_AVP_LIST* outl, AAA_AVP_LIST* inl)
+{
+	str group;
+	
+	group = cdpb.AAAGroupAVPS(*inl);
+	cdpb.AAAFreeAVPList(inl);
+	
+	return 
+	Rf_add_avp_list(outl,
+		group.s, group.len,
+		AVP_IMS_Time_Stamps,
+		AAA_AVP_FLAG_MANDATORY,
+		IMS_vendor_id_3GPP,
+		AVP_FREE_DATA,
+		__FUNCTION__);
+
+}
+
+
