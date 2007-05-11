@@ -45,34 +45,25 @@ package de.fhg.fokus.hss.web.action;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.IMPI;
-import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
-import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
-import de.fhg.fokus.hss.web.form.IMPI_Form;
 import de.fhg.fokus.hss.web.form.S_IFC_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
-import de.fhg.fokus.hss.auth.HexCodec;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -81,17 +72,19 @@ import de.fhg.fokus.hss.auth.HexCodec;
 
 
 public class S_IFC_Load extends Action {
-	
+	private static Logger logger = Logger.getLogger(S_IFC_Load.class);
+
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-
 		S_IFC_Form form = (S_IFC_Form) actionForm;
 		int id_set = form.getId_set();
+		ActionForward forward = null;
 		
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 
 			if (id_set != -1){
 				// load
@@ -99,17 +92,32 @@ public class S_IFC_Load extends Action {
 				S_IFC_Load.setForm(form, shared_ifc_set);
 			}
 			prepareForward(session, form, request, id_set);
-			HibernateUtil.commitTransaction();
+
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id_set=" + id_set);
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
-		}
-		finally{
-			HibernateUtil.closeSession();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id_set=" + id_set);
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+				
 		return forward;
 	}
 	

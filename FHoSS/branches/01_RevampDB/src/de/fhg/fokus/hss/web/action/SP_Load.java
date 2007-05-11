@@ -45,37 +45,27 @@ package de.fhg.fokus.hss.web.action;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-
-import de.fhg.fokus.hss.db.model.IMPI;
-import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.SP;
-import de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set;
-import de.fhg.fokus.hss.db.model.TP;
 import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
-import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.SP_DAO;
 import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.IMPI_Form;
 import de.fhg.fokus.hss.web.form.SP_Form;
-import de.fhg.fokus.hss.web.form.TP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
-import de.fhg.fokus.hss.auth.HexCodec;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -84,11 +74,11 @@ import de.fhg.fokus.hss.auth.HexCodec;
 
 
 public class SP_Load extends Action {
-	
+	private static Logger logger = Logger.getLogger(SP_Load.class);
+
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-
 		SP_Form form = (SP_Form) actionForm;
 		int id = form.getId();
 		List attached_ifc_list;
@@ -96,10 +86,11 @@ public class SP_Load extends Action {
 		
 		List select_ifc = new ArrayList();
 		List select_shared_ifc = new ArrayList();
-		Session session = null;
+		ActionForward forward = null;
 		
+		boolean dbException = false;
 		try{
-			session = HibernateUtil.getCurrentSession();
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 			
 			// load
@@ -136,18 +127,32 @@ public class SP_Load extends Action {
 			else{
 				request.setAttribute("deleteDeactivation", "true");
 			}
+			request.setAttribute("attached_IFC_list", attached_ifc_list);
 			
-			HibernateUtil.commitTransaction();
+			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+			forward = new ActionForward(forward.getPath() + "?id=" + id);
+		}
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			if (session != null)
-				session.close();
-		}
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		
 		
-		
-		request.setAttribute("attached_IFC_list", attached_ifc_list);
-		ActionForward forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() + "?id=" + id);
 		return forward;
 	}
 	

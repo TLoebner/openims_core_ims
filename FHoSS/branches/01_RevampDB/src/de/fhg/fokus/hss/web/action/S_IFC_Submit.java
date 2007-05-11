@@ -51,17 +51,12 @@ import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-
-import de.fhg.fokus.hss.db.model.ApplicationServer;
-import de.fhg.fokus.hss.db.model.CapabilitiesSet;
 import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
-import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.form.S_IFC_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -73,7 +68,7 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 public class S_IFC_Submit extends Action{
 	
-	private static Logger logger = Logger.getLogger(AS_Submit.class);
+	private static Logger logger = Logger.getLogger(S_IFC_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
@@ -83,9 +78,10 @@ public class S_IFC_Submit extends Action{
 		ActionForward forward = null;
 		int id_set = form.getId_set();
 
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 					
 			if (nextAction.equals("save")){
 				Shared_IFC_Set shared_ifc_set;
@@ -151,10 +147,24 @@ public class S_IFC_Submit extends Action{
 			S_IFC_Load.prepareForward(session, form, request, id_set);
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		return forward;

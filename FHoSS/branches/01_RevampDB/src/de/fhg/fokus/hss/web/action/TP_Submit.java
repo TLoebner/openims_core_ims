@@ -43,9 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -55,22 +53,18 @@ import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.SPT;
-import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.TP;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.db.op.SPT_DAO;
-import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.op.TP_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.form.SPT_Form;
 import de.fhg.fokus.hss.web.form.TP_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -83,20 +77,20 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 public class TP_Submit extends Action{
 	
-	private static Logger logger = Logger.getLogger(AS_Submit.class);
+	private static Logger logger = Logger.getLogger(TP_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
 		TP_Form form = (TP_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
 		int id = form.getId();
 
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 
 			if (id != -1){
 				if (TP_Load.testForDelete(session, id)){
@@ -108,9 +102,7 @@ public class TP_Submit extends Action{
 			}			
 			
 			if (nextAction.equals("save")){
-				int auth_scheme;
 				TP tp;
-
 				if (id == -1){
 					// create
 					tp = new TP();
@@ -173,8 +165,6 @@ public class TP_Submit extends Action{
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
 			}			
 			else if (nextAction.equals("attach_spt")){
-				System.out.println("adddddddnew SPT added to db!");
-
 				if ((form.getGroup() != -1) && (form.getType() != -1)){
 					// add new SPT
 					
@@ -208,7 +198,6 @@ public class TP_Submit extends Action{
 							break;
 					}
 					SPT_DAO.insert(session, spt);
-					
 				}
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
@@ -225,12 +214,25 @@ public class TP_Submit extends Action{
 			}
 			
 			TP_Load.prepareForward(session, form, request, id);
-			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		return forward;

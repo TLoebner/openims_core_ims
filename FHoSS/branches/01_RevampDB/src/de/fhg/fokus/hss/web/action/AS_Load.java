@@ -89,6 +89,11 @@ public class AS_Load extends Action {
 					ApplicationServer as = ApplicationServer_DAO.get_by_ID(session, id);
 					AS_Load.setForm(form, as);
 			}
+			else{
+				form.setUdr(true);
+				form.setPur(true);
+				form.setSnr(true);
+			}
 			
 			List select_ifc = IFC_DAO.get_all(session);
 			form.setSelect_ifc(select_ifc);

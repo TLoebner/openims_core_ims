@@ -105,7 +105,7 @@ function add_action_for_form(action, associated_ID) {
 					</tr>
 					<tr bgcolor="#FFCC66">
 						<td>Diameter Peer</td>
-						<td><html:text property="server_name" styleClass="inputtext_readonly" readonly="true" style="width:250px;"/> </td>
+						<td><html:text property="diameter_address" styleClass="inputtext_readonly" readonly="true" style="width:250px;"/> </td>
 					</tr>
 
 					<tr bgcolor="#FFCC66">

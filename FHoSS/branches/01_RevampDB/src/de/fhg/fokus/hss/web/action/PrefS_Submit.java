@@ -51,15 +51,13 @@ import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
-import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.AS_Form;
 import de.fhg.fokus.hss.web.form.CS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -71,20 +69,20 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 public class PrefS_Submit extends Action{
 	
-	private static Logger logger = Logger.getLogger(AS_Submit.class);
+	private static Logger logger = Logger.getLogger(PrefS_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
 		CS_Form form = (CS_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
 		int id = form.getId();
 
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 
 			// for all the actions we test if the current element can be deleted or not
 			if (id != -1){
@@ -96,11 +94,9 @@ public class PrefS_Submit extends Action{
 				}
 			}
 			
-			// all the possible actions
+			// test for all the possible actions
 			if (nextAction.equals("save")){
-				int auth_scheme;
 				ChargingInfo charging_info;
-
 				if (id == -1){
 					// create
 					charging_info = new ChargingInfo();
@@ -109,8 +105,7 @@ public class PrefS_Submit extends Action{
 					// update
 					charging_info = ChargingInfo_DAO.get_by_ID(session, id);
 				}	
-				
-				// make the changes
+				// apply the changes
 				charging_info.setName(form.getName());
 				charging_info.setPri_ccf(form.getPri_ccf());
 				charging_info.setSec_ccf(form.getSec_ccf());
@@ -125,20 +120,18 @@ public class PrefS_Submit extends Action{
 				else{
 					ChargingInfo_DAO.update(session, charging_info);
 				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + id);
-				
-				
 			}
 			else if (nextAction.equals("refresh")){
 				ChargingInfo charging_info = (ChargingInfo) ChargingInfo_DAO.get_by_ID(session, id);
-
 				if (!CS_Load.setForm(form, charging_info)){
 					logger.error("The CS withe the ID:" + id + " was not loaded from database!");
 				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + id);
-				
 			}
 			else if (nextAction.equals("delete")){
 				ChargingInfo_DAO.delete_by_ID(session, form.getId());
@@ -146,10 +139,24 @@ public class PrefS_Submit extends Action{
 			}
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
 		return forward;

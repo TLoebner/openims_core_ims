@@ -49,10 +49,12 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 
@@ -75,20 +77,20 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 
 
 public class SP_Submit extends Action{
+	private static Logger logger = Logger.getLogger(SP_Submit.class);
 	
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		String action = request.getParameter("action");
 		SP_Form form = (SP_Form) actionForm;
 		String nextAction = form.getNextAction();
 		int id = form.getId();
 		ActionForward forward = null;
-		Session session = null;
 		
+		boolean dbException = false;
 		try{
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
-			session = HibernateUtil.getCurrentSession();
 					
 			if (id != -1){
 				if (SP_Load.testForDelete(session, id)){
@@ -195,16 +197,26 @@ public class SP_Submit extends Action{
 			else{
 				request.setAttribute("deleteDeactivation", "true");
 			}
-			
-			HibernateUtil.commitTransaction();
 		}
 		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
-			if (session != null){
-				session.close();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
 			}
+			HibernateUtil.closeSession();
 		}
 		return forward;
 	}
