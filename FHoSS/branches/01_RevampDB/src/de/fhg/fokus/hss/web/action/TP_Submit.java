@@ -43,7 +43,9 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -143,14 +145,10 @@ public class TP_Submit extends Action{
 			else if (nextAction.equals("attach_ifc")){
 				IFC ifc = IFC_DAO.get_by_ID(session, form.getIfc_id());
 				if (ifc != null){
-					if (ifc.getId_tp() > 0){
-						//error
-					}
-					else{
-						ifc.setId_tp(id);
-						IFC_DAO.update(session, ifc);
-					}
+					ifc.setId_tp(id);
+					IFC_DAO.update(session, ifc);
 				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
 			}
@@ -180,7 +178,7 @@ public class TP_Submit extends Action{
 							break;
 
 						case CxConstants.SPT_Type_Method:
-							spt.setMethod("INVITE");
+							spt.setMethod("");
 							break;
 
 						case CxConstants.SPT_Type_SessionCase:
@@ -206,8 +204,12 @@ public class TP_Submit extends Action{
 			}
 			else if (nextAction.equals("save_spt")){
 				saveSpts(session, form, id);
-				System.out.println("Save SPT!");
-
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward =  new ActionForward(forward.getPath() +"?id=" + id);
+			}
+			else if (nextAction.equals("delete_spt")){
+				SPT_DAO.delete_by_ID(session, form.getAssociated_ID());
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
@@ -240,6 +242,7 @@ public class TP_Submit extends Action{
 	
 		
 	private void saveSpts(Session session, TP_Form form, int id_tp){
+				
 		Iterator itSptForms = form.getSpts().iterator();
 
 		int newGroupId = -1;
@@ -258,12 +261,8 @@ public class TP_Submit extends Action{
 
 			if (spt == null)
 				continue;
-			if (sptForm.isDelete() == true){
-				SPT_DAO.delete_by_ID(session, sptID);
-			} 
-			else{
 				
-				switch (spt.getType()){
+			switch (spt.getType()){
 
 					case CxConstants.SPT_Type_RequestURI:
 						spt.setRequesturi(sptForm.getRequestUri());
@@ -297,7 +296,6 @@ public class TP_Submit extends Action{
 				spt.setGrp(newGroupId);
 				spt.setCondition_negated(sptForm.isNeg()?1:0);
 				SPT_DAO.update(session, spt);
-			}
 		}// while
 
 	}	

@@ -43,10 +43,18 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
+import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 
 import java.io.Serializable;
 import java.util.List;
@@ -60,7 +68,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class S_IFC_Form extends ActionForm implements Serializable{
-
+	private static Logger logger = Logger.getLogger(S_IFC_Form.class);
+	
 	private int id;
 	private String name;
 	private int id_set;
@@ -69,6 +78,7 @@ public class S_IFC_Form extends ActionForm implements Serializable{
 	private List select_ifc;
 	private int associated_ID;
 	private String nextAction;
+	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.name = null;
@@ -83,13 +93,60 @@ public class S_IFC_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (name == null || name.equals("")){
-        	actionErrors.add("s_ifc.error.name", new ActionMessage("s_ifc.error.name"));
-        }
-        if (id_set == -1 && id_ifc < 1){
-        	actionErrors.add("s_ifc.error.id_ifc", new ActionMessage("s_ifc.error.id_ifc"));
-        }
         
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+
+        	if (nextAction.equals("save")){
+        		if (name == null || name.equals("")){
+        			actionErrors.add("s_ifc.error.name", new ActionMessage("s_ifc.error.name"));
+        		}
+        		if (id_set == -1 && id_ifc < 1){
+        			actionErrors.add("s_ifc.error.id_ifc", new ActionMessage("s_ifc.error.id_ifc"));
+        		}
+        	
+        		if ((name != null && !name.equals(""))){
+        			boolean result = Shared_IFC_Set_DAO.test_unused_name(session, name, id_set);
+        			if (!result){
+        				actionErrors.add("s_ifc.error.name_used", new ActionMessage("s_ifc.error.name_used"));		
+        			}
+        		}
+        	}
+        	else if (nextAction.equals("attach_ifc")){
+        		if (id_ifc < 1){
+        			actionErrors.add("s_ifc.error.id_ifc_not_given", new ActionMessage("s_ifc.error.id_ifc_not_given"));
+        		}
+        		
+        		Shared_IFC_Set shared_ifc_set = Shared_IFC_Set_DAO.get_by_IFC_and_Set_ID(session, id_ifc, id_set);
+        		if (shared_ifc_set != null){
+        			actionErrors.add("s_ifc.error.ifc_already_attached", new ActionMessage("s_ifc.error.ifc_already_attached"));	
+        		}
+        	
+        		shared_ifc_set = Shared_IFC_Set_DAO.get_by_Priority_and_Set_ID(session, priority, id_set);
+        		if (shared_ifc_set != null){
+        			actionErrors.add("s_ifc.error.ifc_priority_duplication", new ActionMessage("s_ifc.error.ifc_priority_duplication"));	
+        		}
+        	}
+        }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+                
         return actionErrors;
     }
     

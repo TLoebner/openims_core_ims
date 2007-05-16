@@ -80,24 +80,50 @@ public class Shared_IFC_Set_DAO {
 	
 	
 	public static List get_all_from_set(Session session, int id_set){
-		Query query = session.createSQLQuery("select * from shared_ifc_set where id_set=?")
+		Query query = session.createSQLQuery("select * from shared_ifc_set where id_set=? order by (priority)" )
 			.addEntity(Shared_IFC_Set.class);
 		query.setInteger(0, id_set);
 		return query.list();
 	}
 
-	public static Object[] get_all_from_set(Session session, int id_set, int firstResult, int maxResults){
-		Query query = session.createSQLQuery("select * from shared_ifc_set where id_set=?")
+	public static Shared_IFC_Set get_by_IFC_and_Set_ID(Session session, int id_ifc, int id_set){
+		Query query = session.createSQLQuery("select * from shared_ifc_set where id_ifc=? and id_set=?")
 			.addEntity(Shared_IFC_Set.class);
+		query.setInteger(0, id_ifc);
+		query.setInteger(1, id_set);
+		
+		return (Shared_IFC_Set) query.uniqueResult();
+	}
+
+	public static Shared_IFC_Set get_by_Priority_and_Set_ID(Session session, int priority, int id_set){
+		Query query = session.createSQLQuery("select * from shared_ifc_set where priority=? and id_set=?")
+			.addEntity(Shared_IFC_Set.class);
+		query.setInteger(0, priority);
+		query.setInteger(1, id_set);
+		
+		return (Shared_IFC_Set) query.uniqueResult();
+	}
+
+	public static boolean test_unused_name(Session session, String name, int id_set){
+		Query query = session.createSQLQuery("select * from shared_ifc_set where name=? and id_set !=?")
+			.addEntity(Shared_IFC_Set.class);
+		query.setString(0, name);
+		query.setInteger(1, id_set);
+		
+		List result = query.list();
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		return true;
+	}
+	
+	public static Object[] get_all_from_set(Session session, int id_set, int firstResult, int maxResults){
+		Query query = session.createSQLQuery("select distinct id_set, name from shared_ifc_set where id_set=?")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
 		query.setInteger(0, id_set);
 		
-		Object[] result = new Object[2];
-		result[0] = new Integer(query.list().size());
-		query.setFirstResult(firstResult);
-		query.setMaxResults(maxResults);
-		result[1] = query.list();
-		
-		return result;
+		return getResult(session, query, firstResult, maxResults);
 	}
 	
 	public static List get_all_Sets(Session session){
@@ -207,7 +233,7 @@ public class Shared_IFC_Set_DAO {
 	
 	public static Object[] get_by_Wildcarded_IFC_Name(Session session, String name_ifc, int firstResult, int maxResults){
 		Query query;
-		query = session.createSQLQuery("select distinct id_set, name from shared_ifc_set, ifc where shared_ifc_set.id_ifc=ifc.id and ifc.name like ?")
+		query = session.createSQLQuery("select distinct shared_ifc_set.id_set, shared_ifc_set.name from shared_ifc_set, ifc where shared_ifc_set.id_ifc=ifc.id and ifc.name like ?")
 			.addScalar("id_set", Hibernate.INTEGER)
 			.addScalar("name", Hibernate.STRING);
 		query.setString(0, "%" + name_ifc + "%");

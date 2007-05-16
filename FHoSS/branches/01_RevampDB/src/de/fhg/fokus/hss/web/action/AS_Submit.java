@@ -161,6 +161,8 @@ public class AS_Submit extends Action{
 					ApplicationServer_DAO.update(session, as);
 				}
 
+				// make a refresh for the Application Server fields
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
 			}
@@ -186,25 +188,34 @@ public class AS_Submit extends Action{
 					IFC_DAO.update(session, ifc);
 				}
 				
+				// perform a refresh
+				ApplicationServer as = ApplicationServer_DAO.get_by_ID(session, id);
+				if (!AS_Load.setForm(form, as)){
+					logger.error("The AS withe the ID:" + id + " was not loaded from database!");
+				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
 			}
 			else if (nextAction.equals("attach_ifc")){
 				
 				IFC ifc = IFC_DAO.get_by_ID(session, form.getIfc_id());
-				if (ifc.getId_application_server() > 0){
-					//error
-				}
-				else{
+				if (ifc != null){
 					ifc.setId_application_server(id);
 					IFC_DAO.update(session, ifc);
+				}
+
+				// perform a refresh
+				ApplicationServer as = ApplicationServer_DAO.get_by_ID(session, id);
+				if (!AS_Load.setForm(form, as)){
+					logger.error("The AS withe the ID:" + id + " was not loaded from database!");
 				}
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
 			}
-
 			
+			// refresh the data structures
 			List select_ifc = IFC_DAO.get_all(session);
 			form.setSelect_ifc(select_ifc);
 			

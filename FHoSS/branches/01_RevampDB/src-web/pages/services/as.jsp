@@ -247,7 +247,7 @@ function add_action_for_form(action, associated_ID) {
 					<tr>
 						
 						<td>
-							<html:select property="ifc_id" name="AS_Form" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="ifc_id" value="-1" name="AS_Form" styleClass="inputtext" size="1" style="width:250px;">
 								<html:option value="-1">Select IFC...</html:option>
 								<html:optionsCollection name="AS_Form" property="select_ifc" label="name" value="id"/>
 							</html:select>	

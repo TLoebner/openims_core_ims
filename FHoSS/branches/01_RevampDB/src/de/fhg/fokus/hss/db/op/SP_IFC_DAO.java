@@ -106,13 +106,34 @@ public class SP_IFC_DAO {
 		query = session.createSQLQuery(
 				"select * from sp " +
 				"	inner join sp_ifc on sp.id=sp_ifc.id_sp" +
-				"		where sp_ifc.id_ifc=?")
+				"		where sp_ifc.id_ifc=? order by (priority)")
 				.addEntity(SP.class);
 		query.setInteger(0, id_ifc);
 		return query.list();
 	}
+
+	public static SP_IFC get_by_SP_ID_and_Priority(Session session, int id_sp, int priority){
+		Query query;
+		query = session.createSQLQuery(
+				"select * from sp_ifc " +
+				"		where sp_ifc.id_sp = ? and sp_ifc.priority = ?")
+				.addEntity(SP_IFC.class);
+		
+		query.setInteger(0, id_sp);
+		query.setInteger(1, priority);
+		
+		SP_IFC result = null;
+		try{
+			result = (SP_IFC) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		return result;
+	}
 	
-	
+		
 	public static int get_Unreg_Serv_Count(Session session, int id_sp){
 		// to be fixed!
 		
@@ -134,7 +155,7 @@ public class SP_IFC_DAO {
 		query = session.createSQLQuery(
 					"select * from ifc " +
 					"	inner join sp_ifc on ifc.id = sp_ifc.id_ifc" +
-					"		where sp_ifc.id_sp=?")
+					"		where sp_ifc.id_sp=? order by (sp_ifc.priority)")
 						.addEntity(IFC.class);
 		query.setInteger(0, id_sp);
 		return query.list();

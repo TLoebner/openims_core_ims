@@ -47,9 +47,6 @@ package de.fhg.fokus.hss.web.form;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 
-
-import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.web.util.*;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
@@ -78,17 +75,19 @@ public class SPT_Form extends ActionForm implements Serializable{
     private boolean neg;
     private int group;
     private int type;
-    private boolean delete = false;
     private int trigptId;
-	
-	private List select_type;
-
-	private static ArrayList sipMethodList;
+    private boolean rtype_reg;
+    private boolean rtype_re_reg;
+    private boolean rtype_un_reg;
     
-    static {
-    	sipMethodList = WebConstants.select_spt_method_type;
-    }
+    
+	private static List sptTypeList;
+	private static ArrayList sipMethodList;
 	
+	static{
+		sptTypeList = WebConstants.select_spt_type;
+		sipMethodList = WebConstants.select_spt_method_type;
+	}
 	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
 		this.sptId = -1;
@@ -102,17 +101,13 @@ public class SPT_Form extends ActionForm implements Serializable{
     	this.sessionDescContent = null;
     	this.sessionDescLine = null;
     	this.sessionCase = null;
-
-    	this.select_type = WebConstants.select_spt_type;
+    	
+    	this.rtype_reg = false;
+    	this.rtype_re_reg = false;
+    	this.rtype_un_reg = false;
+    	
     }
 
-	public boolean isDelete() {
-		return delete;
-	}
-
-	public void setDelete(boolean delete) {
-		this.delete = delete;
-	}
 
 	public int getGroup() {
 		return group;
@@ -138,12 +133,12 @@ public class SPT_Form extends ActionForm implements Serializable{
 		this.requestUri = requestUri;
 	}
 
-	public List getSelect_type() {
-		return select_type;
+	public List getSptTypeList() {
+		return sptTypeList;
 	}
 
-	public void setSelect_type(List select_type) {
-		this.select_type = select_type;
+	public void setSptTypeList(List sptTypeList) {
+		SPT_Form.sptTypeList = sptTypeList;
 	}
 
 	public String getSessionCase() {
@@ -233,6 +228,36 @@ public class SPT_Form extends ActionForm implements Serializable{
 
 	public void setSipMethodList(ArrayList sipMethodList) {
 		SPT_Form.sipMethodList = sipMethodList;
+	}
+ 
+
+	public boolean isRtype_re_reg() {
+		return rtype_re_reg;
+	}
+
+
+	public void setRtype_re_reg(boolean rtype_re_reg) {
+		this.rtype_re_reg = rtype_re_reg;
+	}
+
+
+	public boolean isRtype_reg() {
+		return rtype_reg;
+	}
+
+
+	public void setRtype_reg(boolean rtype_reg) {
+		this.rtype_reg = rtype_reg;
+	}
+
+
+	public boolean isRtype_un_reg() {
+		return rtype_un_reg;
+	}
+
+
+	public void setRtype_un_reg(boolean rtype_un_reg) {
+		this.rtype_un_reg = rtype_un_reg;
 	}
 	
 }

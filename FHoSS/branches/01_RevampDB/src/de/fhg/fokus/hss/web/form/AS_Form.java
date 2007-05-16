@@ -55,7 +55,9 @@ import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.web.action.AS_Submit;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -159,26 +161,40 @@ public class AS_Form extends ActionForm implements Serializable{
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
-
-        if (name == null || name.equals("")){
-        	actionErrors.add("as.error.name", new ActionMessage("as.error.name"));
-        }
-        if (server_name == null || server_name.equals("")){
-        	actionErrors.add("as.error.server_name", new ActionMessage("as.error.server_name"));
-        }
-        if (server_name != null && !server_name.toLowerCase().startsWith("sip:")){
-        	// check if the server_name is a "sip:" URI
-        	actionErrors.add("as.error.incorrect_server_name", new ActionMessage("as.error.incorrect_server_name"));
-        }
         
-        // check if this AS Name was already used for other AS
         boolean dbException = false;
         try{
         	Session session = HibernateUtil.getCurrentSession();
         	HibernateUtil.beginTransaction();
-        	ApplicationServer as = ApplicationServer_DAO.get_by_Name(session, name);
-        	if (as != null && as.getId() != id){
-        		actionErrors.add("as.error.duplicate_as_name", new ActionMessage("as.error.duplicate_as_name"));
+        	
+        	if (nextAction.equals("save")){
+        		
+                if (name == null || name.equals("")){
+                	actionErrors.add("as.error.name", new ActionMessage("as.error.name"));
+                }
+                if (server_name == null || server_name.equals("")){
+                	actionErrors.add("as.error.server_name", new ActionMessage("as.error.server_name"));
+                }
+                if (server_name != null && (!server_name.toLowerCase().startsWith("sip:") || server_name.substring(4).equals(""))){
+                	// check if the server_name is a "sip:" URI
+                	actionErrors.add("as.error.incorrect_server_name", new ActionMessage("as.error.incorrect_server_name"));
+                }
+
+                // check if this AS Name was already used for other AS
+        		ApplicationServer as = ApplicationServer_DAO.get_by_Name(session, name);
+        		if (as != null && as.getId() != id){
+        			actionErrors.add("as.error.duplicate_as_name", new ActionMessage("as.error.duplicate_as_name"));
+        		}
+        	}
+        	else if (nextAction.equals("attach_ifc")){
+        		if (ifc_id == -1){
+        			actionErrors.add("as.error.invalid_ifc_id", new ActionMessage("as.error.invalid_ifc_id"));
+        		}
+        		
+        		IFC ifc = IFC_DAO.get_by_ID(session, ifc_id);
+        		if (ifc != null && ifc.getId_application_server() > 1){
+        			actionErrors.add("as.error.ifc_has_already_association", new ActionMessage("as.error.ifc_has_already_association"));	
+        		}
         	}
         }
 		catch(DatabaseException e){

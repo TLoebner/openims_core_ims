@@ -58,23 +58,13 @@ import de.fhg.fokus.hss.db.model.SP;
 
 public class SP_DAO {
 	private static Logger logger = Logger.getLogger(SP_DAO.class);
-	public static SP insert(Session session, String name, int cn_service_auth){
-		SP sp  = new SP();
-		sp.setName(name);
-		sp.setCn_service_auth(cn_service_auth);
+
+	public static void insert(Session session, SP sp){
 		session.save(sp);
-		
-		return sp;
 	}
 	
-	public static SP update(Session session, int id, String name, int cn_service_auth){
-		
-		SP sp = (SP) session.load(SP.class, id);
-		sp.setName(name);
-		sp.setCn_service_auth(cn_service_auth);
+	public static void update(Session session, SP sp){
 		session.saveOrUpdate(sp);
-		
-		return sp;
 	}	
 	
 	public static SP get_by_ID(Session session, int id){

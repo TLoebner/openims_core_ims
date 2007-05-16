@@ -34,18 +34,13 @@
 	 				<td>
 					 	<table border="0" cellspacing="1" align="center" width="100%" style="border:1px solid #FF6600;">
 		    			<tr bgcolor="#FFCC66">
-							<td>ID</td>
-							<td><html:text property="id_s_ifc" value="" styleClass="inputtext" size="8"/></td>
+							<td>ID-Set</td>
+							<td><html:text property="id_set" value="" styleClass="inputtext" size="8"/></td>
 						</tr>
 						
 		    			<tr bgcolor="#FFCC66">							
 		    				<td>Name</td>
 							<td><html:text property="name" value="" styleClass="inputtext" size="32"/></td>
-						</tr>
-						
-						<tr bgcolor="#FFCC66">
-							<td> Set-ID </td>
-							<td class="tgpFormular"><html:text property="id_set" value="" styleClass="inputtext" size="8"/></td>
 						</tr>
 						
 						<tr bgcolor="#FFCC66">

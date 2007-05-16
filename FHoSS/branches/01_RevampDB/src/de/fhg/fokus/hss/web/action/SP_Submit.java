@@ -104,14 +104,21 @@ public class SP_Submit extends Action{
 			if (nextAction.equals("save")){
 				if (id == -1){
 					// create
-					SP sp = SP_DAO.insert(session, form.getName(), form.getCn_service_auth());
+					SP sp = new SP();
+					sp.setName(form.getName());
+					sp.setCn_service_auth(form.getCn_service_auth());
+					SP_DAO.insert(session, sp);
+					
 					id = sp.getId();
 					form.setId(id);
 				}
 				else{
 					// update
-					SP sp = SP_DAO.update(session, form.getId(), form.getName(), form.getCn_service_auth());
-				}	
+					SP sp = SP_DAO.get_by_ID(session, id);
+					sp.setName(form.getName());
+					sp.setCn_service_auth(form.getCn_service_auth());
+				}
+				
 				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() + "?id=" + id);
 			}
@@ -133,9 +140,14 @@ public class SP_Submit extends Action{
 				sp_ifc.setPriority(form.getSp_ifc_priority());
 				SP_IFC_DAO.insert(session, sp_ifc);
 				
+				// perform refresh
+				SP sp = (SP) SP_DAO.get_by_ID(session, id);
+				if (!SP_Load.setForm(form, sp)){
+					logger.error("The Service Profile withe the ID:" + id + " was not loaded from database!");
+				}
+				
 				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
-				
 			}
 			else if (nextAction.equals("attach_shared_ifc")){
 				System.out.println("attach shared IFC:" + form.getShared_ifc_id());
@@ -143,21 +155,39 @@ public class SP_Submit extends Action{
 				sp_shared_ifc.setId_sp(id);
 				sp_shared_ifc.setId_shared_ifc_set(form.getShared_ifc_id());
 				SP_Shared_IFC_Set_DAO.insert(session, sp_shared_ifc);
+
+				// perform refresh
+				SP sp = (SP) SP_DAO.get_by_ID(session, id);
+				if (!SP_Load.setForm(form, sp)){
+					logger.error("The Service Profile withe the ID:" + id + " was not loaded from database!");
+				}
 				
 				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
-				
 			}
 			else if (nextAction.equals("detach_ifc")){
 				System.out.println("delete IFC:" + form.getAssociated_ID());
 				SP_IFC_DAO.delete_by_SP_and_IFC_ID(session, id, form.getAssociated_ID());
+
+				// perform refresh
+				SP sp = (SP) SP_DAO.get_by_ID(session, id);
+				if (!SP_Load.setForm(form, sp)){
+					logger.error("The Service Profile withe the ID:" + id + " was not loaded from database!");
+				}
+				
 				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
-				
 			}
 			else if (nextAction.equals("detach_shared_ifc")){
 				System.out.println("delete shared:" + form.getAssociated_ID());
 				SP_Shared_IFC_Set_DAO.delete_by_SP_and_Shared_IFC_ID(session, id, form.getAssociated_ID());
+
+				// perform refresh
+				SP sp = (SP) SP_DAO.get_by_ID(session, id);
+				if (!SP_Load.setForm(form, sp)){
+					logger.error("The Service Profile withe the ID:" + id + " was not loaded from database!");
+				}
+				
 				forward  = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}

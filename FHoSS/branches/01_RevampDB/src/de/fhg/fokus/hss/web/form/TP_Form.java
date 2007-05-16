@@ -45,16 +45,26 @@ package de.fhg.fokus.hss.web.form;
 
 import org.apache.commons.collections.Factory;
 import org.apache.commons.collections.list.LazyList;
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.model.TP;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
+import de.fhg.fokus.hss.db.op.TP_DAO;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -65,6 +75,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 
 public class TP_Form extends ActionForm implements Serializable{
+	private static Logger logger = Logger.getLogger(TP_Form.class);	
 	// TP properties
 	private int id;
 	private String name;
@@ -109,11 +120,67 @@ public class TP_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (name == null || name.equals("")){
-        	actionErrors.add("tp.error.name", new ActionMessage("tp.error.name"));
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        	
+        		if (nextAction.equals("save")){
+        			if (name == null || name.equals("")){
+        				actionErrors.add("tp.error.name", new ActionMessage("tp.error.name"));
+        			}
+        			TP tp = TP_DAO.get_by_Name(session, name);
+        			if (tp != null && tp.getId() != id){
+        				actionErrors.add("tp.error.duplicate_name", new ActionMessage("tp.error.duplicate_name"));
+        			}
+        		}
+        		else if (nextAction.equals("attach_ifc")){
+        			if (ifc_id == -1){
+        				actionErrors.add("tp.error.invalid_ifc", new ActionMessage("tp.error.invalid_ifc"));
+        			}
+        			IFC ifc = IFC_DAO.get_by_ID(session, ifc_id);
+        			if (ifc != null && ifc.getId_tp() > 0){
+        				actionErrors.add("tp.error.duplicate_tp_association", new ActionMessage("tp.error.duplicate_tp_association"));
+        			}
+        		}
+
+        		if (spts != null){
+        			// validate SPTs
+        			Iterator it = spts.iterator();
+        			while (it.hasNext()){
+        				SPT_Form sptFrom = (SPT_Form) it.next();
+        				ActionErrors sptActionErrors = sptFrom.validate(actionMapping, request);
+
+        				if (sptActionErrors != null && sptActionErrors.size() > 0){
+        					actionErrors.add(sptActionErrors);
+        				}
+        			}
+        		}
+        		
         }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+        
+        
         return actionErrors;
     }
+
+    // getters & setters
     
 	public int getId() {
 		return id;
@@ -211,6 +278,4 @@ public class TP_Form extends ActionForm implements Serializable{
 		this.type = type;
 	}
 
-	
-	
 }

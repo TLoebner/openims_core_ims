@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -72,24 +73,26 @@ public class SP_Shared_IFC_Set_DAO {
 		session.saveOrUpdate(sp_shared_ifc);
 	}	
 	
-	public static SP_Shared_IFC_Set get_by_SP_Shared_IFC_Set_ID(Session session, int id_sp, int id_shared_ifc_set){
+	public static SP_Shared_IFC_Set get_by_SP_and_Shared_IFC_Set_ID(Session session, int id_sp, int id_shared_ifc_set){
 		Query query;
 		query = session.createSQLQuery("select * from sp_shared_ifc_set where id_sp=? and id_shared_ifc_set=?")
-			.addEntity(Shared_IFC_Set.class);
+			.addEntity(SP_Shared_IFC_Set.class);
 		query.setInteger(0, id_sp);
 		query.setInteger(1, id_shared_ifc_set);
 		
 		SP_Shared_IFC_Set result = null;
-		try{
-			result = (SP_Shared_IFC_Set) query.uniqueResult();
-		}
-		catch(org.hibernate.NonUniqueResultException e){
-			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
-			e.printStackTrace();
-		}
-		
+		result = (SP_Shared_IFC_Set) query.uniqueResult();
+
 		return result;
 	}
+	
+	public static int get_SP_cnt_by_Shared_IFC_Set_ID(Session session, int set_id){
+		Query query;
+		query = session.createSQLQuery("select count(*) from sp_shared_ifc_set where sp_shared_ifc_set.id_shared_ifc_set=?");
+		query.setInteger(0, set_id);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		return result.intValue();
+	}	
 	
 /*	public static List getJoinResult(Session session, int id_sp){
 		Query query;
