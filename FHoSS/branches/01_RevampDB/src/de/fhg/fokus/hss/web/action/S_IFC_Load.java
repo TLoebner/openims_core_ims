@@ -60,6 +60,7 @@ import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
 import de.fhg.fokus.hss.db.op.IFC_DAO;
+import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.op.Shared_IFC_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.S_IFC_Form;
@@ -133,6 +134,15 @@ public class S_IFC_Load extends Action {
 	}
 	
 	public static boolean testForDelete(Session session, int id_set){
+		// Shared iFC Set can be deleted only if it has a single iFC associated and is not used by any Service Profile
+		int associated_ifc_cnt = Shared_IFC_Set_DAO.get_cnt_for_set(session, id_set);
+		if (associated_ifc_cnt > 1){
+			return false;
+		}
+		int sp_cnt = SP_Shared_IFC_Set_DAO.get_SP_cnt_by_Shared_IFC_Set_ID(session, id_set);
+		if (sp_cnt > 0){
+			return false;
+		}
 		return true;
 	}
 	
@@ -141,10 +151,20 @@ public class S_IFC_Load extends Action {
 		form.setSelect_ifc(select_ifc);
 		
 		if (testForDelete(session, id_set)){
-			request.setAttribute("deleteDeactivation", "false");		
+			request.setAttribute("deleteDeactivation", "false");
+			request.setAttribute("detachDeactivation", "false");
 		}
 		else{
 			request.setAttribute("deleteDeactivation", "true");
+			int associated_ifc_cnt = Shared_IFC_Set_DAO.get_cnt_for_set(session, id_set);
+			
+			System.out.println("\n\nCNT:" + associated_ifc_cnt);
+			if (associated_ifc_cnt > 1){
+				request.setAttribute("detachDeactivation", "false");	
+			}
+			else{
+				request.setAttribute("detachDeactivation", "true");
+			}
 		}
 		
 		List attached_ifc = Shared_IFC_Set_DAO.get_all_from_set(session, id_set);

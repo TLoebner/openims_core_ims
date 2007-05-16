@@ -75,7 +75,7 @@ public class SPT_DAO {
 	}	
 	
 	public static List get_all_by_TP_ID(Session session, int id_tp){
-		Query query = session.createSQLQuery("select * from spt where id_tp=?")
+		Query query = session.createSQLQuery("select * from spt where id_tp=? order by (grp)")
 			.addEntity(SPT.class);
 		query.setInteger(0, id_tp);
 		return query.list();

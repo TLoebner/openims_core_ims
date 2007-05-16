@@ -44,7 +44,7 @@ function rowsPerPageChanged(){
 		<td>
 	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="350">	
 				<tr class="header">
-					<td class="header" width="50"> ID </td>
+					<td class="header" width="50"> ID-Set </td>
 					<td class="header"> Name </td>
 				</tr>
 			

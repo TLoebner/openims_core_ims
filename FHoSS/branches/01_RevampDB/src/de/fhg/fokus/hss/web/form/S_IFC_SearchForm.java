@@ -55,7 +55,6 @@ import org.apache.struts.action.ActionMapping;
  */
 
 public class S_IFC_SearchForm extends ActionForm implements Serializable{
-	private String id_s_ifc;
 	private String name;
 	private String id_set;
 	private String name_ifc;
@@ -65,7 +64,6 @@ public class S_IFC_SearchForm extends ActionForm implements Serializable{
 	private String rowsPerPage;
 	
 	public void reset(ActionMapping arg0, HttpServletRequest arg1) {
-  		this.id_s_ifc = null;
 		this.name = null;
   		this.id_set = null;
   		this.name_ifc = null;
@@ -95,14 +93,6 @@ public class S_IFC_SearchForm extends ActionForm implements Serializable{
 
 	public void setName(String name) {
 		this.name = name;
-	}
-
-	public String getId_s_ifc() {
-		return id_s_ifc;
-	}
-
-	public void setId_s_ifc(String id_s_ifc) {
-		this.id_s_ifc = id_s_ifc;
 	}
 
 	public String getId_set() {

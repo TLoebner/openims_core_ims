@@ -150,7 +150,7 @@ function add_action_for_form(action, associated_ID) {
 					<tr>
 						
 						<td>
-							<html:select property="ifc_id" name="SP_Form" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="ifc_id" value="-1" name="SP_Form" styleClass="inputtext" size="1" style="width:250px;">
 								<html:option value="-1">Select IFC...</html:option>
 								<html:optionsCollection name="SP_Form" property="select_ifc" label="name" value="id"/>
 							</html:select>	
@@ -161,7 +161,7 @@ function add_action_for_form(action, associated_ID) {
 						</td>
 
 						<td>	
-							<html:text property="sp_ifc_priority" value="1" styleClass="inputtext" style="width:100px;" />
+							<html:text property="sp_ifc_priority" value="0" styleClass="inputtext" style="width:100px;" />
 						</td>
 						
 						<td>
@@ -234,7 +234,7 @@ function add_action_for_form(action, associated_ID) {
 					</tr>
 					<tr>
 						<td>
-							<html:select property="shared_ifc_id" name="SP_Form" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="shared_ifc_id" value="-1" name="SP_Form" styleClass="inputtext" size="1" style="width:250px;">
 								<html:option value="-1">Select Shared-iFC...</html:option>
 								<html:optionsCollection name="SP_Form" property="select_shared_ifc" label="name" value="id_set"/>
 							</html:select>	

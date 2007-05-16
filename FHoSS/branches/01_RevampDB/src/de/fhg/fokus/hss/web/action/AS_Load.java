@@ -144,6 +144,8 @@ public class AS_Load extends Action {
 		
 		if (as != null){
 			exitCode = true;
+			
+			// set the basic parameters
 			form.setId(as.getId());
 			form.setName(as.getName());
 			form.setServer_name(as.getServer_name());
@@ -151,6 +153,8 @@ public class AS_Load extends Action {
 			form.setDiameter_address(as.getDiameter_address());
 			form.setService_info(as.getService_info());
 			form.setRep_data_size_limit(as.getRep_data_size_limit());
+			
+			// set the Sh permissions
 			form.setUdr((as.getUdr() == 1));
 			form.setPur((as.getPur() == 1));
 			form.setSnr((as.getSnr() == 1));

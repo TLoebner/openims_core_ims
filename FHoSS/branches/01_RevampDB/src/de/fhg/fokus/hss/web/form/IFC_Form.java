@@ -43,12 +43,19 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
@@ -62,7 +69,8 @@ import javax.servlet.http.HttpServletRequest;
  */
 
 public class IFC_Form extends ActionForm implements Serializable{
-
+	private static Logger logger = Logger.getLogger(IFC_Form.class);
+	
 	private int id;
 	private String name;
 	private int profile_part_ind;
@@ -73,6 +81,7 @@ public class IFC_Form extends ActionForm implements Serializable{
 	private List select_tp;
 	private List select_as;
 	private String nextAction;
+	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.name = null;
@@ -87,12 +96,43 @@ public class IFC_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (name == null || name.equals("")){
-        	actionErrors.add("ifc.error.name", new ActionMessage("ifc.error.name"));
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        
+        	if (name == null || name.equals("")){
+        		actionErrors.add("ifc.error.name", new ActionMessage("ifc.error.name"));
+        	}
+        	
+        	IFC ifc = IFC_DAO.get_by_Name(session, name);
+        	if (ifc != null && ifc.getId() != id){
+        		actionErrors.add("ifc.error.duplicate_name", new ActionMessage("ifc.error.duplicate_name"));
+        	}
         }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+        
         return actionErrors;
     }
     
+    
+    // getters & setters
 	public int getId() {
 		return id;
 	}

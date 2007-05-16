@@ -192,8 +192,19 @@ function add_action_for_form(action, associated_ID) {
 								</td>
 								
 								<td> 
-									<input type="button" name="detach_ifc" 
-										"value="Detach" onclick="add_action_for_form(5, <%= ifc.getId() %>);"/>													
+									
+									<%
+										if (((String)request.getAttribute("detachDeactivation")).equals("true")){
+									%>
+											<input type="button" name="detach_ifc" "value="Detach" onclick="add_action_for_form(5, <%= ifc.getId() %>);" disabled/>	
+									<%
+										}
+										else{
+									%>
+											<input type="button" name="detach_ifc" "value="Detach" onclick="add_action_for_form(5, <%= ifc.getId() %>);" />										
+									<%
+										}
+									%>												
 								</td>
 							</tr>											
 					<%			

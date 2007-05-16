@@ -49,6 +49,11 @@ function add_action_for_form(action, associated_ID) {
 			document.TP_Form.associated_ID.value = associated_ID;			
 			document.TP_Form.submit();			
 			break;
+		case 6:
+			document.TP_Form.nextAction.value="delete_spt";
+			document.TP_Form.associated_ID.value = associated_ID;			
+			document.TP_Form.submit();			
+			break;
 
 		case 12:
 			document.TP_Form.nextAction.value="attach_ifc";
@@ -59,13 +64,19 @@ function add_action_for_form(action, associated_ID) {
 			document.TP_Form.nextAction.value="save_spt";
 			document.TP_Form.submit();
 			break;
+			
 					
 	}
 }
 
-function addSpt(groupId){
+function addSpt(groupId, is_spt_list_empty){
 	document.TP_Form.nextAction.value = "attach_spt";
-	document.TP_Form.type.value = document.TP_Form.typeSelect[groupId].value;
+	if (is_spt_list_empty == 1){
+		document.TP_Form.type.value = document.TP_Form.typeSelect.value;
+	}
+	else{
+		document.TP_Form.type.value = document.TP_Form.typeSelect[groupId].value;
+	}
 	document.TP_Form.group.value = groupId;
 	document.TP_Form.submit();
 }
@@ -136,10 +147,8 @@ function addSpt(groupId){
 				</td>
 			
 	<%
-		if (id != -1){
+				if (id != -1){
 	%>
-				<td width="15">
-				</td>			
 				<td>
 					<table>
 					<tr>
@@ -150,7 +159,7 @@ function addSpt(groupId){
 					<tr>
 						
 						<td>
-							<html:select property="ifc_id" name="TP_Form" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="ifc_id" value="-1" name="TP_Form" styleClass="inputtext" size="1" style="width:250px;">
 								<html:option value="-1">Select IFC...</html:option>
 								<html:optionsCollection name="TP_Form" property="select_ifc" label="name" value="id"/>
 							</html:select>	
@@ -198,16 +207,11 @@ function addSpt(groupId){
 					%>
 					</table>
 				</td>
-				
-				<td>
-					<br/>
-				</td>
+				<td> <br/> </td>
 			</tr>	
 			</table>		
 		</td>
-		<td>
-			<br/>
-		</td>
+		<td> <br/> </td>
 	</tr>
 	<tr>		
 		<td>
@@ -216,24 +220,228 @@ function addSpt(groupId){
 				<b> Add SPTs to Trigger Point </b>
 			</tr>
 			<tr>
-				<td>
-				
+				<td>				
 					<table width="730" class="as" cellspacing="0" cellpadding="0">
 					<tr class="header">
-					<td width="15"></td>
-					<td><br>
-					<table class="as" cellpadding="0" cellspacing="0" border="0" width="700">
+						<td><br>
 			<% 
-						int lastGroupId = 0;
+							int lastGroupId = 0;
+							int groupCnt = 0;							
 			%>
-						<nested:iterate property="spts" name="TP_Form"
-							id="spt" type="SPT_Form" indexId="ix">
-			<%				
-							if (lastGroupId != spt.getGroup()) {
-			%>
-							<tr class="<%= lastGroupId % 2 == 0 ? "even" : "odd" %>">
-								<td style="text-align:center;" colspan="6">
+							<table class="as" cellpadding="0" cellspacing="0" border="0" width="700">
+
+								<nested:iterate property="spts" name="TP_Form"
+									id="spt" type="SPT_Form" indexId="ix">
+					<%
+
+								if (lastGroupId != spt.getGroup() && groupCnt > 0){
+					%>
+								<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
+									<td style="text-align:center;" colspan="12">
+										<select name="typeSelect">
+											<option value="<%= CxConstants.SPT_Type_RequestURI %>">
+												<%= CxConstants.SPT_Type_RequestURI_Name %>
+											</option>
+											<option value="<%= CxConstants.SPT_Type_Method %>">
+												<%= CxConstants.SPT_Type_Method_Name %>
+											</option>
+											<option value="<%= CxConstants.SPT_Type_SIPHeader %>">
+												<%= CxConstants.SPT_Type_SIPHeader_Name %>
+											</option>
+											<option value="<%= CxConstants.SPT_Type_SessionCase %>">
+												<%= CxConstants.SPT_Type_SessionCase_Name %>
+											</option>
+											<option value="<%= CxConstants.SPT_Type_SessionDescription %>">
+												<%= CxConstants.SPT_Type_SessionDescription_Name %>
+											</option>
+										</select> 
+					
+										<a href="javascript:addSpt(<%=(lastGroupId)%>, 0);">
+											<img src="/hss.web.console/images/add_obj.gif" width="16"
+												height="16" alt="Add" />
+										</a>
+									</td>
+								</tr>		
 								
+								<tr class="header">
+									<td style="text-align:center;" colspan="12">
+										<logic:equal name="TP_Form" property="condition_type_cnf" value="1">AND</logic:equal>
+										<logic:equal name="TP_Form" property="condition_type_cnf" value="0">OR</logic:equal>
+									</td>
+								</tr>
+
+					<%							
+									lastGroupId = spt.getGroup();		
+									groupCnt = 0;	
+								}
+					%>
+								
+								<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
+								
+									<td nowrap="nowrap" width="120">
+										<nested:hidden property="sptId"> </nested:hidden> 
+										<nested:hidden property="group"></nested:hidden> 
+										<nested:hidden property="type"></nested:hidden> 
+									
+			<%							if (spt.getType() == CxConstants.SPT_Type_RequestURI) {
+			
+			%> 								<bean:message key="spt.head.requestUri" />
+									</td>								
+									<td class="tgpFormular">
+										<nested:text property="requestUri" styleClass="inputtext" 
+											style="width:280px;" maxlength="255" onchange="add_action_for_form(13, -1);" />
+									</td>
+	
+									<td>								
+			<%					
+										} else if (spt.getType() == CxConstants.SPT_Type_Method) {
+			%>
+										<bean:message key="spt.head.sipMethod" />
+									</td>
+									<td class="tgpFormular">
+										<nested:select property="sipMethod" styleClass="inputtext" style="width:280px;" >
+											<nested:optionsCollection property="sipMethodList" label="name" value="code"/>
+										</nested:select>
+									</td>
+								
+									<td>
+			<%
+										} else if (spt.getType() == CxConstants.SPT_Type_SessionCase) {
+			%>
+										<bean:message key="spt.head.sessionCase" />
+									</td>
+									<td class="tgpFormular">
+										<nested:select property="sessionCase" styleClass="inputtext" style="width:280px;">
+											<option value="0"
+												<%= ((spt.getSessionCase() != null)&&(spt.getSessionCase().equals("0"))) ? "selected" : ""  %> />ORIGINATING</option>
+											<option value="1"
+												<%= ((spt.getSessionCase() != null)&&(spt.getSessionCase().equals("1"))) ? "selected" : ""  %> />TERMINATING</option>
+											<option value="2"
+												<%= ((spt.getSessionCase() != null)&&(spt.getSessionCase().equals("2"))) ? "selected" : ""  %> />UNREGISTER</option>
+										</nested:select>
+									</td>
+									
+									<td>									
+			<% 
+									} else if (spt.getType() == CxConstants.SPT_Type_SessionDescription) {
+			%>
+										<bean:message key="spt.head.sessionDesc" />
+									</td>
+									<td>
+										<table>
+										<tr>
+											<td class="tgpFormular">
+												<bean:message key="spt.head.sessionDescLine" />
+											</td>
+											<td class="tgpFormular" nowrap="nowrap" colspan="3">
+												<nested:text property="sessionDescLine" size="10" styleClass="inputtext"
+													style="width:200px;" />
+											</td>
+										</tr>
+										<tr>
+											<td class="tgpFormular" nowrap="nowrap">
+												<bean:message key="spt.head.sessionDescContent" />
+											</td>
+											<td class="tgpFormular" colspan="2">
+												<nested:text property="sessionDescContent" size="10" styleClass="inputtext" style="width:200px;" />
+											</td>
+										</tr>
+										</table>
+									</td>
+
+									<td>
+			<%				
+									} else if (spt.getType() == CxConstants.SPT_Type_SIPHeader) {
+
+			%>
+									<bean:message key="spt.head.sipHeader" />
+									</td>
+									
+									<td>
+										<table>
+										<tr>
+											<td class="tgpFormular">
+												<bean:message key="spt.head.sipHeader" />
+											</td>
+											<td class="tgpFormular" colspan="2">
+												<nested:text property="sipHeader" size="10" styleClass="inputtext"
+														style="width:200px;" />
+											</td>
+										</tr>
+										<tr>
+											<td class="tgpFormular" nowrap="nowrap">
+												<bean:message key="spt.head.sipHeaderContent" />
+											</td>
+											<td class="tgpFormular" colspan="2">
+												<nested:text property="sipHeaderContent" size="10"
+														styleClass="inputtext" style="width:200px;" />
+											</td>
+										</tr>
+										</table>
+									</td>
+			<%					
+									}
+
+			%>
+								<!-- Condition Negated -->
+								<td nowrap="nowrap">
+									<bean:message key="spt.head.neg" />
+								</td>
+								<td class="tgpFormular">
+									<nested:checkbox property="neg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+								</td>
+
+								<!-- Registration Type: Registration -->
+								<td nowrap="nowrap">
+									Reg
+								</td>
+								<td class="tgpFormular">
+									<nested:checkbox property="rtype_reg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+								</td>
+
+								<!-- Registration Type: Re-Registration -->
+								<td nowrap="nowrap">
+									ReReg
+								</td>
+								<td class="tgpFormular">
+									<nested:checkbox property="rtype_re_reg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+								</td>
+
+								<!-- Registration Type: UnRegistration -->
+								<td nowrap="nowrap">
+									UnReg
+								</td>
+								<td class="tgpFormular">
+									<nested:checkbox property="rtype_un_reg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+								</td>
+								
+								<td>
+									<input type="button" name="delete_button" value="Delete" 
+										onclick="add_action_for_form(6, <%= spt.getSptId() %>);" />		
+								</td>	
+
+							</tr>
+							<tr class="<%= lastGroupId%2 == 1 ? "even" : "odd" %>">
+								<td style="text-align:center;" colspan="12">
+									<logic:equal name="TP_Form" property="condition_type_cnf" value="0">
+										AND
+									</logic:equal>
+									<logic:equal name="TP_Form" property="condition_type_cnf" value="1">
+										OR
+									</logic:equal>
+								</td>
+							</tr>
+					
+						<%
+							lastGroupId = spt.getGroup();
+							groupCnt++;
+						%>
+						</nested:iterate>
+
+						<!-- End of the last Group -->
+						<logic:notEmpty property="spts" name="TP_Form">
+							<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
+								<td style="text-align:center;" colspan="12">
 									<select name="typeSelect">
 										<option value="<%= CxConstants.SPT_Type_RequestURI %>">
 											<%= CxConstants.SPT_Type_RequestURI_Name %>
@@ -251,176 +459,28 @@ function addSpt(groupId){
 											<%= CxConstants.SPT_Type_SessionDescription_Name %>
 										</option>
 									</select> 
-									<a href="javascript:addSpt(<%=lastGroupId%>)">
+			
+									<a href="javascript:addSpt(<%=lastGroupId%>, 0);">
 										<img src="/hss.web.console/images/add_obj.gif" width="16"
 											height="16" alt="Add" />
-									</a>
+									</a>	
 								</td>
 							</tr>
 							<tr class="header">
-								<td style="text-align:center;" colspan="6">
-									<logic:equal name="TP_Form" property="condition_type_cnf" value="1">
-										AND
-									</logic:equal>
-									<logic:equal name="TP_Form" property="condition_type_cnf" value="0">
-										OR
-									</logic:equal>
+								<td style="text-align:center;" colspan="12">
+									<logic:equal name="TP_Form" property="condition_type_cnf" value="1">AND</logic:equal>
+									<logic:equal name="TP_Form" property="condition_type_cnf" value="0">OR</logic:equal>
 								</td>
 							</tr>
 							
-			<%				lastGroupId = spt.getGroup();
-							}
-			%>
-							<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
-								<td nowrap="nowrap" width="120">
-									<nested:hidden property="sptId"> </nested:hidden> 
-									<nested:hidden property="group"></nested:hidden> 
-									<nested:hidden property="type"></nested:hidden> 
-									
-			<%					if (spt.getType() == CxConstants.SPT_Type_RequestURI) {
-			
-			%> 							<bean:message key="spt.head.requestUri" />
-								</td>
-								<td class="tgpFormular">
-									<nested:text property="requestUri" styleClass="inputtext" 
-										style="width:280px;" maxlength="255" />
-								</td>
-								<td nowrap="nowrap">
-									<bean:message key="spt.head.neg" />
-								</td>
-								<td class="tgpFormular">
-									<nested:checkbox property="neg" styleClass="inputtext" />
-								</td>
-								
-			<%					} else if (spt.getType() == CxConstants.SPT_Type_Method) {
-
-			%>
-									<bean:message key="spt.head.sipMethod" />
-								</td>
-								<td class="tgpFormular">
-									<nested:select property="sipMethod" styleClass="inputtext" style="width:280px;">
-										<nested:optionsCollection property="sipMethodList" />
-									</nested:select>
-								</td>
-								<td nowrap="nowrap">
-									<bean:message key="spt.head.neg" />
-								</td>
-								<td class="tgpFormular">
-									<nested:checkbox property="neg" styleClass="inputtext" />
-								</td>
-								
-								<% } else if (spt.getType() == CxConstants.SPT_Type_SessionCase) {
-				%>
-									<bean:message key="spt.head.sessionCase" />
-								</td>
-								<td class="tgpFormular">
-									<nested:select property="sessionCase" styleClass="inputtext" style="width:280px;">
-										<option value="" /></option>
-										<option value="0"
-											<%= ((spt.getSessionCase() != null)&&(spt.getSessionCase().equals("0"))) ? "selected" : ""  %> />ORIGINATING</option>
-										<option value="1"
-											<%= ((spt.getSessionCase() != null)&&(spt.getSessionCase().equals("1"))) ? "selected" : ""  %> />TERMINATING</option>
-										<option value="2"
-											<%= ((spt.getSessionCase() != null)&&(spt.getSessionCase().equals("2"))) ? "selected" : ""  %> />UNREGISTER</option>
-									</nested:select>
-								</td>
-								<td nowrap="nowrap">
-									<bean:message key="spt.head.neg" />
-								</td>
-								<td class="tgpFormular"><nested:checkbox property="neg"
-									styleClass="inputtext" />
-								</td>
-								
-								<% } else if (spt.getType() == CxConstants.SPT_Type_SessionDescription) {
-			%>
-									<bean:message key="spt.head.sessionDesc" />
-								</td>
-								<td>
-									<table>
-									<tr>
-										<td class="tgpFormular">
-											<bean:message key="spt.head.sessionDescLine" />
-										</td>
-										<td class="tgpFormular" nowrap="nowrap" colspan="3">
-											<nested:text property="sessionDescLine" size="10" styleClass="inputtext"
-												style="width:200px;" />
-										</td>
-									</tr>
-									<tr>
-										<td class="tgpFormular" nowrap="nowrap">
-											<bean:message key="spt.head.sessionDescContent" />
-										</td>
-										<td class="tgpFormular" colspan="2">
-											<nested:text property="sessionDescContent" size="10" styleClass="inputtext" style="width:200px;" />
-										</td>
-									</tr>
-									</table>
-								</td>
-								<td nowrap="nowrap">
-									<bean:message key="spt.head.neg" />
-								</td>
-								<td class="tgpFormular">
-									<nested:checkbox property="neg" styleClass="inputtext" />
-								</td>
-								
-			<%					} else if (spt.getType() == CxConstants.SPT_Type_SIPHeader) {
-
-			%>
-									<bean:message key="spt.head.sipHeader" />
-								</td>
-								<td>
-									<table>
-									<tr>
-										<td class="tgpFormular">
-											<bean:message key="spt.head.sipHeader" />
-										</td>
-										<td class="tgpFormular" colspan="2">
-											<nested:text property="sipHeader" size="10" styleClass="inputtext"
-													style="width:200px;" />
-										</td>
-									</tr>
-									<tr>
-										<td class="tgpFormular" nowrap="nowrap">
-											<bean:message key="spt.head.sipHeaderContent" />
-										</td>
-										<td class="tgpFormular" colspan="2">
-											<nested:text property="sipHeaderContent" size="10"
-													styleClass="inputtext" style="width:200px;" />
-										</td>
-									</tr>
-									</table>
-								</td>
-								<td nowrap="nowrap">
-									<bean:message key="spt.head.neg" />
-								</td>
-								<td class="tgpFormular">
-									<nested:checkbox property="neg" styleClass="inputtext" />
-								</td>
-								
-			<%					}
-
-			%>
-								<td nowrap="nowrap">
-									<bean:message key="form.head.delete" />
-								</td>
-								<td class="tgpFormular">
-									<nested:checkbox property="delete" styleClass="inputtext" />
-								</td>
-							</tr>
-							<tr class="<%= lastGroupId%2 == 1 ? "even" : "odd" %>">
-								<td style="text-align:center;" colspan="6">
-									<logic:equal name="TP_Form" property="condition_type_cnf" value="0">
-										AND
-									</logic:equal>
-									<logic:equal name="TP_Form" property="condition_type_cnf" value="1">
-										OR
-									</logic:equal>
-								</td>
-							</tr>
-						</nested:iterate>
+						<%
+							lastGroupId++;
+						%>
+						</logic:notEmpty>						
 						
-					<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
-						<td style="text-align:center;" colspan="6">
+						<!-- Root Group -->
+						<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
+							<td style="text-align:center;" colspan="12">
 								<select name="typeSelect">
 									<option value="<%= CxConstants.SPT_Type_RequestURI %>">
 										<%= CxConstants.SPT_Type_RequestURI_Name %>
@@ -438,86 +498,39 @@ function addSpt(groupId){
 										<%= CxConstants.SPT_Type_SessionDescription_Name %>
 									</option>
 								</select> 
-							
-							<a href="javascript:addSpt(<%=lastGroupId%>)">
-								<img src="/hss.web.console/images/add_obj.gif" width="16"
-									height="16" alt="Add" />
-							</a>
-						</td>
-					</tr>
-					
-					<logic:notEmpty property="spts" name="TP_Form">
-						<tr class="header">
-							<td style="text-align:center;" colspan="6">
-								<logic:equal name="TP_Form" property="condition_type_cnf" value="1">
-									AND
-								</logic:equal>
-								<logic:equal name="TP_Form" property="condition_type_cnf" value="0">
-									OR
-								</logic:equal>
-							</td>
-						</tr>
-				<%
-						lastGroupId++;
-				%>
-						<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
-							<td style="text-align:center;" colspan="6">
-								<select name="typeSelect">
-									<option value="<%= CxConstants.SPT_Type_RequestURI %>">
-										<%= CxConstants.SPT_Type_RequestURI_Name %>
-									</option>
-									<option value="<%= CxConstants.SPT_Type_Method %>">
-										<%= CxConstants.SPT_Type_Method_Name %>
-									</option>
-									<option value="<%= CxConstants.SPT_Type_SIPHeader %>">
-											<%= CxConstants.SPT_Type_SIPHeader_Name %>
-									</option>
-									<option value="<%= CxConstants.SPT_Type_SessionCase %>">
-										<%= CxConstants.SPT_Type_SessionCase_Name %>
-									</option>
-									<option value="<%= CxConstants.SPT_Type_SessionDescription %>">
-										<%= CxConstants.SPT_Type_SessionDescription_Name %>
-									</option>
-								</select> 
-								<a href="javascript:addSpt(<%=(lastGroupId)%>)">
+								
+			<%
+							if (lastGroupId == 0){					
+			%>					
+								<a href="javascript:addSpt(<%=lastGroupId%>, 1);">
 									<img src="/hss.web.console/images/add_obj.gif" width="16"
 										height="16" alt="Add" />
 								</a>
+								
+			<%
+							}
+							else{
+			%>						
+								<a href="javascript:addSpt(<%=lastGroupId%>, 0);">
+									<img src="/hss.web.console/images/add_obj.gif" width="16"
+										height="16" alt="Add" />
+								</a>
+			<%				
+							}
+			%>					
 							</td>
 						</tr>
-					</logic:notEmpty>
+						</table>
+					<br></td>
+				</tr>
 				</table>
-				<br>
 			</td>
-			<td width="15"></td>
-		</tr>
-		</table>
-		</td>
 		</tr>
 		</table>
 		
-<!--		
-		<p style="text-align:right;">
-			<a href="javascript:showXML();">[Show XML]</a>
-			<input type="image"
-				src="/hss.web.console/images/save_edit.gif" width="16" height="16" alt="Save">
+		<p style="text-align:center;">
+			<html:button property="save_button" value="Save-SPT" onclick="add_action_for_form(13, -1);"/>				
 		</p>
-
-		<% if(request.isUserInRole(SecurityPermissions.SP_IFC)) { %>
-				<logic:equal value="-1" property="id" name="TP_Form">
-					<p style="text-align:right;">
-						<input type="image" src="/hss.web.console/images/save_edit.gif" width="16"
-							height="16" alt="Save">
-					</p>
-					
-				</logic:equal>
-		<% } %>
--->
-				<p style="text-align:center;">
-						<html:button property="save_button" value="Save-SPT" 
-							onclick="add_action_for_form(13, -1);"/>				
-				</p>
-			
 		</td>
 	</tr>
 	</table>

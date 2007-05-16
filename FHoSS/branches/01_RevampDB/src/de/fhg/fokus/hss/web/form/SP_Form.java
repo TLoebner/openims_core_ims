@@ -43,10 +43,22 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.model.SP_IFC;
+import de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set;
+import de.fhg.fokus.hss.db.op.SP_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
+import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
 
 import java.io.Serializable;
 import java.util.List;
@@ -60,6 +72,7 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class SP_Form extends ActionForm implements Serializable{
+	private static Logger logger = Logger.getLogger(SP_Form.class);
 
 	private int id;
 	private String name;
@@ -89,12 +102,88 @@ public class SP_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (name == null || name.equals("")){
-        	actionErrors.add("sp.error.name", new ActionMessage("sp.error.name"));
-        }
+    	boolean dbException = false;
+    	try{
+    		Session session = HibernateUtil.getCurrentSession();
+    		HibernateUtil.beginTransaction();
+
+    		if (nextAction.equals("save")){
+    	        if (name == null || name.equals("")){
+    	        	actionErrors.add("sp.error.name", new ActionMessage("sp.error.name"));
+    	        }
+
+    			// test for SP Name duplication
+    			SP sp = SP_DAO.get_by_Name(session, name);
+    			if (sp != null && sp.getId() != id){
+    				actionErrors.add("sp.error.duplicate_name", new ActionMessage("sp.error.duplicate_name"));
+    			}
+    			
+    			if (cn_service_auth  < 0){
+    				actionErrors.add("sp.error.invalid_cn_service_auth", new ActionMessage("sp.error.invalid_cn_service_auth"));
+    			}
+    		}
+    		else if (nextAction.equals("attach_ifc")){
+        		// validation regarding the associated IFCs
+    			if (sp_ifc_priority < 0){
+    				actionErrors.add("sp.error.invalid_priority_value", new ActionMessage("sp.error.invalid_priority_value"));
+    			}
+    			
+    			if (ifc_id == -1){
+    				actionErrors.add("sp.error.invalid_ifc_selection", new ActionMessage("sp.error.invalid_ifc_selection"));
+    			}
+    			// check if this association already exists
+    			SP_IFC sp_ifc = SP_IFC_DAO.get_by_SP_and_IFC_ID(session, id, ifc_id);
+    			if (sp_ifc != null){
+    				actionErrors.add("sp.error.duplicate_ifc_association", new ActionMessage("sp.error.duplicate_ifc_association"));
+    			}
+    	
+    			sp_ifc = SP_IFC_DAO.get_by_SP_ID_and_Priority(session, id, sp_ifc_priority);
+    			if (sp_ifc != null){
+    				actionErrors.add("sp.error.duplicate_sp_ifc_priority", new ActionMessage("sp.error.duplicate_sp_ifc_priority"));
+    			}
+    		}
+    		else if (nextAction.equals("attach_shared_ifc")){
+    			
+    			if (shared_ifc_id == -1){
+    				actionErrors.add("sp.error.invalid_shared_ifc_id", new ActionMessage("sp.error.invalid_shared_ifc_id"));
+    			}
+    			
+    			SP_Shared_IFC_Set shared_ifc_set = null;
+    			try{
+    				shared_ifc_set = 
+    					SP_Shared_IFC_Set_DAO.get_by_SP_and_Shared_IFC_Set_ID(session, id, shared_ifc_id);
+    			}
+    			catch(org.hibernate.NonUniqueResultException e){
+    				logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+    				e.printStackTrace();
+    			}
+    			
+    			if (shared_ifc_set != null){
+    				actionErrors.add("sp.error.duplicate_shared_ifc_association", new ActionMessage("sp.error.duplicate_shared_ifc_association"));
+    			}    			
+    		}
+    	}
+    	catch(DatabaseException e){
+    		logger.error("Database Exception occured!\nReason:" + e.getMessage());
+    		e.printStackTrace();
+    		dbException = true;
+    	}
+    	catch (HibernateException e){
+    		logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+    		e.printStackTrace();
+    		dbException = true;
+    	}
+    	finally{
+    		if (!dbException){
+    			HibernateUtil.commitTransaction();
+    		}
+    		HibernateUtil.closeSession();
+    	}
+        
         return actionErrors;
     }
     
+    // getters & setters
 	public int getCn_service_auth() {
 		return cn_service_auth;
 	}
