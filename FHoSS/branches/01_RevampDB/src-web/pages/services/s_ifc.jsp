@@ -140,7 +140,8 @@ function add_action_for_form(action, associated_ID) {
 						<td>	
 							<b>Attach iFC </b>
 						</td>
-					</tr>					
+					</tr>			
+							
 					<tr>
 						
 						<td>
@@ -150,6 +151,9 @@ function add_action_for_form(action, associated_ID) {
 							</html:select>	
 						</td>
 
+						<td>
+							Priority	
+						</td>
 						<td>	
 							<html:text property="priority" styleClass="inputtext"/>
 						</td>
@@ -159,6 +163,14 @@ function add_action_for_form(action, associated_ID) {
 							<br />
 						</td>
 					</tr>	
+					</table>
+					<table>
+					<tr><td>
+						<font color="#FF0000">
+							Warning: Priority values defined here can overwrite priority values defined in SP-iFC setup! 
+						</font>						
+					</td></tr>
+					
 					</table>
 					
 					<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">

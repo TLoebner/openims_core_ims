@@ -219,6 +219,22 @@ public class TP_Load extends Action {
 			sptForm.setType(spt.getType());
 			sptForm.setGroup(spt.getGrp());
 			sptForm.setNeg(spt.getCondition_negated()==1?true:false);
+			
+			switch (spt.getRegistration_type()) {
+			
+				case CxConstants.Registration_Type_Initial_Registration:
+					sptForm.setRtype("rtype_reg");
+					break;
+					
+				case CxConstants.Registration_Type_Initial_Re_Registration:
+					sptForm.setRtype("rtype_re_reg");
+					break;
+					
+				case CxConstants.Registration_Type_Initial_De_Registration:
+					sptForm.setRtype("rtype_de_reg");
+					break;
+			}
+			
 			result.add(sptForm);
 		}
 

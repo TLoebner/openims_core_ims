@@ -44,12 +44,18 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
-import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.VisitedNetwork;
+import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 
 import java.io.Serializable;
 import javax.servlet.http.HttpServletRequest;
@@ -61,7 +67,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class VN_Form extends ActionForm implements Serializable{
-
+	private static Logger logger = Logger.getLogger(VN_Form.class);
+	
 	private int id;
 	private String identity;
 	
@@ -74,10 +81,42 @@ public class VN_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (identity == null || identity.equals("")){
-        	actionErrors.add("vn.error.identity", new ActionMessage("vn.error.identity"));
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        
+        	if (nextAction.equals("save")){
+        		if (identity == null || identity.equals("")){
+        			actionErrors.add("vn.error.identity", new ActionMessage("vn.error.identity"));
+        		}
+        		
+        		// check for name duplication
+        		VisitedNetwork vn = VisitedNetwork_DAO.get_by_Identity(session, identity);
+        		if (vn != null && vn.getId() != id){
+        			actionErrors.add("vn.error.duplicate_identity", new ActionMessage("vn.error.duplicate_identity"));
+        		}
+        	}
         }
-        return actionErrors;
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}        
+        
+		return actionErrors;
     }
 
 	public int getId() {

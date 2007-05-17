@@ -47,8 +47,8 @@ function rowsPerPageChanged(){
 				<tr class="header">
 					<td class="header"> ID </td>
 					<td class="header"> Name </td>
-					<td class="header"> Triggering Point </td>									
-					<td class="header"> Application Server </td>									
+					<td class="header"> Triggering Point Id </td>									
+					<td class="header"> Application Server Id</td>									
 					<td class="header"> Profile Part Indicator </td>													
 				</tr>
 			
@@ -71,15 +71,37 @@ function rowsPerPageChanged(){
 							</a>	
 						</td>
 						<td> 
-							<%= ifc.getId_tp() %>
+							<%
+							
+								 if (ifc.getId_tp() == -1) {
+								 	out.println("none");
+								 }
+								 else {
+								 	out.println(ifc.getId_tp());
+								 }
+							%>
 						</td>
 
 						<td> 
-							<%= ifc.getId_application_server() %>
+							<%
+								if (ifc.getId_application_server() == -1){
+									out.println("none");								
+								}
+								else{
+									out.println(ifc.getId_application_server());	
+								}
+							 %>
 						</td>
 
 						<td> 
-							<%= ifc.getProfile_part_ind() %>
+							<%
+								if (ifc.getProfile_part_ind() == 0){
+									out.println("Registered");
+								}
+								else{
+									out.println("Unregistered");
+								}
+							%>
 						</td>
 					</tr>
 				<%		

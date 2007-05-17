@@ -124,6 +124,17 @@ public class CxConstants {
 	public static final short IMPU_user_state_Registered = 1;
 	public static final short IMPU_user_state_Unregistered = 2;
 	public static final short IMPU_user_state_Auth_Pending = 3;
+
+	// tDirectionOfRequest
+	public static final int Direction_of_Request_Originating_Session = 0;
+	public static final int Direction_of_Request_Terminating_Registered = 1;
+	public static final int Direction_of_Request_Terminating_Unregistered = 2;
+	public static final int Direction_of_Request_Originating_Unregistered = 3;
+	
+	public static final String Direction_of_Request_Originating_Session_Name = "Originating-Session";
+	public static final String Direction_of_Request_Terminating_Registered_Name = "Terminating-Registered";
+	public static final String Direction_of_Request_Terminating_Unregistered_Name = "Terminating-UnRegistered";
+	public static final String Direction_of_Request_Originating_Unregistered_Name = "Originating-UnRegistered";
 	
 	public static final int Auth_Scheme_Unknown = 0;
 	public static final int Auth_Scheme_AKAv1 = 1;

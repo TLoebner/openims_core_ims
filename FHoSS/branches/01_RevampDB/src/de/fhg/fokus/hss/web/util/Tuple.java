@@ -49,8 +49,8 @@ package de.fhg.fokus.hss.web.util;
  */
 
 public class Tuple {
-	private Object value;
 	private Object label;
+	private Object value;
 	
 	private String name;
 	private int code;
@@ -60,9 +60,9 @@ public class Tuple {
 		this.code = code;
 	}
 	
-	public Tuple(Object value, Object label){
-		this.value = value;
+	public Tuple(Object label, Object value){
 		this.label = label;
+		this.value = value;
 	}
 
 	public int getCode() {

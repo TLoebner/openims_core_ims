@@ -295,8 +295,20 @@ public class TP_Submit extends Action{
 
 				spt.setGrp(newGroupId);
 				spt.setCondition_negated(sptForm.isNeg()?1:0);
+				
+				if (sptForm.getRtype().equals("rtype_reg")){
+					spt.setRegistration_type(CxConstants.Registration_Type_Initial_Registration);
+				}
+				else if (sptForm.getRtype().equals("rtype_re_reg")){
+					spt.setRegistration_type(CxConstants.Registration_Type_Initial_Re_Registration);
+				}
+				else if (sptForm.getRtype().equals("rtype_de_reg")){
+					spt.setRegistration_type(CxConstants.Registration_Type_Initial_De_Registration);
+				}
+				
 				SPT_DAO.update(session, spt);
 		}// while
 
-	}	
+	}
+	
 }

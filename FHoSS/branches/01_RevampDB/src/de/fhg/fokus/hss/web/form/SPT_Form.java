@@ -44,6 +44,7 @@
 package de.fhg.fokus.hss.web.form;
 
 
+import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 
@@ -76,17 +77,17 @@ public class SPT_Form extends ActionForm implements Serializable{
     private int group;
     private int type;
     private int trigptId;
-    private boolean rtype_reg;
-    private boolean rtype_re_reg;
-    private boolean rtype_un_reg;
-    
-    
-	private static List sptTypeList;
+
+    private String rtype;
+
+    private static List sptTypeList;
 	private static ArrayList sipMethodList;
+	private static ArrayList directionOfRequestList;
 	
 	static{
 		sptTypeList = WebConstants.select_spt_type;
 		sipMethodList = WebConstants.select_spt_method_type;
+		directionOfRequestList = WebConstants.select_direction_of_request;
 	}
 	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
@@ -102,12 +103,15 @@ public class SPT_Form extends ActionForm implements Serializable{
     	this.sessionDescLine = null;
     	this.sessionCase = null;
     	
-    	this.rtype_reg = false;
-    	this.rtype_re_reg = false;
-    	this.rtype_un_reg = false;
-    	
+    	this.rtype = null;
     }
 
+    public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
+        ActionErrors actionErrors = new ActionErrors();
+
+        // [validation for SPT: to be added]
+        return actionErrors;
+    }
 
 	public int getGroup() {
 		return group;
@@ -230,34 +234,20 @@ public class SPT_Form extends ActionForm implements Serializable{
 		SPT_Form.sipMethodList = sipMethodList;
 	}
  
-
-	public boolean isRtype_re_reg() {
-		return rtype_re_reg;
+	public String getRtype() {
+		return rtype;
 	}
 
-
-	public void setRtype_re_reg(boolean rtype_re_reg) {
-		this.rtype_re_reg = rtype_re_reg;
+	public void setRtype(String rtype) {
+		this.rtype = rtype;
 	}
 
-
-	public boolean isRtype_reg() {
-		return rtype_reg;
+	public ArrayList getDirectionOfRequestList() {
+		return directionOfRequestList;
 	}
 
-
-	public void setRtype_reg(boolean rtype_reg) {
-		this.rtype_reg = rtype_reg;
-	}
-
-
-	public boolean isRtype_un_reg() {
-		return rtype_un_reg;
-	}
-
-
-	public void setRtype_un_reg(boolean rtype_un_reg) {
-		this.rtype_un_reg = rtype_un_reg;
+	public void setDirectionOfRequestList(ArrayList directionOfRequestList) {
+		SPT_Form.directionOfRequestList = directionOfRequestList;
 	}
 	
 }
