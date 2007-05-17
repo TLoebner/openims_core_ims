@@ -164,14 +164,14 @@ function add_action_for_form(action, associated_ID) {
 					<tr>
 						
 						<td>
-							<html:select property="id_cap" name="CapS_Form" styleClass="inputtext" size="1" style="width:150px;">
+							<html:select property="id_cap" value="-1" name="CapS_Form" styleClass="inputtext" size="1" style="width:150px;">
 								<html:option value="-1">Select Capability...</html:option>
 								<html:optionsCollection name="CapS_Form" property="select_cap" label="name" value="id"/>
 							</html:select>	
 						</td>
 
 						<td>	
-							<html:select property="cap_type" styleClass="inputtext" size="1" style="width:150px;">
+							<html:select property="cap_type" value="-1" styleClass="inputtext" size="1" style="width:150px;">
 								<html:option value="-1">Select Type...</html:option>
 								<html:optionsCollection name="CapS_Form" property="select_cap_type" label="name" value="code"/>
 							</html:select>

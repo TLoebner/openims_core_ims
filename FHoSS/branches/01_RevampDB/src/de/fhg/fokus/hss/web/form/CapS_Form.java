@@ -44,12 +44,21 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.CapabilitiesSet;
+import de.fhg.fokus.hss.db.model.Capability;
+import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
+import de.fhg.fokus.hss.db.op.Capability_DAO;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
@@ -64,7 +73,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class CapS_Form extends ActionForm implements Serializable{
-
+	private static Logger logger = Logger.getLogger(CapS_Form.class);
+	
 	private String name;
 	private int id_set;
 	
@@ -89,15 +99,53 @@ public class CapS_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (name == null || name.equals("")){
-        	actionErrors.add("cap_set.error.name", new ActionMessage("cap_set.error.name"));
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+
+        	if (nextAction.equals("save")){
+                if (name == null || name.equals("")){
+                	actionErrors.add("cap_set.error.name", new ActionMessage("cap_set.error.name"));
+                }
+                if (id_set == -1 && id_cap == -1){
+                	actionErrors.add("cap_set.error.id_cap", new ActionMessage("cap_set.error.id_cap"));
+                }
+                
+                
+                if (CapabilitiesSet_DAO.test_unused_name(session, name, id_set) == false){
+                	actionErrors.add("cap_set.error.duplicate_set_name", new ActionMessage("cap_set.error.duplicate_set_name"));
+                }
+        	}
+        	else if (nextAction.equals("attach_cap")){
+        		if (id_cap == -1 || cap_type == -1){
+        			actionErrors.add("cap_set.error.provide_cap_and_type", new ActionMessage("cap_set.error.provide_cap_and_type"));
+        		}
+        		
+        		CapabilitiesSet cap_set = CapabilitiesSet_DAO.get_by_Capability_and_Set_ID(session, id_cap, id_set);
+        		if (cap_set != null){
+        			actionErrors.add("cap_set.error.cap_already_attached", new ActionMessage("cap_set.error.cap_already_attached"));
+        		}
+        	}
         }
-        
-        if (id_set == -1 && id_cap == -1){
-        	actionErrors.add("cap_set.error.id_cap", new ActionMessage("cap_set.error.id_cap"));
-        }
-        
-        
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}                
+                        
         return actionErrors;
     }
 

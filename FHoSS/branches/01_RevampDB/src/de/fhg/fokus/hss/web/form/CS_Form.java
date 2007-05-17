@@ -43,12 +43,19 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 
 import java.io.Serializable;
 import javax.servlet.http.HttpServletRequest;
@@ -60,7 +67,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class CS_Form extends ActionForm implements Serializable{
-
+	private static Logger logger = Logger.getLogger(CS_Form.class);
+	
 	private int id;
 	private String name;
 	private String pri_ecf;
@@ -79,11 +87,41 @@ public class CS_Form extends ActionForm implements Serializable{
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
-
-        if (name == null || name.equals("")){
-        	actionErrors.add("cs.error.name", new ActionMessage("cs.error.name"));
-        }
         
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+
+        	if (nextAction.equals("save")){
+        		if (name == null || name.equals("")){
+        			actionErrors.add("cs.error.name", new ActionMessage("cs.error.name"));
+        		}
+        		
+        		ChargingInfo chgInfo = ChargingInfo_DAO.get_by_Name(session, name);
+        		if (chgInfo != null && chgInfo.getId() != id){
+        			actionErrors.add("cs.error.duplicate_name", new ActionMessage("cs.error.duplicate_name"));
+        		}
+        	}
+        
+        }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}                
         return actionErrors;
     }
 

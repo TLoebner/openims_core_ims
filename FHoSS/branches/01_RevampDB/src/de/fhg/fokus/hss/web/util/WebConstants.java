@@ -115,8 +115,13 @@ public class WebConstants {
 	static{
 		select_spt_method_type = new ArrayList<Tuple>();
 		select_spt_method_type.add(new Tuple("INVITE", "INVITE"));
+		select_spt_method_type.add(new Tuple("REGISTER", "REGISTER"));
+		select_spt_method_type.add(new Tuple("CANCEL", "CANCEL"));
+		select_spt_method_type.add(new Tuple("OPTION", "OPTION"));
 		select_spt_method_type.add(new Tuple("PUBLISH", "PUBLISH"));
 		select_spt_method_type.add(new Tuple("SUBSCRIBE", "SUBSCRIBE"));
+		select_spt_method_type.add(new Tuple("MESSAGE", "MESSAGE"));
+		
 		//etc
 	}
 	public static final ArrayList<Tuple> select_profile_part_indicator;
@@ -134,6 +139,19 @@ public class WebConstants {
 		select_cap_type.add(new Tuple("Optional", 0));
 		select_cap_type.add(new Tuple("Mandatory", 1));		
 	}
+	public static final ArrayList<Tuple> select_direction_of_request;
+	static{
+		select_direction_of_request = new ArrayList<Tuple>();
+		select_direction_of_request.add(new Tuple(CxConstants.Direction_of_Request_Originating_Session_Name, 
+				CxConstants.Direction_of_Request_Originating_Session));
+		select_direction_of_request.add(new Tuple(CxConstants.Direction_of_Request_Terminating_Registered_Name, 
+				CxConstants.Direction_of_Request_Terminating_Registered));
+		select_direction_of_request.add(new Tuple(CxConstants.Direction_of_Request_Terminating_Unregistered_Name, 
+				CxConstants.Direction_of_Request_Terminating_Unregistered));
+		select_direction_of_request.add(new Tuple(CxConstants.Direction_of_Request_Originating_Unregistered_Name, 
+				CxConstants.Direction_of_Request_Originating_Unregistered));
+	}
+	
 	
 	
 	

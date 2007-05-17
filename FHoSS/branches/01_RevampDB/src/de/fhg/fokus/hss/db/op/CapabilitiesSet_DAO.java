@@ -244,5 +244,26 @@ public class CapabilitiesSet_DAO {
 		return result.intValue();
 	}
 	
+	public static boolean test_unused_name(Session session, String name, int id_set){
+		Query query = session.createSQLQuery("select * from capabilities_set where name=? and id_set !=?")
+			.addEntity(CapabilitiesSet.class);
+		query.setString(0, name);
+		query.setInteger(1, id_set);
+		
+		List result = query.list();
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		return true;
+	}
+	
+	public static CapabilitiesSet get_by_Capability_and_Set_ID(Session session, int id_cap, int id_set){
+		Query query = session.createSQLQuery("select * from capabilities_set where id_capability=? and id_set=?")
+			.addEntity(CapabilitiesSet.class);
+		query.setInteger(0, id_cap);
+		query.setInteger(1, id_set);
+	
+		return (CapabilitiesSet) query.uniqueResult();
+	}
 	
 }
