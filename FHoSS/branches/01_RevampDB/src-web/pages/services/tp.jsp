@@ -299,7 +299,7 @@ function addSpt(groupId, is_spt_list_empty){
 										<bean:message key="spt.head.sipMethod" />
 									</td>
 									<td class="tgpFormular">
-										<nested:select property="sipMethod" onclick="add_action_for_form(13, -1);">
+										<nested:select property="sipMethod" onchange="add_action_for_form(13, -1);">
 											<nested:optionsCollection property="sipMethodList" label="label" value="value"/>
 										</nested:select>
 									</td>
@@ -311,7 +311,8 @@ function addSpt(groupId, is_spt_list_empty){
 										<bean:message key="spt.head.sessionCase" />
 									</td>
 									<td class="tgpFormular">
-										<nested:select property="sessionCase" value="0" styleClass="inputtext" style="width:280px;">
+										<nested:select property="sessionCase" value="0" styleClass="inputtext" style="width:280px;" 
+											onchange="add_action_for_form(13, -1);">
 											<nested:optionsCollection property="directionOfRequestList" label="name" value="code"/>
 										</nested:select>
 									</td>
@@ -330,7 +331,7 @@ function addSpt(groupId, is_spt_list_empty){
 											</td>
 											<td class="tgpFormular" nowrap="nowrap" colspan="3">
 												<nested:text property="sessionDescLine" size="10" styleClass="inputtext"
-													style="width:200px;" />
+													style="width:200px;" onchange="add_action_for_form(13, -1);"/>
 											</td>
 										</tr>
 										<tr>
@@ -338,7 +339,8 @@ function addSpt(groupId, is_spt_list_empty){
 												<bean:message key="spt.head.sessionDescContent" />
 											</td>
 											<td class="tgpFormular" colspan="2">
-												<nested:text property="sessionDescContent" size="10" styleClass="inputtext" style="width:200px;" />
+												<nested:text property="sessionDescContent" size="10" styleClass="inputtext" style="width:200px;" 
+													onchange="add_action_for_form(13, -1);"/>
 											</td>
 										</tr>
 										</table>
@@ -360,7 +362,7 @@ function addSpt(groupId, is_spt_list_empty){
 											</td>
 											<td class="tgpFormular" colspan="2">
 												<nested:text property="sipHeader" size="10" styleClass="inputtext"
-														style="width:200px;" />
+														style="width:200px;" onchange="add_action_for_form(13, -1);"/>
 											</td>
 										</tr>
 										<tr>
@@ -369,7 +371,7 @@ function addSpt(groupId, is_spt_list_empty){
 											</td>
 											<td class="tgpFormular" colspan="2">
 												<nested:text property="sipHeaderContent" size="10"
-														styleClass="inputtext" style="width:200px;" />
+														styleClass="inputtext" style="width:200px;" onchange="add_action_for_form(13, -1);"/>
 											</td>
 										</tr>
 										</table>
@@ -391,7 +393,7 @@ function addSpt(groupId, is_spt_list_empty){
 									Reg
 								</td>
 								<td class="tgpFormular">
-									<nested:radio property="rtype" value="rtype_reg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+									<nested:radio property="rtype" value="rtype_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
 								</td>
 
 								<!-- Registration Type: Re-Registration -->
@@ -407,7 +409,7 @@ function addSpt(groupId, is_spt_list_empty){
 									DeReg
 								</td>
 								<td class="tgpFormular">
-									<nested:radio property="rtype" value="rtype_de_reg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+									<nested:radio property="rtype" value="rtype_de_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
 								</td>
 								
 								<td>
@@ -522,12 +524,7 @@ function addSpt(groupId, is_spt_list_empty){
 			</td>
 		</tr>
 		</table>
-
-<!--		
-		<p style="text-align:center;">
-			<html:button property="save_button" value="Save-SPT" onclick="add_action_for_form(13, -1);"/>				
-		</p>
--->		
+	
 		</td>
 	</tr>
 	</table>

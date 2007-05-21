@@ -19,40 +19,40 @@
 </head>
 <body>
 
-<body>
-	<table align=center valign=middle height=100%>
+	<html:form action="PrefS_Search">
+		<table align="center" valign="middle" height="80%">
 		<tr> 
 			<td align=center>
-				<br/><br/><h1>Charging Info Sets - Search </h1>
+				<br/><br/><h1>Preferred S-CSCF Set - Search </h1>
 			</td>
 		</tr>
 		<tr height=99%>
 			<td align=center>
-			<html:form action="CS_Search">
-			<table border=0 cellspacing=0 align="center" width=300>
+				<table border=0 cellspacing=0 align="center" width=300>
 				<tr><td align="right"><b>Enter Search Parameters:</b></td></tr>
 	 			<tr>
 	 				<td>
 					 	<table border="0" cellspacing="1" align="center" width="100%" style="border:1px solid #FF6600;">
 		    			<tr bgcolor="#FFCC66">
-							<td>ID</td>
-							<td>
-								<html:text property="id_cs" value=""/>
-							</td>
+							<td>ID-Set</td>
+							<td><html:text property="id_set" value="" styleClass="inputtext" size="8"/></td>
 						</tr>
-
-						<tr bgcolor="#FFCC66">
-							<td>Name</td>
-							<td><html:text property="name" value="" size="32"/></td>
+						
+		    			<tr bgcolor="#FFCC66">							
+		    				<td>Name</td>
+							<td><html:text property="name" value="" styleClass="inputtext" size="32"/></td>
 						</tr>
+						
 						</table>
-					</td>	
+					</td>		
+				</tr>
 				<tr>
 					<td align="center"><br/><html:submit property="search" value="Search" /></td>
-				</tr>			
-			</table>	
-			</html:form>
-		</td></tr>	
-	</table>	
+				</tr>				
+				</table>
+			</td>
+		</tr>		
+		</table>		
+	</html:form>
 </body>
 </html>

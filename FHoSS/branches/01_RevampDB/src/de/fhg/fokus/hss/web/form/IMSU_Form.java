@@ -43,10 +43,18 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.IMSU;
+import de.fhg.fokus.hss.db.op.IMSU_DAO;
 
 import java.io.Serializable;
 import java.util.List;
@@ -60,6 +68,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class IMSU_Form extends ActionForm implements Serializable{
+	private static Logger logger = Logger.getLogger(IMSU_Form.class);
+	
 	private int id;
 	private String name;
 	private String scscf_name;
@@ -93,6 +103,33 @@ public class IMSU_Form extends ActionForm implements Serializable{
         	actionErrors.add("name", new ActionMessage("imsu_form.error.name"));
         }
         
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        	
+        	IMSU imsu = IMSU_DAO.get_by_Name(session, name);
+        	if (imsu != null && imsu.getId() != id){
+        		actionErrors.add("imsu_form.error.duplicate_identity", new ActionMessage("imsu_form.error.duplicate_identity"));	
+        	}
+        }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}        
         return actionErrors;
     }
 

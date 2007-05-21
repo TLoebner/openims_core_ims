@@ -216,11 +216,20 @@ function add_action_for_form(action, associated_ID) {
 										out.println(tuple.getName()); 
 									%>
 								</td>
-								
-								<td> 
-									<input type="button" name="detach_cap" 
-										"value="Detach" onclick="add_action_for_form(5, <%= cap.getId() %>);"/>													
-								</td>
+								<td>
+									<%
+										if (((String)request.getAttribute("detachDeactivation")).equals("true")){
+									%>
+											<input type="button" name="detach_cap" "value="Detach" onclick="add_action_for_form(5, <%= cap.getId() %>);" disabled/>	
+									<%
+										}
+										else{
+									%>
+											<input type="button" name="detach_cap" "value="Detach" onclick="add_action_for_form(5, <%= cap.getId() %>);" />										
+									<%
+										}
+									%>												
+								</td>	
 							</tr>											
 					<%			
 								idx++;												

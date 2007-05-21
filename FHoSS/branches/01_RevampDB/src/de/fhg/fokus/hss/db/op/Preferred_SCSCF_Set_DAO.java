@@ -43,7 +43,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
-
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -54,14 +54,30 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
-import de.fhg.fokus.hss.db.model.Shared_IFC_Set;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
+
 public class Preferred_SCSCF_Set_DAO {
 	
 	private static Logger logger = Logger.getLogger(Preferred_SCSCF_Set_DAO.class);
+	
+	public static void insert(Session session, Preferred_SCSCF_Set preferred_scscf_set){
+		session.save(preferred_scscf_set);
+	}
+	
+	public static void update(Session session, Preferred_SCSCF_Set preferred_scscf_set){
+		session.saveOrUpdate(preferred_scscf_set);
+	}
+	
+	public static void update_all_from_set(Session session, int id_set, String name){
+		Query query = session.createSQLQuery("update preferred_scscf_set set name=? where id_set=?");
+		query.setString(0, name);
+		query.setInteger(1, id_set);
+		query.executeUpdate();
+	}
 	
 	public static List get_all_from_set(Session session, int id_set){
 		Query query = session.createSQLQuery("select * from preferred_scscf_set where id_set=?")
@@ -76,6 +92,78 @@ public class Preferred_SCSCF_Set_DAO {
 			.addScalar("name", Hibernate.STRING);
 		
 		return getResult(session, query);
+	}
+	
+	public static Preferred_SCSCF_Set get_by_set_ID(Session session, int id_set){
+		Query query;
+		query = session.createSQLQuery("select distinct id_set, name from preferred_scscf_set where id_set=?")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+		query.setInteger(0, id_set);
+
+		List list = getResult(session, query);
+		if (list.size() == 0){
+			return null;
+		}
+		else{
+			return (Preferred_SCSCF_Set) list.get(0);
+		}
+	}	
+	
+	public static Object[] get_by_Wildcarded_Name(Session session, String name, 
+			int firstResult, int maxResults){
+		
+		Query query;
+		query = session.createSQLQuery("select distinct id_set, name from preferred_scscf_set where name like ? order by(id_set)")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+
+		query.setString(0, "%" + name + "%");
+		return getResult(session, query, firstResult, maxResults);
+	}
+	
+	public static Object[] get_all_from_set(Session session, int id_set, int firstResult, int maxResults){
+		Query query = session.createSQLQuery("select distinct id_set, name from preferred_scscf_set where id_set=?")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+		query.setInteger(0, id_set);
+		
+		return getResult(session, query, firstResult, maxResults);
+	}
+	
+	public static Object[] get_all(Session session, int firstResult, int maxResults){
+		Query query;
+		query = session.createSQLQuery("select distinct id_set, name from preferred_scscf_set order by(id_set)")
+			.addScalar("id_set", Hibernate.INTEGER)
+			.addScalar("name", Hibernate.STRING);
+		
+		return getResult(session, query, firstResult, maxResults);
+	}
+	
+	private static Object[] getResult(Session session, Query query, int firstResult, int maxResults){
+		int size = get_cnt(session);
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		
+		Object[] result = new Object[2];
+		result[0] = new Integer(size);
+		
+		List list_result = new ArrayList();
+		Preferred_SCSCF_Set preferred_scscf_set = null;
+	
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			
+			while (it.hasNext()){
+				Object[] row = (Object[]) it.next();
+				preferred_scscf_set = new Preferred_SCSCF_Set();
+				preferred_scscf_set.setId_set((Integer)row[0]);
+				preferred_scscf_set.setName((String)row[1]);
+				list_result.add(preferred_scscf_set);
+			}	
+		}
+		result[1] = list_result;
+		return result;
 	}
 	
 	
@@ -105,9 +193,79 @@ public class Preferred_SCSCF_Set_DAO {
 		return query.executeUpdate();
 	}
 	
-/*	public static int delete_SCSCF_Name_from_set(Session session, String scscf_name){
-		Query query = session.createQuery("delete from PreferredSet where scscf_name like ?");
-		query.setString(0, scscf_name);
+	public static boolean test_unused_name(Session session, String name, int id_set){
+		Query query = session.createSQLQuery("select * from preferred_scscf_set where name=? and id_set !=?")
+			.addEntity(Preferred_SCSCF_Set.class);
+		query.setString(0, name);
+		query.setInteger(1, id_set);
+		
+		List result = query.list();
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		return true;
+	}
+
+	
+	public static boolean test_unused_scscf_name(Session session, String name, int id_set){
+		Query query = session.createSQLQuery("select * from preferred_scscf_set where scscf_name=? and id_set =?")
+			.addEntity(Preferred_SCSCF_Set.class);
+		query.setString(0, name);
+		query.setInteger(1, id_set);
+		
+		List result = query.list();
+		if (result != null && result.size() > 0){
+			return false;
+		}
+		return true;
+	}
+	
+	public static Preferred_SCSCF_Set get_by_Priority_and_Set_ID(Session session, int priority, int id_set){
+		Query query = session.createSQLQuery("select * from preferred_scscf_set where priority=? and id_set=?")
+			.addEntity(Preferred_SCSCF_Set.class);
+		query.setInteger(0, priority);
+		query.setInteger(1, id_set);
+		
+		return (Preferred_SCSCF_Set) query.uniqueResult();
+	}
+	
+	
+	public static int get_cnt_for_set(Session session, int id_set){
+		Query query;
+		query = session.createSQLQuery("select count(*) from preferred_scscf_set where id_set=?");
+		query.setInteger(0, id_set);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}
+	
+	public static int get_cnt(Session session){
+		Query query;
+		query = session.createSQLQuery("select count(distinct id_set) from preferred_scscf_set");
+		BigInteger result = (BigInteger) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}
+
+	public static int get_max_id_set(Session session){
+		Query query = session.createSQLQuery("select max(id_set) from preferred_scscf_set");
+		Integer result = (Integer) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}
+	
+	public static int delete_set_by_ID(Session session, int id_set){
+		Query query = session.createSQLQuery("delete from preferred_scscf_set where id_set=?");
+		query.setInteger(0, id_set);
 		return query.executeUpdate();
-	}*/
+	}
+	
+	public static int delete_scscf_from_set(Session session, int id){
+		Query query = session.createSQLQuery("delete from preferred_scscf_set where id=?");
+		query.setInteger(0, id);
+		return query.executeUpdate();
+	}	
 }

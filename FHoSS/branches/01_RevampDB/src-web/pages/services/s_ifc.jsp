@@ -102,6 +102,15 @@ function add_action_for_form(action, associated_ID) {
 								</html:select>	
 							</td>
 						</tr>
+						<tr bgcolor="#FFCC66">
+							<td>
+								Priority	
+							</td>
+							<td>	
+								<html:text property="priority" styleClass="inputtext" />
+							</td>
+						</tr>
+						
 			<%
 						}
 			%>			
@@ -145,7 +154,7 @@ function add_action_for_form(action, associated_ID) {
 					<tr>
 						
 						<td>
-							<html:select property="id_ifc" name="S_IFC_Form" styleClass="inputtext" size="1" style="width:150px;">
+							<html:select property="id_ifc" name="S_IFC_Form" styleClass="inputtext" size="1" style="width:150px;" value="">
 								<html:option value="-1">Select iFC...</html:option>
 								<html:optionsCollection name="S_IFC_Form" property="select_ifc" label="name" value="id"/>
 							</html:select>	
@@ -155,7 +164,7 @@ function add_action_for_form(action, associated_ID) {
 							Priority	
 						</td>
 						<td>	
-							<html:text property="priority" styleClass="inputtext"/>
+							<html:text property="priority" styleClass="inputtext" />
 						</td>
 						
 						<td>

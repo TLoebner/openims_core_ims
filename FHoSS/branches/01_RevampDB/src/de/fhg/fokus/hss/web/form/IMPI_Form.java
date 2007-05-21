@@ -43,10 +43,13 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
 import java.io.Serializable;
 import java.util.List;
@@ -54,7 +57,10 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -62,6 +68,8 @@ import de.fhg.fokus.hss.db.model.IMPI;
 
 
 public class IMPI_Form extends ActionForm implements Serializable{
+	private static Logger logger = Logger.getLogger(IMPI_Form.class);
+	
 	public static final String DEFAULT_OP = "00000000000000000000000000000000";  
 	public static final String DEFAULT_AMF = "0000";
 	public static final String DEFAULT_SQN = "000000000000";
@@ -128,9 +136,6 @@ public class IMPI_Form extends ActionForm implements Serializable{
         if (identity == null || identity.equals("")){
         	actionErrors.add("identity", new ActionMessage("impi_form.error.identity"));
         }
-/*        if (this.id_imsu == -1){
-        	actionErrors.add("id_imsu", new ActionMessage("impi_form.error.id_imsu"));
-        }*/
         
 		int auth_scheme = IMPI.generateAuthScheme(aka1, aka2, md5, digest, http_digest, early, nass_bundle, all);	
         if ((auth_scheme & default_auth_scheme) == 0){
@@ -152,7 +157,34 @@ public class IMPI_Form extends ActionForm implements Serializable{
         if (sqn == null || sqn.equals("") || sqn.length() != 12){
         	actionErrors.add("secret_key", new ActionMessage("impi_form.error.sqn"));
         }
-        
+
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        	
+        	IMPI impi = IMPI_DAO.get_by_Identity(session, identity);
+        	if (impi != null && impi.getId() != id){
+        		actionErrors.add("impi.error.duplicate_identity", new ActionMessage("impi.error.duplicate_identity"));	
+        	}
+        }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}        	
         return actionErrors;
     }
 

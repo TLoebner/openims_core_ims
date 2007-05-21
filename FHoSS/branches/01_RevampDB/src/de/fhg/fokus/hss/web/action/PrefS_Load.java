@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -56,12 +57,11 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-
-import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
+import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_Form;
+import de.fhg.fokus.hss.web.form.PrefS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -76,44 +76,37 @@ public class PrefS_Load extends Action {
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
+		PrefS_Form form = (PrefS_Form) actionForm;
+		int id_set = form.getId_set();
 		ActionForward forward = null;
-		CS_Form form = (CS_Form) actionForm;
-		int id = form.getId();
-
+		
 		boolean dbException = false;
 		try{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
-			if (id != -1){
+			if (id_set != -1){
 				// load
-				ChargingInfo charging_info = ChargingInfo_DAO.get_by_ID(session, id);
-				CS_Load.setForm(form, charging_info);
-				
-				if (testForDelete(session, id)){
-					request.setAttribute("deleteDeactivation", "false");		
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
+				Preferred_SCSCF_Set preferred_scscf_set = Preferred_SCSCF_Set_DAO.get_by_set_ID(session, id_set);
+				PrefS_Load.setForm(form, preferred_scscf_set);
 			}
-			else{
-				request.setAttribute("deleteDeactivation", "false");
-			}
+			prepareForward(session, form, request, id_set);
+
 			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-			forward = new ActionForward(forward.getPath() + "?id=" + id);
+			forward = new ActionForward(forward.getPath() + "?id_set=" + id_set);
 		}
 		catch(DatabaseException e){
 			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
 			dbException = true;
+			
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
-		
 		catch (HibernateException e){
 			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
 			dbException = true;
+			
 			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
 		finally{
@@ -122,30 +115,51 @@ public class PrefS_Load extends Action {
 			}
 			HibernateUtil.closeSession();
 		}
+				
 		return forward;
 	}
 	
-	public static boolean setForm(CS_Form form, ChargingInfo charging_info){
+	public static boolean setForm(PrefS_Form form, Preferred_SCSCF_Set preferred_scscf_set){
 		boolean exitCode = false;
 		
-		if (charging_info != null){
+		if (preferred_scscf_set != null){
 			exitCode = true;
-			form.setId(charging_info.getId());
-			form.setName(charging_info.getName());
-			form.setPri_ccf(charging_info.getPri_ccf());
-			form.setSec_ccf(charging_info.getSec_ccf());
-			form.setPri_ecf(charging_info.getPri_ecf());
-			form.setSec_ecf(charging_info.getSec_ecf());
+			form.setId_set(preferred_scscf_set.getId_set());
+			form.setName(preferred_scscf_set.getName());
 		}
 		return exitCode;
 	}
 	
-	public static boolean testForDelete(Session session, int id){
-		List l = IMPU_DAO.get_by_Charging_Info_ID(session, id);
-		if (l == null || l.size() == 0){
-			return true;
+	public static boolean testForDelete(Session session, int id_set){
+		int set_usage_count = IMSU_DAO.get_IMSU_cnt_by_Preferred_SCSCF_Set_ID(session, id_set);
+		if (set_usage_count > 0){
+			return false;
 		}
-		return false;
+		return true;
+	}
+	
+	public static void prepareForward(Session session, PrefS_Form form, HttpServletRequest request, int id_set){
 		
+		if (testForDelete(session, id_set)){
+			request.setAttribute("deleteDeactivation", "false");
+			request.setAttribute("deleteSCSCFDeactivation", "false");
+		}
+		else{
+			request.setAttribute("deleteDeactivation", "true");
+			int associated_ifc_cnt = Preferred_SCSCF_Set_DAO.get_cnt_for_set(session, id_set);
+			
+			if (associated_ifc_cnt > 1){
+				request.setAttribute("deleteSCSCFDeactivation", "false");	
+			}
+			else{
+				request.setAttribute("deleteSCSCFDeactivation", "true");
+			}
+		}
+		
+		List scscf_list = Preferred_SCSCF_Set_DAO.get_all_from_set(session, id_set);
+		if (scscf_list != null)
+			request.setAttribute("scscf_list", scscf_list);
+		else
+			request.setAttribute("scscf_list", new ArrayList());
 	}
 }

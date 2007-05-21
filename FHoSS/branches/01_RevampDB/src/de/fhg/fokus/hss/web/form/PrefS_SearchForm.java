@@ -40,75 +40,64 @@
   * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
   * 
   */
+package de.fhg.fokus.hss.web.form;
 
-package de.fhg.fokus.hss.db.op;
+import java.io.Serializable;
 
-import java.util.Iterator;
-import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 
-import org.apache.log4j.Logger;
-import org.hibernate.Query;
-import org.hibernate.Session;
-
-import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.db.model.IMPI_IMPU;
-import de.fhg.fokus.hss.db.model.IMPU;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionMapping;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class DB_Op {
-	private static Logger logger = Logger.getLogger(DB_Op.class);
+public class PrefS_SearchForm extends ActionForm implements Serializable{
+	private String name;
+	private String id_set;
 	
-	public static void setUserState(Session session, int id_impi, int id_impu_implicitset, short user_state,
-			boolean apply_on_IMPU){
-
-		Query query = session.createSQLQuery(
-				"select {IMPI_IMPU.*}, {IMPU.*} from impi_impu IMPI_IMPU" +
-				"	inner join impu IMPU on IMPI_IMPU.id_impu=IMPU.id" +
-				"		where IMPU.id_implicit_set=? and IMPI_IMPU.id_impi=?")
-					.addEntity(IMPI_IMPU.class)
-					.addEntity(IMPU.class);
-
-		query.setInteger(0, id_impu_implicitset);
-		query.setInteger(1, id_impi);
-		
-		List resultList = query.list();
-		Iterator it = resultList.iterator();
-		while (it.hasNext()){
-			Object[] row = (Object[]) it.next(); 
-			IMPI_IMPU impi_impu = (IMPI_IMPU)row[0];
-			impi_impu.setUser_state(user_state);
-			session.saveOrUpdate(impi_impu);
-			if (apply_on_IMPU){
-				IMPU impu = (IMPU)row[1];
-				impu.setUser_state(user_state);
-				session.saveOrUpdate(impu);
-			}
-		}
+	private String crtPage;
+	private String rowsPerPage;
+	
+	public void reset(ActionMapping arg0, HttpServletRequest arg1) {
+		this.name = null;
+  		this.id_set = null;
+  		
+  		crtPage = "1";
+  		rowsPerPage = "20";
+  	}
+	
+	public String getCrtPage() {
+		return crtPage;
 	}
-	
-	
-	public static void resetAuthPending(Session session, int id_impi, int id_impu_implicitset){
-		
-		Query query = session.createSQLQuery(
-				"select * from impi_impu " +
-				"	inner join impu on impi_impu.id_impu=impu.id" +
-				"		where impu.id_implicit_set=? and impi_impu.id_impi=?")
-					.addEntity(IMPI_IMPU.class);
-		query.setInteger(0, id_impu_implicitset);
-		query.setInteger(1, id_impi);
-		
-		// update the user state on impi_impu and on impu table
-		List resultList = query.list();
-		Iterator it = resultList.iterator();
 
-		while (it.hasNext()){
-			IMPI_IMPU impi_impu = (IMPI_IMPU) it.next();
-			impi_impu.setUser_state(CxConstants.IMPU_user_state_Not_Registered);
-			session.saveOrUpdate(impi_impu);
-		}
+	public void setCrtPage(String crtPage) {
+		this.crtPage = crtPage;
 	}
+
+	public String getRowsPerPage() {
+		return rowsPerPage;
+	}
+	public void setRowsPerPage(String rowsPerPage) {
+		this.rowsPerPage = rowsPerPage;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getId_set() {
+		return id_set;
+	}
+
+	public void setId_set(String id_set) {
+		this.id_set = id_set;
+	}
+
 }

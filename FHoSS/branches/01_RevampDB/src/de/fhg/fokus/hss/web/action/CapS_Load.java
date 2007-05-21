@@ -61,6 +61,7 @@ import org.hibernate.Session;
 import de.fhg.fokus.hss.db.model.CapabilitiesSet;
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.Capability_DAO;
+import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.CapS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -136,6 +137,12 @@ public class CapS_Load extends Action {
 		if (cnt > 1){
 			return false;
 		}
+		
+		cnt = IMSU_DAO.get_IMSU_cnt_by_Cap_Set_ID(session, id);
+		if (cnt > 0){
+			return false;
+		}
+		
 		return true;
 	}
 	
@@ -144,10 +151,19 @@ public class CapS_Load extends Action {
 		form.setSelect_cap(select_cap);
 		
 		if (testForDelete(session, id)){
-			request.setAttribute("deleteDeactivation", "false");		
+			request.setAttribute("deleteDeactivation", "false");
+			request.setAttribute("detachDeactivation", "false");
 		}
 		else{
 			request.setAttribute("deleteDeactivation", "true");
+			int associated_cap_cnt = CapabilitiesSet_DAO.get_cnt_for_set(session, id);
+			if (associated_cap_cnt > 1){
+				request.setAttribute("detachDeactivation", "false");	
+			}
+			else{
+				request.setAttribute("detachDeactivation", "true");
+			}
+			
 		}
 		List attached_cap = CapabilitiesSet_DAO.get_all_from_set(session, id);
 		if (attached_cap != null){
