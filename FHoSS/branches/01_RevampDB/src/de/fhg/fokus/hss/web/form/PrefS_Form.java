@@ -51,16 +51,11 @@ import org.apache.struts.action.ActionMessage;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
-import de.fhg.fokus.hss.db.model.IFC;
-import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.web.util.WebConstants;
-
+import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
+import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
 import java.io.Serializable;
-import java.util.List;
-
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -68,29 +63,28 @@ import javax.servlet.http.HttpServletRequest;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class IFC_Form extends ActionForm implements Serializable{
-	private static Logger logger = Logger.getLogger(IFC_Form.class);
+
+public class PrefS_Form extends ActionForm implements Serializable{
+	private static Logger logger = Logger.getLogger(PrefS_Form.class);
 	
 	private int id;
 	private String name;
-	private int profile_part_ind;
-	private int id_application_server;
-	private int id_tp;
-
-	private List select_profile_part_indicator = WebConstants.select_profile_part_indicator;
-	private List select_tp;
-	private List select_as;
+	private int id_set;
+	private int priority;
+	private String scscf_name;
+	
+	private int associated_ID;
 	private String nextAction;
 	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.name = null;
-    	this.profile_part_ind = CxConstants.Profile_Part_Indicator_Registered;
-    	this.id_application_server = -1;
-    	this.id_tp = -1;
+    	this.id_set = -1;
+    	this.priority = 0;
+    	this.scscf_name = null;
+    	
     	this.nextAction = null;
-    	this.select_as = null;
-    	this.select_tp = null;
+    	this.associated_ID = -1;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -100,25 +94,48 @@ public class IFC_Form extends ActionForm implements Serializable{
         try{
         	Session session = HibernateUtil.getCurrentSession();
         	HibernateUtil.beginTransaction();
-        
-        	if (name == null || name.equals("")){
-        		actionErrors.add("ifc.error.name", new ActionMessage("ifc.error.name"));
+
+        	if (nextAction.equals("save")){
+        		if (name == null || name.equals("")){
+        			actionErrors.add("pref_scscf.error.name", new ActionMessage("pref_scscf.error.name"));
+        		}
+
+        		if (id_set == -1){
+        			if (scscf_name == null || scscf_name.equals("")){
+        				actionErrors.add("pref_scscf.error.scscf_name", new ActionMessage("pref_scscf.error.scscf_name"));	
+        			}
+        		}
+        		if ((name != null && !name.equals(""))){
+        			boolean result = Preferred_SCSCF_Set_DAO.test_unused_name(session, name, id_set);
+        			if (!result){
+        				actionErrors.add("pref_scscf.error.name_used", new ActionMessage("pref_scscf.error.name_used"));		
+        			}
+        		}
+        		
         	}
-        	if (id_application_server == -1){
-        		actionErrors.add("ifc.error.invalid_application_server_id", new ActionMessage("ifc.error.invalid_application_server_id"));        		
-        	}
-        	
-        	IFC ifc = IFC_DAO.get_by_Name(session, name);
-        	if (ifc != null && ifc.getId() != id){
-        		actionErrors.add("ifc.error.duplicate_name", new ActionMessage("ifc.error.duplicate_name"));
+        	else if (nextAction.equals("add_scscf")){
+    			if (scscf_name == null || scscf_name.equals("")){
+    				actionErrors.add("pref_scscf.error.scscf_name", new ActionMessage("pref_scscf.error.scscf_name"));	
+    			}
+    			
+    			if (scscf_name != null && !name.equals("")){
+        			boolean result = Preferred_SCSCF_Set_DAO.test_unused_scscf_name(session, scscf_name, id_set);
+        			if (!result){
+        				actionErrors.add("pref_scscf.error.scscf_name_used", new ActionMessage("pref_scscf.error.scscf_name_used"));		
+        			}
+    			}
+    			
+    			Preferred_SCSCF_Set preferred_scscf_set = Preferred_SCSCF_Set_DAO.get_by_Priority_and_Set_ID(session, priority, id_set);
+    			if (preferred_scscf_set != null){
+    				actionErrors.add("pref_scscf.error.duplicate_priority", new ActionMessage("pref_scscf.error.duplicate_priority"));
+    			}
         	}
         }
 		catch(DatabaseException e){
 			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
 			dbException = true;
-		}
-		
+		}		
 		catch (HibernateException e){
 			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
@@ -130,12 +147,10 @@ public class IFC_Form extends ActionForm implements Serializable{
 			}
 			HibernateUtil.closeSession();
 		}
-        
+                
         return actionErrors;
     }
     
-    
-    // getters & setters
 	public int getId() {
 		return id;
 	}
@@ -160,53 +175,35 @@ public class IFC_Form extends ActionForm implements Serializable{
 		this.nextAction = nextAction;
 	}
 
-	public int getId_application_server() {
-		return id_application_server;
+	public int getId_set() {
+		return id_set;
 	}
 
-	public void setId_application_server(int id_application_server) {
-		this.id_application_server = id_application_server;
+	public void setId_set(int id_set) {
+		this.id_set = id_set;
 	}
 
-	public int getId_tp() {
-		return id_tp;
+	public int getPriority() {
+		return priority;
 	}
 
-	public void setId_tp(int id_tp) {
-		this.id_tp = id_tp;
+	public void setPriority(int priority) {
+		this.priority = priority;
 	}
 
-	public int getProfile_part_ind() {
-		return profile_part_ind;
+	public String getScscf_name() {
+		return scscf_name;
 	}
 
-	public void setProfile_part_ind(int profile_part_ind) {
-		this.profile_part_ind = profile_part_ind;
+	public void setScscf_name(String scscf_name) {
+		this.scscf_name = scscf_name;
 	}
 
-	public List getSelect_profile_part_indicator() {
-		return select_profile_part_indicator;
+	public int getAssociated_ID() {
+		return associated_ID;
 	}
 
-	public void setSelect_profile_part_indicator(List select_profile_part_indicator) {
-		this.select_profile_part_indicator = select_profile_part_indicator;
+	public void setAssociated_ID(int associated_ID) {
+		this.associated_ID = associated_ID;
 	}
-
-	public List getSelect_as() {
-		return select_as;
-	}
-
-	public void setSelect_as(List select_as) {
-		this.select_as = select_as;
-	}
-
-	public List getSelect_tp() {
-		return select_tp;
-	}
-
-	public void setSelect_tp(List select_tp) {
-		this.select_tp = select_tp;
-	}
-
-	
 }

@@ -309,18 +309,18 @@
 
 		<!-- Preferred S-CSCF Sets -->
 		<action path="/PrefS_Load" name="PrefS_Form" type="de.fhg.fokus.hss.web.action.PrefS_Load" validate="false">
-			<forward name="success" path="/pages/network/pref_scscf.jsp" />
+			<forward name="success" path="/pages/network/preferred_scscf_set.jsp" />
 			<forward name="failure" path="/pages/errorPage.jsp"/>
 		</action>
 		
 		<action path="/PrefS_Submit" name="PrefS_Form" type="de.fhg.fokus.hss.web.action.PrefS_Submit" input="/PrefS_Load.do" validate="true">
-			<forward name="success" path="/pages/network/pref_scscf.jsp" />
-			<forward name="delete" path="/pages/network/pref_scscf_search.jsp" />									
-			<forward name="failure" path="/pages/network/pref_scscf.jsp"/>
+			<forward name="success" path="/pages/network/preferred_scscf_set.jsp" />
+			<forward name="delete" path="/pages/network/preferred_scscf_set_search.jsp" />									
+			<forward name="failure" path="/pages/network/preferred_scscf_set.jsp"/>
 		</action>
 
 		<action path="/PrefS_Search" name="PrefS_SearchForm" type="de.fhg.fokus.hss.web.action.PrefS_Search" validate="false">
-			<forward name="success" path="/pages/network/pref_scscf_search_result.jsp" />
+			<forward name="success" path="/pages/network/preferred_scscf_set_search_result.jsp" />
 			<forward name="failure" path="/pages/errorPage.jsp"/>
 		</action>
 				

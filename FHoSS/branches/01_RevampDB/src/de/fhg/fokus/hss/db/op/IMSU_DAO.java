@@ -42,6 +42,7 @@
   */
 
 package de.fhg.fokus.hss.db.op;
+import java.math.BigInteger;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -181,4 +182,24 @@ public class IMSU_DAO {
 		return (String) query.uniqueResult();
 	}
 	
+	public static int get_IMSU_cnt_by_Preferred_SCSCF_Set_ID(Session session, int id_set){
+		Query query;
+		query = session.createSQLQuery("select count(*) from imsu where id_preferred_scscf_set=?");
+		query.setInteger(0, id_set);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}	
+
+	public static int get_IMSU_cnt_by_Cap_Set_ID(Session session, int id_set){
+		Query query;
+		query = session.createSQLQuery("select count(*) from imsu where id_capabilities_set=?");
+		query.setInteger(0, id_set);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}	
+
 }

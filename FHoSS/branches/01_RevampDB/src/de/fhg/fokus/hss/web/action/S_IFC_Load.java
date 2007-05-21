@@ -157,8 +157,6 @@ public class S_IFC_Load extends Action {
 		else{
 			request.setAttribute("deleteDeactivation", "true");
 			int associated_ifc_cnt = Shared_IFC_Set_DAO.get_cnt_for_set(session, id_set);
-			
-			System.out.println("\n\nCNT:" + associated_ifc_cnt);
 			if (associated_ifc_cnt > 1){
 				request.setAttribute("detachDeactivation", "false");	
 			}

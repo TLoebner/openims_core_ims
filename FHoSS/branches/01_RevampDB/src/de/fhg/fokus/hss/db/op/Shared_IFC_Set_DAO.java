@@ -285,13 +285,11 @@ public class Shared_IFC_Set_DAO {
 		return result.intValue();
 	}
 	
-
 	public static int get_cnt(Session session){
 		Query query;
 		query = session.createSQLQuery("select count(distinct id_set) from shared_ifc_set");
 		BigInteger result = (BigInteger) query.uniqueResult();
 		return result.intValue();
 	}
-	
 	
 }

@@ -124,9 +124,13 @@ public class SAR {
 
 			IMPU impu = IMPU_DAO.get_by_Identity(session, publicIdentity);
 			IMPI impi = IMPI_DAO.get_by_Identity(session, privateIdentity);
-			if (impu == null || impi == null){
+			if (publicIdentity != null && impu == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN); 
 			}
+			if (privateIdentity != null && impi == null){
+				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN); 
+			}
+			
 			
 			IMPI_IMPU impi_impu;
 			// 2. check association
@@ -200,18 +204,27 @@ public class SAR {
 					
 				case CxConstants.Server_Assignment_Type_Unregistered_User:
 					// store the scscf_name & orgiin_host
-					IMSU_DAO.update(session, impi.getId_imsu(), serverName, originHost);
-
-					// set the user_state to Unregistered
-					DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
-							CxConstants.IMPU_user_state_Unregistered, true);
-					
-					// add a private to the response (the first private found, if are more than one available)
 					privateIdentitiesList = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, impu.getId());
 					if (privateIdentitiesList == null || privateIdentitiesList.size() == 0){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
-					UtilAVP.addUserName(response, ((IMPI)privateIdentitiesList.get(0)).getIdentity());
+					
+					IMPI first_IMPI = (IMPI) privateIdentitiesList.get(0);
+					IMSU_DAO.update(session, first_IMPI.getId_imsu(), serverName, originHost);
+
+					// set the user_state to Unregistered
+					DB_Op.setUserState(session, first_IMPI.getId(), impu.getId_implicit_set(), 
+							CxConstants.IMPU_user_state_Unregistered, true);
+					
+					//download the profile data
+					user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_implicit_set());
+					if (user_data == null){
+						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
+					}
+					UtilAVP.addUserData(response, user_data);
+					
+					// add a private to the response (the first private found, if more than one are available)					
+					UtilAVP.addUserName(response, first_IMPI.getIdentity());
 					
 					//AssociatedIdentities if neccessary
 					if (privateIdentitiesList.size() > 1){

@@ -57,10 +57,9 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_SearchForm;
+import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
+import de.fhg.fokus.hss.web.form.PrefS_SearchForm;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -75,9 +74,9 @@ public class PrefS_Search extends Action{
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		CS_SearchForm form = (CS_SearchForm) actionForm;
+		PrefS_SearchForm form = (PrefS_SearchForm) actionForm;
 		Object [] queryResult = null;
-		ChargingInfo uniqueResult = null;
+		PrefS_SearchForm uniqueResult = null;
 		ActionForward forward = null;
 		
 		int rowsPerPage = Integer.parseInt(form.getRowsPerPage());
@@ -89,19 +88,18 @@ public class PrefS_Search extends Action{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 		
-			if (form.getId_cs() != null && !form.getId_cs().equals("")){
-				uniqueResult = ChargingInfo_DAO.get_by_ID(session, Integer.parseInt(form.getId_cs()));
+			if (form.getName() != null && !form.getName().equals("")){
+				queryResult = Preferred_SCSCF_Set_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
 			}
-			else if (form.getName() != null && !form.getName().equals("")){
-				queryResult = ChargingInfo_DAO.get_by_Wildcarded_Name(session, form.getName(), firstResult, rowsPerPage);
+			else if (form.getId_set() != null && !form.getId_set().equals("")){
+				queryResult = Preferred_SCSCF_Set_DAO.get_all_from_set(session, Integer.parseInt(form.getId_set()), firstResult, rowsPerPage);
 			}
 			else{
-				queryResult = ChargingInfo_DAO.get_all(session, firstResult, rowsPerPage);
+				queryResult = Preferred_SCSCF_Set_DAO.get_all(session, firstResult, rowsPerPage);
 			}
 		
 			int maxPages = 1;
 			if (queryResult != null){
-				// more than one result
 				maxPages = ((((Integer)queryResult[0]).intValue() - 1) / rowsPerPage) + 1;
 				request.setAttribute("resultList", (List)queryResult[1]);
 			}
@@ -113,7 +111,6 @@ public class PrefS_Search extends Action{
 				request.setAttribute("resultList", list);
 			}
 			
-			
 			if (currentPage > maxPages){
 				currentPage = 0;
 			}
@@ -123,7 +120,6 @@ public class PrefS_Search extends Action{
 			request.setAttribute("rowPerPage", String.valueOf(rowsPerPage));
 			
 			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-			
 		}
 		catch(DatabaseException e){
 			logger.error("Database Exception occured!\nReason:" + e.getMessage());

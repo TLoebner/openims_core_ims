@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.math.BigInteger;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -135,19 +136,19 @@ public class SP_IFC_DAO {
 	
 		
 	public static int get_Unreg_Serv_Count(Session session, int id_sp){
-		// to be fixed!
 		
-//		Query query;
-//		query = session.createQuery(
-//				"select count(*) from SP_IFC as sp_ifc" +
-//				"	inner join sp_ifc.sp" +
-//				"	inner join sp_ifc.ifc");// +
-			//	"		where sp_ifc.sp.id=? and sp_ifc.ifc.profile_part_ind=?");
-		//query.setInteger(0, id_sp);
-		//query.setInteger(1, CxConstants.Profile_Part_Indicator_UnRegistered);
-//		Integer result = (Integer)query.uniqueResult();
-		//return result.intValue();
-		return 0;
+		Query query;
+		query = session.createSQLQuery(
+				"select count(*) from sp_ifc" +
+				"	inner join sp on sp.id=sp_ifc.id_sp" +
+				"	inner join ifc on ifc.id=sp_ifc.id_ifc" + 
+				"		where sp.id=? and ifc.profile_part_ind=?");
+		query.setInteger(0, id_sp);
+		query.setInteger(1, CxConstants.Profile_Part_Indicator_UnRegistered);
+		BigInteger result = (BigInteger)query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
 	}
 	
 	public static List get_all_IFC_by_SP_ID(Session session, int id_sp){

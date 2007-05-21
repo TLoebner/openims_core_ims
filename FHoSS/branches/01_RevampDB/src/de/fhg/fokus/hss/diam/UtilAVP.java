@@ -270,7 +270,7 @@ public class UtilAVP {
 			}
 		}
 		
-		if (optional_cap_list != null){
+		if (optional_cap_list != null ){
 			it = optional_cap_list.iterator();
 			AVP opt_cap_avp;
 			while (it.hasNext()){
@@ -280,8 +280,11 @@ public class UtilAVP {
 				server_cap.addChildAVP(opt_cap_avp);
 			}
 		}
-		
-		message.addAVP(server_cap);
+
+		if ((mandatory_cap_list != null && mandatory_cap_list.size() > 0) || (optional_cap_list != null && optional_cap_list.size() > 0)){
+			System.out.println("\n\n\nAdding CAPAAA");
+			message.addAVP(server_cap);	
+		}
 	}
 
 	public static void addResultCode(DiameterMessage message, int resultCode){

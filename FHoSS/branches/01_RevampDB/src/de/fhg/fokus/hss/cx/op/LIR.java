@@ -125,7 +125,7 @@ public class LIR {
 			switch (user_state){
 			
 				case CxConstants.IMPU_user_state_Registered:
-					if (scscf_name == null){
+					if (scscf_name == null || scscf_name.equals("")){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
 					UtilAVP.addServerName(response, scscf_name);
@@ -147,12 +147,15 @@ public class LIR {
 
 				case CxConstants.IMPU_user_state_Not_Registered:
 					unregistered_services = false;
-					if (SP_IFC_DAO.get_Unreg_Serv_Count(session, impu.getId_sp()) > 0){
+					
+					int cnt =SP_IFC_DAO.get_Unreg_Serv_Count(session, impu.getId_sp());
+					System.out.println("\n\nUnreg services count:" + cnt);
+					if (cnt > 0){
 						unregistered_services = true;
 					}
 					
 					if (originatingRequest == 1 || unregistered_services == true){
-						if (scscf_name != null){
+						if (scscf_name != null && !scscf_name.equals("")){
 							UtilAVP.addServerName(response, scscf_name);
 							UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 							break;

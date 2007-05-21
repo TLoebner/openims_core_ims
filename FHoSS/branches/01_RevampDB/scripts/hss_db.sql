@@ -1,13 +1,15 @@
--- MySQL dump 10.9
+-- MySQL dump 10.10
 --
 -- Host: localhost    Database: hss_db
 -- ------------------------------------------------------
--- Server version	4.1.20-log
+-- Server version	5.0.21-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
@@ -192,9 +194,6 @@ CREATE TABLE `impu` (
   KEY `idx_wildcard_psi` (`wildcard_psi`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='IM Public Identities';
 
-
-
-
 --
 -- Table structure for table `impu_visited_network`
 --
@@ -226,9 +225,6 @@ CREATE TABLE `imsu` (
   KEY `idx_preferred_scscf` (`id_preferred_scscf_set`),
   KEY `idx_name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='IMS Subscription';
-
-
-
 
 --
 -- Table structure for table `preferred_scscf_set`
@@ -361,7 +357,7 @@ CREATE TABLE `sp_ifc` (
   `id` int(11) NOT NULL auto_increment,
   `id_sp` int(11) NOT NULL default '0',
   `id_ifc` int(11) NOT NULL default '0',
-  `priority` int(11) NOT NULL default '0',  
+  `priority` int(11) NOT NULL default '0',
   PRIMARY KEY  (`id`),
   KEY `id_sp` (`id_sp`),
   KEY `id_ifc` (`id_ifc`),
@@ -430,6 +426,7 @@ CREATE TABLE `visited_network` (
   PRIMARY KEY  (`id`),
   KEY `idx_identity` (`identity`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Visited Networks';
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
@@ -438,7 +435,6 @@ CREATE TABLE `visited_network` (
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
 
 # DB access rights
 grant delete,insert,select,update on hss_db.* to hss@localhost identified by 'hss';

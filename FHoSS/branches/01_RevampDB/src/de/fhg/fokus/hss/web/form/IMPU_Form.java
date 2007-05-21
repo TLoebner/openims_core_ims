@@ -43,12 +43,19 @@
 
 package de.fhg.fokus.hss.web.form;
 
+import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 
 import java.io.Serializable;
 import java.util.List;
@@ -62,7 +69,8 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class IMPU_Form extends ActionForm implements Serializable{
-
+	private static Logger logger = Logger.getLogger(IMPU_Form.class);
+	
 	private int id;
 	private String identity;
 	private boolean barring;
@@ -126,6 +134,35 @@ public class IMPU_Form extends ActionForm implements Serializable{
         if (this.id_charging_info == -1){
         	actionErrors.add("id_charging_info", new ActionMessage("impu_form.error.id_charging_info"));
         }
+        
+        boolean dbException = false;
+        try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        	
+        	IMPU impu = IMPU_DAO.get_by_Identity(session, identity);
+        	if (impu != null && impu.getId() != id){
+        		actionErrors.add("impu_form.error.duplicate_identity", new ActionMessage("impu_form.error.duplicate_identity"));	
+        	}
+        }
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}        	
+        
         
         return actionErrors;
     }

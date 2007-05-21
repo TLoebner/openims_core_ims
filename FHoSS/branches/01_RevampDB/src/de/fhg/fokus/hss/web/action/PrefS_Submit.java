@@ -54,11 +54,10 @@ import org.apache.struts.action.ActionMapping;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-
-import de.fhg.fokus.hss.db.model.ChargingInfo;
-import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
+import de.fhg.fokus.hss.db.model.Preferred_SCSCF_Set;
+import de.fhg.fokus.hss.db.op.Preferred_SCSCF_Set_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.web.form.CS_Form;
+import de.fhg.fokus.hss.web.form.PrefS_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
@@ -74,69 +73,81 @@ public class PrefS_Submit extends Action{
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
 		
-		CS_Form form = (CS_Form) actionForm;
+		PrefS_Form form = (PrefS_Form) actionForm;
 		String nextAction = form.getNextAction();
 		ActionForward forward = null;
-		int id = form.getId();
+		int id_set = form.getId_set();
 
 		boolean dbException = false;
 		try{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
-
-			// for all the actions we test if the current element can be deleted or not
-			if (id != -1){
-				if (CS_Load.testForDelete(session, form.getId())){
-					request.setAttribute("deleteDeactivation", "false");
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
-			}
-			
-			// test for all the possible actions
+					
 			if (nextAction.equals("save")){
-				ChargingInfo charging_info;
-				if (id == -1){
+				Preferred_SCSCF_Set preferred_scscf_set;
+
+				if (id_set == -1){
 					// create
-					charging_info = new ChargingInfo();
+					preferred_scscf_set = new Preferred_SCSCF_Set();
+					preferred_scscf_set.setName(form.getName());
+					preferred_scscf_set.setPriority(form.getPriority());
+					preferred_scscf_set.setScscf_name(form.getScscf_name());
+					
+					int max_id_set = Preferred_SCSCF_Set_DAO.get_max_id_set(session);
+					preferred_scscf_set.setId_set(max_id_set + 1);
+					Preferred_SCSCF_Set_DAO.insert(session, preferred_scscf_set);
+					id_set = max_id_set + 1;
+					form.setId_set(id_set);
+					
 				}	
 				else{
 					// update
-					charging_info = ChargingInfo_DAO.get_by_ID(session, id);
+					Preferred_SCSCF_Set_DAO.update_all_from_set(session, id_set, form.getName());
 				}	
-				// apply the changes
-				charging_info.setName(form.getName());
-				charging_info.setPri_ccf(form.getPri_ccf());
-				charging_info.setSec_ccf(form.getSec_ccf());
-				charging_info.setPri_ecf(form.getPri_ecf());
-				charging_info.setSec_ecf(form.getSec_ecf());
-				
-				if (id == -1){
-					ChargingInfo_DAO.insert(session, charging_info);
-					id = charging_info.getId();
-					form.setId(id);
-				}
-				else{
-					ChargingInfo_DAO.update(session, charging_info);
-				}
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + id);
+				forward =  new ActionForward(forward.getPath() + "?id_set=" + id_set);
 			}
 			else if (nextAction.equals("refresh")){
-				ChargingInfo charging_info = (ChargingInfo) ChargingInfo_DAO.get_by_ID(session, id);
-				if (!CS_Load.setForm(form, charging_info)){
-					logger.error("The CS withe the ID:" + id + " was not loaded from database!");
+				Preferred_SCSCF_Set preferred_scscf_set = (Preferred_SCSCF_Set) Preferred_SCSCF_Set_DAO.get_by_set_ID(session, id_set);
+
+				if (!PrefS_Load.setForm(form, preferred_scscf_set)){
+					logger.error("The Preferred-SCSCF-Set with the ID:" + id_set + " was not loaded from database!");
 				}
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + id);
+				forward =  new ActionForward(forward.getPath() + "?id_set=" + id_set);
 			}
 			else if (nextAction.equals("delete")){
-				ChargingInfo_DAO.delete_by_ID(session, form.getId());
+				Preferred_SCSCF_Set_DAO.delete_set_by_ID(session, id_set);
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			else if (nextAction.equals("add_scscf")){
+				Preferred_SCSCF_Set preferred_scscf_set = new Preferred_SCSCF_Set();
+				preferred_scscf_set.setId_set(id_set);
+				preferred_scscf_set.setName(form.getName());
+				preferred_scscf_set.setPriority(form.getPriority());	
+				preferred_scscf_set.setScscf_name(form.getScscf_name());
+				Preferred_SCSCF_Set_DAO.insert(session, preferred_scscf_set);
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id_set=" + id_set);
+			}
+			else if (nextAction.equals("delete_scscf")){
+				int cnt = Preferred_SCSCF_Set_DAO.get_cnt_for_set(session, id_set); 
+				Preferred_SCSCF_Set_DAO.delete_scscf_from_set(session, form.getAssociated_ID());
+				
+				if (cnt == 1){
+					forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+				}
+				else{
+					forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+					forward = new ActionForward(forward.getPath() +"?id_set=" + id_set);
+				}
+				
+			}
+			
+			PrefS_Load.prepareForward(session, form, request, id_set);
 		}
 		catch(DatabaseException e){
 			logger.error("Database Exception occured!\nReason:" + e.getMessage());
