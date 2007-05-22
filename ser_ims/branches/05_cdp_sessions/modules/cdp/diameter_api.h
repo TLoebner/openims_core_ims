@@ -78,7 +78,8 @@ AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_
 int AAADropTransaction(AAATransaction *trans);
 
 AAASessionId AAACreateSession();
-int generate_sessionID( str *sID, unsigned int end_pad_len);
+//int generate_sessionID( str *sID, unsigned int end_pad_len);
+int generate_sessionID( str *sID, unsigned int end_pad_len, str* opt);
 
 
 int AAADropSession(AAASessionId *s);

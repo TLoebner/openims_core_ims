@@ -1,5 +1,5 @@
 /**
- * $Id: acctstatemachine.h 2 2007-04-16 22:37:20Z placido $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -58,11 +58,11 @@
 #ifndef _ACCT_STATEMACHINE_H
 #define _ACCT_STATEMACHINE_H
 
-
+#include "diameter.h"
 #include "acct.h"
 
 
-int acct_cli_sm_process(acc_session *s,acc_event_t event,AAAMessage *msg,int session_locked);
+int acct_cli_sm_process(AAAAcctSession *s, acc_event_t event, AAAMessage *req, AAAMessage *ans, int session_locked);
 
 
 #endif /* _ACCT_STATEMACHINE_H */

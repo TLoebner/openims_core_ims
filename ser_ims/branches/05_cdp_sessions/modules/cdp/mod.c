@@ -59,6 +59,8 @@
 #include "diameter_peer.h"
 #include "config.h"
 #include "cdp_load.h"
+//#include "acct.h"
+//#include "timer.h"
 
 MODULE_VERSION
 
@@ -66,6 +68,9 @@ MODULE_VERSION
 char* config_file="DiameterPeer.xml"; 	/**< default DiameterPeer configuration filename */
 
 extern dp_config *config; 				/**< DiameterPeer configuration structure */
+
+int cdp_acc_sessions_hash_size=256;		/**< size of the acc_sessions hash table */
+
 
 /**
  * Exported functions. This is the API available for use from other SER modules.
@@ -98,6 +103,12 @@ extern dp_config *config; 				/**< DiameterPeer configuration structure */
  * <p>
  * - AAAAddRequestHandler() - add a #AAARequestHandler_f callback to request being received
  * - AAAAddResponseHandler() - add a #AAAResponseHandler_f callback to responses being received
+ * <p>
+ * <p>
+ * - AAACreateAcctSession() - 
+ * - AAAGetAcctSession() - 
+ * - AAADropAcctSession() - 
+ * - AAAAcctCliEvent() -
  */
 static cmd_export_t cdp_cmds[] = {
 	{"load_cdp",					(cmd_function)load_cdp, 				NO_SCRIPT, 0, 0},
@@ -132,6 +143,15 @@ static cmd_export_t cdp_cmds[] = {
 	{"AAACreateAuthSession",		(cmd_function)AAACreateAuthSession,		NO_SCRIPT, 0, 0},
 	{"AAAGetAuthSession",			(cmd_function)AAAGetAuthSession,		NO_SCRIPT, 0, 0},	
 	//{"AAADropAuthSession",			(cmd_function)AAADropAuthSession,		NO_SCRIPT, 0, 0},	
+	
+	{"AAACreateAcctSession",		(cmd_function)AAACreateAcctSession,		NO_SCRIPT, 0, 0},
+	{"AAAGetAcctSession",			(cmd_function)AAAGetAcctSession,		NO_SCRIPT, 0, 0},	
+	{"AAADropAcctSession",			(cmd_function)AAADropAcctSession,		NO_SCRIPT, 0, 0},
+	{"AAAAcctCliEvent",				(cmd_function)AAAAcctCliEvent,			NO_SCRIPT, 0, 0},
+	{"AAAAcctCliStart",				(cmd_function)AAAAcctCliStart,			NO_SCRIPT, 0, 0},
+	{"AAAAcctCliStop",				(cmd_function)AAAAcctCliStop,			NO_SCRIPT, 0, 0},
+	{"AAAAcctCliInterim",			(cmd_function)AAAAcctCliInterim,		NO_SCRIPT, 0, 0},
+	
 	{"AAAPrintMessage",				(cmd_function)AAAPrintMessage,			NO_SCRIPT, 0, 0},
 	{ 0, 0, 0, 0, 0 }
 };
@@ -143,6 +163,7 @@ static cmd_export_t cdp_cmds[] = {
  */
 static param_export_t cdp_params[] = {	
 	{ "config_file",PARAM_STRING,&config_file}, /**< configuration filename */
+	{"acc_sess_hash_size", 	PARAM_INT, &cdp_acc_sessions_hash_size}, /**< accounting sessions hash size */
 	{ 0, 0, 0 }
 };
 
@@ -178,6 +199,7 @@ static int cdp_init( void )
 		LOG(L_CRIT,"ERR:"M_NAME":cdp_init(): error initializing the diameter peer\n");
 		return 1;
 	}
+	
 	register_procs(2+config->workers + 2 * config->peers_cnt);
 	return 0;
 }

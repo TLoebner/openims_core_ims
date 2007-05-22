@@ -1,20 +1,69 @@
 #ifndef __DIAMETER_BASE_ACCT_H
 #define __DIAMETER_BASE_ACCT_H
 
-/*
- * acct.h, acct.c provide the accounting portion of Diameter based 
+/**
+ * $Id$
+ *  
+ * Copyright (C) 2004-2007 FhG Fokus
+ * Copyright (C) 2007 PT Inovacao
+ *
+ * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+ * implementation
+ *
+ * Open IMS Core is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * For a license to use the Open IMS Core software under conditions
+ * other than those described here, or to purchase support for this
+ * software, please contact Fraunhofer FOKUS by e-mail at the following
+ * addresses:
+ *     info@open-ims.org
+ *
+ * Open IMS Core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * It has to be noted that this Open Source IMS Core System is not 
+ * intended to become or act as a product in a commercial context! Its 
+ * sole purpose is to provide an IMS core reference implementation for 
+ * IMS technology testing and IMS application prototyping for research 
+ * purposes, typically performed in IMS test-beds.
+ * 
+ * Users of the Open Source IMS Core System have to be aware that IMS
+ * technology may be subject of patents and licence terms, as being 
+ * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+ * standards. Thus all Open IMS Core users have to take notice of this 
+ * fact and have to agree to check out carefully before installing, 
+ * using and extending the Open Source IMS Core System, if related 
+ * patents and licences may become applicable to the intended usage 
+ * context.  
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+ 
+/**
+ * \file
+ * 
+ * acct.h, acct.c provides the accounting portion of Diameter based 
  * protocol.
  * 
  * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
  * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  */
 
-#include "cdp_load.h"
-#include "../../locking.h"
+
+#include "utils.h"
+#include "diameter_api.h"
 
 /* Command code used in the accounting portion of Diameter base protocol. */
-#define ACR 	271
-#define ACA 	271
+#define Code_AC 	271
+//#define ACA 	271
 
 
 
@@ -57,18 +106,23 @@ typedef struct _acc_session {
 	str* sID;								/**< session id */
 	str* peer_fqdn;							/**< FQDN of peer */
 	str* dlgid;       						/**< application-level identifier, combines application session (e.g. SIP dialog) or event with diameter accounting session */
+	
 	acc_state_t state;						/**< current state */
 	unsigned int acct_record_number; 		/**< number of last accounting record within this session */
+	unsigned int aii;	 					/**< expiration of Acct-Interim-Interval (seconds) */
+	unsigned int timeout;					/**< session timeout (seconds) */
+	
+	AAAMessage* interim_acr;				/**< interim ACR to send every aii seconds */
 	
 	struct _acc_session *next;				/**< next accounting session in this hash slot 		*/
 	struct _acc_session *prev;				/**< previous accounting session in this hash slot	*/
-} acc_session;
+} AAAAcctSession;
 
 
 /** Structure for an accounting session hash slot */
 typedef struct {
-	acc_session *head;						/**< first accounting session in this hash slot */
-	acc_session *tail;						/**< last accounting session in this hash slot 	*/
+	AAAAcctSession *head;						/**< first accounting session in this hash slot */
+	AAAAcctSession *tail;						/**< last accounting session in this hash slot 	*/
 	gen_lock_t *lock;					/**< slot lock 									*/	
 } acc_session_hash_slot;
 
@@ -76,18 +130,24 @@ typedef struct {
 
 inline unsigned int get_acc_session_hash(str* id);
 
-int acc_session_init(int hash_size);
+int acc_sessions_init(int hash_size);
 
-void acc_session_destroy();
+void acc_sessions_destroy();
 
 inline void s_lock(unsigned int hash);
 inline void s_unlock(unsigned int hash);
 
 
 
-void free_acc_session(acc_session *s);
+void free_acc_session(AAAAcctSession *s);
 
-//AAAMessage * ACR_create(AAASessionId sessId, unsigned int type, struct cdp_binds* cdpb);
+/** exported funcs */
+AAAAcctSession* AAACreateAcctSession(str* peer, str* dlgid);
+AAAAcctSession* AAAGetAcctSession(str *dlgid); 
+void AAADropAcctSession(AAAAcctSession* s);
+AAAMessage* AAAAcctCliEvent(AAAMessage* acr, str* dlgid, str* peer_fqdn);
+AAAMessage* AAAAcctCliStart(AAAMessage* acr, str* dlgid, str* peer_fqdn, AAAAcctSession *s);
+AAAMessage* AAAAcctCliStop(AAAMessage* acr, str* peer_fqdn, AAAAcctSession *s);
+AAAMessage* AAAAcctCliInterim(AAAMessage* acr, str* peer_fqdn, AAAAcctSession *s);
 
-//void test(int x);
 #endif /*__DIAMETER_BASE_ACCT_H*/
