@@ -68,6 +68,7 @@
 #include "api_process.h"
 #include "transaction.h"
 #include "session.h"
+#include "acct.h"
 
 #ifdef CDP_FOR_SER
 	#include "../../pt.h"
@@ -85,6 +86,13 @@ gen_lock_t *pid_list_lock;	/**< lock for list of local processes	*/
 
 extern handler_list *handlers; 		/**< list of handlers */
 extern gen_lock_t *handlers_lock;	/**< lock for list of handlers */
+
+
+extern int cdp_acc_sessions_hash_size;
+
+extern acc_session_hash_slot *acc_sessions;		/**< the accounting sessions hash table	*/
+
+extern callback_f acc_session_timer;
 
 
 /**
@@ -220,6 +228,15 @@ int diameter_peer_init(char *cfg_filename)
 	
 	/* init the auth session */
 	if (!auth_session_init()) goto error;
+	
+	/* init the accounting session storage */
+	if (!acc_sessions_init(cdp_acc_sessions_hash_size)){
+		LOG(L_ERR,"ERROR:init_diameter_peer(): Error initializing the Hash Table for accounting sessions\n");
+		goto error;
+	}
+	
+	/* register the acc session timer */
+	//if (add_timer(60,0,acc_session_timer,acc_sessions)<0) return 1;
 	
 #ifdef CDP_FOR_SER
 	/* init diameter transactions */

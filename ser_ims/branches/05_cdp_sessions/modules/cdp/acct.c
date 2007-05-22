@@ -1,4 +1,52 @@
-/*
+/**
+ * $Id$
+ *  
+ * Copyright (C) 2004-2007 FhG Fokus
+ * Copyright (C) 2007 PT Inovacao
+ *
+ * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+ * implementation
+ *
+ * Open IMS Core is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * For a license to use the Open IMS Core software under conditions
+ * other than those described here, or to purchase support for this
+ * software, please contact Fraunhofer FOKUS by e-mail at the following
+ * addresses:
+ *     info@open-ims.org
+ *
+ * Open IMS Core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * It has to be noted that this Open Source IMS Core System is not 
+ * intended to become or act as a product in a commercial context! Its 
+ * sole purpose is to provide an IMS core reference implementation for 
+ * IMS technology testing and IMS application prototyping for research 
+ * purposes, typically performed in IMS test-beds.
+ * 
+ * Users of the Open Source IMS Core System have to be aware that IMS
+ * technology may be subject of patents and licence terms, as being 
+ * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+ * standards. Thus all Open IMS Core users have to take notice of this 
+ * fact and have to agree to check out carefully before installing, 
+ * using and extending the Open Source IMS Core System, if related 
+ * patents and licences may become applicable to the intended usage 
+ * context.  
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+ 
+/**
+ * \file
+ * 
  * acct.h, acct.c provides the accounting portion of Diameter based 
  * protocol.
  * 
@@ -6,8 +54,8 @@
  * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  */
 #include "acct.h"
-
-//extern struct tm_binds tmb;          /**< Structure with pointers to tm funcs 		*/
+#include "acctstatemachine.h"
+#include "time.h"
 
 int acc_sessions_hash_size;						/**< size of the accounting session hash table 		*/
 acc_session_hash_slot *acc_sessions=0;			/**< the hash table									*/
@@ -21,6 +69,7 @@ acc_session_hash_slot *acc_sessions=0;			/**< the hash table									*/
 inline unsigned int get_acc_session_hash(str* id)
 {
 	if (!id) return 0;
+	if (!id->s) return 0;
 	if (id->len==0) return 0;
 #define h_inc h+=v^(v>>3)
 	char* p;
@@ -28,12 +77,12 @@ inline unsigned int get_acc_session_hash(str* id)
 	register unsigned h;
   	
 	h=0;
-	for (p=id->s; p<=(id->s+id->len-4); p+=4){
+	for (p=id->s; p<=((id->s)+(id->len)-4); p+=4){
 		v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
 		h_inc;
 	}
 	v=0;
-	for (;p<(id->s+id->len); p++) {
+	for (;p<((id->s)+(id->len)); p++) {
 		v<<=8;
 		v+=*p;
 	}
@@ -78,7 +127,7 @@ int acc_sessions_init(int hash_size)
 void acc_sessions_destroy()
 {
 	int i;
-	acc_session *s,*ns;
+	AAAAcctSession *s,*ns;
 	for(i=0;i<acc_sessions_hash_size;i++){
 		s_lock(i);
 			s = acc_sessions[i].head;
@@ -99,9 +148,9 @@ void acc_sessions_destroy()
  */
 inline void s_lock(unsigned int hash)
 {
-//	LOG(L_CRIT,"GET %d\n",hash);
+	LOG(L_CRIT,"GET %d\n",hash);
 	lock_get(acc_sessions[(hash)].lock);
-//	LOG(L_CRIT,"GOT %d\n",hash);	
+	LOG(L_CRIT,"GOT %d\n",hash);	
 }
 
 /**
@@ -111,7 +160,7 @@ inline void s_lock(unsigned int hash)
 inline void s_unlock(unsigned int hash)
 {
 	lock_release(acc_sessions[(hash)].lock);
-//	LOG(L_CRIT,"RELEASED %d\n",hash);	
+	LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
 
 
@@ -122,9 +171,9 @@ inline void s_unlock(unsigned int hash)
  * @param dlgid - the app-level id (e.g. SIP dialog)
  * @returns the acc_session* or NULL if not found
  */
-acc_session* get_acc_session(str* dlgid)
+AAAAcctSession* get_acc_session(str* dlgid)
 {
-	acc_session *s=0;
+	AAAAcctSession *s=0;
 	unsigned int hash = get_acc_session_hash(dlgid);
 
 	s_lock(hash);
@@ -145,26 +194,25 @@ acc_session* get_acc_session(str* dlgid)
 
 
 /**
- * Creates a new acc_session structure.
+ * Creates a new AAAAcctSession structure.
  * Does not add the structure to the list
  * @param dlgid - application-level id
- * @returns the new acc_session* or NULL acc_sesssion
+ * @returns the new AAAAcctSession* or NULL
  */
-acc_session* new_acc_session(str* dlgid)
+AAAAcctSession* new_acc_session(str* dlgid)
 {
-	acc_session *s;
+	AAAAcctSession *s;
 	
-	s = shm_malloc(sizeof(acc_session));
+	s = shm_malloc(sizeof(AAAAcctSession));
 	if (!s) {
 		LOG(L_ERR,"ERR:new_acc_session(): Unable to alloc %d bytes\n",
-			sizeof(acc_session));
+			sizeof(AAAAcctSession));
 		goto error;
 	}
-	memset(s,0,sizeof(acc_session));
+	memset(s,0,sizeof(AAAAcctSession));
 	
-	s->hash = get_acc_session_hash(dlgid);		
-	//STR_SHM_DUP(d->call_id,call_id,"shm");
-	//STR_SHM_DUP(d->aor,aor,"shm");	
+	s->hash = get_acc_session_hash(dlgid);
+	
 	return s;
 error:
 	if (s){
@@ -177,10 +225,10 @@ error:
 /**
  * Creates and adds an accounting session to the hash table.
  * \note Locks the hash slot if OK! Call s_unlock(acc_session->hash) when you are finished)
- * @param s - acc_session to add
- * @returns the new acc_session* or NULL acc_session
+ * @param s - AAAAcctSession to add
+ * @returns the new AAAAcctSession* or NULL
  */
-acc_session* add_acc_session(acc_session* s)
+AAAAcctSession* add_acc_session(AAAAcctSession* s)
 {
 	s_lock(s->hash);
 		s->next = 0;
@@ -193,16 +241,34 @@ acc_session* add_acc_session(acc_session* s)
 }
 
 
-
+/**
+ * Deletes an acc_session from the hash table
+ * \note Must be called with a lock on the acc_session hash slot
+ * @param s - the AAAAcctSession to delete
+ */
+void del_acc_session(AAAAcctSession *s)
+{
+	LOG(L_INFO,"DBG:del_acc_session(): Deleting AAAAcctSession <%.*s>\n",s->sID->len, s->sID->s);
+	if (s->prev) s->prev->next = s->next;
+	else acc_sessions[s->hash].head = s->next;
+	if (s->next) s->next->prev = s->prev;
+	else acc_sessions[s->hash].tail = s->prev;
+	free_acc_session(s);
+}
 
 /**
  * Frees an accounting session.
  * @param s - the accounting session to free
  */
-void free_acc_session(acc_session *s)
+void free_acc_session(AAAAcctSession *s)
 {
+	LOG(L_DBG,"DBG:free_acc_session()");
 	if (!s) return;
-	if (s->sID->s) shm_free(s->sID->s);	
+	if (s->sID->s) shm_free(s->sID->s);
+	
+	// TODO: free interim_acr, peer_fqdn, sID, dlgid, and peer_fqdn.s, dlgid.s
+	// TODO: remove interim timer...
+	
 	shm_free(s);
 }
 
@@ -211,16 +277,16 @@ void free_acc_session(acc_session *s)
 
 /****************************** API FUNCTIONS ********************************/
 /**
- * Creates an acc_session.
+ * Creates an AAAAcctSession.
  * @param peer - accounting server FQDN.
  * @param dlgid - application-level id of accountable event or session
- * @returns the new acc_session
+ * @returns the new AAAAcctSession*
  */
-acc_session* AAACreateAccSession(str* peer, str* dlgid)
+AAAAcctSession* AAACreateAcctSession(str* peer, str* dlgid)
 {
-	acc_session* s = NULL;
+	AAAAcctSession* s = NULL;
 	
-	LOG(L_INFO, "INF: AAACreateAccSession\n");
+	LOG(L_INFO, "INF: AAACreateAcctSession\n");
 		
 	s = new_acc_session(dlgid);
 	if (!s) return 0;		
@@ -242,9 +308,16 @@ acc_session* AAACreateAccSession(str* peer, str* dlgid)
 	s->sID = shm_malloc(sizeof(str));
 	s->sID->len = 0;
 	s->sID->s = 0;
+	
+	s->timeout = time(0) + 60; // TODO: use parameter "session_timeout"
+	s->aii=0;
+	
 	/* generates a new session-ID */
-	if (generate_sessionID( s->sID, 0 )!=1) goto error;
-	//LOG(L_INFO, "s->sID: %.*s\n", s->sID->len, s->sID->s);
+	//if (generate_sessionID( s->sID, 0 )!=1) goto error;
+	if (generate_sessionID( s->sID, 0, dlgid )!=1) goto error; // TODO: check pad length...
+	LOG(L_INFO, "s->sID: %.*s\n", s->sID->len, s->sID->s);
+	
+	LOG(L_INFO, "s->hash: %d\n", s->hash);
 	
 	s->prev = NULL;
 	s->next = NULL;
@@ -259,14 +332,15 @@ acc_session* AAACreateAccSession(str* peer, str* dlgid)
 	}*/
 		
 	add_acc_session(s);
+	s_unlock(s->hash);
 	
 	return s;
 
 error:
 	if (s) 
-		LOG(L_ERR, "ERR: AAACreateAccSession: AAAAccSession exists\n");
+		LOG(L_ERR, "ERR: AAACreateAccSession: AAAAcctSession exists\n");
 	else 	
-		LOG(L_ERR, "ERR: AAACreateAccSession: Error on new AAAAccSession \
+		LOG(L_ERR, "ERR: AAACreateAccSession: Error on new AAAAcctSession \
 			generation\n");
 	
 	return NULL;
@@ -274,23 +348,211 @@ error:
 
 
 /**
- * Get an acc_session based on the application-level id.
+ * Get an AAAAcctSession based on the application-level id.
  * @param dlgid app-level id 
- *  
+ * @returns the AAAAcctSession* if found, else NULL
  */
-acc_session* AAAGetAccSession(str *dlgid) 
+AAAAcctSession* AAAGetAcctSession(str *dlgid) 
 {
-	acc_session* s;
+	AAAAcctSession* s;
 	
-	LOG(L_INFO, "INF: AAAGetAccSession\n");
+	LOG(L_INFO, "INF: AAAGetAcctSession\n");
 	s = get_acc_session(dlgid);
-	if (!s) LOG(L_ERR, "ERR: AAAGetAccSession: acc_session does not exist\n");
+	if (!s) {
+		LOG(L_ERR, "ERR: AAAGetAcctSession: AAAAcctSession does not exist\n");
+		return 0;
+	}
+	unsigned int hash = get_acc_session_hash(dlgid);
+	s_unlock(hash);
 	
 	return s;
 }
 
+/**
+ * Drop a given AAAAcctSession.
+ * @param s the accounting session to drop
+ */
+void AAADropAcctSession(AAAAcctSession* s) {
+	LOG(L_INFO, "INF: AAADropAcctSession\n");
+	if (s) {
+		AAAAcctSession *s1 = get_acc_session(s->dlgid);
+		if (!s1) {
+			LOG(L_ERR, "ERR: AAADropAcctSession: AAAAcctSession does not exist\n");
+			return;
+		}
+		unsigned int hash = get_acc_session_hash(s1->dlgid);
+		//del_acc_session(s);
+		s_unlock(hash);
+	}
+}
 
 
+
+/**
+ * Accounting client: sends an ACR Event and returns answer
+ * @param acr ACR with EVENT_RECORD Accounting-Record-Type
+ * @param dlgid app-level session/dialog id
+ * @param peer_fqdn FQDN of diameter peer to send message to
+ * @return answer (ACA) or NULL if sending failed
+ */
+AAAMessage* AAAAcctCliEvent(AAAMessage* acr, str* dlgid, str* peer_fqdn) {
+	// TODO: check acr has Accounting-Record-Type with EVENT_RECORD value
+	
+	AAAMessage* aca = 0;
+	AAA_AVP      *avp;
+	
+	AAAAcctSession* s = AAACreateAcctSession(peer_fqdn, dlgid); 	
+	if (!s) return 0;
+	
+	// add Session-Id AVP
+	avp = AAACreateAVP( 263, 0, 0, s->sID->s, s->sID->len,
+			AVP_DUPLICATE_DATA);
+	if ( !avp || AAAAddAVPToMessage(acr,avp,0)!=AAA_ERR_SUCCESS) {
+		LOG(L_ERR,"ERROR:AAAAcctCliEvent: cannot create/add Session-Id avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	acr->sessionId = avp;
+	
+	acct_cli_sm_process(s, ACC_EV_EVENT, acr, aca, 0);
+	
+	AAADropAcctSession(s); // TODO: only drop if received successfull answer, otherwise need to buffer and follow Accounting client state machine...
+	
+	return aca;
+error:
+	return 0;
+}
+
+/**
+ * Accounting client sends an ACR Start and returns answer
+ * @param acr ACR with START_RECORD Accounting-Record-Type
+ * @param dlgid id of app-level session
+ * @param peer_fqdn FQDN of diameter peer
+ * @param s pointer to newly created session
+ * @return answer (ACA) or NULL if sending failed
+ */
+AAAMessage* AAAAcctCliStart(AAAMessage* acr, str* dlgid, str* peer_fqdn, AAAAcctSession *s) {
+	// TODO: check acr has Accounting-Record-Type with START_RECORD value
+	AAAMessage* aca = 0;
+	AAA_AVP      *avp;
+	
+	s = AAACreateAcctSession(peer_fqdn, dlgid);
+	
+	// add Session-Id AVP
+	avp = AAACreateAVP( 263, 0, 0, s->sID->s, s->sID->len,
+			AVP_DUPLICATE_DATA);
+	if ( !avp || AAAAddAVPToMessage(acr,avp,0)!=AAA_ERR_SUCCESS) {
+		LOG(L_ERR,"ERROR:AAAAcctCliEvent: cannot create/add Session-Id avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	acr->sessionId = avp;
+	
+	acct_cli_sm_process(s, ACC_EV_START, acr, aca, 0);
+	
+	return aca;
+error:
+	return 0;
+}
+
+
+/**
+ * Accounting client sends an ACR Interim, updates session timeout and returns answer
+ * @param acr ACR with INTERIM_RECORD Accounting-Record-Type
+ * @param peer_fqdn FQDN of diameter peer
+ * @param s pointer to existing session
+ * @return answer (ACA) or NULL if sending failed
+ */
+AAAMessage* AAAAcctCliInterim(AAAMessage* acr, str* peer_fqdn, AAAAcctSession *s) {
+	// TODO: check acr has Accounting-Record-Type with INTERIM_RECORD value
+	AAAMessage* aca = 0;
+	AAA_AVP      *avp;
+	
+	// add Session-Id AVP
+	avp = AAACreateAVP( 263, 0, 0, s->sID->s, s->sID->len,
+			AVP_DUPLICATE_DATA);
+	if ( !avp || AAAAddAVPToMessage(acr,avp,0)!=AAA_ERR_SUCCESS) {
+		LOG(L_ERR,"ERROR:AAAAcctCliEvent: cannot create/add Session-Id avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	acr->sessionId = avp;
+	
+//	s->timeout += ; // TODO: update session timeout
+	
+	acct_cli_sm_process(s, ACC_EV_INTERIM, acr, aca, 0);
+	
+	return aca;
+error:
+	return 0;
+}
+
+
+/**
+ * Accounting client sends an ACR Stop and returns answer
+ * @param acr ACR with STOP_RECORD Accounting-Record-Type
+ * @param peer_fqdn FQDN of diameter peer
+ * @param s pointer to existing session
+ * @return answer (ACA) or NULL if sending failed
+ */
+AAAMessage* AAAAcctCliStop(AAAMessage* acr, str* peer_fqdn, AAAAcctSession *s) {
+	// TODO: check acr has Accounting-Record-Type with STOP_RECORD value
+	AAAMessage* aca = 0;
+	AAA_AVP      *avp;
+	
+	// add Session-Id AVP
+	avp = AAACreateAVP( 263, 0, 0, s->sID->s, s->sID->len,
+			AVP_DUPLICATE_DATA);
+	if ( !avp || AAAAddAVPToMessage(acr,avp,0)!=AAA_ERR_SUCCESS) {
+		LOG(L_ERR,"ERROR:AAAAcctCliEvent: cannot create/add Session-Id avp\n");
+		if (avp) AAAFreeAVP( &avp );
+		goto error;
+	}
+	acr->sessionId = avp;
+	
+	acct_cli_sm_process(s, ACC_EV_STOP, acr, aca, 0);
+	
+	return aca;
+error:
+	return 0;
+}
+
+/**
+ * The interim interval timer sends an interim ACR
+ * @param ticks - the current time
+ * @param param - pointer to the AAAAcctSession
+*/
+void interim_interval_timer(time_t now, void *ptr) {
+	// TODO
+}
+
+
+/**
+ * The acc_session timer looks for expired sessions and removes them
+ * @param ticks - the current time
+ * @param param - pointer to the sessions hashtable
+ */
+void acc_session_timer(time_t ticks, void* param)
+{
+	int i=0;
+	AAAAcctSession *s = 0;
+	
+	LOG(L_DBG,"DEBUG:acc_session_timer: running acc_session_timer...\n");
+	
+	for(i=0;i<acc_sessions_hash_size;i++){
+		s_lock(i);
+		s = acc_sessions[i].head;
+		while(s){
+			// check acc session expiration
+			if (s->timeout < ticks) {
+				LOG(L_DBG,"DEBUG:acc_session_timer: dropping session with dlgid %.*s\n", s->dlgid->len, s->dlgid->s);
+				AAADropAcctSession(s);
+			}
+			s = s->next;
+		}
+		s_unlock(i);
+	}
+}
 
 
 //static inline int acct_add_avp(AAAMessage *m,char *d,int len,int avp_code,

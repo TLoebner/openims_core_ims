@@ -104,5 +104,13 @@ int load_cdp( struct cdp_binds *cdpb)
 	//FIND_EXP(AAADropAuthSession,"AAADropAuthSession",AAADropAuthSession_f);
 	FIND_EXP(AAAPrintMessage,"AAAPrintMessage",AAAPrintMessage_f);
 	
+	FIND_EXP(AAACreateAcctSession,"AAACreateAcctSession",AAACreateAcctSession_f);
+	FIND_EXP(AAAGetAcctSession,"AAAGetAcctSession",AAAGetAcctSession_f);
+	FIND_EXP(AAADropAcctSession,"AAADropAcctSession",AAADropAcctSession_f);
+	FIND_EXP(AAAAcctCliEvent,"AAAAcctCliEvent",AAAAcctCliEvent_f);
+	FIND_EXP(AAAAcctCliStart,"AAAAcctCliStart",AAAAcctCliStart_f);
+	FIND_EXP(AAAAcctCliStop,"AAAAcctCliStop",AAAAcctCliStop_f);
+	FIND_EXP(AAAAcctCliInterim,"AAAAcctCliInterim",AAAAcctCliInterim_f);
+	
 	return 1;
 }

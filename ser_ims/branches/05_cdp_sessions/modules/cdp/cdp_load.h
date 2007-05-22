@@ -61,7 +61,8 @@
 #include "diameter_ims.h"
 #include "peer.h"
 #include "auth.h"
-//#include "acct.h"
+#include "acct.h"
+#include "acctstatemachine.h"
 
 #define NO_SCRIPT	-1
 
@@ -139,7 +140,13 @@ typedef AAAAuthSession* (*AAACreateAuthSession_f)(str peer, str call_id,
 typedef AAAAuthSession* (*AAAGetAuthSession_f)(str call_id);
 //typedef void (*AAADropAuthSession_f)(AAAAuthSession* auth);
 
-//typedef AAAAcctSession (*AAACreateAcctSession_f)();
+typedef AAAAcctSession* (*AAACreateAcctSession_f)(str* peer, str* dlgid);
+typedef AAAAcctSession* (*AAAGetAcctSession_f)(str* dlgid);
+typedef void (*AAADropAcctSession_f)(AAAAcctSession* s);
+typedef AAAMessage* (*AAAAcctCliEvent_f)(AAAMessage* acr, str* dlgid, str* peer_fqdn);
+typedef AAAMessage* (*AAAAcctCliStart_f)(AAAMessage* acr, str* dlgid, str* peer_fqdn, AAAAcctSession *s);
+typedef AAAMessage* (*AAAAcctCliStop_f)(AAAMessage* acr, str* peer_fqdn, AAAAcctSession *s);
+typedef AAAMessage* (*AAAAcctCliInterim_f)(AAAMessage* acr, str* peer_fqdn, AAAAcctSession *s);
 
 typedef void (*AAAPrintMessage_f) (AAAMessage *msg);
 
@@ -174,7 +181,14 @@ struct cdp_binds {
 	AAAGetAuthSession_f	AAAGetAuthSession;
 	AAAPrintMessage_f AAAPrintMessage;
 	//AAADropAuthSession_f AAADropAuthSession;
-	//AAACreateAcctSession_f AAACreateAcctSession;
+	
+	AAACreateAcctSession_f AAACreateAcctSession;
+	AAAGetAcctSession_f AAAGetAcctSession; 
+	AAADropAcctSession_f AAADropAcctSession; 
+	AAAAcctCliEvent_f AAAAcctCliEvent;
+	AAAAcctCliStart_f AAAAcctCliStart;
+	AAAAcctCliStop_f AAAAcctCliStop;
+	AAAAcctCliInterim_f AAAAcctCliInterim;
 };
 
 

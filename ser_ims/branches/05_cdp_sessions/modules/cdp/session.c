@@ -116,7 +116,7 @@ int session_destroy()
  * This function is thread safe.
  * @returns an 1 if success or -1 if error.
  */
-int generate_sessionID( str *sID, unsigned int end_pad_len)
+int generate_sessionID( str *sID, unsigned int end_pad_len, str *opt)
 {
 	unsigned int s2;
 
@@ -127,9 +127,9 @@ int generate_sessionID( str *sID, unsigned int end_pad_len)
 	/* compute id's len */
 	sID->len = config->identity.len +
 		1/*;*/ + 10/*high 32 bits*/ +
-		1/*;*/ + 10/*low 32 bits*/ +
-//		1/*;*/ + 8/*optional value*/ +
-		1 /* terminating \0 */ +
+		1/*;*/ + 10/*low 32 bits*/;
+	if (opt) sID->len += 1/*;*/ + opt->len/*optional value*/;
+	sID->len += 1 /* terminating \0 */ +
 		end_pad_len;
 
 	/* get some memory for it */
@@ -145,7 +145,8 @@ int generate_sessionID( str *sID, unsigned int end_pad_len)
 	lock_release(session_lock);
 	
 	/* build the sessionID */
-	sprintf(sID->s,"%.*s;%u;%u",config->identity.len,config->identity.s,*session_id1,s2);
+	if (!opt) sprintf(sID->s,"%.*s;%u;%u",config->identity.len,config->identity.s,*session_id1,s2);
+	else sprintf(sID->s,"%.*s;%u;%u;%.*s",config->identity.len,config->identity.s,*session_id1,s2,opt->len,opt->s);
 	sID->len = strlen(sID->s);
 	return 1;
 error:
@@ -169,7 +170,7 @@ AAASessionId AAACreateSession()
 	
 	/* generates a new session-ID - the extra pad is used to append to 
 	 * session-ID the hash-code and label of the session ".XXXXXXXX.XXXXXXXX"*/
-	if (generate_sessionID( &(sID), 0 )!=1)
+	if (generate_sessionID( &(sID), 0, 0 )!=1)
 		goto error;
 
 	return sID;

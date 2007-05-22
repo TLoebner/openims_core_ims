@@ -313,7 +313,7 @@ AAAAuthSession* AAACreateAuthSession(str peer, str call_id, int state)
 	auth->sid->len = 0;
 	auth->sid->s = 0;
 	/* generates a new session-ID */
-	if (generate_sessionID( auth->sid, 0 )!=1) goto error;
+	if (generate_sessionID( auth->sid, 0, NULL )!=1) goto error;
 	//print(auth->sid);
 	
 	auth->prev = NULL;
