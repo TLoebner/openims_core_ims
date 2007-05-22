@@ -107,8 +107,8 @@ public class IFC_Submit extends Action{
 
 				// make the changes
 				ifc.setName(form.getName());
-				//ifc.setPriority(form.getPriority());
-				ifc.setProfile_part_ind(form.getProfile_part_ind());
+				ifc.setProfile_part_ind(form.getProfile_part_ind());	
+				
 				ifc.setId_application_server(form.getId_application_server());
 				ifc.setId_tp(form.getId_tp());
 				

@@ -83,6 +83,10 @@ public class CS_Form extends ActionForm implements Serializable{
     	this.id = -1;
     	this.name = null;
     	this.deleteActivation = "true";
+    	this.pri_ccf = null;
+    	this.sec_ccf = null;
+    	this.pri_ecf = null;
+    	this.sec_ecf = null;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -96,6 +100,10 @@ public class CS_Form extends ActionForm implements Serializable{
         	if (nextAction.equals("save")){
         		if (name == null || name.equals("")){
         			actionErrors.add("cs.error.name", new ActionMessage("cs.error.name"));
+        		}
+        		
+        		if ((pri_ccf == null || pri_ccf.equals("")) && (pri_ecf == null || pri_ecf.equals(""))){
+        			actionErrors.add("cs.error.primary_address_not_present", new ActionMessage("cs.error.primary_address_not_present"));
         		}
         		
         		ChargingInfo chgInfo = ChargingInfo_DAO.get_by_Name(session, name);

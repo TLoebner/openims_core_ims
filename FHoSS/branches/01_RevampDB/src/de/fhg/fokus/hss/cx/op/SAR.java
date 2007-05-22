@@ -56,6 +56,7 @@ import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.cx.CxExperimentalResultException;
 import de.fhg.fokus.hss.cx.CxFinalResultException;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
@@ -66,6 +67,7 @@ import de.fhg.fokus.hss.db.model.SPT;
 import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.TP;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.DB_Op;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
@@ -193,7 +195,11 @@ public class SAR {
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
 					UtilAVP.addUserData(response, user_data);
-
+					
+					// add charging information
+					ChargingInfo chargingInfo = ChargingInfo_DAO.get_by_ID(session, impu.getId_charging_info());
+					UtilAVP.addChargingInformation(response, chargingInfo);
+					
 					// if more private are associated to the IMSU,  AssociatedIdentities AVP are added
 					List privateIdentitiesList = IMPI_DAO.get_all_by_IMSU_ID(session, impi.getId_imsu());
 					if (privateIdentitiesList != null && privateIdentitiesList.size() > 1){
@@ -222,6 +228,10 @@ public class SAR {
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
 					UtilAVP.addUserData(response, user_data);
+					
+					// add charging Info
+					chargingInfo = ChargingInfo_DAO.get_by_ID(session, impu.getId_charging_info());
+					UtilAVP.addChargingInformation(response, chargingInfo);
 					
 					// add a private to the response (the first private found, if more than one are available)					
 					UtilAVP.addUserName(response, first_IMPI.getIdentity());
@@ -344,6 +354,10 @@ public class SAR {
 							throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 						}
 						UtilAVP.addUserData(response, user_data);
+						// add charging information
+						chargingInfo = ChargingInfo_DAO.get_by_ID(session, impu.getId_charging_info());
+						UtilAVP.addChargingInformation(response, chargingInfo);
+												
 						UtilAVP.addUserName(response, impi.getIdentity());
 						
 						privateIdentitiesList = IMPI_DAO.get_all_by_IMSU_ID(session, impi.getId_imsu());

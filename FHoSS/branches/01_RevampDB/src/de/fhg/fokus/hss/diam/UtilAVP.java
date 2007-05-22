@@ -57,6 +57,7 @@ import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.auth.AuthenticationVector;
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.CapabilitiesSet;
+import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
@@ -421,6 +422,41 @@ public class UtilAVP {
 		AVP userData = new AVP(DiameterConstants.AVPCode.IMS_USER_DATA, true, DiameterConstants.Vendor.V3GPP);
 		userData.setData(data);
 		message.addAVP(userData);
+	}
+	
+	public static void addChargingInformation(DiameterMessage message, ChargingInfo chargingInfo){
+		AVP chargingInfoAVP = new AVP(DiameterConstants.AVPCode.IMS_CHARGING_INFORMATION, true, 
+				DiameterConstants.Vendor.V3GPP);
+		
+		if (chargingInfo.getPri_ccf() != null && !chargingInfo.getPri_ccf().equals("")){
+			AVP pri_ccf_AVP = new AVP(DiameterConstants.AVPCode.IMS_PRI_CHRG_COLL_FN_NAME, true, 
+					DiameterConstants.Vendor.V3GPP);
+			pri_ccf_AVP.setData(chargingInfo.getPri_ccf());
+			chargingInfoAVP.addChildAVP(pri_ccf_AVP);
+		}
+
+		if (chargingInfo.getPri_ecf() != null && !chargingInfo.getPri_ecf().equals("")){
+			AVP pri_ecf_AVP = new AVP(DiameterConstants.AVPCode.IMS_PRI_EVENT_CHARGING_FN_NAME, true, 
+					DiameterConstants.Vendor.V3GPP);
+			pri_ecf_AVP.setData(chargingInfo.getPri_ecf());
+			chargingInfoAVP.addChildAVP(pri_ecf_AVP);
+		}
+		
+		if (chargingInfo.getSec_ccf() != null && !chargingInfo.getSec_ccf().equals("")){
+			AVP sec_ccf_AVP = new AVP(DiameterConstants.AVPCode.IMS_SEC_CHRG_COLL_FN_NAME, true, 
+					DiameterConstants.Vendor.V3GPP);
+			sec_ccf_AVP.setData(chargingInfo.getSec_ccf());
+			chargingInfoAVP.addChildAVP(sec_ccf_AVP);
+		}
+
+		if (chargingInfo.getSec_ecf() != null && !chargingInfo.getSec_ecf().equals("")){
+			AVP sec_ecf_AVP = new AVP(DiameterConstants.AVPCode.IMS_SEC_EVENT_CHARGING_FN_NAME, true, 
+					DiameterConstants.Vendor.V3GPP);
+			sec_ecf_AVP.setData(chargingInfo.getSec_ecf());
+			chargingInfoAVP.addChildAVP(sec_ecf_AVP);
+		}
+		
+		message.addAVP(chargingInfoAVP);
 	}
 	
 	public static void addAsssociatedIdentities(DiameterMessage message, List identitiesList){
