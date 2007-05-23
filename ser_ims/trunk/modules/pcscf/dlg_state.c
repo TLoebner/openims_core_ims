@@ -57,6 +57,7 @@
 #include "dlg_state.h"
 
 #include "../../mem/shm_mem.h"
+#include "../sl/sl_funcs.h"
 
 #include "sip.h"
 #include "release_call.h"
@@ -76,6 +77,38 @@ extern str pcscf_record_route_mt_uri;		/**< URI for Record-route terminating	*/
 extern str pcscf_name_str;					/**< fixed SIP URI of this P-CSCF 		*/
 
 extern struct tm_binds tmb;
+extern int pcscf_min_se;
+
+int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
+int supports_extension(struct sip_msg *m, str *extension);
+int requires_extension(struct sip_msg *m, str *extension);
+
+#define strtotime(src,dest) \
+{\
+	int i;\
+	(dest)=0;\
+	for(i=0;i<(src).len;i++)\
+		if ((src).s[i]>='0' && (src).s[i]<='9')\
+			(dest) = (dest)*10 + (src).s[i] -'0';\
+}
+
+
+#define FParam_INT(val) { \
+	 .v = { \
+		.i = val \
+	 },\
+	.type = FPARAM_INT, \
+	.orig = "int_value", \
+};
+
+#define FParam_STRING(val) { \
+	.v = { \
+		.str = STR_STATIC_INIT(val) \
+	},\
+	.type = FPARAM_STR, \
+	.orig = val, \
+};
+
 
 /**
  * Computes the hash for a string.
@@ -448,6 +481,7 @@ void free_p_dialog(p_dialog *d)
 	}
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
+	if (d->refresher.s) shm_free(d->refresher.s);
 	shm_free(d);
 }
 
@@ -568,7 +602,110 @@ static enum p_dialog_method get_dialog_method(str method)
 		strncasecmp(method.s,s_SUBSCRIBE.s,s_SUBSCRIBE.len)==0) return DLG_METHOD_SUBSCRIBE;
 	return DLG_METHOD_OTHER;
 }
+
+
+static fparam_t fp_422 = FParam_INT(422);
+static fparam_t fp_se_small = FParam_STRING("Session Interval Too Small");
+
+/**
+ * Send a 422 Session Interval Too Small.
+ * @param msg - the msg to respond to
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns
+ */
+int P_422_session_expires(struct sip_msg* msg, char* str1, char* str2)
+{
+	str hdr = {pkg_malloc(32), 0};
 	
+	if (!hdr.s) {
+		LOG(L_ERR, "ERR:"M_NAME":P_422_session_expires(): no memory for hdr\n");
+		goto error;
+	}
+
+	hdr.len = snprintf(hdr.s, 31, "Min-SE: %d\r\n", pcscf_min_se);
+
+	if (!cscf_add_header_rpl(msg, &hdr)) {
+		LOG(L_ERR, "ERR:"M_NAME":P_422_session_expires(): Can't add header\n");
+		goto error;
+ 	}
+	
+	return sl_reply(msg, (char *)&fp_422, (char *)&fp_se_small);
+
+error:
+	if (hdr.s) pkg_free(hdr.s);
+	return CSCF_RETURN_FALSE;
+}
+
+
+static str s_refresher = {"refresher=", 10};
+static str str_ext_timer = {"timer", 5};
+static str str_min_se = {"Min-SE:",7};
+static str str_se = {"Session-Expires:",16}; 
+static str str_require = {"Require:",8}; 
+
+/**
+ * Checks if Session-Expires value is over Min_SE local policy
+ * @param msg - the initial request
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not
+*/
+int P_check_session_expires(struct sip_msg* msg, char* str1, char* str2)
+{
+	time_t t_time;
+	time_t min_se_time = 0;
+	str ses_exp = {0,0};
+ 	str min_se = {0,0};
+	str new_min_se = {0,0};
+	str new_ses_exp = {0,0};
+	struct hdr_field *h_se, *h_min_se;
+	str refresher;
+
+	ses_exp = cscf_get_session_expires_body(msg, &h_se);
+	t_time = cscf_get_session_expires(ses_exp, &refresher);
+	
+	if (!t_time || t_time >= pcscf_min_se)
+		return CSCF_RETURN_TRUE;
+	if (!supports_extension(msg, &str_ext_timer)) //does not suports timer extension
+	{
+		//add Min-SE header with its minimum interval
+		min_se = cscf_get_min_se(msg, &h_min_se);
+		if (min_se.len) {
+			strtotime(min_se, min_se_time);
+			if (min_se_time < pcscf_min_se)
+				cscf_del_header(msg, h_min_se);
+			else
+				return CSCF_RETURN_TRUE;
+		}
+		new_min_se.len = 11/*int value*/ + str_min_se.len+3;
+		new_min_se.s = pkg_malloc(new_min_se.len+1);
+		if (!new_min_se.s) {
+			LOG(L_ERR,"ERR:"M_NAME":P_check_session_expires: Error allocating %d bytes\n",new_min_se.len);
+			goto error;
+		}
+		new_min_se.len = snprintf(new_min_se.s, new_min_se.len, "%.*s %d\r\n",str_min_se.len, str_min_se.s, pcscf_min_se);
+		min_se_time = pcscf_min_se;
+		cscf_add_header(msg, &new_min_se, HDR_OTHER_T);
+		if (t_time < pcscf_min_se) {
+			cscf_del_header(msg, h_se);
+			new_ses_exp.len = 11 + str_se.len+3;
+			new_ses_exp.s = pkg_malloc(new_ses_exp.len+1);
+			if (!new_ses_exp.s) {
+				LOG(L_ERR,"ERR:"M_NAME":P_check_session_expires: Error allocating %d bytes\n",new_ses_exp.len);
+				goto error;
+			}
+			new_ses_exp.len = snprintf(new_ses_exp.s, new_ses_exp.len, "%.*s %d\r\n",str_se.len, str_se.s, pcscf_min_se);
+			t_time = pcscf_min_se;
+			cscf_add_header(msg, &new_ses_exp, HDR_OTHER_T);
+		}
+		return CSCF_RETURN_TRUE;
+	}
+error:
+	if (new_min_se.s) pkg_free(new_min_se.s);
+	if (new_ses_exp.s) pkg_free(new_ses_exp.s);
+	return CSCF_RETURN_FALSE;
+}		
 
 
 /**
@@ -583,9 +720,13 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str call_id;
 	p_dialog *d;
 	str host;
+	time_t t_time;
+	str ses_exp = {0,0};
+	str refresher = {0,0};
 	int port,transport;
 	char buf1[256],buf2[256];
 	str tag,ruri,uri,x;
+	struct hdr_field *h;
 	
 	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
@@ -596,7 +737,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_INFO,"DBG:"M_NAME":P_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
+	LOG(L_DBG,"DBG:"M_NAME":P_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
 	if (is_p_dialog(call_id,host,port,transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_save_dialog: dialog already exists!\n");	
@@ -611,7 +752,20 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
-	d->expires = d_act_time()+60;
+
+	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
+
+	ses_exp = cscf_get_session_expires_body(msg, &h);
+	t_time = cscf_get_session_expires(ses_exp, &refresher);
+	if (!t_time){
+		d->expires = d_act_time() + 60;
+		d->lr_session_expires = 0;
+	}else {
+		d->expires = d_act_time() + t_time;
+		d->lr_session_expires = t_time;
+		if (refresher.len)
+			STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
+	}
 	
 	switch(str1[0]) {
 		case 'o':
@@ -660,7 +814,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 void save_dialog_routes(struct sip_msg* msg, char* str1,p_dialog *d)
 {
 	int i;
-	rr_t *rr,*ri;
+	rr_t *rr,*ri;	
 	struct hdr_field *hdr;
 	if (d->routes){
 		for(i=0;i<d->routes_cnt;i++)
@@ -704,6 +858,87 @@ void save_dialog_routes(struct sip_msg* msg, char* str1,p_dialog *d)
 		}
 	}		
 }
+/**
+ * Updates dialog on reply message
+ * @param msg - the SIP message 
+ * @param d - dialog to modify
+ */
+int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
+{
+	struct hdr_field *h_req;
+	struct hdr_field *h=0;
+	int res=0;
+	time_t t_time=0;
+	str ses_exp = {0,0};
+	str refresher = {0,0};
+	str new_ses_exp = {0,0};
+	str new_ext = {0,0};
+
+	ses_exp = cscf_get_session_expires_body(msg, &h);
+	t_time = cscf_get_session_expires(ses_exp, &refresher);
+	if (!t_time) //i.e not session-expires header in response
+	{
+		if (!d->uac_supp_timer || !d->lr_session_expires)
+		{
+			d->expires = d_act_time()+pcscf_dialogs_expiration_time;	
+		}
+		else// uac supports timer, but no session-expires header found in response
+		{
+			new_ses_exp.len = 11/*int value*/ + str_se.len+s_refresher.len+8;
+			new_ses_exp.s = pkg_malloc(new_ses_exp.len+1);
+			if (!new_ses_exp.s) {
+				LOG(L_ERR,"ERR:"M_NAME":update_dialog_on_reply: Error allocating %d bytes\n",new_ses_exp.len);
+				goto error;
+			}
+			new_ses_exp.len = snprintf(new_ses_exp.s, new_ses_exp.len, "%.*s %d; %.*suac\r\n",str_se.len, str_se.s, (int)d->lr_session_expires ,s_refresher.len, s_refresher.s);
+			cscf_add_header(msg, &new_ses_exp, HDR_OTHER_T);
+			if (!requires_extension(msg, &str_ext_timer)) //must have require timer extenstion
+			{
+				/* walk through all Require headers to find first require header*/
+				res = parse_headers(msg, HDR_EOH_F, 0);
+				if (res == -1) {
+					ERR("Error while parsing headers (%d)\n", res);
+					return 0; /* what to return here ? */
+				}
+				
+				h_req = msg->require;
+				while (h_req) {
+					if (h_req->type == HDR_REQUIRE_T) {
+						if (h_req->body.s[new_ext.len-1]=='\n')
+						{
+							new_ext.len = str_require.len + 1/* */+h_req->body.len + 7;/*, timer*/
+							new_ext.s = pkg_malloc(new_ext.len);
+							if (!new_ext.s) {
+								LOG(L_ERR,"ERR:"M_NAME":update_dialog_on_reply: Error allocating %d bytes\n",new_ext.len);
+								goto error;
+							}			
+							new_ext.len = snprintf(new_ext.s, str_require.len, "%.*s %.*s, timer\r\n", str_require.len, str_require.s, h_req->body.len-2, h_req->body.s);
+						}
+						else
+						{
+							new_ext.len = str_require.len + 1/*space*/ + h_req->body.len + 9;/*, timer\r\n*/
+							new_ext.s = pkg_malloc(new_ext.len);
+							if (!new_ext.s) {
+								LOG(L_ERR,"ERR:"M_NAME":update_dialog_on_reply: Error allocating %d bytes\n",new_ext.len);
+								goto error;
+							}			
+							new_ext.len = snprintf(new_ext.s, str_require.len, "%.*s %.*s, timer\r\n", str_require.len, str_require.s, h_req->body.len, h_req->body.s);
+						}
+						cscf_del_header(msg, h_req);
+						cscf_add_header(msg, &new_ext, HDR_REQUIRE_T);
+						break;
+					}
+					h_req = h_req->next;
+				}
+			}
+		}
+	}
+	return 1;
+error:
+	if (new_ses_exp.s) pkg_free(new_ses_exp.s);
+	if (new_ext.s) pkg_free(new_ext.s);
+	return 0;	
+}
 
 /**
  * Updates a dialog.
@@ -732,6 +967,9 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	int port,transport;
 	int expires;
 	str totag;
+	time_t t_time=0;
+	str ses_exp = {0,0};
+	str refresher = {0,0};
 	
 	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
@@ -766,7 +1004,27 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq>d->last_cseq) d->last_cseq = cseq;
-		d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+		if (get_dialog_method(msg->first_line.u.request.method) == DLG_METHOD_INVITE)
+		{
+			d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
+	
+			ses_exp = cscf_get_session_expires_body(msg, &h);
+			t_time = cscf_get_session_expires(ses_exp, &refresher);
+			if (!t_time){
+				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+				d->lr_session_expires = 0;
+			} else {
+				d->expires = d_act_time() + t_time;
+				d->lr_session_expires = t_time;
+				if (refresher.len)
+					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
+			}
+		}
+		else
+		{
+			d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+			d->lr_session_expires = 0;		
+		}
 	}else{
 		/* Reply */
 		response = msg->first_line.u.reply.statuscode;
@@ -788,7 +1046,9 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			if (response>=200 && response<300){
 				save_dialog_routes(msg,str1,d);
 				d->state = DLG_STATE_CONFIRMED;
-				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+				
+				update_dialog_on_reply(msg, d);
+				
 				cscf_get_to_tag(msg,&totag);
 				tmb.update_dlg_uas(d->dialog_s,response,&totag);
 				tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);
@@ -807,6 +1067,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
 					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+					d->lr_session_expires = 0;
 					break;
 				case DLG_METHOD_INVITE:
 					if (req && req->first_line.u.request.method.len==3 &&
@@ -815,7 +1076,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 						d_unlock(d->hash);				
 						return P_drop_dialog(msg,str1,str2);
 					}
-					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+					update_dialog_on_reply(msg, d);
 					break;
 				case DLG_METHOD_SUBSCRIBE:
 //					if (req && req->first_line.u.request.method.len==9 &&
@@ -833,12 +1094,12 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 							d_unlock(d->hash);				
 							return P_drop_dialog(msg,str1,str2);
 						}else if (expires>0){
-							d->expires = expires;
+							d->expires = d_act_time() + expires;
 						}
 					}
 					break;
 			}
-			if (cseq>d->last_cseq) d->last_cseq = cseq;					
+			if (cseq>d->last_cseq) d->last_cseq = cseq;
 		}
 	}
 	

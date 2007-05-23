@@ -99,6 +99,9 @@ typedef struct _s_dialog {
 	int last_cseq;						/**< last seen CSeq								*/
 	enum s_dialog_state state;			/**< state of the dialog						*/
 	time_t expires;						/**< expiration time for the dialog				*/
+	time_t lr_session_expires;  		/**< last remembered request - session-expires header	*/
+	str refresher;						/**< session refresher							*/
+	unsigned char uac_supp_timer; 		/**< requester uac supports timer 				*/
 	
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 											released or not, or its peer, with count on 
@@ -157,5 +160,9 @@ int S_record_route(struct sip_msg *msg,char *user,char *str2);
 int S_is_record_routed(struct sip_msg *msg,char *str1,char *str2);
 
 void dialog_timer(unsigned int ticks, void* param);
+
+int S_check_session_expires(struct sip_msg* msg, char* str1, char* str2);
+
+int S_422_session_expires(struct sip_msg* msg, char* str1, char* str2);
 		
 #endif

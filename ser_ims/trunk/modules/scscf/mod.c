@@ -117,6 +117,8 @@ int append_branches=1;					/**< if to append branches						*/
 int scscf_dialogs_hash_size=256;		/**< size of the dialog hash table 				*/
 int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs		*/
 
+int scscf_min_se=90;					/**< Minimum session-expires accepted value		*/
+
 persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
 char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
 int scscf_persistency_timer_authdata=60;							/**< interval to snapshot authorization data*/ 
@@ -185,6 +187,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - S_record_route() - record routes
  * - S_is_record_routed() - check if we already record-routed
  * - S_add_p_asserted_identity() - adds the P-Asserted-Identity aliases if the original P-Asserted-Identity was a TEL URI
+ * - S_check_session_expires() - Checks if Session-Expires value is over Min_SE local policy
+ * - S_422_session_expires() - Return a 422 response with Min_SE set to local policy
  */
 static cmd_export_t scscf_cmds[]={
 	{"load_scscf",					(cmd_function)load_scscf, 	NO_SCRIPT, 0, 0},
@@ -223,13 +227,16 @@ static cmd_export_t scscf_cmds[]={
 	
 	{"S_originating_barred",		S_originating_barred,		0,0,REQUEST_ROUTE},
 	{"S_terminating_barred",		S_terminating_barred,		0,0,REQUEST_ROUTE},
-	
+
 	{"S_is_in_dialog",				S_is_in_dialog,				1,0,REQUEST_ROUTE},
 	{"S_save_dialog",				S_save_dialog,				1,0,REQUEST_ROUTE},
 	{"S_update_dialog",				S_update_dialog,			1,0,REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"S_record_route",				S_record_route,				1,0,REQUEST_ROUTE},	
 	{"S_is_record_routed",			S_is_record_routed,			1,0,REQUEST_ROUTE},	
 	{"S_add_p_asserted_identity",	S_add_p_asserted_identity,	0,0,REQUEST_ROUTE},	
+
+	{"S_check_session_expires",		S_check_session_expires, 	0, 0, REQUEST_ROUTE},
+	{"S_422_session_expires",		S_422_session_expires,	 	0, 0, REQUEST_ROUTE},
 	
 	{0, 0, 0, 0, 0}
 };
@@ -269,6 +276,7 @@ static cmd_export_t scscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialogs hash table 
  * - dialogs_expiration_time - default dialogs expiration time
+ * - min_se - default min_se header
  * <p>
  * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	
  * - persistency_location - where to dump/load the persistency data to/from
@@ -307,6 +315,7 @@ static param_export_t scscf_params[]={
 
 	{"dialogs_hash_size", 				INT_PARAM, &scscf_dialogs_hash_size},
 	{"dialogs_expiration_time", 		INT_PARAM, &scscf_dialogs_expiration_time},
+	{"min_se", 							INT_PARAM, &scscf_min_se},
 	
 	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
 	{"persistency_location", 			STR_PARAM, &scscf_persistency_location},

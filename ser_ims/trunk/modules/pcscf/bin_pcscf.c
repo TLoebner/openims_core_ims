@@ -111,6 +111,9 @@ int bin_encode_p_dialog(bin_data *x,p_dialog *d)
 	if (!bin_encode_uchar(x,c)) goto error;	
 
 	if (!bin_encode_time_t(x,d->expires)) goto error;		
+	if (!bin_encode_time_t(x,d->lr_session_expires)) goto error;
+	if (!bin_encode_str(x,&(d->refresher))) goto error;
+	if (!bin_encode_uchar(x,d->uac_supp_timer)) goto error;
 	
 	if (!bin_encode_uchar(x,d->is_releasing)) goto error;
 	if (!bin_encode_dlg_t(x,d->dialog_c)) goto error;	
@@ -178,6 +181,10 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	
 	if (!bin_decode_time_t(x,	&d->expires)) goto error;
 	
+	if (!bin_decode_time_t(x, &d->lr_session_expires)) goto error;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->refresher),&s)) goto error;
+	if (!bin_decode_uchar(x,&d->uac_supp_timer)) goto error;	
+
 	if (!bin_decode_uchar(x, &d->is_releasing)) goto error;
 	if (!bin_decode_dlg_t(x,&(d->dialog_c))) goto error;
 	if (!bin_decode_dlg_t(x,&(d->dialog_s))) goto error;
@@ -196,6 +203,7 @@ error:
 			shm_free(d->routes);
 		}
 		if (d->method_str.s) shm_free(d->method_str.s);
+		if (d->refresher.s) shm_free(d->refresher.s);
 		shm_free(d);
 	}
 	return 0;

@@ -128,6 +128,8 @@ int subscriptions_hash_size=1024;			/**< the size of the hash table for subscrip
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
 int pcscf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
 
+int pcscf_min_se=90;						/**< Minimum session-expires accepted value		*/
+
 int pcscf_nat_enable = 1; 					/**< whether to enable NAT							*/
 int pcscf_nat_ping = 1; 					/**< whether to ping anything 						*/
 int pcscf_nat_pingall = 0; 					/**< whether to ping also the UA that don't look like being behind a NAT */
@@ -224,6 +226,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_follows_dialog_routes() - checks if a subsequent request follows the saved dialog routes
  * - P_enforce_dialog_routes() - enforces the dialog routes
  * - P_record_route() - records route
+ * - P_check_session_expires() - Checks if Session-Expires value is over Min_SE local policy
+ * - P_422_session_expires() - Return a 422 response with Min_SE set to local policy 
  * <p>
  * - P_assert_called_identity() - asserts the called identity by adding the P-Asserted-Identity header
  * <p>
@@ -274,8 +278,10 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_drop_dialog",				P_drop_dialog, 				1, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_follows_dialog_routes",		P_follows_dialog_routes, 	1, 0, REQUEST_ROUTE},
 	{"P_enforce_dialog_routes",		P_enforce_dialog_routes, 	1, 0, REQUEST_ROUTE},
-	{"P_record_route",				P_record_route,				1, 0, REQUEST_ROUTE},	
-	
+	{"P_record_route",				P_record_route,				1, 0, REQUEST_ROUTE},		
+	{"P_check_session_expires",		P_check_session_expires, 	0, 0, REQUEST_ROUTE},
+	{"P_422_session_expires",		P_422_session_expires,	 	0, 0, REQUEST_ROUTE},
+
 	{"P_assert_called_identity",	P_assert_called_identity, 	0, 0, ONREPLY_ROUTE},
 	
 	{"P_trans_in_processing",		P_trans_in_processing, 		0, 0, REQUEST_ROUTE},
@@ -299,6 +305,7 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialog hash table
  * - dialogs_expiration_time - time-out for dialog expiration
+ * - min_se - default value for Min_SE header
  * <p>
  * - use_ipsec - if to enable the use of IPSec
  * - ipsec_host - IP of the IPSec host
@@ -337,17 +344,18 @@ static cmd_export_t pcscf_cmds[]={
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
 
-	{"registrar_hash_size",		INT_PARAM, &registrar_hash_size},
-	{"reginfo_dtd", 			STR_PARAM, &pcscf_reginfo_dtd},
-	{"subscriptions_hash_size",	INT_PARAM, &subscriptions_hash_size},
+	{"registrar_hash_size",		INT_PARAM, 		&registrar_hash_size},
+	{"reginfo_dtd", 			STR_PARAM, 		&pcscf_reginfo_dtd},
+	{"subscriptions_hash_size",	INT_PARAM,		&subscriptions_hash_size},
 
-	{"dialogs_hash_size",		INT_PARAM, &pcscf_dialogs_hash_size},
-	{"dialogs_expiration_time",	INT_PARAM, &pcscf_dialogs_expiration_time},
+	{"dialogs_hash_size",		INT_PARAM,		&pcscf_dialogs_hash_size},
+	{"dialogs_expiration_time",	INT_PARAM,		&pcscf_dialogs_expiration_time},
+	{"min_se",		 			INT_PARAM, 		&pcscf_min_se},
 	
-	{"use_ipsec", 				INT_PARAM, &pcscf_use_ipsec},
-	{"ipsec_host", 				STR_PARAM, &pcscf_ipsec_host},	
-	{"ipsec_port_c",			INT_PARAM, &pcscf_ipsec_port_c},
-	{"ipsec_port_s", 			INT_PARAM, &pcscf_ipsec_port_s},
+	{"use_ipsec", 				INT_PARAM,		&pcscf_use_ipsec},
+	{"ipsec_host", 				STR_PARAM,		&pcscf_ipsec_host},	
+	{"ipsec_port_c",			INT_PARAM,		&pcscf_ipsec_port_c},
+	{"ipsec_port_s", 			INT_PARAM,		&pcscf_ipsec_port_s},
 	
 	
 	{"ipsec_P_Inc_Req", 		STR_PARAM,		&pcscf_ipsec_P_Inc_Req},
