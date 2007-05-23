@@ -43,9 +43,12 @@
 
 package de.fhg.fokus.hss.main;
 
+import org.apache.log4j.Logger;
+
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.diam.DiameterConstants;
+import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.sh.op.PNR;
 import de.fhg.fokus.hss.sh.op.PUR;
 import de.fhg.fokus.hss.sh.op.SNR;
@@ -57,52 +60,75 @@ import de.fhg.fokus.hss.cx.op.*;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class Task {
+	private static Logger logger = Logger.getLogger(Task.class);
+	// generic variables
+
+	// can be 1 - Sending Request, 2 - Processing Request, 3 - Timeout
+	public int event_type;
 	public int interface_type;
 	public int command_code;
-	public boolean isRequest;
 	public String FQDN;
-	public DiameterPeer peer;
 	public DiameterMessage message;
 	
-	public Task (int interface_type, int command_code, boolean isRequest, String FQDN, DiameterPeer peer, DiameterMessage message){
-		this.interface_type = interface_type;
-		this.command_code = command_code;
-		this.isRequest = isRequest;
+	// PPR and RTR specific variables
+	public int id_impi = -1;
+	public int id_implicit_set = -1;
+	public int type = -1;
+	public int grp = -1;
+	
+	public Task (int event_type, String FQDN, int command_code, int interface_type, 
+			DiameterMessage message){
+		
+		this.event_type = event_type;
 		this.FQDN = FQDN;
-		this.peer = peer;
+		this.command_code = command_code;
+		this.interface_type = interface_type;
 		this.message = message;
+	}
+	
+	public Task (int event_type, int command_code, int interface_type){
+		this.event_type = event_type;
+		this.command_code = command_code;
+		this.interface_type = interface_type;
 	}
 	
 	public DiameterMessage execute (){
 		DiameterMessage response = null;
+		DiameterStack diameterStack = HSSContainer.getInstance().diamStack; 
+		DiameterPeer peer = diameterStack.diameterPeer;
 		
 		if (interface_type == DiameterConstants.Application.Cx){
 			
 			// Cx commands
 			switch (command_code){
 				case DiameterConstants.Command.LIR:
-					System.out.println("Processing LIR!");
+					logger.info("Processing LIR!");
 					response = LIR.processRequest(peer, message);
 					peer.sendMessage(FQDN, response);
 					break;
 				
 				case DiameterConstants.Command.MAR:
-					System.out.println("Processing MAR!");
+					logger.info("Processing MAR!");
 					response = MAR.processRequest(peer, message);
 					peer.sendMessage(FQDN, response);
 					break;
 				
 				case DiameterConstants.Command.PPR:
-					if (isRequest){
-						PPR.processAnswer(peer, message);
+					if (event_type == 1){
+						// the diameter stack is the sender for the message (Initiated message by HSS: PPR or RTR)
+						logger.info("Sending PPR!");
+						PPR.sendRequest(peer, diameterStack, id_impi, id_implicit_set, type, grp);
 					}
+					else if (event_type == 2){
+						logger.info("Processing PPA!");
+						PPR.processResponse(peer, message);
+					} 
 					else{
-						PPR.sendRequest(peer, message);
+						PPR.processTimeout(message);
 					}
 					break;
 				
 				case DiameterConstants.Command.RTR:
-					//RTR.sendRequest(peer, )
 					break;
 				case DiameterConstants.Command.SAR:
 					System.out.println("Processing SAR!");
@@ -136,12 +162,6 @@ public class Task {
 					break;
 		
 				case DiameterConstants.Command.PNA:
-					if (isRequest){
-						PNR.processAnswer(message);
-					}
-					else{
-						// send request
-					}
 					break;
 			}
 		}

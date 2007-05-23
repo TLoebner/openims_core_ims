@@ -9,13 +9,16 @@
 		<generator class="native"/>
 	</id>
 
-	<property name="hopbyhop" type="java.lang.Long" />
-	<property name="endtoend" type="java.lang.Long"/>
-	<property name="id_impu" type="java.lang.Integer" />
-	<property name="id_impi" type="java.lang.Integer"/>
-	<property name="type" type="short"/>
-	<property name="subtype" type="short"/>	
+	<property name="hopbyhop" type="long" />
+	<property name="endtoend" type="long"/>
+	<property name="id_impu" type="int" />
+	<property name="id_impi" type="int"/>
+	<property name="id_implicit_set" type="int"/>
+	<property name="type" type="int"/>
+	<property name="subtype" type="int"/>	
 	<property name="grp" type="int"/>	
+	<property name="reason_info" type="string"/>	
+	<property name="trials_cnt" type="int"/>	
 	
 </class>
 </hibernate-mapping>

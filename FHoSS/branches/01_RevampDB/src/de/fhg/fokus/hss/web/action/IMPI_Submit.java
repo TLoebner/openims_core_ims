@@ -68,10 +68,12 @@ import de.fhg.fokus.hss.cx.op.RTR;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.IMSU;
+import de.fhg.fokus.hss.db.model.RTR_PPR;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.main.HSSContainer;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
@@ -263,58 +265,55 @@ public class IMPI_Submit extends Action{
 			HibernateUtil.closeSession();
 		}
 		
-		// if we have PPR or RTR
-		if (nextAction.equals("ppr")){
-			// PPR
-			logger.info("We are sending a PPR message for the user!");
-
-			// [to be completed]
-			//...
-			
-			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
-		}
-		else if (nextAction.equals("rtr")){
-			// RTR
-			logger.info("We are sending a RTR message for the user!");
-			
-			dbException = false;
-			DiameterStack stack = HSSContainer.getInstance().diamStack;
-			List impiList = new ArrayList();;
-			try{
-				Session session = HibernateUtil.getCurrentSession();
-				HibernateUtil.beginTransaction();
+		dbException = false;
+		DiameterStack stack = HSSContainer.getInstance().diamStack;
+		List impiList = new ArrayList();
+		
+		dbException = false;
+		try{
+			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
+		
+			// if we have PPR or RTR
+			if (nextAction.equals("ppr")){
+				// PPR
+				logger.info("We are sending a PPR message for the user!");
 				
-				IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
-				impiList.add(impi);
+				int grp = RTR_PPR_DAO.get_max_grp(session) + 1;
+				RTR_PPR rtr_ppr = new RTR_PPR();
+				rtr_ppr.setId_impi(form.getId());
+				rtr_ppr.setId_implicit_set(1);//!!!
+				rtr_ppr.setId_impu(-1);
+				rtr_ppr.setType(2);
+				rtr_ppr.setSubtype(1);//!!!
+				rtr_ppr.setGrp(grp);
+				RTR_PPR_DAO.insert(session, rtr_ppr);
+				
+				logger.info("PPR Event saved in the database!");
 			}
-			catch(DatabaseException e){
-				logger.error("Database Exception occured!\nReason:" + e.getMessage());
-				e.printStackTrace();
-				dbException = true;
-				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-			}
+			else if (nextAction.equals("rtr")){
+				// RTR
+				logger.info("We are sending a RTR message for the user!");
+				
+			}	
 			
-			catch (HibernateException e){
-				logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
-				e.printStackTrace();
-				dbException = true;
-				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-			}
-			finally{
-				if (!dbException){
-					HibernateUtil.commitTransaction();
-				}
-				HibernateUtil.closeSession();
-			}			
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
 			if (!dbException){
-				RTR.sendRequest(stack.diameterPeer, null, impiList,
-					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
-			
-				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+				HibernateUtil.commitTransaction();
 			}
-		}		
+			HibernateUtil.closeSession();
+		}			
+			
+			
+		forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+		forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		
 		return forward;
 	}

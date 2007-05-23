@@ -362,8 +362,8 @@ public class IMPU_Submit extends Action{
 			
 			if (!dbException){
 				DiameterStack stack = HSSContainer.getInstance().diamStack;
-				RTR.sendRequest(stack.diameterPeer, null, impiList,
-					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
+//				RTR.sendRequest(stack.diameterPeer, null, impiList,
+//					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
 			
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());

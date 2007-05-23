@@ -148,6 +148,15 @@ public class IMPU_DAO {
 
 		return (IMPU) query.uniqueResult();
 	}
+
+	public static IMPU get_one_from_set(Session session, int id_implicit_set){
+		Query query;
+		query = session.createSQLQuery("select * from impu where id_implicit_set=? limit 1")
+			.addEntity(IMPU.class);
+		query.setInteger(0, id_implicit_set);
+
+		return (IMPU) query.uniqueResult();
+	}
 	
 	public static IMPU get_by_Identity(Session session, String identity){
 		Query query;

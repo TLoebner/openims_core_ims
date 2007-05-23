@@ -90,25 +90,26 @@ public class HSSContainer {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		
+/*		
         Session session = HibernateUtil.getCurrentSession();
-        //IMPI_DAO.getAll(session, 10, 10);
-        //IMPI_IMPU_DAO.insert(session,13,3, 0);
         HibernateUtil.commitTransaction();
         HibernateUtil.closeSession();
-		
+*/		
 		tasksQueue = new LinkedBlockingQueue();
 		workers = new Worker[10];
 		for (int i = 0; i < workers.length; i++){
 			workers[i] = new Worker(this);
 			workers[i].start();
 		}
+		
+		CxEventsWorker cxEventsWorker = new CxEventsWorker(10);
+		cxEventsWorker.start();
 	}
 	
 	public static void main(String args[]){
 		HSSContainer hssContainer = HSSContainer.getInstance();
-		//Tester t = new Tester();
-		//t.start();
+		Tester t = new Tester();
+		t.start();
 		
 		waitForExit();
 		try{

@@ -41,61 +41,55 @@
   * 
   */
 
-package de.fhg.fokus.hss.diam;
+package de.fhg.fokus.hss.db.op;
 
-import org.apache.log4j.Logger;
+import org.hibernate.Query;
+import org.hibernate.Session;
 
-import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
-import de.fhg.fokus.diameter.DiameterPeer.EventListener;
-import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
-import de.fhg.fokus.diameter.DiameterPeer.transaction.TransactionListener;
-import de.fhg.fokus.hss.main.HSSContainer;
-import de.fhg.fokus.hss.main.Task;
+import de.fhg.fokus.hss.db.model.RTR_PPR;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-
-public class DiameterStack implements EventListener, TransactionListener {
-	private static Logger logger = Logger.getLogger(DiameterStack.class);
+public class RTR_PPR_DAO {
 	
-	public DiameterPeer diameterPeer = null;
-	
-	public DiameterStack(){
-		diameterPeer = new DiameterPeer("DiameterPeerHSS.xml");
-		diameterPeer.enableTransactions(10, 1);
-		diameterPeer.addEventListener(this);
-		
+	public static void insert(Session session, RTR_PPR rtr_ppr){
+		session.save(rtr_ppr);
 	}
 	
-	public void recvMessage(String FQDN, DiameterMessage request) {
-		
-		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, request);
-		
-		try{
-			HSSContainer.getInstance().tasksQueue.put(task);
-			logger.debug("New task was added to queue!");
-		}
-		catch(InterruptedException e){
-			e.printStackTrace();
-		}
+	public static void update(Session session, RTR_PPR rtr_ppr){
+		session.saveOrUpdate(rtr_ppr);
 	}
 	
-	public void receiveAnswer(String FQDN, DiameterMessage request, DiameterMessage answer) {
-		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, request);
-		try{
-			HSSContainer.getInstance().tasksQueue.put(task);
-			logger.debug("New task was added to queue!");
-		}
-		catch(InterruptedException e){
-			e.printStackTrace();
-		}
+	public static void update_by_grp(Session session, int grp, long hopByHopID, long endToEndID){
+		Query query;
+		query = session.createSQLQuery("update rtr_ppr set hopbyhop=?, endtoend=? where grp=?")
+				.setLong(0, hopByHopID)
+				.setLong(1, endToEndID)
+				.setInteger(2, grp);
+		query.executeUpdate();
+	}
+	
+	public static void delete(Session session, long hopbyhop, long endtoend){
+		Query query = session.createSQLQuery("delete from rtr_ppr where hopbyhop=? and endtoend=?");
+		query.setLong(0, hopbyhop);
+		query.setLong(1, endtoend);
+		query.executeUpdate();
 	}
 
-	public void timeout(DiameterMessage request) {
-		// to be completed
+	public static RTR_PPR get_next_available(Session session){
+		Query query;
+		query = session.createSQLQuery("select * from rtr_ppr where hopbyhop=0 limit 1")
+				.addEntity(RTR_PPR.class);
+		return (RTR_PPR) query.uniqueResult();
 	}
-	
+
+	public static int get_max_grp(Session session){
+		Query query = session.createSQLQuery("select max(grp) from rtr_ppr");
+		Integer result = (Integer) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}
 }
-

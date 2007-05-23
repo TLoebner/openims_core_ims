@@ -46,6 +46,7 @@ package de.fhg.fokus.hss.cx.op;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
@@ -69,6 +70,8 @@ import de.fhg.fokus.hss.db.hibernate.*;
  */
 
 public class LIR {
+	private static Logger logger = Logger.getLogger(LIR.class);
+	
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
 		DiameterMessage response = diameterPeer.newResponse(request);
 
