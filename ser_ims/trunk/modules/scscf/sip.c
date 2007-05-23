@@ -2715,7 +2715,6 @@ error:
 }
 
 
-static str s_sent_by={"sent-by",7};
 /**
  * Get the sent-by parameter of the last Via header in the message.
  * @param msg - the SIP message to loog into
@@ -2724,21 +2723,14 @@ static str s_sent_by={"sent-by",7};
 str cscf_get_last_via_sent_by(struct sip_msg *msg)
 {
 	struct via_body *via;
-	struct via_param *vp;
-	str sent_by={0,0};
-
+	
 	via = cscf_get_last_via(msg);
 	if (!via){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via_sent_by(): Message has no via header!\n");
-		return sent_by;
+		str zero={0,0};
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via_sent_by(): Message has no via header!\n");		
+		return zero;
 	}			
-	for(vp = via->param_lst; vp; vp = vp->next)
-		if (vp->name.len == s_sent_by.len &&
-			strncasecmp(vp->name.s,s_sent_by.s,s_sent_by.len)==0){							
-				sent_by = vp->value;
-				return sent_by;
-			}
-	return sent_by;			
+	return via->host;
 }
 
 
