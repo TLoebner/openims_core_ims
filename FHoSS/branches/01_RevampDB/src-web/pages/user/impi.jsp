@@ -444,6 +444,22 @@ function disable_other_boxes(){
 							</table>
 						</td>
 					</tr>		
+					
+					<tr>
+						<td>
+							<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
+							<tr align="center">
+								<td align="center"> <b> Push Cx Operation </b></td>
+							</tr>
+							<tr align="center">
+								<td align="center">
+									<html:button property="ppr_button" value="PPR" onclick="add_action_for_form(10, -1);"/>
+									<html:button property="rtr_button" value="RTR" onclick="add_action_for_form(11, -1);"/>
+								</td>
+							</tr>	
+							</table>				
+						</td>
+					</tr>
 					</logic:notEqual>
 				</table>
 			</td>

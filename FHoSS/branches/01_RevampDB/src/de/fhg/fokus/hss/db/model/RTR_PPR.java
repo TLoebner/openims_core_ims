@@ -49,13 +49,16 @@ package de.fhg.fokus.hss.db.model;
  */
 public class RTR_PPR {
 	private int id;
-	private Long hopbyhop;
-	private Long endtoend;
-	private Integer id_impu;
-	private Integer id_impi;
-	private short type;
-	private short subtype;
+	private long hopbyhop;
+	private long endtoend;
+	private int id_impu;
+	private int id_impi;
+	private int id_implicit_set;
+	private int type;
+	private int subtype;
 	private int grp;
+	private String reason_info;
+	private int trials_cnt;
 
 	public RTR_PPR(){}
 
@@ -63,11 +66,8 @@ public class RTR_PPR {
 		return endtoend;
 	}
 
-	public void setEndtoend(Long endtoend) {
-		if (endtoend != null)
-			this.endtoend = endtoend;
-		else
-			this.endtoend = -1l;
+	public void setEndtoend(long endtoend) {
+		this.endtoend = endtoend;
 	}
 
 	public int getGrp() {
@@ -82,11 +82,8 @@ public class RTR_PPR {
 		return hopbyhop;
 	}
 
-	public void setHopbyhop(Long hopbyhop) {
-		if (hopbyhop != null)
-			this.hopbyhop = hopbyhop;
-		else
-			this.hopbyhop = -1l;
+	public void setHopbyhop(long hopbyhop) {
+		this.hopbyhop = hopbyhop;
 	}
 
 	public int getId() {
@@ -101,39 +98,58 @@ public class RTR_PPR {
 		return id_impi;
 	}
 
-	public void setId_impi(Integer id_impi) {
-		if (id_impi != null)
-			this.id_impi = id_impi;
-		else
-			this.id_impi = -1;
+	public void setId_impi(int id_impi) {
+		this.id_impi = id_impi;
 	}
 
 	public int getId_impu() {
 		return id_impu;
 	}
 
-	public void setId_impu(Integer id_impu) {
-		if (id_impu != null)
-			this.id_impu = id_impu;
-		else
-			this.id_impu = -1;
+	public void setId_impu(int id_impu) {
+		this.id_impu = id_impu;
 	}
 
-	public short getSubtype() {
+	public String getReason_info() {
+		return reason_info;
+	}
+
+	public void setReason_info(String reason_info) {
+		this.reason_info = reason_info;
+	}
+
+	public int getSubtype() {
 		return subtype;
 	}
 
-	public void setSubtype(short subtype) {
+	public void setSubtype(int subtype) {
 		this.subtype = subtype;
 	}
 
-	public short getType() {
+	public int getTrials_cnt() {
+		return trials_cnt;
+	}
+
+	public void setTrials_cnt(int trials_cnt) {
+		this.trials_cnt = trials_cnt;
+	}
+
+	public int getType() {
 		return type;
 	}
 
-	public void setType(short type) {
+	public void setType(int type) {
 		this.type = type;
 	}
+
+	public int getId_implicit_set() {
+		return id_implicit_set;
+	}
+
+	public void setId_implicit_set(int id_implicit_set) {
+		this.id_implicit_set = id_implicit_set;
+	}
+
 	
 }
 

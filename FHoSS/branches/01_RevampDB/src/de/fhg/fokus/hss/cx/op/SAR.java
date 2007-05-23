@@ -190,7 +190,7 @@ public class SAR {
 					UtilAVP.addUserName(response, privateIdentity);
 					
 					//download the profile data
-					String user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_implicit_set());
+					String user_data = SAR.downloadUserData(privateIdentity, impu.getId_implicit_set());
 					if (user_data == null){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
@@ -223,7 +223,7 @@ public class SAR {
 							CxConstants.IMPU_user_state_Unregistered, true);
 					
 					//download the profile data
-					user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_implicit_set());
+					user_data = SAR.downloadUserData(privateIdentity, impu.getId_implicit_set());
 					if (user_data == null){
 						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 					}
@@ -349,7 +349,7 @@ public class SAR {
 					}
 					else{
 						
-						user_data = SAR.downloadUserData(privateIdentity, publicIdentity, impu.getId_implicit_set());
+						user_data = SAR.downloadUserData(privateIdentity, impu.getId_implicit_set());
 						if (user_data == null){
 							throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 						}
@@ -502,7 +502,7 @@ public class SAR {
 	public static final String one="1";
 	public static final String two="2";
 
-	private static String downloadUserData(String privateIdentity, String publicIdentity, int id_implicit_set){
+	public static String downloadUserData(String privateIdentity, int id_implicit_set){
 		Session session = HibernateUtil.getCurrentSession();
 		List<IMPU> [] impu_array;
 		SP[] sp_array;
@@ -553,14 +553,11 @@ public class SAR {
 		sb.append(privateIdentity);
 		sb.append(private_id_e);
 		
-		System.out.println("\nBefore SP:\n" + sb.toString());
 		//SP
 		for (int i = 0; i < sp_array.length; i++){
-			System.out.println("\nCurrent Iteration:\n" + i);
 			sb.append(service_profile_s);
 			// PublicIdentity 					=> 1 to n
 			
-			System.out.println("\nBefore Public identity:\n" + sb.toString());
 			it = impu_array[i].iterator();
 			while (it.hasNext()){
 				IMPU impu = (IMPU)it.next();
@@ -570,8 +567,6 @@ public class SAR {
 				sb.append(identity_e);
 				sb.append(public_id_e);
 			}
-			
-			System.out.println("\nAfter Public identity:\n" + sb.toString());
 			
 			// InitialFilterCriteria 			=> 0 to n
 			
@@ -709,7 +704,6 @@ public class SAR {
 					sb.append(app_server_s);
 					
 					sb.append(server_name_s);
-					System.out.println("Server name:" + crt_as.getServer_name());
 					sb.append(crt_as.getServer_name());
 					sb.append(server_name_e);
 					if (crt_as.getDefault_handling() != -1){
@@ -766,7 +760,8 @@ public class SAR {
 			sb.append(service_profile_e);
 		}
 		sb.append(ims_subscription_e);
-		System.out.println("The XML document which is prepared to be sent to the S-CSCF:\n" + sb.toString());
+		
+		logger.info("\n\nThe UserData XML document which is sent to the S-CSCF:\n" + sb.toString());
 		return sb.toString();
 	}
 }

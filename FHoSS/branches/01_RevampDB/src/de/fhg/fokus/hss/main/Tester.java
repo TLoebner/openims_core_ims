@@ -16,12 +16,15 @@ import de.fhg.fokus.hss.auth.HexCodec;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMSU;
+import de.fhg.fokus.hss.db.model.RTR_PPR;
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.DB_Op;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.sh.data.ShDataParser;
 
 /**
@@ -30,16 +33,8 @@ import de.fhg.fokus.hss.sh.data.ShDataParser;
  */
 public class Tester extends Thread{
 	public void run() {
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println("Tester class!");
 		
-		
-		
+		/*
 		InputSource input;// = new InputSource(new FileReader("files//online1.xml"));
 		String inputString = 
 			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
@@ -259,6 +254,8 @@ public class Tester extends Thread{
 		
 		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
 		ShDataParser parser = new ShDataParser(input);
+		
+*/		
 /*		  		
 		ShData shData = parser.getShData();
 		if (shData != null)

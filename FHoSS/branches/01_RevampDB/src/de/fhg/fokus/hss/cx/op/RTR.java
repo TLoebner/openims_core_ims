@@ -50,18 +50,16 @@ import org.hibernate.Session;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.cx.CxExperimentalResultException;
 import de.fhg.fokus.hss.cx.CxFinalResultException;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
-import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.op.DB_Op;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.UtilAVP;
 import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.diameter.DiameterPeer.transaction.TransactionListener;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -69,7 +67,7 @@ import de.fhg.fokus.diameter.DiameterPeer.transaction.TransactionListener;
 
 public class RTR {
 
-	public static void sendRequest(DiameterPeer diameterPeer,  
+	public static DiameterMessage prepareRequest(DiameterPeer diameterPeer,  
 			List impuList, List impiList, int reasonCode, String reasonInfo){
 		
 		DiameterMessage request = diameterPeer.newRequest(DiameterConstants.Command.RTR, DiameterConstants.Application.Cx);
@@ -184,8 +182,6 @@ public class RTR {
 			UtilAVP.addDeregistrationReason(request, reasonCode, reasonInfo);
 			// add result code
 			UtilAVP.addResultCode(request, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
-			// send the RTR
-			diameterPeer.sendRequestTransactional(dest_host, request, new RTRListener());
 		}
 /*		catch(CxExperimentalResultException e){
 			
@@ -198,22 +194,13 @@ public class RTR {
 			HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
+		
+		return request;
 	}
 	
-	/*public static void processAnswer(DiameterPeer diameterPeer, DiameterMessage message){
-		System.out.println("Answer received for RTR!");
-	}*/
-}
-class RTRListener implements TransactionListener {
-
-	public void receiveAnswer(String arg0, DiameterMessage arg1, DiameterMessage arg2) {
-		System.out.println("Answer received for RTR request!");
+	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
+		DiameterMessage response = diameterPeer.newResponse(request);
 		
+		return response;
 	}
-
-	public void timeout(DiameterMessage arg0) {
-		System.out.println("Timeout for RTR request!");
-		
-	}
-	
 }
