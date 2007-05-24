@@ -1,32 +1,49 @@
 /*
  * IMS offline charging (Rf) module
  *
- * $Id: acc_rf.c 166 2007-04-14 19:28:23Z placido $
+ * $Id$
+ *  
+ * Copyright (C) 2004-2007 FhG Fokus
+ * Copyright (C) 2007 PT Inovacao
  *
- * Copyright (C) 2001-2003 FhG FOKUS
- * Copyright (C) 2005 iptelorg GmbH
+ * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+ * implementation
  *
- * This file is part of ser, a free SIP server.
- *
- * ser is free software; you can redistribute it and/or modify
+ * Open IMS Core is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version
+ * (at your option) any later version.
  *
- * For a license to use the ser software under conditions
+ * For a license to use the Open IMS Core software under conditions
  * other than those described here, or to purchase support for this
- * software, please contact iptel.org by e-mail at the following addresses:
- *    info@iptel.org
+ * software, please contact Fraunhofer FOKUS by e-mail at the following
+ * addresses:
+ *     info@open-ims.org
  *
- * ser is distributed in the hope that it will be useful,
+ * Open IMS Core is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ * 
+ * It has to be noted that this Open Source IMS Core System is not 
+ * intended to become or act as a product in a commercial context! Its 
+ * sole purpose is to provide an IMS core reference implementation for 
+ * IMS technology testing and IMS application prototyping for research 
+ * purposes, typically performed in IMS test-beds.
+ * 
+ * Users of the Open Source IMS Core System have to be aware that IMS
+ * technology may be subject of patents and licence terms, as being 
+ * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+ * standards. Thus all Open IMS Core users have to take notice of this 
+ * fact and have to agree to check out carefully before installing, 
+ * using and extending the Open Source IMS Core System, if related 
+ * patents and licences may become applicable to the intended usage 
+ * context.  
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ * 
  */
 
 /**
@@ -37,6 +54,7 @@
  * Scope:
  * - Exports parameters and functions
  * - Initialization functions
+ * - tm callbacks
  * 
  *  \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  * 
@@ -191,7 +209,7 @@ static void log_reply(struct cell* t, struct sip_msg* reply, unsigned int code, 
 	str tag;
 	AAAAcctMessageType acct_record_type = AAA_ACCT_EVENT;
 	//AAAMessage *acr=0;
-	//AAAAcctSession *s;
+	AAAAcctSession *acc_s;
 	struct sip_msg *req = (t->uas).request;
 	char send=0;
 
@@ -265,14 +283,18 @@ static void log_reply(struct cell* t, struct sip_msg* reply, unsigned int code, 
 	if (send) {		 
 		switch (acct_record_type) {
 			case AAA_ACCT_INTERIM:
-				//Rf_ACR_interim(req); // req or reply?
+				LOG(L_INFO,"INFO:"M_NAME":log_reply: Sending Accounting Interim...\n");
+				str dlgid = cscf_get_call_id(req, 0);
+				acc_s = cdpb.AAAGetAcctSession(&dlgid);
+				Rf_ACR_interim(req, acc_s);
 		  		break;
 		  	case AAA_ACCT_START:
-				Rf_ACR_start(req);  // req or reply??
+		  		LOG(L_INFO,"INFO:"M_NAME":log_reply: Sending Accounting Start...\n");
+				Rf_ACR_start(req);
 				break;
 			case AAA_ACCT_EVENT: 
 				LOG(L_INFO,"INFO:"M_NAME":log_reply: Sending Accounting Event...\n");
-				Rf_ACR_event(req); // or reply??
+				Rf_ACR_event(req);
 				break;
 			default:
 				LOG(L_ERR, "BUG:"M_NAME":log_reply: Bad acct_record_type\n");
@@ -500,7 +522,7 @@ static int mod_init(void)
 	}
 
 	/* register response callback */
-	cdpb.AAAAddResponseHandler(&RfAnswerHandler,0);
+	//cdpb.AAAAddResponseHandler(&RfAnswerHandler,0);
 
 	return 0;
 error:
