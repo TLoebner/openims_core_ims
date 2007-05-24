@@ -116,8 +116,10 @@ int append_branches=1;					/**< if to append branches						*/
 
 int scscf_dialogs_hash_size=256;		/**< size of the dialog hash table 				*/
 int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs		*/
-
 int scscf_min_se=90;					/**< Minimum session-expires accepted value		*/
+int* scscf_dialog_count = 0;			/**< Counter for saved dialogs					*/
+int scscf_max_dialog_count=20000;		/**< Maximum number of dialogs					*/ 
+gen_lock_t* scscf_dialog_count_lock=0; 	/**< Lock for the dialog counter				*/
 
 persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
 char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
@@ -315,6 +317,7 @@ static param_export_t scscf_params[]={
 
 	{"dialogs_hash_size", 				INT_PARAM, &scscf_dialogs_hash_size},
 	{"dialogs_expiration_time", 		INT_PARAM, &scscf_dialogs_expiration_time},
+	{"max_dialog_count",				INT_PARAM, &scscf_max_dialog_count},
 	{"min_se", 							INT_PARAM, &scscf_min_se},
 	
 	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
@@ -645,6 +648,11 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
+	scscf_dialog_count = shm_malloc(sizeof(int));
+	*scscf_dialog_count = 0;
+	scscf_dialog_count_lock = lock_alloc();
+	scscf_dialog_count_lock = lock_init(scscf_dialog_count_lock);
+
 	if (scscf_persistency_mode!=NO_PERSISTENCY){
 		load_snapshot_dialogs();
 		if (register_timer(persistency_timer_dialogs,0,scscf_persistency_timer_dialogs)<0) goto error;
@@ -737,6 +745,9 @@ static void mod_destroy(void)
 		r_notify_destroy();	
 		r_storage_destroy();
 		s_dialogs_destroy();	
+        lock_get(scscf_dialog_count_lock);
+        shm_free(scscf_dialog_count);
+        lock_destroy(scscf_dialog_count_lock);		
 		pkg_free(scscf_service_route.s);
 	}
 	

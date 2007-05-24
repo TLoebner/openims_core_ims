@@ -127,8 +127,11 @@ int subscriptions_hash_size=1024;			/**< the size of the hash table for subscrip
 
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
 int pcscf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
+int pcscf_min_se=90;						/**< Minimum session-expires accepted value			*/
+int* pcscf_dialog_count = 0;				/**< Counter for saved dialogs						*/
+int pcscf_max_dialog_count=20000;			/**< Maximum number of dialogs						*/ 
+gen_lock_t* pcscf_dialog_count_lock=0; 		/**< Lock for the dialog counter					*/
 
-int pcscf_min_se=90;						/**< Minimum session-expires accepted value		*/
 
 int pcscf_nat_enable = 1; 					/**< whether to enable NAT							*/
 int pcscf_nat_ping = 1; 					/**< whether to ping anything 						*/
@@ -145,8 +148,6 @@ int rtpproxy_enable = 0; 					/**< if the RTPProxy is enabled 					*/
 int rtpproxy_disable_tout = 60 ;			/**< disabling timeout for the RTPProxy 			*/
 int rtpproxy_retr = 5;						/**< Retry count 									*/
 int rtpproxy_tout = 1;						/**< Timeout 										*/
-
-
 
 /* fixed parameter storage */
 str pcscf_name_str;							/**< fixed SIP URI of this P-CSCF 					*/
@@ -350,7 +351,9 @@ static param_export_t pcscf_params[]={
 
 	{"dialogs_hash_size",		INT_PARAM,		&pcscf_dialogs_hash_size},
 	{"dialogs_expiration_time",	INT_PARAM,		&pcscf_dialogs_expiration_time},
+	{"max_dialog_count",		INT_PARAM,		&pcscf_max_dialog_count},
 	{"min_se",		 			INT_PARAM, 		&pcscf_min_se},
+	
 	
 	{"use_ipsec", 				INT_PARAM,		&pcscf_use_ipsec},
 	{"ipsec_host", 				STR_PARAM,		&pcscf_ipsec_host},	
@@ -687,6 +690,11 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
 		goto error;
 	}		
+	pcscf_dialog_count = shm_malloc(sizeof(int));
+	*pcscf_dialog_count = 0;
+	pcscf_dialog_count_lock = lock_alloc();
+	pcscf_dialog_count_lock = lock_init(pcscf_dialog_count_lock);
+
 	if (pcscf_persistency_mode!=NO_PERSISTENCY){
 		load_snapshot_dialogs();
 		if (register_timer(persistency_timer_dialogs,0,pcscf_persistency_timer_dialogs)<0) goto error;
@@ -762,6 +770,9 @@ static void mod_destroy(void)
 		r_subscription_destroy();
 		r_storage_destroy();
 		p_dialogs_destroy();
+        lock_get(pcscf_dialog_count_lock);
+        shm_free(pcscf_dialog_count);
+        lock_destroy(pcscf_dialog_count_lock);
 	}
 	
 	if ( (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) && pcscf_db) {

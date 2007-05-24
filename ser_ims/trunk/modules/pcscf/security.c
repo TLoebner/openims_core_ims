@@ -618,15 +618,15 @@ int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2)
 	/* get the real receive IP address */
 	src_ip = &(msg->rcv.src_ip);
 	src_ip_ch = ip_addr2a(src_ip);
-	LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Received from <%s>\n",src_ip_ch);			 
+	LOG(L_DBG,"DBG:"M_NAME":P_check_sent_by(): Received from <%s>\n",src_ip_ch);			 
 
 	/* find the sent-by Via parameter */
 	sent_by = cscf_get_last_via_sent_by(msg);
-	LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Via sent-by=<%.*s>\n",sent_by.len,sent_by.s);
+	LOG(L_DBG,"DBG:"M_NAME":P_check_sent_by(): Via sent-by=<%.*s>\n",sent_by.len,sent_by.s);
 			
 	/* if not found, exit now */	
 	if (sent_by.len == 0) {
-		LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): Via does not contain a sent-by parameter\n");
+		LOG(L_DBG,"DBG:"M_NAME":P_check_sent_by(): Via does not contain a sent-by value\n");
 		return ret;
 	}		
 	
@@ -634,10 +634,10 @@ int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2)
 	if (sent_by.len==strlen(src_ip_ch) &&
 		strncasecmp(sent_by.s,src_ip_ch,sent_by.len)==0){
 			ret = CSCF_RETURN_TRUE;
-			LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): sent-by matches the actual IP received from\n");
+			LOG(L_DBG,"DBG:"M_NAME":P_check_sent_by(): sent-by matches the actual IP received from\n");
 	}else{
 		ret = CSCF_RETURN_FALSE;
-		LOG(L_INFO,"DBG:"M_NAME":P_check_sent_by(): sent-by does not match the actual IP received from\n");
+		LOG(L_DBG,"DBG:"M_NAME":P_check_sent_by(): sent-by does not match the actual IP received from\n");
 	}	
 	return ret;
 }
