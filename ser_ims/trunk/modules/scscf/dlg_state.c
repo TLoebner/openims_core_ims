@@ -221,6 +221,56 @@ inline int d_act_time()
 	return d_time_now;
 }
 
+extern int* scscf_dialog_count;
+extern int scscf_max_dialog_count;
+extern gen_lock_t* scscf_dialog_count_lock;
+
+/**
+ * Locks the dialog counter variable
+ */
+inline void s_dialog_count_lock()
+{
+	lock_get(scscf_dialog_count_lock);
+}
+
+/**
+ * UnLocks the dialog counter variable
+ */
+inline void s_dialog_count_unlock()
+{
+        lock_release(scscf_dialog_count_lock);
+}
+
+
+/**
+ * Try to increment the dialog count
+ * @returns 1 on success or 0 if the total number of dialogs is already reached
+ */
+inline int s_dialog_count_increment ()
+{
+    s_dialog_count_lock();	
+	if (*scscf_dialog_count<scscf_max_dialog_count){
+    	(*scscf_dialog_count)++;
+    	s_dialog_count_unlock();
+    	return 1;
+	} else {
+    	s_dialog_count_unlock();
+    	return 0;
+	}
+	LOG(L_DBG,"DBG:"M_NAME":s_dialog_count_increment(): P-CSCF Dialog counter value is %d\n", *scscf_dialog_count);
+}
+
+/**
+ * Decrement the dialog count
+ */
+inline void s_dialog_count_decrement()
+{
+    s_dialog_count_lock();
+    (*scscf_dialog_count)--;
+    s_dialog_count_unlock();
+	LOG(L_DBG,"DBG:"M_NAME":s_dialog_count_decrement(): P-CSCF Dialog counter value is %d\n", *scscf_dialog_count);    
+}
+
 
 /**
  * Creates a new s_dialog structure.
@@ -234,6 +284,7 @@ s_dialog* new_s_dialog(str call_id,str aor, enum s_dialog_direction dir)
 {
 	s_dialog *d;
 	
+	if (!s_dialog_count_increment()) return 0;
 	d = shm_malloc(sizeof(s_dialog));
 	if (!d) {
 		LOG(L_ERR,"ERR:"M_NAME":new_s_dialog(): Unable to alloc %d bytes\n",
@@ -252,6 +303,7 @@ error:
 	if (d){
 		shm_free(d);		
 	}
+	s_dialog_count_decrement();
 	return 0;
 }
 
@@ -467,6 +519,7 @@ void free_s_dialog(s_dialog *d)
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);		
 	shm_free(d);
+	s_dialog_count_decrement(); 	
 }
 
 /**

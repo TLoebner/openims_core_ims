@@ -220,6 +220,56 @@ inline int d_act_time()
 	return d_time_now;
 }
 
+extern int* pcscf_dialog_count;
+extern int pcscf_max_dialog_count;
+extern gen_lock_t* pcscf_dialog_count_lock;
+
+/**
+ * Locks the dialog counter variable
+ */
+inline void p_dialog_count_lock()
+{
+	lock_get(pcscf_dialog_count_lock);
+}
+
+/**
+ * UnLocks the dialog counter variable
+ */
+inline void p_dialog_count_unlock()
+{
+        lock_release(pcscf_dialog_count_lock);
+}
+
+
+/**
+ * Try to increment the dialog count
+ * @returns 1 on success or 0 if the total number of dialogs is already reached
+ */
+inline int p_dialog_count_increment ()
+{
+    p_dialog_count_lock();	
+	if (*pcscf_dialog_count<pcscf_max_dialog_count){
+    	(*pcscf_dialog_count)++;
+    	p_dialog_count_unlock();
+    	return 1;
+	} else {
+    	p_dialog_count_unlock();
+    	return 0;
+	}
+	LOG(L_DBG,"DBG:"M_NAME":p_dialog_count_increment(): P-CSCF Dialog counter value is %d\n", *pcscf_dialog_count);
+}
+
+/**
+ * Decrement the dialog count
+ */
+inline void p_dialog_count_decrement()
+{
+    p_dialog_count_lock();
+    (*pcscf_dialog_count)--;
+    p_dialog_count_unlock();
+	LOG(L_DBG,"DBG:"M_NAME":p_dialog_count_decrement(): P-CSCF Dialog counter value is %d\n", *pcscf_dialog_count);    
+}
+
 
 /**
  * Creates a new p_dialog structure.
@@ -234,6 +284,7 @@ p_dialog* new_p_dialog(str call_id,str host,int port, int transport)
 {
 	p_dialog *d;
 	
+	if (!p_dialog_count_increment()) return 0;
 	d = shm_malloc(sizeof(p_dialog));
 	if (!d) {
 		LOG(L_ERR,"ERR:"M_NAME":new_p_dialog(): Unable to alloc %d bytes\n",
@@ -253,6 +304,7 @@ error:
 	if (d){
 		shm_free(d);		
 	}
+	p_dialog_count_decrement();
 	return 0;
 }
 
@@ -483,6 +535,7 @@ void free_p_dialog(p_dialog *d)
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
 	if (d->refresher.s) shm_free(d->refresher.s);
 	shm_free(d);
+	p_dialog_count_decrement(); 
 }
 
 /**
