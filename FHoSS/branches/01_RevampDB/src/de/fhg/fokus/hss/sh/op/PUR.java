@@ -141,12 +141,12 @@ public class PUR {
 			}
 			
 			// - 3 - check if the user identity apply to the Data-Reference, as specified in table 7.6.1 (TS 29.328)
-			if (data_reference == ShConstants.Data_Ref_PSI_Activation && impu.getType() != CxConstants.Identity_Type.Distinct_PSI.code){
+			if (data_reference == ShConstants.Data_Ref_PSI_Activation && impu.getType() != CxConstants.Identity_Type_Distinct_PSI){
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED);
 			}
 			
 			// - 3a - 
-			if (data_reference == ShConstants.Data_Ref_Aliases_Repository_Data && impu.getType() != CxConstants.Identity_Type.Public_User_Identity.code){
+			if (data_reference == ShConstants.Data_Ref_Aliases_Repository_Data && impu.getType() != CxConstants.Identity_Type_Public_User_Identity){
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED);
 			}
 			

@@ -63,6 +63,7 @@ import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
@@ -93,6 +94,10 @@ public class IMPI_Load extends Action {
 			HibernateUtil.beginTransaction();
 
 	    	form.setSelect_auth_scheme(WebConstants.select_auth_scheme);
+
+	    	// RTR & PPR
+	    	form.setRtr_select_identities(IMPI_IMPU_DAO.get_all_registered_IMPU_by_IMPI_ID(session, id));
+	    	
 			if (id != -1){
 				// load
 				IMPI impi = IMPI_DAO.get_by_ID(session, id); 
@@ -159,31 +164,31 @@ public class IMPI_Load extends Action {
 				form.setAll(true);
 			}
 			else{
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_AKAv1) != 0){
 					form.setAka1(true);
 				}
 			
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_AKAv2) != 0){
 					form.setAka2(true);
 				}
 				
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_MD5.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_MD5) != 0){
 					form.setMd5(true);
 				}
 
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_Digest.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_Digest) != 0){
 					form.setDigest(true);
 				}
 				
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_HTTP_Digest_MD5) != 0){
 					form.setHttp_digest(true);
 				}
 				
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_Early.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_Early) != 0){
 					form.setEarly(true);
 				}
 				
-				if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_NASS_Bundle.getCode()) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_NASS_Bundle) != 0){
 					form.setNass_bundle(true);
 				}
 				

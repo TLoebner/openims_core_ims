@@ -71,8 +71,13 @@ public class DiameterStack implements EventListener, TransactionListener {
 	
 	public void recvMessage(String FQDN, DiameterMessage request) {
 		
-		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, request);
 		
+		if (request.commandCode == DiameterConstants.Command.PPR || request.commandCode == DiameterConstants.Command.RTR){
+			// these commands are received also by the receiveAnswer method
+			return;
+		}
+		
+		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, request);
 		try{
 			HSSContainer.getInstance().tasksQueue.put(task);
 			logger.debug("New task was added to queue!");
@@ -83,7 +88,7 @@ public class DiameterStack implements EventListener, TransactionListener {
 	}
 	
 	public void receiveAnswer(String FQDN, DiameterMessage request, DiameterMessage answer) {
-		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, request);
+		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, answer);
 		try{
 			HSSContainer.getInstance().tasksQueue.put(task);
 			logger.debug("New task was added to queue!");

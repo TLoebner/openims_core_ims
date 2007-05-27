@@ -111,4 +111,26 @@ public class DB_Op {
 			session.saveOrUpdate(impi_impu);
 		}
 	}
+	
+	public static void deregister_all_IMPUs_for_an_IMPI_ID(Session session, int id_impi){
+
+		Query query = session.createSQLQuery(
+				"update impi_impu, impu set impi_impu.user_state=0, impu.user_state=0 where " +
+				"	impi_impu.id_impi=? and impu.id=impi_impu.id_impu");
+		
+		query.setInteger(0, id_impi);
+		query.executeUpdate();
+	}
+	
+	public static void deregister_IMPU_for_an_IMPI_ID(Session session, int id_impu, int id_impi){
+		Query query = session.createSQLQuery(
+				"update impi_impu, impu set impi_impu.user_state=0, impu.user_state=0" +
+				"	where impu.id=? and impi_impu.id_impu=impu.id" +
+				"		and impi_impu.id_impi=?");
+		
+		query.setInteger(0, id_impu);
+		query.setInteger(1, id_impi);
+		query.executeUpdate();
+	}
+	
 }

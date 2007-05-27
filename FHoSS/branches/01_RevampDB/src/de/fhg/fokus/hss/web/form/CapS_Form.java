@@ -52,13 +52,10 @@ import org.apache.struts.action.ActionMessage;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.CapabilitiesSet;
-import de.fhg.fokus.hss.db.model.Capability;
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
-import de.fhg.fokus.hss.db.op.Capability_DAO;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
@@ -74,7 +71,8 @@ import javax.servlet.http.HttpServletRequest;
 
 public class CapS_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(CapS_Form.class);
-	
+	private static final long serialVersionUID=1L;
+
 	private String name;
 	private int id_set;
 	

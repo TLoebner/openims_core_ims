@@ -50,9 +50,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.log4j.Logger;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.diam.*;
-import de.fhg.fokus.hss.db.hibernate.*;
-import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -62,6 +61,7 @@ public class HSSContainer {
 	private static Logger logger = Logger.getLogger(HSSContainer.class);
 	private static HSSContainer appContainer = null;
 	public LinkedBlockingQueue tasksQueue;
+	
 	public Worker [] workers;
 	
 	// diameter stack
@@ -90,11 +90,13 @@ public class HSSContainer {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-/*		
+
+		// invoke hibernate for the first time
         Session session = HibernateUtil.getCurrentSession();
         HibernateUtil.commitTransaction();
         HibernateUtil.closeSession();
-*/		
+		
+        // initialise the tasksQueue and start the workers
 		tasksQueue = new LinkedBlockingQueue();
 		workers = new Worker[10];
 		for (int i = 0; i < workers.length; i++){
@@ -102,6 +104,7 @@ public class HSSContainer {
 			workers[i].start();
 		}
 		
+		// CxEvents Worker
 		CxEventsWorker cxEventsWorker = new CxEventsWorker(10);
 		cxEventsWorker.start();
 	}

@@ -49,7 +49,6 @@ import org.hibernate.Session;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
@@ -63,6 +62,7 @@ import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.diam.UtilAVP;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -84,6 +84,8 @@ public class PPR {
 		try{
         	Session session = HibernateUtil.getCurrentSession();
         	HibernateUtil.beginTransaction();
+        	
+        	// get an impu from the implicit set; this is used to obtain the charging-info functions
         	IMPU impu = IMPU_DAO.get_one_from_set(session, id_implicit_set);
         	if (impu.getUser_state() == CxConstants.IMPU_user_state_Not_Registered || impu.getUser_state() == CxConstants.IMPU_user_state_Auth_Pending){
         		logger.error("Implicit Registration Set: " + id_implicit_set + " is in Not-Registered state!");
@@ -92,17 +94,20 @@ public class PPR {
         	else{
         		IMPI impi = IMPI_DAO.get_by_ID(session, id_impi);
         		IMSU imsu = IMSU_DAO.get_by_ID(session, impi.getId_imsu());
-        		UtilAVP.addDestinationHost(request, imsu.getDiameter_name());
+     
+        		String destHost = imsu.getDiameter_name(); 
+        		UtilAVP.addDestinationHost(request, destHost);
+        		UtilAVP.addDestinationRealm(request, destHost.substring(destHost.indexOf('.') + 1));
         		
         		String userData = SAR.downloadUserData(impi.getIdentity(), id_implicit_set);
         		ChargingInfo chgInfo = ChargingInfo_DAO.get_by_ID(session, impu.getId_charging_info());
 			
         		UtilAVP.addUserName(request, impi.getIdentity());
-        		if (type == 1){
+        		if (type == WebConstants.PPR_Apply_for_User_Data){
         			// add only User Data
         			UtilAVP.addUserData(request, userData);
         		}
-        		else if (type == 2){
+        		else if (type == WebConstants.PPR_Apply_for_Charging_Func){
         			// 	add only Charging Info
         			UtilAVP.addChargingInformation(request, chgInfo);
         		}
@@ -118,11 +123,6 @@ public class PPR {
         		// send the request
         		diameterPeer.sendRequestTransactional(imsu.getDiameter_name(), request, diameterStack);
         	}
-		}
-		catch(DatabaseException e){
-			logger.error("Database Exception occured!\nReason:" + e.getMessage());
-			e.printStackTrace();
-			dbException = true;
 		}
 		catch (HibernateException e){
 			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());

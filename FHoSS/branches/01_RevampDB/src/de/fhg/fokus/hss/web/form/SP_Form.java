@@ -73,7 +73,8 @@ import javax.servlet.http.HttpServletRequest;
 
 public class SP_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(SP_Form.class);
-
+	private static final long serialVersionUID=1L;
+	
 	private int id;
 	private String name;
 	private int cn_service_auth;

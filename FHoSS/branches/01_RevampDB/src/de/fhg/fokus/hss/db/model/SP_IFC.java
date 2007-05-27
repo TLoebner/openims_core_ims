@@ -43,12 +43,16 @@
 
 package de.fhg.fokus.hss.db.model;
 
+import java.io.Serializable;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class SP_IFC {
+public class SP_IFC implements Serializable {
+	private static final long serialVersionUID=1L;
+	
 	private int id;
 	private int priority;
 	private int id_sp;

@@ -69,6 +69,8 @@ import javax.servlet.http.HttpServletRequest;
 public class Cap_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(Cap_Form.class);
 	
+	private static final long serialVersionUID=1L;
+
 	private int id;
 	private String name;
 	

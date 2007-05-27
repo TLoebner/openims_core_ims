@@ -58,7 +58,6 @@ import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.web.action.AS_Submit;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
@@ -74,7 +73,8 @@ import javax.servlet.http.HttpServletRequest;
 
 public class AS_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(AS_Form.class);
-
+	private static final long serialVersionUID=1L;
+	
 	private int id;
 	private String name;
 	private String server_name;

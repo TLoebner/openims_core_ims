@@ -43,11 +43,15 @@
 
 package de.fhg.fokus.hss.db.model;
 
+import java.io.Serializable;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class RTR_PPR {
+public class RTR_PPR implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	private int id;
 	private long hopbyhop;
 	private long endtoend;
@@ -59,7 +63,8 @@ public class RTR_PPR {
 	private int grp;
 	private String reason_info;
 	private int trials_cnt;
-
+	private String diameter_name;
+	
 	public RTR_PPR(){}
 
 	public long getEndtoend() {
@@ -148,6 +153,14 @@ public class RTR_PPR {
 
 	public void setId_implicit_set(int id_implicit_set) {
 		this.id_implicit_set = id_implicit_set;
+	}
+
+	public String getDiameter_name() {
+		return diameter_name;
+	}
+
+	public void setDiameter_name(String diameter_name) {
+		this.diameter_name = diameter_name;
 	}
 
 	

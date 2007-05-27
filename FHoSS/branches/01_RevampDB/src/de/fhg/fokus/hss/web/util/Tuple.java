@@ -43,12 +43,16 @@
 
 package de.fhg.fokus.hss.web.util;
 
+import java.io.Serializable;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class Tuple {
+public class Tuple implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	private Object label;
 	private Object value;
 	

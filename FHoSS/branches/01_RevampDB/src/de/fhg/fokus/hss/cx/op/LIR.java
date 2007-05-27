@@ -152,7 +152,6 @@ public class LIR {
 					unregistered_services = false;
 					
 					int cnt =SP_IFC_DAO.get_Unreg_Serv_Count(session, impu.getId_sp());
-					System.out.println("\n\nUnreg services count:" + cnt);
 					if (cnt > 0){
 						unregistered_services = true;
 					}

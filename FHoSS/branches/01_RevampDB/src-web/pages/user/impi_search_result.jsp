@@ -71,7 +71,7 @@ function rowsPerPageChanged(){
 							<%= impi.getAuth_scheme() %>
 						</td>
 						<td>
-							<%= HexCodec.encode(impi.getSqn()) %>
+							<%= impi.getSqn() %>
 						</td>
 					</tr>
 				<%		

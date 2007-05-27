@@ -70,6 +70,7 @@ import javax.servlet.http.HttpServletRequest;
 
 public class IFC_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(IFC_Form.class);
+	private static final long serialVersionUID=1L;
 	
 	private int id;
 	private String name;

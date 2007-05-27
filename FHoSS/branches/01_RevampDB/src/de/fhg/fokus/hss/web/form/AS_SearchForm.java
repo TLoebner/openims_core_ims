@@ -55,6 +55,8 @@ import org.apache.struts.action.ActionMapping;
  */
 
 public class AS_SearchForm extends ActionForm implements Serializable{
+	private static final long serialVersionUID=1L;
+
 	private String id_as;
 	private String name;
 	private String server_name;

@@ -75,7 +75,9 @@ import javax.servlet.http.HttpServletRequest;
  */
 
 public class TP_Form extends ActionForm implements Serializable{
-	private static Logger logger = Logger.getLogger(TP_Form.class);	
+	private static Logger logger = Logger.getLogger(TP_Form.class);
+	private static final long serialVersionUID=1L;
+	
 	// TP properties
 	private int id;
 	private String name;
@@ -96,7 +98,7 @@ public class TP_Form extends ActionForm implements Serializable{
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.name = null;
-    	this.condition_type_cnf = CxConstants.ConditionType.CNF.code;
+    	this.condition_type_cnf = CxConstants.ConditionType_CNF;
 
     	Factory factory = new Factory() {
                 public Object create() {
