@@ -301,12 +301,12 @@ public class DigestAKA
           	nonce[k] = autn[i];
 
         AuthenticationVector authenticationVector = null;
-        if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode()) != 0){
+        if ((auth_scheme & CxConstants.Auth_Scheme_AKAv1) != 0){
            	//AKAv1
            	logger.debug("Authentication-Scheme: AKAv1!");
           	authenticationVector = new AuthenticationVector(auth_scheme, nonce, xres, ck, ik);
         }
-        else if ((auth_scheme & CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode()) != 0){
+        else if ((auth_scheme & CxConstants.Auth_Scheme_AKAv2) != 0){
            	// AKAv2
            	logger.debug("Authentication-Scheme: AKAv2!");
            	byte xresV2[] =  new byte[xres.length + ck.length + ik.length];

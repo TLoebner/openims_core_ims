@@ -58,15 +58,27 @@ function add_action_for_form(action, associated_ID) {
 			document.IMPI_Form.nextAction.value="ppr";
 			document.IMPI_Form.submit();			
 			break;
+			
 		case 11:	
-			document.IMPI_Form.nextAction.value="rtr";
+			document.IMPI_Form.nextAction.value="rtr_select_identities";
 			document.IMPI_Form.submit();			
 			break;
-		case 12:
+
+		case 12:	
+			document.IMPI_Form.nextAction.value="rtr_all";
+			document.IMPI_Form.submit();			
+			break;
+			
+		case 13:	
+			document.IMPI_Form.nextAction.value="rtr_selected";
+			document.IMPI_Form.submit();			
+			break;
+			
+		case 14:
 			document.IMPI_Form.nextAction.value="add_imsu";
 			document.IMPI_Form.submit();			
 			break;
-		case 13:
+		case 15:
 			document.IMPI_Form.nextAction.value="add_impu";
 			document.IMPI_Form.submit();			
 			
@@ -322,7 +334,7 @@ function disable_other_boxes(){
 										<html:text property="imsu_name" value="" styleClass="inputtext" />
 									</td>
 									<td>
-										<html:button property="imsu_add_button" value="Add/Change" onclick="add_action_for_form(12, -1);"/>
+										<html:button property="imsu_add_button" value="Add/Change" onclick="add_action_for_form(14, -1);"/>
 									</td>
 								</tr>	
 							</table>
@@ -359,9 +371,7 @@ function disable_other_boxes(){
 					</tr>		
 
 					<tr>
-						<td>
-							<br/>
-						</td>	
+						<td> <br/> </td>	
 					</tr>
 					<tr>
 						<td>
@@ -399,7 +409,7 @@ function disable_other_boxes(){
 										<html:text property="impu_identity" value="" styleClass="inputtext" />
 									</td>
 									<td>
-										<html:button property="impu_add_button" value="Add" onclick="add_action_for_form(13);"/>
+										<html:button property="impu_add_button" value="Add" onclick="add_action_for_form(15);"/>
 									</td>
 								</tr>	
 							</table>
@@ -444,19 +454,87 @@ function disable_other_boxes(){
 							</table>
 						</td>
 					</tr>		
+
+					<tr> <td> <br/> </td> </tr>
 					
 					<tr>
 						<td>
-							<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
-							<tr align="center">
-								<td align="center"> <b> Push Cx Operation </b></td>
-							</tr>
-							<tr align="center">
+							<b> Push Cx Operation </b>
+							<table class="as" border="0" cellspacing="1" align="center" width="100" style="border:2px solid #FF6600;">
+							<tr bgcolor="#FFCC66">
+								<td>
+									Apply for
+								</td>
 								<td align="center">
+									<html:select property="ppr_apply_for" name="IMPI_Form" styleClass="inputtext" size="1" style="width:200px;">
+										<html:optionsCollection name="IMPI_Form" property="select_ppr_apply_for" label="name" value="code"/>
+									</html:select>
+								</td>
+							</tr>
+							<tr bgcolor="#FFCC66">
+								<td align="center">
+									Execute
+								</td>
+															
+								<td align="center">									
 									<html:button property="ppr_button" value="PPR" onclick="add_action_for_form(10, -1);"/>
-									<html:button property="rtr_button" value="RTR" onclick="add_action_for_form(11, -1);"/>
+								</td>
+							</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>	
+						<td>
+							<b> RTR Operation </b>
+							<table class="as" border="0" cellspacing="1" align="center" width="100" style="border:2px solid #FF6600;">
+
+							<tr bgcolor="#FFCC66">
+								<td>Apply for</td>
+								<td>
+									<html:select property="rtr_apply_for" name="IMPI_Form" styleClass="inputtext" size="1" style="width:200px;"
+										onchange="add_action_for_form(3, -1);" >
+										<html:optionsCollection name="IMPI_Form" property="select_rtr_apply_for" label="name" value="code"/>
+									</html:select>
+								</td>
+							</tr>
+							
+							<tr bgcolor="#FFCC66">
+								<td>Select Identities</td>
+								<td><html:select multiple="true" size="5" property="rtr_identities">
+							    	<html:optionsCollection property="rtr_select_identities" label="identity" value="id"/>
+							   	</html:select></td>
+							</tr>
+							
+							<tr bgcolor="#FFCC66">
+								<td>Reason</td>
+								<td>
+									<html:select property="rtr_reason" name="IMPI_Form" styleClass="inputtext" size="1" style="width:200px;">
+										<html:option value="-1">Select Reason...</html:option>
+										<html:optionsCollection name="IMPI_Form" property="select_rtr_reason" label="name" value="code"/>
+									</html:select>
+								</td>
+								
+							</tr>
+
+							<tr bgcolor="#FFCC66">
+								<td>Reason Info</td>
+								<td>
+									<html:text property="reasonInfo" styleClass="inputtext" style="width:200px;"/> 
+								</td>
+							</tr>
+
+							<tr bgcolor="#FFCC66">
+							
+								<td align="center" >
+									Execute
+								</td>
+								
+								<td align="center" >									
+									<html:button property="rtr_button" value="RTR-All" onclick="add_action_for_form(12, -1);"/>
+									<html:button property="rtr_button" value="RTR-Selected" onclick="add_action_for_form(13, -1);"/>
 								</td>
 							</tr>	
+							
 							</table>				
 						</td>
 					</tr>

@@ -56,6 +56,7 @@ import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
 import java.util.List;
@@ -70,6 +71,7 @@ import javax.servlet.http.HttpServletRequest;
 
 public class IMPU_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(IMPU_Form.class);
+	private static final long serialVersionUID=1L;
 	
 	private int id;
 	private String identity;
@@ -95,6 +97,11 @@ public class IMPU_Form extends ActionForm implements Serializable{
 	private List select_vn;
 	private String nextAction;
 
+	// PPR & RTR variables
+	private int ppr_apply_for;
+	private List select_ppr_apply_for;
+	
+	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.identity = null;
@@ -103,7 +110,7 @@ public class IMPU_Form extends ActionForm implements Serializable{
     	this.id_sp = -1;
     	this.id_charging_info = -1;
     	this.can_register = true;
-    	this.type = CxConstants.Identity_Type.Public_User_Identity.code;    	
+    	this.type = CxConstants.Identity_Type_Public_User_Identity;    	
     	this.wildcard_psi = null;
     	this.psi_activation = false;
     	this.display_name = null;
@@ -117,6 +124,8 @@ public class IMPU_Form extends ActionForm implements Serializable{
     	this.select_sp = null;
     	this.select_identity_type = null;
     	this.select_vn = null;
+    	this.ppr_apply_for = -1;
+    	this.select_ppr_apply_for = WebConstants.select_ppr_apply_for;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -318,6 +327,21 @@ public class IMPU_Form extends ActionForm implements Serializable{
 	public void setAlready_assigned_impi_id(int already_assigned_impi_id) {
 		this.already_assigned_impi_id = already_assigned_impi_id;
 	}
-	
+
+	public int getPpr_apply_for() {
+		return ppr_apply_for;
+	}
+
+	public void setPpr_apply_for(int ppr_apply_for) {
+		this.ppr_apply_for = ppr_apply_for;
+	}
+
+	public List getSelect_ppr_apply_for() {
+		return select_ppr_apply_for;
+	}
+
+	public void setSelect_ppr_apply_for(List select_ppr_apply_for) {
+		this.select_ppr_apply_for = select_ppr_apply_for;
+	}
 	
 }

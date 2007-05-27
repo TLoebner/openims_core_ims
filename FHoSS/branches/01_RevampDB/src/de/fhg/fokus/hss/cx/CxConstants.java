@@ -91,11 +91,17 @@ public class CxConstants {
 	public static final int User_Data_Not_Available = 0;
 	public static final int User_Data_Already_Available = 1;
 	
-	// Deregistration-Reason
-	public static final int Deregistration_Reason_Permanent_Termination = 0;
-	public static final int Deregistration_Reason_New_Server_Assigned = 1;
-	public static final int Deregistration_Reason_Server_Change = 2;
-	public static final int Deregistration_Reason_Remove_S_CSCF = 3;
+	// RTR Deregistration-Reason
+	public static final int RTR_Permanent_Termination = 0;
+	public static final int RTR_New_Server_Assigned = 1;
+	public static final int RTR_Server_Change = 2;
+	public static final int RTR_Remove_S_CSCF = 3;
+	
+	public static final String RTR_Permanent_Termination_Name = "Permanent-Termination";
+	public static final String RTR_New_Server_Assigned_Name = "New-Server-Assigned";
+	public static final String RTR_Server_Change_Name = "Server-Change";
+	public static final String RTR__Remove_S_CSCF_Name = "Remove-S-CSCF";
+ 	
 	
 	// SPT Type: Choice Of...
 	public static final int SPT_Type_RequestURI = 0;
@@ -130,12 +136,12 @@ public class CxConstants {
 	public static final int Direction_of_Request_Terminating_Registered = 1;
 	public static final int Direction_of_Request_Terminating_Unregistered = 2;
 	public static final int Direction_of_Request_Originating_Unregistered = 3;
-	
 	public static final String Direction_of_Request_Originating_Session_Name = "Originating-Session";
 	public static final String Direction_of_Request_Terminating_Registered_Name = "Terminating-Registered";
 	public static final String Direction_of_Request_Terminating_Unregistered_Name = "Terminating-UnRegistered";
 	public static final String Direction_of_Request_Originating_Unregistered_Name = "Originating-UnRegistered";
 	
+	// Auth_Scheme
 	public static final int Auth_Scheme_Unknown = 0;
 	public static final int Auth_Scheme_AKAv1 = 1;
 	public static final int Auth_Scheme_AKAv2 = 2;
@@ -144,87 +150,29 @@ public class CxConstants {
 	public static final int Auth_Scheme_HTTP_Digest_MD5 = 16;		
 	public static final int Auth_Scheme_Early = 32;
 	public static final int Auth_Scheme_NASS_Bundle = 64;
-
-	public enum AuthScheme{
-		Auth_Scheme_Unknown("Unknown", 0),
-		Auth_Scheme_AKAv1("Digest-AKAv1-MD5", 1),
-		Auth_Scheme_AKAv2("Digest-AKAv2-MD5", 2),
-		Auth_Scheme_MD5("Digest-MD5", 4),
-		Auth_Scheme_Digest("Digest", 8),
-		Auth_Scheme_HTTP_Digest_MD5("HTTP-Digest-MD5",16),		
-		Auth_Scheme_Early("Early-IMS", 32),
-		Auth_Scheme_NASS_Bundle("NASS-Bundle", 64);
-		
-		public int code;
-		private String name;
-		
-		private AuthScheme(String name, int code){
-			this.name = name;
-			this.code = code;
-		}
-
-		public int getCode() {
-			return code;
-		}
-
-		public String getName() {
-			return name;
-		}
-	}
+	public static final String Auth_Scheme_Unknown_Name = "Unknown";
+	public static final String Auth_Scheme_AKAv1_Name = "Digest-AKAv1-MD5";
+	public static final String Auth_Scheme_AKAv2_Name = "Digest-AKAv2-MD5";
+	public static final String Auth_Scheme_MD5_Name = "Digest-MD5";
+	public static final String Auth_Scheme_Digest_Name = "Digest";
+	public static final String Auth_Scheme_HTTP_Digest_MD5_Name = "HTTP-Digest-MD5";		
+	public static final String Auth_Scheme_Early_Name = "Early-IMS";
+	public static final String Auth_Scheme_NASS_Bundle_Name = "NASS-Bundle";
 	
-	//tIdentityType
-	public enum Identity_Type{
-		Public_User_Identity("Public_User_Identity", 0),
-		Wildcarded_PSI("Wildcarded_PSI", 1),
-		Distinct_PSI("Distinct_PSI", 2);
-		
-		public int code;
-		public String name;
-		
-		private Identity_Type(String name, int code){
-			this.name = name;
-			this.code = code;
-		}
+	// Identity_Type
 
-		public int getCode() {
-			return code;
-		}
-
-		public void setCode(int code) {
-			this.code = code;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-		public void setName(String name) {
-			this.name = name;
-		}
-	}
+	public static final int Identity_Type_Public_User_Identity = 0; 
+	public static final int Identity_Type_Wildcarded_PSI = 1;
+	public static final int Identity_Type_Distinct_PSI = 2;
+	public static final String Identity_Type_Public_User_Identity_Name = "Public_User_Identity"; 
+	public static final String Identity_Type_Wildcarded_PSI_Name = "Wildcarded_PSI";
+	public static final String Identity_Type_Distinct_PSI_Name = "Distinct_PSI";
+	
 	
 	//Condition Type CNF
-	public enum ConditionType{
-		CNF("Conjunctive Normal Format", 1),
-		DNF("Disjunctive Normal Format", 0);
-
-		public int code;
-		public String name;
-		
-		private ConditionType(String name, int code){
-			this.name = name;
-			this.code = code;
-		}
-
-		public int getCode() {
-			return code;
-		}
-
-		public String getName() {
-			return name;
-		}
-
-	}
 	
-	
+	public static final int ConditionType_CNF = 0; 
+	public static final int ConditionType_DNF = 1;
+	public static final String ConditionType_CNF_Name = "Conjunctive Normal Format"; 
+	public static final String ConditionType_DNF_Name = "Disjunctive Normal Format";
 }

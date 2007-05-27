@@ -55,6 +55,8 @@ import org.apache.struts.action.ActionMapping;
  */
 
 public class Cap_SearchForm extends ActionForm implements Serializable{
+	private static final long serialVersionUID=1L;
+
 	private String id_cap;
 	private String name;
 	

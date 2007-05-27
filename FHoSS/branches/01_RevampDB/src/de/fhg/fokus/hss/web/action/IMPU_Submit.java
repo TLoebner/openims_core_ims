@@ -43,7 +43,6 @@
 
 package de.fhg.fokus.hss.web.action;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -59,17 +58,18 @@ import org.hibernate.Session;
 
 
 import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.cx.op.RTR;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.IMPU_VisitedNetwork;
+import de.fhg.fokus.hss.db.model.RTR_PPR;
 import de.fhg.fokus.hss.db.model.SP;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_VisitedNetwork_DAO;
+import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.db.op.SP_DAO;
 import de.fhg.fokus.hss.db.op.VisitedNetwork_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
@@ -319,56 +319,53 @@ public class IMPU_Submit extends Action{
 			}
 			HibernateUtil.closeSession();
 		}
-		
-		// PPR & RTR
-		if (nextAction.equals("ppr")){
-			logger.info("We are sending a PPR message for the user!");
 
-			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-			forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+		dbException = false;
+		try{
+			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 
-		}
-		else if (nextAction.equals("rtr")){
-			logger.info("We are sending a RTR message for the user!");
-			
-			List impiList = new ArrayList();
-			dbException = false;
-			try{
-				Session session = HibernateUtil.getCurrentSession();
-				HibernateUtil.beginTransaction();
+			// PPR & RTR
+			if (nextAction.equals("ppr")){
+				logger.info("We are sending a PPR message for the user!");
 				
-				IMPI impi = IMPI_DAO.get_by_ID(session, form.getId());
-				impiList.add(impi);
-			}
-			catch(DatabaseException e){
-				logger.error("Database Exception occured!\nReason:" + e.getMessage());
-				e.printStackTrace();
-				dbException = true;
-				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-			}
-			
-			catch (HibernateException e){
-				logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
-				e.printStackTrace();
-				dbException = true;
-				forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-			}
-			finally{
-				if (!dbException){
-					HibernateUtil.commitTransaction();
+				IMPU impu = IMPU_DAO.get_by_ID(session, id);
+				if (impu.getUser_state() == CxConstants.IMPU_user_state_Registered || impu.getUser_state() == CxConstants.IMPU_user_state_Unregistered){
+					logger.warn("IMPU: " + form.getIdentity() + " is not registered! PPR aborted!");
+					// we process the request only if the user is in Registered or Unregistered state
+					int id_impi = IMPU_DAO.get_a_registered_IMPI_ID(session, form.getId());
+					if (id_impi != -1){
+						int grp = RTR_PPR_DAO.get_max_grp(session);
+						// we have only a PPR message for the implicit set!
+						RTR_PPR rtr_ppr = new RTR_PPR();
+						rtr_ppr.setId_impi(id_impi);
+						rtr_ppr.setId_implicit_set(impu.getId_implicit_set());
+						rtr_ppr.setId_impu(impu.getId());
+						// type for PPR is 2
+						rtr_ppr.setType(2);
+						rtr_ppr.setSubtype(form.getPpr_apply_for());
+						rtr_ppr.setGrp(grp);
+						RTR_PPR_DAO.insert(session, rtr_ppr);
+					}
 				}
-				HibernateUtil.closeSession();
 			}
 			
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
 			if (!dbException){
-				DiameterStack stack = HSSContainer.getInstance().diamStack;
-//				RTR.sendRequest(stack.diameterPeer, null, impiList,
-//					CxConstants.Deregistration_Reason_Permanent_Termination, "permanent termination");
-			
-				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+				HibernateUtil.commitTransaction();
 			}
-		}		
+			HibernateUtil.closeSession();
+		}
+		
+		forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+		forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		
 		return forward;
 	}

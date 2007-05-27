@@ -61,6 +61,7 @@ import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
+import de.fhg.fokus.hss.web.util.WebConstants;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -69,6 +70,7 @@ import de.fhg.fokus.hss.db.op.IMPI_DAO;
 
 public class IMPI_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(IMPI_Form.class);
+	private static final long serialVersionUID=1L;
 	
 	public static final String DEFAULT_OP = "00000000000000000000000000000000";  
 	public static final String DEFAULT_AMF = "0000";
@@ -91,6 +93,17 @@ public class IMPI_Form extends ActionForm implements Serializable{
 	private String sqn;
 	private String ip;
 	private String line_identifier;
+	
+	// RTR & PPR variables
+	private String[] rtr_identities;
+	private List rtr_select_identities;
+	private int rtr_reason;
+	private List select_rtr_reason;
+	private String reasonInfo;
+	private List select_rtr_apply_for;
+	private int rtr_apply_for;
+	private int ppr_apply_for;
+	private List select_ppr_apply_for;
 	
 	//private List select_imsu;
 	private String nextAction;
@@ -118,7 +131,7 @@ public class IMPI_Form extends ActionForm implements Serializable{
     	this.early = false;
     	this.nass_bundle = false;
     	this.all = false;
-    	this.default_auth_scheme = CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode();
+    	this.default_auth_scheme = CxConstants.Auth_Scheme_AKAv1;
     	this.line_identifier = null;
     	
     	this.impu_identity = null;
@@ -128,45 +141,63 @@ public class IMPI_Form extends ActionForm implements Serializable{
     	this.associated_ID = -1;
     	this.select_auth_scheme = null;
     	this.already_assigned_imsu_id = -1;
+    	
+    	// RTR & PPR variables
+    	this.rtr_reason = -1;
+    	this.select_rtr_reason = WebConstants.select_rtr_reason;
+    	this.reasonInfo = null;
+    	this.rtr_apply_for = 0;
+    	this.select_rtr_apply_for = WebConstants.select_rtr_apply_for;
+    	this.ppr_apply_for = 0;
+    	this.select_ppr_apply_for = WebConstants.select_ppr_apply_for;
+    	this.rtr_select_identities = null;
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (identity == null || identity.equals("")){
-        	actionErrors.add("identity", new ActionMessage("impi_form.error.identity"));
-        }
-        
-		int auth_scheme = IMPI.generateAuthScheme(aka1, aka2, md5, digest, http_digest, early, nass_bundle, all);	
-        if ((auth_scheme & default_auth_scheme) == 0){
-        	actionErrors.add("", new ActionMessage(""));
-        }
-        
-        if (!(this.aka1 || this.aka2 || this.md5 || this.digest || this.http_digest || this.early || this.nass_bundle || this.all )){
-        	actionErrors.add("auth_scheme", new ActionMessage("impi_form.error.auth_scheme"));
-        }
-        if (secretKey == null || secretKey.equals("")){
-        	actionErrors.add("secret_key", new ActionMessage("impi_form.error.secret_key"));
-        }
-        if (amf == null || amf.equals("") || amf.length() != 4){
-        	actionErrors.add("secret_key", new ActionMessage("impi_form.error.amf"));
-        }
-        if (op == null || op.equals("") || op.length() != 32){
-        	actionErrors.add("secret_key", new ActionMessage("impi_form.error.op"));
-        }
-        if (sqn == null || sqn.equals("") || sqn.length() != 12){
-        	actionErrors.add("secret_key", new ActionMessage("impi_form.error.sqn"));
-        }
-
         boolean dbException = false;
         try{
         	Session session = HibernateUtil.getCurrentSession();
         	HibernateUtil.beginTransaction();
+
+            if (nextAction.equals("save")){
+            	if (identity == null || identity.equals("")){
+            		actionErrors.add("identity", new ActionMessage("impi_form.error.identity"));
+            	}
+            
+            	int auth_scheme = IMPI.generateAuthScheme(aka1, aka2, md5, digest, http_digest, early, nass_bundle, all);	
+            	if ((auth_scheme & default_auth_scheme) == 0){
+            		actionErrors.add("", new ActionMessage(""));
+            	}
+            
+            	if (!(this.aka1 || this.aka2 || this.md5 || this.digest || this.http_digest || this.early || this.nass_bundle || this.all )){
+            		actionErrors.add("auth_scheme", new ActionMessage("impi_form.error.auth_scheme"));
+            	}
+            	if (secretKey == null || secretKey.equals("")){
+            		actionErrors.add("secret_key", new ActionMessage("impi_form.error.secret_key"));
+            	}
+            	if (amf == null || amf.equals("") || amf.length() != 4){
+            		actionErrors.add("secret_key", new ActionMessage("impi_form.error.amf"));
+            	}
+            	if (op == null || op.equals("") || op.length() != 32){
+            		actionErrors.add("secret_key", new ActionMessage("impi_form.error.op"));
+            	}
+            	if (sqn == null || sqn.equals("") || sqn.length() != 12){
+            		actionErrors.add("secret_key", new ActionMessage("impi_form.error.sqn"));
+            	}
         	
-        	IMPI impi = IMPI_DAO.get_by_Identity(session, identity);
-        	if (impi != null && impi.getId() != id){
-        		actionErrors.add("impi.error.duplicate_identity", new ActionMessage("impi.error.duplicate_identity"));	
-        	}
+            	IMPI impi = IMPI_DAO.get_by_Identity(session, identity);
+            	if (impi != null && impi.getId() != id){
+            		actionErrors.add("impi.error.duplicate_identity", new ActionMessage("impi.error.duplicate_identity"));	
+            	}
+            }
+            else if (nextAction.equals("rtr_all") || nextAction.equals("rtr_selected")){
+            	if (rtr_reason == -1){
+            		actionErrors.add("impi.error.rtr_reason_missing", new ActionMessage("impi.error.rtr_reason_missing"));
+            	}
+            }
+        	
         }
 		catch(DatabaseException e){
 			logger.error("Database Exception occured!\nReason:" + e.getMessage());
@@ -401,6 +432,79 @@ public class IMPI_Form extends ActionForm implements Serializable{
 
 	public void setAlready_assigned_imsu_id(int already_assigned_imsu_id) {
 		this.already_assigned_imsu_id = already_assigned_imsu_id;
+	}
+
+	public String[] getRtr_identities() {
+		return rtr_identities;
+	}
+
+	public void setRtr_identities(String[] rtr_identities) {
+		this.rtr_identities = rtr_identities;
+	}
+
+
+	public List getRtr_select_identities() {
+		return rtr_select_identities;
+	}
+
+	public void setRtr_select_identities(List rtr_select_identities) {
+		this.rtr_select_identities = rtr_select_identities;
+	}
+
+	public int getRtr_reason() {
+		return rtr_reason;
+	}
+
+	public void setRtr_reason(int rtr_reason) {
+		this.rtr_reason = rtr_reason;
+	}
+
+	public List getSelect_rtr_reason() {
+		return select_rtr_reason;
+	}
+
+	public void setSelect_rtr_reason(List select_rtr_reason) {
+		this.select_rtr_reason = select_rtr_reason;
+	}
+
+	public String getReasonInfo() {
+		return reasonInfo;
+	}
+
+	public void setReasonInfo(String reasonInfo) {
+		this.reasonInfo = reasonInfo;
+	}
+
+	public int getRtr_apply_for() {
+		return rtr_apply_for;
+	}
+
+	public void setRtr_apply_for(int rtr_apply_for) {
+		this.rtr_apply_for = rtr_apply_for;
+	}
+
+	public List getSelect_rtr_apply_for() {
+		return select_rtr_apply_for;
+	}
+
+	public void setSelect_rtr_apply_for(List select_rtr_apply_for) {
+		this.select_rtr_apply_for = select_rtr_apply_for;
+	}
+
+	public int getPpr_apply_for() {
+		return ppr_apply_for;
+	}
+
+	public void setPpr_apply_for(int ppr_apply_for) {
+		this.ppr_apply_for = ppr_apply_for;
+	}
+
+	public List getSelect_ppr_apply_for() {
+		return select_ppr_apply_for;
+	}
+
+	public void setSelect_ppr_apply_for(List select_ppr_apply_for) {
+		this.select_ppr_apply_for = select_ppr_apply_for;
 	}
 
 }

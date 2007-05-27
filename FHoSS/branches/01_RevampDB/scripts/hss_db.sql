@@ -276,6 +276,7 @@ CREATE TABLE `rtr_ppr` (
   `grp` int(11) default '0',
   `reason_info` varchar(255) default '',
   `trials_cnt` int(11) default '0',
+  `diameter_name` varchar(255) default '',  
   PRIMARY KEY  (`id`),
   KEY `idx_hopbyhop` USING BTREE (`hopbyhop`),
   KEY `idx_endtoend` (`endtoend`),

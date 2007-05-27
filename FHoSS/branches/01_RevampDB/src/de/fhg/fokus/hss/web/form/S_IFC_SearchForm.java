@@ -55,10 +55,11 @@ import org.apache.struts.action.ActionMapping;
  */
 
 public class S_IFC_SearchForm extends ActionForm implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	private String name;
 	private String id_set;
 	private String name_ifc;
-	
 	
 	private String crtPage;
 	private String rowsPerPage;

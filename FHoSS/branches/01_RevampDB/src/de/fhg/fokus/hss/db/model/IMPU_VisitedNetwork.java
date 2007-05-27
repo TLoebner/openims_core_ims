@@ -43,12 +43,16 @@
 
 package de.fhg.fokus.hss.db.model;
 
+import java.io.Serializable;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class IMPU_VisitedNetwork {
+public class IMPU_VisitedNetwork implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	private int id;
 	private int id_impu;
 	private int id_visited_network;

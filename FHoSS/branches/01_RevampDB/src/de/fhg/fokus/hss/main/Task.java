@@ -43,10 +43,14 @@
 
 package de.fhg.fokus.hss.main;
 
+import java.util.List;
+
 import org.apache.log4j.Logger;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
+import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.sh.op.PNR;
@@ -63,8 +67,9 @@ public class Task {
 	private static Logger logger = Logger.getLogger(Task.class);
 	// generic variables
 
-	// can be 1 - Sending Request, 2 - Processing Request, 3 - Timeout
+	// "event_type" - can be 1 - Sending Request, 2 - Processing Request, 3 - Timeout
 	public int event_type;
+	// "interface_type" can be Cx, Sh, Zh etc
 	public int interface_type;
 	public int command_code;
 	public String FQDN;
@@ -75,6 +80,11 @@ public class Task {
 	public int id_implicit_set = -1;
 	public int type = -1;
 	public int grp = -1;
+	public List<IMPI> impiList = null;
+	public List<IMPU> impuList = null;
+	public int reasonCode = -1;
+	public String reasonInfo = null;
+	public String diameter_name = null;
 	
 	public Task (int event_type, String FQDN, int command_code, int interface_type, 
 			DiameterMessage message){
@@ -129,6 +139,18 @@ public class Task {
 					break;
 				
 				case DiameterConstants.Command.RTR:
+					if (event_type == 1){
+						logger.info("Sending RTR!");
+						RTR.sendRequest(peer, diameterStack, diameter_name, impuList, impiList, reasonCode, reasonInfo, grp);
+					}
+					else if (event_type == 2){
+						logger.info("Processing RTA!");
+						RTR.processResponse(peer, message);
+					} 
+					else{
+						RTR.processTimeout(message);
+					}
+					
 					break;
 				case DiameterConstants.Command.SAR:
 					System.out.println("Processing SAR!");

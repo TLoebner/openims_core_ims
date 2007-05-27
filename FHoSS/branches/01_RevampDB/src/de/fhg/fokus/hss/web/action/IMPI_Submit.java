@@ -218,7 +218,114 @@ public class IMPI_Submit extends Action{
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
-		
+			else if (nextAction.equals("ppr")){
+				// PPR
+				logger.info("We are sending a PPR message for the user!");
+				
+				// if a PPR is to be sent for an IMPI, we are preparing more PPR messages, corresponding to each different implicit registration set!
+				
+				List implicit_sets_ids = IMPI_DAO.get_all_registered_implicit_sets(session, form.getId());
+				int grp = RTR_PPR_DAO.get_max_grp(session);
+				
+				if (implicit_sets_ids != null && implicit_sets_ids.size() > 0){
+					int id_implicit_set;
+					for  (int i = 0; i < implicit_sets_ids.size(); i++){
+						grp++;
+						id_implicit_set = (Integer) implicit_sets_ids.get(i);
+						
+						// add row into rtr_ppr table coresponding to the implicit_set
+						RTR_PPR rtr_ppr = new RTR_PPR();
+						rtr_ppr.setId_impi(form.getId());
+						rtr_ppr.setId_implicit_set(id_implicit_set);
+						rtr_ppr.setId_impu(-1);
+						// for PPR type is 2
+						rtr_ppr.setType(2);
+						rtr_ppr.setSubtype(form.getPpr_apply_for());
+						rtr_ppr.setGrp(grp);
+						RTR_PPR_DAO.insert(session, rtr_ppr);
+					}
+				}
+
+				logger.info("PPR Event saved in the database!");
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}
+			else if (nextAction.equals("rtr_all")){
+				// RTR
+				logger.info("RTR All");
+				
+				List list = null;
+				if (form.getRtr_apply_for() == WebConstants.RTR_Apply_for_IMPUs){
+					list = IMPI_IMPU_DAO.get_all_registered_IMPU_by_IMPI_ID(session, form.getId());
+				}				
+				else{
+					list = IMPI_DAO.get_all_Registered_IMPIs_by_IMSU_ID(session, form.getId_imsu());
+				}
+				if (list != null && list.size() > 0){
+					
+					IMSU imsu = IMSU_DAO.get_by_ID(session, form.getId_imsu());
+					int grp = RTR_PPR_DAO.get_max_grp(session) + 1;
+					for (int i = 0; i < list.size(); i++){
+						RTR_PPR rtr_ppr = new RTR_PPR();
+						rtr_ppr.setGrp(grp);
+						// type for RTR is 1
+						rtr_ppr.setType(1);
+						// Reason
+						rtr_ppr.setSubtype(form.getRtr_reason());
+						rtr_ppr.setReason_info(form.getReasonInfo());
+						rtr_ppr.setDiameter_name(imsu.getDiameter_name());
+						if (form.getRtr_apply_for() == WebConstants.RTR_Apply_for_IMPUs){
+							IMPU impu = (IMPU)list.get(i);
+							rtr_ppr.setId_impi(form.getId());
+							rtr_ppr.setId_impu(impu.getId());
+						}
+						else{
+							IMPI impi = (IMPI) list.get(i);
+							rtr_ppr.setId_impi(impi.getId());
+							rtr_ppr.setId_impu(-1);
+						}
+						RTR_PPR_DAO.insert(session, rtr_ppr);
+					}
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}	
+			else if (nextAction.equals("rtr_selected")){
+				// RTR
+				logger.info("RTR Selected");
+				String[] rtr_identities = form.getRtr_identities();
+				
+				if (rtr_identities != null){
+					int grp = RTR_PPR_DAO.get_max_grp(session) +  1;
+					IMSU imsu = IMSU_DAO.get_by_ID(session, form.getId_imsu());
+					for (int i = 0; i < rtr_identities.length; i++){
+						if (Integer.parseInt(rtr_identities[i]) == -1)
+							break;
+						RTR_PPR rtr_ppr = new RTR_PPR();
+						rtr_ppr.setGrp(grp);
+						// type for RTR is 1
+						rtr_ppr.setType(1);
+						// Reason
+						rtr_ppr.setSubtype(form.getRtr_reason());
+						rtr_ppr.setReason_info(form.getReasonInfo());
+						rtr_ppr.setDiameter_name(imsu.getDiameter_name());
+						if (form.getRtr_apply_for() == WebConstants.RTR_Apply_for_IMPUs){
+							rtr_ppr.setId_impi(form.getId());
+							rtr_ppr.setId_impu(Integer.parseInt(rtr_identities[i]));
+						}
+						else{
+							rtr_ppr.setId_impi(Integer.parseInt(rtr_identities[i]));
+							rtr_ppr.setId_impu(-1);
+						}
+						RTR_PPR_DAO.insert(session, rtr_ppr);
+					}
+				}
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+			}	
+
 			// actions performed in all the situations 
 
 			// reload the associated IMPUs
@@ -243,7 +350,16 @@ public class IMPI_Submit extends Action{
 			else{
 				request.setAttribute("deleteDeactivation", "true");
 			}
-	    	
+
+			// select RTR Identities
+			if (form.getRtr_apply_for() == 0){
+				// Apply for IMPUs
+				form.setRtr_select_identities(IMPI_IMPU_DAO.get_all_registered_IMPU_by_IMPI_ID(session, form.getId()));
+			}
+			else{
+				// Apply for IMPIs
+				form.setRtr_select_identities(IMPI_DAO.get_all_Registered_IMPIs_by_IMSU_ID(session, form.getId_imsu()));
+			}
 		}
 		catch(DatabaseException e){
 			logger.error("Database Exception occured!\nReason:" + e.getMessage());
@@ -264,56 +380,6 @@ public class IMPI_Submit extends Action{
 			}
 			HibernateUtil.closeSession();
 		}
-		
-		dbException = false;
-		DiameterStack stack = HSSContainer.getInstance().diamStack;
-		List impiList = new ArrayList();
-		
-		dbException = false;
-		try{
-			Session session = HibernateUtil.getCurrentSession();
-			HibernateUtil.beginTransaction();
-		
-			// if we have PPR or RTR
-			if (nextAction.equals("ppr")){
-				// PPR
-				logger.info("We are sending a PPR message for the user!");
-				
-				int grp = RTR_PPR_DAO.get_max_grp(session) + 1;
-				RTR_PPR rtr_ppr = new RTR_PPR();
-				rtr_ppr.setId_impi(form.getId());
-				rtr_ppr.setId_implicit_set(1);//!!!
-				rtr_ppr.setId_impu(-1);
-				rtr_ppr.setType(2);
-				rtr_ppr.setSubtype(1);//!!!
-				rtr_ppr.setGrp(grp);
-				RTR_PPR_DAO.insert(session, rtr_ppr);
-				
-				logger.info("PPR Event saved in the database!");
-			}
-			else if (nextAction.equals("rtr")){
-				// RTR
-				logger.info("We are sending a RTR message for the user!");
-				
-			}	
-			
-		}
-		catch (HibernateException e){
-			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
-			e.printStackTrace();
-			dbException = true;
-			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-		}
-		finally{
-			if (!dbException){
-				HibernateUtil.commitTransaction();
-			}
-			HibernateUtil.closeSession();
-		}			
-			
-			
-		forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 		
 		return forward;
 	}

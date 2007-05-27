@@ -43,11 +43,15 @@
 
 package de.fhg.fokus.hss.db.model;
 
+import java.io.Serializable;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class TP {
+public class TP implements Serializable {
+	private static final long serialVersionUID=1L;
+	
 	private int id;
 	private String name;
 	private int condition_type_cnf;

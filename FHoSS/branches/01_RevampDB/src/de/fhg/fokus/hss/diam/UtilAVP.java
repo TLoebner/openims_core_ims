@@ -250,7 +250,30 @@ public class UtilAVP {
 		}
 		return null;
 	}
-	
+
+	public static List<String> getAssociatedIdentities(DiameterMessage message){
+		List<String> result = null;
+		
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_ASSOCIATED_IDENTITIES, false, 
+				DiameterConstants.Vendor.V3GPP);
+		
+		if (avp == null)
+			return null;
+		
+		Vector childs = avp.childs;
+		String username = null;
+		if (childs == null)
+			return null;
+		for (int i=0; i < childs.size(); i++){
+			AVP child = (AVP)childs.get(i);
+			username = new String(child.data);
+			if (result == null){
+				result = new ArrayList();
+				result.add(username);
+			}
+		}
+		return result;
+	}
 	
 	
 	public static void addServerCapabilities(DiameterMessage message, List mandatory_cap_list, List optional_cap_list){
@@ -367,22 +390,22 @@ public class UtilAVP {
             
             switch (av.getAuth_scheme()){
             	case CxConstants.Auth_Scheme_AKAv1:
-            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_AKAv1.getName());
+            		authScheme.setData(CxConstants.Auth_Scheme_AKAv1_Name);
             		break;
             	case CxConstants.Auth_Scheme_AKAv2:
-            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_AKAv2.getName());
+            		authScheme.setData(CxConstants.Auth_Scheme_AKAv2_Name);
             		break;
             	case CxConstants.Auth_Scheme_MD5:
-            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_MD5.getName());
+            		authScheme.setData(CxConstants.Auth_Scheme_MD5_Name);
             		break;
             	case CxConstants.Auth_Scheme_Early:
-            		authScheme.setData(CxConstants.AuthScheme.Auth_Scheme_Early.getName());
+            		authScheme.setData(CxConstants.Auth_Scheme_Early_Name);
             		break;
             }
             
             authDataItem.addChildAVP(authScheme);
             
-            if(((av.getAuth_scheme() & CxConstants.AuthScheme.Auth_Scheme_Early.getCode()) != 0)){
+            if(((av.getAuth_scheme() & CxConstants.Auth_Scheme_Early) != 0)){
                 AVP ip = new AVP(DiameterConstants.AVPCode.FRAMED_IP_ADDRESS, true, DiameterConstants.Vendor.V3GPP);
                 ip.setData((av.getIp()));
                 authDataItem.addChildAVP(ip);
@@ -483,11 +506,12 @@ public class UtilAVP {
 		reasonCodeAVP.setData(reasonCode);
 		deregistrationReasonAVP.addChildAVP(reasonCodeAVP);
 		
-		AVP reasonInfoAVP = new AVP(DiameterConstants.AVPCode.IMS_REASON_INFO, true, 
-				DiameterConstants.Vendor.V3GPP);
-		reasonInfoAVP.setData(reasonInfo);
-		deregistrationReasonAVP.addChildAVP(reasonInfoAVP);
-		
+		if (reasonInfo != null && !reasonInfo.equals("")){
+			AVP reasonInfoAVP = new AVP(DiameterConstants.AVPCode.IMS_REASON_INFO, true, 
+					DiameterConstants.Vendor.V3GPP);
+			reasonInfoAVP.setData(reasonInfo);
+			deregistrationReasonAVP.addChildAVP(reasonInfoAVP);
+		}
 		message.addAVP(deregistrationReasonAVP);
 	}
 	

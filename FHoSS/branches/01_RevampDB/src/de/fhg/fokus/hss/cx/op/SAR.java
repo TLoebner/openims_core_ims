@@ -269,27 +269,43 @@ public class SAR {
 									// set the user_state to Not-Registered
 									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, true);
-									// clear the scscf_name & origin_host
-									IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+									HibernateUtil.commitTransaction();
+									// commit the transaction, as the previous updates should
+									// be seen by the next DB operations
+									
+									HibernateUtil.beginTransaction();										
+									// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+									int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+									if (reg_cnt_for_imsu == 0){
+										IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+									}
 								}
 								else{
 									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, false);
 									
 								}
-								UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 								break;
 								
 							case CxConstants.IMPU_user_state_Unregistered:
 								// set the user_state to Not-Registered
 								DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, true);
-								// clear the scscf_name & origin_host
-								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
-								UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+
+								HibernateUtil.commitTransaction();
+								// commit the transaction, as the previous updates should
+								// be seen by the next DB operations
+								
+								HibernateUtil.beginTransaction();										
+								// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+								int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+								if (reg_cnt_for_imsu == 0){
+									IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+								}
 								break;
 						}
 					}
+					UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 					break;
 					
 				case CxConstants.Server_Assignment_Type_Timeout_Deregistration_Store_Server_Name:
@@ -315,8 +331,16 @@ public class SAR {
 							// set the user_state to Not-Registered
 							DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, true);
-							// clear the scscf_name & origin_host
-							IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+							HibernateUtil.commitTransaction();
+							// commit the transaction, as the previous updates should
+							// be seen by the next DB operations
+							
+							HibernateUtil.beginTransaction();										
+							// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+							int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+							if (reg_cnt_for_imsu == 0){
+								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+							}
 						}
 						else{
 							// Set the user_state to Not-Registered only on IMPI_IMPU association, IMPU registration state
@@ -385,8 +409,16 @@ public class SAR {
 								// set the user_state to Not-Registered
 								DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, true);
-								// clear the scscf_name & origin_host
-								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+								HibernateUtil.commitTransaction();
+								// commit the transaction, as the previous updates should
+								// be seen by the next DB operations
+								
+								HibernateUtil.beginTransaction();										
+								// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+								int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+								if (reg_cnt_for_imsu == 0){
+									IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+								}
 							}
 							else{
 								// Set the user_state to Not-Registered only on IMPI_IMPU association, 
@@ -400,8 +432,16 @@ public class SAR {
 							// set the user_state to Not-Registered
 							DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, true);
-							// clear the scscf_name & origin_host
-							IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+							HibernateUtil.commitTransaction();
+							// commit the transaction, as the previous updates should
+							// be seen by the next DB operations
+							
+							HibernateUtil.beginTransaction();										
+							// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+							int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+							if (reg_cnt_for_imsu == 0){
+								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+							}
 							break;
 							
 						case CxConstants.IMPU_user_state_Auth_Pending:

@@ -43,6 +43,9 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.List;
+
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -60,6 +63,21 @@ public class RTR_PPR_DAO {
 	
 	public static void update(Session session, RTR_PPR rtr_ppr){
 		session.saveOrUpdate(rtr_ppr);
+	}
+	
+	public static void mark_all_from_grp(Session session, int grp){
+		Query query;
+		query = session.createSQLQuery("update rtr_ppr set hopbyhop=1 where grp=?");
+		query.setInteger(0, grp);
+		query.executeUpdate();
+	}
+	
+	public static List get_all_from_grp(Session session, int grp){
+		Query query;
+		query = session.createSQLQuery("select * from rtr_ppr where grp=?")
+				.addEntity(RTR_PPR.class);
+		query.setInteger(0, grp);
+		return query.list();
 	}
 	
 	public static void update_by_grp(Session session, int grp, long hopByHopID, long endToEndID){
@@ -85,11 +103,30 @@ public class RTR_PPR_DAO {
 		return (RTR_PPR) query.uniqueResult();
 	}
 
+	public static List get_all_IMPI_IDs_by_HopByHop_and_EndToEnd_ID(Session session, long hopbyhop, long endtoend){
+		Query query;
+		query = session.createSQLQuery("select distinct id_impi from rtr_ppr where hopbyhop=? and endtoend=?")
+				.addScalar("id_impi", Hibernate.INTEGER);
+		query.setLong(0, hopbyhop);
+		query.setLong(1, endtoend);
+		return query.list();
+	}
+	
+	
 	public static int get_max_grp(Session session){
 		Query query = session.createSQLQuery("select max(grp) from rtr_ppr");
 		Integer result = (Integer) query.uniqueResult();
 		if (result == null)
 			return 0;
 		return result.intValue();
+	}
+	
+	public static RTR_PPR get_one_from_grp (Session session, long hopbyhop, long endtoend){
+		Query query;
+		query = session.createSQLQuery("select * from rtr_ppr where hopbyhop=? and endtoend=? limit 1")
+			.addEntity(RTR_PPR.class);
+		query.setLong(0, hopbyhop);
+		query.setLong(1, endtoend);
+		return (RTR_PPR) query.uniqueResult();
 	}
 }

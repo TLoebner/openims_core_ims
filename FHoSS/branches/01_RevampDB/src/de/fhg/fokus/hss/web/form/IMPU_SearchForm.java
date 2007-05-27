@@ -56,6 +56,8 @@ import org.apache.struts.action.ActionMapping;
  */
 
 public class IMPU_SearchForm extends ActionForm implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	private String impu_id;
 	private String identity;
 	private String id_impu_implicitset;

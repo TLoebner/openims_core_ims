@@ -66,6 +66,7 @@ import javax.servlet.http.HttpServletRequest;
 
 public class PrefS_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(PrefS_Form.class);
+	private static final long serialVersionUID=1L;
 	
 	private int id;
 	private String name;

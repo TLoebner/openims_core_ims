@@ -102,6 +102,33 @@ public class IMPI_IMPU_DAO {
 */		
 	}
 	
+	public static List get_all_registered_IMPU_by_IMPI_ID(Session session, int id_impi){
+		Query query;
+
+		query = session.createSQLQuery("select * from impu" +
+				"	inner join impi_impu on impu.id=impi_impu.id_impu" +
+				" where impi_impu.id_impi=? and (impi_impu.user_state=1 or impi_impu.user_state=2)")
+				.addEntity("impu", IMPU.class);
+		query.setInteger(0, id_impi);
+		return query.list();
+
+	}
+	
+	public static int get_Registered_IMPUs_count_for_IMSU_ID(Session session, int id_imsu){
+		Query query;
+
+		query = session.createSQLQuery("select count(*) from impi_impu" +
+				"	inner join impi on impi.id=impi_impu.id_impi" +
+				" where impi.id_imsu=? and (impi_impu.user_state=1 or impi_impu.user_state=2)");
+		
+		query.setInteger(0, id_imsu);
+		BigInteger result = (BigInteger) query.uniqueResult();
+		if (result == null)
+			return 0;
+		return result.intValue();
+	}	
+	
+	
 /*	public static List getJoinByIMPI(Session session, int id_impi){
 		Query query;
 		query = session.createQuery(

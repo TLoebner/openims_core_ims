@@ -137,19 +137,19 @@ public class MAR {
 				AVP child = (AVP)it.next();
 				if (child.code == DiameterConstants.AVPCode.IMS_SIP_AUTHENTICATION_SCHEME){
 					String data = new String(child.getData());
-					if (data.equals(CxConstants.AuthScheme.Auth_Scheme_AKAv1.getName())){
-						auth_scheme = CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode(); 
+					if (data.equals(CxConstants.Auth_Scheme_AKAv1_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_AKAv1; 
 					}
-					else if (data.equals(CxConstants.AuthScheme.Auth_Scheme_AKAv2.getName())){
-						auth_scheme = CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode();
+					else if (data.equals(CxConstants.Auth_Scheme_AKAv2_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_AKAv2;
 					}
-					else if (data.equals(CxConstants.AuthScheme.Auth_Scheme_MD5.getName())){
-						auth_scheme = CxConstants.AuthScheme.Auth_Scheme_MD5.getCode();
+					else if (data.equals(CxConstants.Auth_Scheme_MD5_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_MD5;
 					}
-					else if (data.equals(CxConstants.AuthScheme.Auth_Scheme_Early.getName())){
-						auth_scheme = CxConstants.AuthScheme.Auth_Scheme_Early.getCode();
+					else if (data.equals(CxConstants.Auth_Scheme_Early_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_Early;
 					}
-					else if (data.equals(CxConstants.AuthScheme.Auth_Scheme_Unknown.getName())){
+					else if (data.equals(CxConstants.Auth_Scheme_Unknown_Name)){
 						// if S- does not specify a scheme, the default one will be used!
 						auth_scheme = impi.getDefault_auth_scheme();
 					}

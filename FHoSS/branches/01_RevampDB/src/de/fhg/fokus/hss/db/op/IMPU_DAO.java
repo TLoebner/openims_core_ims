@@ -47,6 +47,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -132,6 +133,18 @@ public class IMPU_DAO {
 		return query.list();
 	}
 
+	public static int get_a_registered_IMPI_ID(Session session, int id_impu){
+		Query query;
+		query = session.createSQLQuery("select id_impi from impi_impu" +
+				"	inner join impu on impu.id=impi_impu.id_impu" +
+				" where (impi_impu.user_state=1 or impi_impu.user_state=2) and impi_impu.id_impu=? limit 1")
+				.addScalar("id_impi", Hibernate.INTEGER);
+		query.setInteger(0, id_impu);
+		Integer result = (Integer) query.uniqueResult();
+		if (result == null)
+			return -1;
+		return result;
+	}
 	
 	public static int delete_VisitedNetwork_for_IMPU(Session session, int id_impu, int id_vn){
 		Query query = session.createSQLQuery("delete from impu_visited_network where id_impu=? and id_visited_network=?");

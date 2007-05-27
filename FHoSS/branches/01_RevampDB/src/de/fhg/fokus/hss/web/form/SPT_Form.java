@@ -62,9 +62,10 @@ import javax.servlet.http.HttpServletRequest;
  */
 
 public class SPT_Form extends ActionForm implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	// SPT properties
 	private int spt_reg_type;
-	
     private int sptId;
     private String sipMethod;
     private String sipHeader;

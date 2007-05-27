@@ -51,7 +51,6 @@ import org.apache.struts.action.ActionMessage;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
@@ -68,7 +67,8 @@ import javax.servlet.http.HttpServletRequest;
 
 public class CS_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(CS_Form.class);
-	
+	private static final long serialVersionUID=1L;
+
 	private int id;
 	private String name;
 	private String pri_ecf;

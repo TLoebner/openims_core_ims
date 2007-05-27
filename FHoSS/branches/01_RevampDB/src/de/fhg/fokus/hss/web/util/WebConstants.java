@@ -58,26 +58,27 @@ public class WebConstants {
 	public static final String FORWARD_FAILURE = "failure";
 	public static final String FORWARD_DELETE = "delete";
 
-	public static final List select_identity_type;
+	public static final List<Tuple> select_identity_type;
 	static{
-		select_identity_type = new ArrayList();
-		select_identity_type.add(CxConstants.Identity_Type.Public_User_Identity);
-		select_identity_type.add(CxConstants.Identity_Type.Wildcarded_PSI);
-		select_identity_type.add(CxConstants.Identity_Type.Distinct_PSI);
+		select_identity_type = new ArrayList<Tuple>();
+		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Public_User_Identity_Name, CxConstants.Identity_Type_Public_User_Identity));
+		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Wildcarded_PSI_Name, CxConstants.Identity_Type_Wildcarded_PSI));
+		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Distinct_PSI_Name, CxConstants.Identity_Type_Distinct_PSI));
 	}
 
-	public static final List select_auth_scheme;
+	public static final List<Tuple> select_auth_scheme;
 	static{
-		select_auth_scheme = new ArrayList();
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_AKAv1);
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_AKAv2);
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_MD5);
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_Digest);
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5);
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_Early);
-		select_auth_scheme.add(CxConstants.AuthScheme.Auth_Scheme_NASS_Bundle);
+		select_auth_scheme = new ArrayList<Tuple>();
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_AKAv1_Name, CxConstants.Auth_Scheme_AKAv1));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_AKAv2_Name, CxConstants.Auth_Scheme_AKAv2));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_MD5_Name, CxConstants.Auth_Scheme_MD5));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_Digest_Name, CxConstants.Auth_Scheme_Digest));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_HTTP_Digest_MD5_Name, CxConstants.Auth_Scheme_HTTP_Digest_MD5));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_Early_Name, CxConstants.Auth_Scheme_Early));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_NASS_Bundle_Name, CxConstants.Auth_Scheme_NASS_Bundle));
 	}
 	
+	/*
 	public static final List select_user_state;
 	static{
 		select_user_state = new ArrayList();
@@ -86,7 +87,7 @@ public class WebConstants {
 		select_user_state.add(CxConstants.IMPU_user_state_Unregistered);
 		select_user_state.add(CxConstants.IMPU_user_state_Auth_Pending);
 	}
-
+*/
 	public static final List<Tuple> select_default_handling;
 	static{
 		select_default_handling = new ArrayList<Tuple>();
@@ -97,8 +98,8 @@ public class WebConstants {
 	public static final List<Tuple> select_condition_type_cnf;
 	static{
 		select_condition_type_cnf = new ArrayList<Tuple>();
-		select_condition_type_cnf.add(new Tuple("Disjunctive Normal Format", CxConstants.ConditionType.DNF.code));
-		select_condition_type_cnf.add(new Tuple("Conjunctive Normal Format", CxConstants.ConditionType.CNF.code));
+		select_condition_type_cnf.add(new Tuple(CxConstants.ConditionType_DNF_Name, CxConstants.ConditionType_DNF));
+		select_condition_type_cnf.add(new Tuple(CxConstants.ConditionType_CNF_Name, CxConstants.ConditionType_CNF));
 	}	
 
 	public static final List<Tuple> select_spt_type;
@@ -153,7 +154,33 @@ public class WebConstants {
 				CxConstants.Direction_of_Request_Originating_Unregistered));
 	}
 	
+	public static final int PPR_Apply_for_User_Data = 0;
+	public static final int PPR_Apply_for_Charging_Func = 1;
+	public static final int PPR_Apply_for_Both = 2;
+	public static final ArrayList<Tuple> select_ppr_apply_for;
+	static{
+		select_ppr_apply_for = new ArrayList<Tuple>();
+		select_ppr_apply_for.add(new Tuple("User-Data", PPR_Apply_for_User_Data));
+		select_ppr_apply_for.add(new Tuple("Charging-Func", PPR_Apply_for_Charging_Func));
+		select_ppr_apply_for.add(new Tuple("Both", PPR_Apply_for_Both));
+	}
 	
-	
+	public static final int RTR_Apply_for_IMPUs = 0;
+	public static final int RTR_Apply_for_IMPIs = 1;
+	public static final ArrayList<Tuple> select_rtr_apply_for;
+	static{
+		select_rtr_apply_for = new ArrayList<Tuple>();
+		select_rtr_apply_for.add(new Tuple("IMPU(s) of crt IMPI", RTR_Apply_for_IMPUs));
+		select_rtr_apply_for.add(new Tuple("IMPI(s) of crt IMSU", RTR_Apply_for_IMPIs));		
+	}
+
+	public static final ArrayList<Tuple> select_rtr_reason;
+	static{
+		select_rtr_reason = new ArrayList<Tuple>();
+		select_rtr_reason.add(new Tuple(CxConstants.RTR_Permanent_Termination_Name, CxConstants.RTR_Permanent_Termination));
+		select_rtr_reason.add(new Tuple(CxConstants.RTR_New_Server_Assigned_Name, CxConstants.RTR_New_Server_Assigned));
+		select_rtr_reason.add(new Tuple(CxConstants.RTR_Server_Change_Name, CxConstants.RTR_Server_Change));
+		select_rtr_reason.add(new Tuple(CxConstants.RTR__Remove_S_CSCF_Name, CxConstants.RTR_Remove_S_CSCF));
+	}
 	
 }

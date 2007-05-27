@@ -42,14 +42,17 @@
   */
 package de.fhg.fokus.hss.db.model;
 
-import java.util.Set;
+import java.io.Serializable;
+
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class IMPU {
+public class IMPU implements Serializable{
+	private static final long serialVersionUID=1L;
+	
 	// table fields
 	private int id;
 	private String identity;

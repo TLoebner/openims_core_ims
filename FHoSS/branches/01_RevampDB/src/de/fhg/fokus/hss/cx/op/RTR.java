@@ -45,18 +45,23 @@ package de.fhg.fokus.hss.cx.op;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
-import de.fhg.fokus.hss.cx.CxFinalResultException;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.model.IMSU;
+import de.fhg.fokus.hss.db.model.RTR_PPR;
+import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.db.op.DB_Op;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
+import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.diam.UtilAVP;
 import de.fhg.fokus.hss.db.hibernate.*;
 
@@ -66,141 +71,325 @@ import de.fhg.fokus.hss.db.hibernate.*;
  */
 
 public class RTR {
-
-	public static DiameterMessage prepareRequest(DiameterPeer diameterPeer,  
-			List impuList, List impiList, int reasonCode, String reasonInfo){
+	private static Logger logger = Logger.getLogger(RTR.class);
+	
+	public static void sendRequest(DiameterPeer diameterPeer, DiameterStack diameterStack, String diameter_name,
+			List<IMPU> impuList, List<IMPI> impiList, int reasonCode, String reasonInfo, int grp){
 		
 		DiameterMessage request = diameterPeer.newRequest(DiameterConstants.Command.RTR, DiameterConstants.Application.Cx);
+		request.flagProxiable = true;
+		
 		// add vendor-specific-application-id & auth-session state
 		UtilAVP.addAuthSessionState(request, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(request, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
-
 		Session session = null;
 		
+		boolean dbException = false;
 		try{
 			session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
 			if (impiList == null || impiList.size() == 0){
-				throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
+				logger.error("IMPI List is NULL or empty! RTR Aborted!");
+				return;
 			}
-			IMPI defaultIMPI = (IMPI) impiList.get(0);
+			
+			IMPI defaultIMPI = impiList.get(0);
+			IMSU imsu = IMSU_DAO.get_by_ID(session, defaultIMPI.getId_imsu());
+			
+			// Preparing the response
 			
 			// add destination host and realm
-			String dest_host = IMSU_DAO.get_Diameter_Name_by_IMSU_ID(session, defaultIMPI.getId_imsu());
-			
-			UtilAVP.addDestinationHost(request, dest_host);
-			UtilAVP.addDestinationRealm(request, dest_host.substring(dest_host.indexOf('.') + 1));
-			
+			//String destHost = IMSU_DAO.get_Diameter_Name_by_IMSU_ID(session, defaultIMPI.getId_imsu());
+			UtilAVP.addDestinationHost(request, diameter_name);
+			UtilAVP.addDestinationRealm(request, diameter_name.substring(diameter_name.indexOf('.') + 1));
 			// add user name
 			UtilAVP.addUserName(request, defaultIMPI.getIdentity());
-			
-			if (impuList == null || impuList.size() == 0){
-				if (reasonCode == CxConstants.Deregistration_Reason_New_Server_Assigned){
-					throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
-				}
-				Iterator it1 = impiList.iterator();
-				IMPI impi = null;
-				while (it1.hasNext()){
-					impi = (IMPI) it1.next();
-					impuList = IMPI_IMPU_DAO.get_all_IMPU_by_IMPI_ID(session, impi.getId());
-					IMPU impu = null;
-					Iterator it = impuList.iterator();
-					while (it.hasNext()){
-						impu = (IMPU) it.next();
-						int user_state = impu.getUser_state();
 
-						switch (user_state){
-							case CxConstants.IMPU_user_state_Registered:
-								int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
-								if (reg_cnt == 1){
+			switch (reasonCode){
+				case CxConstants.RTR_Permanent_Termination:
+					if (impuList == null || impuList.size() == 0){
+						// 1 - first case: we are deregistering IMPIs with all coresponding IMPUs!
+						
+						Iterator impiIt = impiList.iterator();
+						IMPI impi = null;
+						while (impiIt.hasNext()){
+							impi = (IMPI) impiIt.next();
+							impuList = IMPI_IMPU_DAO.get_all_registered_IMPU_by_IMPI_ID(session, impi.getId());
+							IMPU impu = null;
+							Iterator impuIt = impuList.iterator();
+							while (impuIt.hasNext()){
+								impu = (IMPU) impuIt.next();
+								int user_state = impu.getUser_state();
+
+								switch (user_state){
+									case CxConstants.IMPU_user_state_Registered:
+										int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
+										if (reg_cnt == 1){
+											// set the user_state to Not-Registered
+											DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
+													CxConstants.IMPU_user_state_Not_Registered, true);
+											HibernateUtil.commitTransaction();
+											// commit the transaction, as the previous updates should
+											// be seen by the next DB operations
+											
+											HibernateUtil.beginTransaction();
+											// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs
+											int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+											if (reg_cnt_for_imsu == 0){
+												IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+											}
+										}
+										else{
+											// Set the user_state to Not-Registered only on IMPI_IMPU association, 
+											//IMPU registration state remains registered
+											DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
+													CxConstants.IMPU_user_state_Not_Registered, false);
+										}
+										break;
+										
+									case CxConstants.IMPU_user_state_Unregistered:
+										// set the user_state to Not-Registered
+										DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
+												CxConstants.IMPU_user_state_Not_Registered, true);
+										HibernateUtil.commitTransaction();
+										// commit the transaction, as the previous updates should
+										// be seen by the next DB operations
+										
+										HibernateUtil.beginTransaction();
+										// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+										int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
+										if (reg_cnt_for_imsu == 0){
+											IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+										}
+										break;
+								}
+							}
+						}// while impiList
+						
+						if (impiList.size() > 1){
+							// add Associated Identities (contain the rest of IMPIs that should be de-registered together with the defaultIMPI)
+							// remove defaultIMPI
+							impiList.remove(0);
+							// add only the rest of IMPIs
+							UtilAVP.addAsssociatedIdentities(request, impiList);
+						}
+					}
+					else{
+						// 2 - second case - we have RTR for one or more IMPUs, impuList != null
+						IMPU impu = null;
+						Iterator impuIt = impuList.iterator();
+						while (impuIt.hasNext()){
+							impu = (IMPU) impuIt.next();
+							int user_state = impu.getUser_state();
+
+							switch (user_state){
+								case CxConstants.IMPU_user_state_Registered:
+									int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
+									if (reg_cnt == 1){
+										// set the user_state to Not-Registered
+										DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
+												CxConstants.IMPU_user_state_Not_Registered, true);
+										HibernateUtil.commitTransaction();
+										// commit the transaction, as the previous updates should
+										// be seen by the next DB operations
+										
+										HibernateUtil.beginTransaction();										
+										// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+										int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, defaultIMPI.getId_imsu());
+										if (reg_cnt_for_imsu == 0){
+											IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
+										}
+									}
+									else{
+										// Set the user_state to Not-Registered only on IMPI_IMPU association, 
+										//IMPU registration state remain registered
+										DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
+												CxConstants.IMPU_user_state_Not_Registered, false);
+									}
+									break;
+									
+								case CxConstants.IMPU_user_state_Unregistered:
 									// set the user_state to Not-Registered
 									DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, true);
-									// 	clear the scscf_name & origin_host
-									IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
-								}
-								else{
-									// Set the user_state to Not-Registered only on IMPI_IMPU association, 
-									//IMPU registration state remain registered
-									DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
-											CxConstants.IMPU_user_state_Not_Registered, false);
-								}
-								break;
-								
-							case CxConstants.IMPU_user_state_Unregistered:
-								// set the user_state to Not-Registered
-								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
-										CxConstants.IMPU_user_state_Not_Registered, true);
-								// clear the scscf_name & origin_host
-								IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
-								break;
+									HibernateUtil.commitTransaction();
+									// commit the transaction, as the previous updates should
+									// be seen by the next DB operations
+									
+									HibernateUtil.beginTransaction();
+									// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+									int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, defaultIMPI.getId_imsu());
+									if (reg_cnt_for_imsu == 0){
+										IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
+									}
+									break;
+							}
+							// add public identities to the response
+							UtilAVP.addPublicIdentity(request, impu.getIdentity());
 						}
 					}
-					UtilAVP.addAsssociatedIdentities(request, impiList);
-				}
-			}
-			else{
-			
-				IMPU impu = null;
-				Iterator it = impuList.iterator();
-				while (it.hasNext()){
-					impu = (IMPU) it.next();
-					int user_state = impu.getUser_state();
-
-					switch (user_state){
-						case CxConstants.IMPU_user_state_Registered:
-							int reg_cnt = IMPI_IMPU_DAO.get_Registered_IMPU_Count(session, impu.getId());
-							if (reg_cnt == 1){
-								// set the user_state to Not-Registered
-								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
-										CxConstants.IMPU_user_state_Not_Registered, true);
-								// clear the scscf_name & origin_host
-								IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
-							}
-							else{
-								// Set the user_state to Not-Registered only on IMPI_IMPU association, 
-								//IMPU registration state remain registered
-								DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
-										CxConstants.IMPU_user_state_Not_Registered, false);
-							}
-							break;
-							
-						case CxConstants.IMPU_user_state_Unregistered:
-							// set the user_state to Not-Registered
-							DB_Op.setUserState(session, defaultIMPI.getId(), impu.getId_implicit_set(), 
-									CxConstants.IMPU_user_state_Not_Registered, true);
-							// clear the scscf_name & origin_host
-							IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
-							break;
+					
+					break;
+					
+				case CxConstants.RTR_New_Server_Assigned:
+					if (impuList == null || impuList.size() == 0){
+						logger.error("IMPU List is NULL or empty! This is not permited to the reason code: " + reasonCode);
+						logger.error("RTR Aborted!");
+						return;
 					}
-					// add public identities
-					UtilAVP.addPublicIdentity(request, impu.getIdentity());
-				}
+					
+					// the HSS indicates  to the S-CSCF that a new S-CSCF was has been allocated to the IMSU
+
+					// add all the IMSUs to the request
+					for (int i = 0; i < impuList.size(); i++){
+						IMPU impu = impuList.get(i);
+						UtilAVP.addPublicIdentity(request, impu.getIdentity());
+					}
+					break;
+					
+				case CxConstants.RTR_Server_Change:
+					// the HSS indicates that the deregistration is requested to force the selection of new S-CSCF to assign to the IMPU
+					if (impuList == null || impuList.size() == 0){
+						// deregister all the registered IMPUs corresponding to the provided IMPIs
+						for (int i = 0; i < impiList.size(); i++){
+							IMPI impi = impiList.get(i);
+							// deregister all the IMPUs corresponding to the current IMPI
+							DB_Op.deregister_all_IMPUs_for_an_IMPI_ID(session, impi.getId());
+						}
+
+						if (impiList.size() > 1){
+							// remove defaultIMPI
+							impiList.remove(0);
+							// add only the rest of IMPIs
+							UtilAVP.addAsssociatedIdentities(request, impiList);
+						}
+					}
+					else{
+						for (int i = 0; i < impuList.size(); i++){
+							IMPU impu = impuList.get(i);
+							// deregister impu for the associated impi
+							DB_Op.deregister_IMPU_for_an_IMPI_ID(session, impu.getId(), defaultIMPI.getId());
+							UtilAVP.addPublicIdentity(request, impu.getIdentity());
+						}
+					}
+					// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+					HibernateUtil.commitTransaction();
+					// commit the transaction, as the previous updates should
+					// be seen by the next DB operations
+					
+					HibernateUtil.beginTransaction();
+					// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+					int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, defaultIMPI.getId_imsu());
+					if (reg_cnt_for_imsu == 0){
+						IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
+					}
+					break;
+					
+				case CxConstants.RTR_Remove_S_CSCF:
+					// the HSS indicates to the S-CSCF that the S-CSCF will no longer be assigned to 
+					// unregitered Public Identities
+
+					if (impuList != null && impuList.size() > 0){
+						for (int i = 0; i < impuList.size(); i++){
+							IMPU impu = impuList.get(i);
+							// deregister impu for the associated impi
+							DB_Op.deregister_IMPU_for_an_IMPI_ID(session, impu.getId(), defaultIMPI.getId());
+							UtilAVP.addPublicIdentity(request, impu.getIdentity());
+						}
+						HibernateUtil.commitTransaction();
+						// commit the transaction, as the previous updates should
+						// be seen by the next DB operations
+						
+						HibernateUtil.beginTransaction();
+						// 	clear the scscf_name & origin_host ONLY and ONLY if the IMSU has no other registered IMPUs										
+						reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, defaultIMPI.getId_imsu());
+						if (reg_cnt_for_imsu == 0){
+							IMSU_DAO.update(session, defaultIMPI.getId_imsu(), "", "");
+						}
+					}
+					break;
 			}
+			
+			
 			// add deregistration reason
 			UtilAVP.addDeregistrationReason(request, reasonCode, reasonInfo);
-			// add result code
-			UtilAVP.addResultCode(request, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+
+			// update RTR_PPR
+    		// add hopbyhop and endtoend ID into the rtr_ppr table
+    		RTR_PPR_DAO.update_by_grp(session, grp, request.hopByHopID, request.endToEndID);
+
+    		// send the request
+			diameterPeer.sendRequestTransactional(diameter_name, request, diameterStack);
 		}
-/*		catch(CxExperimentalResultException e){
-			
-		}*/
-		catch(CxFinalResultException e){
-			UtilAVP.addResultCode(request, e.getErrorCode());
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
 		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException)
+				HibernateUtil.commitTransaction();
 			HibernateUtil.closeSession();
 		}
-		
-		return request;
 	}
 	
-	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
-		DiameterMessage response = diameterPeer.newResponse(request);
+	public static void processResponse(DiameterPeer diameterPeer, DiameterMessage response){
+		List<String> associatedIdentities = UtilAVP.getAssociatedIdentities(response);
 		
-		return response;
+		// delete the coresponding row(s) from rtr_ppr table
+		boolean dbException = false;
+		try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        	List impi_ids_list = RTR_PPR_DAO.get_all_IMPI_IDs_by_HopByHop_and_EndToEnd_ID(session, response.hopByHopID, response.endToEndID);
+        	
+        	// test if all the associated identities corresponding to the default IMPI were included in the response
+        	// for the moment - a simple test -> refering to the lists size
+
+        	if ((impi_ids_list != null && impi_ids_list.size() > 1) && 
+        			(associatedIdentities == null || associatedIdentities.size() + 1 < impi_ids_list.size())){
+
+        		// we are sending new RTRs to all these IMPIs separatelly (S-CSCF is not supporting AssociatedIdentities in the request)
+            	RTR_PPR rtr_ppr = RTR_PPR_DAO.get_one_from_grp(session, response.hopByHopID, response.endToEndID);
+            	int grp = RTR_PPR_DAO.get_max_grp(session);
+            	if (rtr_ppr == null)
+            		return;
+
+            	// send new RTR messages to all IMPIs (individually for each IMPI)
+            	for (int i = 0; i < impi_ids_list.size(); i++){
+            		grp++;
+            		int id_impi = (Integer) impi_ids_list.get(i);
+            		RTR_PPR new_rtr_ppr = new RTR_PPR();
+            		new_rtr_ppr.setGrp(grp);
+            		new_rtr_ppr.setId_impi(id_impi);
+            		new_rtr_ppr.setTrials_cnt(rtr_ppr.getTrials_cnt() + 1);
+            		new_rtr_ppr.setId_impu(-1);
+            		new_rtr_ppr.setType(rtr_ppr.getType());
+            		new_rtr_ppr.setReason_info(rtr_ppr.getReason_info());
+            		new_rtr_ppr.setDiameter_name(rtr_ppr.getDiameter_name());
+            		RTR_PPR_DAO.insert(session, new_rtr_ppr);
+            	}
+        	}
+        	
+        	// delete the old rows
+        	RTR_PPR_DAO.delete(session, response.hopByHopID, response.endToEndID);
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
 	}
+	
+	public static void processTimeout(DiameterMessage request){
+		logger.info("\nRTR Process Timeout!");
+	}
+	
 }

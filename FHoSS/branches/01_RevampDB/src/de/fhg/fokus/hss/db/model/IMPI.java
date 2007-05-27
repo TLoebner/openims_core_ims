@@ -43,7 +43,7 @@
 
 package de.fhg.fokus.hss.db.model;
 
-import java.util.Set;
+import java.io.Serializable;
 
 import de.fhg.fokus.hss.cx.CxConstants;
 
@@ -52,7 +52,8 @@ import de.fhg.fokus.hss.cx.CxConstants;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class IMPI {
+public class IMPI implements Serializable{
+	private static final long serialVersionUID=1L;
 	// table fields
 	private int id;
 	private String identity;
@@ -79,25 +80,25 @@ public class IMPI {
 			int result = 0;
 
 			if (akav1){
-				result |= CxConstants.AuthScheme.Auth_Scheme_AKAv1.getCode(); 
+				result |= CxConstants.Auth_Scheme_AKAv1; 
 			}
 			if (akav2){
-				result |= CxConstants.AuthScheme.Auth_Scheme_AKAv2.getCode(); 
+				result |= CxConstants.Auth_Scheme_AKAv2; 
 			}
 			if (md5){
-				result |= CxConstants.AuthScheme.Auth_Scheme_MD5.getCode(); 
+				result |= CxConstants.Auth_Scheme_MD5; 
 			}
 			if (digest){
-				result |= CxConstants.AuthScheme.Auth_Scheme_Digest.getCode(); 
+				result |= CxConstants.Auth_Scheme_Digest; 
 			}
 			if (http_digest){
-				result |= CxConstants.AuthScheme.Auth_Scheme_HTTP_Digest_MD5.getCode(); 
+				result |= CxConstants.Auth_Scheme_HTTP_Digest_MD5; 
 			}
 			if (early){
-				result |= CxConstants.AuthScheme.Auth_Scheme_Early.getCode(); 
+				result |= CxConstants.Auth_Scheme_Early; 
 			}
 			if (nass_bundle){
-				result |= CxConstants.AuthScheme.Auth_Scheme_NASS_Bundle.getCode(); 
+				result |= CxConstants.Auth_Scheme_NASS_Bundle; 
 			}
 			
 			return result;

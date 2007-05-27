@@ -63,10 +63,6 @@ function add_action_for_form(action, associated_ID) {
 			document.IMPU_Form.nextAction.value="ppr";
 			document.IMPU_Form.submit();			
 			break;
-		case 11:	
-			document.IMPU_Form.nextAction.value="rtr";
-			document.IMPU_Form.submit();			
-			break;
 			
 		case 12:
 			document.IMPU_Form.nextAction.value="add_impi";
@@ -431,20 +427,31 @@ function add_action_for_form(action, associated_ID) {
 	
 			<tr>
 				<td>
-					<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
-					<tr align="center">
-						<td align="center"> <b> Push Cx Operation </b></td>
-					</tr>
-					<tr align="center">
-						<td align="center">
-							<html:button property="ppr_button" value="PPR" onclick="add_action_for_form(10, -1);"/>
-							<html:button property="rtr_button" value="RTR" onclick="add_action_for_form(11, -1);"/>
+					<b> Push Cx Operation </b>
+					<table class="as" border="0" cellspacing="1" align="center" width="100" style="border:2px solid #FF6600;">
+					<tr bgcolor="#FFCC66">
+						<td>
+							Apply for
 						</td>
-					</tr>	
-					</table>				
+						<td align="center">
+							<html:select property="ppr_apply_for" name="IMPU_Form" styleClass="inputtext" size="1" style="width:200px;">
+								<html:optionsCollection name="IMPU_Form" property="select_ppr_apply_for" label="name" value="code"/>
+							</html:select>
+						</td>
+					</tr>
+					<tr bgcolor="#FFCC66">
+						<td align="center">
+							Execute
+						</td>
+													
+						<td align="center">									
+							<html:button property="ppr_button" value="PPR" onclick="add_action_for_form(10, -1);"/>
+						</td>
+					</tr>
+					</table>
 				</td>
 			</tr>
-							
+			
 			<%
 				}
 			%>

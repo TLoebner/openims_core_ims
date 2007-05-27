@@ -43,9 +43,12 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
@@ -139,6 +142,41 @@ public class IMPI_DAO {
 		
 		return query.list();
 	}
+	
+	public static List get_all_registered_implicit_sets(Session session, int id_impi){
+		Query query;
+		query = session.createSQLQuery("select distinct id_implicit_set from impu" +
+				"	inner join impi_impu on impu.id=impi_impu.id_impu" +
+				" where impi_impu.id_impi=? and (impi_impu.user_state=1 or impi_impu.user_state=2)")
+				.addScalar("id_implicit_set", Hibernate.INTEGER);
+		query.setInteger(0, id_impi);
+		return query.list();
+	}	
+	
+	public static List get_all_Registered_IMPIs_by_IMSU_ID(Session session, int id_imsu){
+		Query query;
+		query = session.createSQLQuery("select distinct impi.id, impi.identity from impi" +
+				"	inner join impi_impu on impi.id=impi_impu.id_impi" +
+				" where impi.id_imsu=? and (impi_impu.user_state=1 or impi_impu.user_state=2)")
+				.addScalar("id", Hibernate.INTEGER)
+				.addScalar("identity", Hibernate.STRING);
+		query.setInteger(0, id_imsu);
+
+		List list_result = new ArrayList();
+		IMPI impi = null;
+		if (query.list() != null && query.list().size() > 0){
+			Iterator it = query.list().iterator();
+			while (it.hasNext()){
+				Object[] row = (Object[]) it.next();
+				impi = new IMPI();
+				impi.setId((Integer)row[0]);
+				impi.setIdentity((String)row[1]);
+				list_result.add(impi);
+			}	
+		}
+		return list_result;
+	}	
+	
 	
 	public static int delete_by_ID(Session session, int id){
 		Query query = session.createSQLQuery("delete from impi where id=?");
