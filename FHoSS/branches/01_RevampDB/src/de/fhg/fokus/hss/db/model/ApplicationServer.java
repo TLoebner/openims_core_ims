@@ -90,10 +90,12 @@ public class ApplicationServer implements Serializable{
 	
 	public ApplicationServer(){
 		// default values
-		
+
+		this.name = null;
+		this.server_name = null;
+		this.diameter_address = null;
+		this.service_info = null;
 		this.default_handling = 1;
-		this.service_info = "";
-		this.diameter_address = "";
 		this.rep_data_size_limit = 100;
 		this.udr = 0;
 		this.pur = 0;

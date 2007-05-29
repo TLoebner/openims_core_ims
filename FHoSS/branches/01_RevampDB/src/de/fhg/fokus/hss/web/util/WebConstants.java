@@ -128,7 +128,8 @@ public class WebConstants {
 	public static final ArrayList<Tuple> select_profile_part_indicator;
 	static{
 		select_profile_part_indicator = new ArrayList<Tuple>();
-		select_profile_part_indicator.add(new Tuple("Any", -1));
+		select_profile_part_indicator.add(new Tuple(CxConstants.Profile_Part_Indicator_Any_Name, 
+				CxConstants.Profile_Part_Indicator_Any));
 		select_profile_part_indicator.add(new Tuple(CxConstants.Profile_Part_Indicator_Registered_Name,
 				CxConstants.Profile_Part_Indicator_Registered));
 		select_profile_part_indicator.add(new Tuple(CxConstants.Profile_Part_Indicator_UnRegistered_Name, 

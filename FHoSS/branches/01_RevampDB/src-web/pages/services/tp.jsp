@@ -277,11 +277,21 @@ function addSpt(groupId, is_spt_list_empty){
 					%>
 								
 								<tr class="<%= lastGroupId%2 == 0 ? "even" : "odd" %>">
+
+									<!-- Add Condition Negated -->
+									<td nowrap="nowrap">
+										<bean:message key="spt.head.neg" />
+									</td>
+									<td class="tgpFormular">
+										<nested:checkbox property="neg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
+									</td>
 								
 									<td nowrap="nowrap" width="120">
 										<nested:hidden property="sptId"> </nested:hidden> 
 										<nested:hidden property="group"></nested:hidden> 
 										<nested:hidden property="type"></nested:hidden> 
+									
+									<!-- Add Request URI -->										
 									
 			<%							if (spt.getType() == CxConstants.SPT_Type_RequestURI) {
 			
@@ -291,8 +301,8 @@ function addSpt(groupId, is_spt_list_empty){
 										<nested:text property="requestUri" styleClass="inputtext" 
 											style="width:280px;" maxlength="255" onchange="add_action_for_form(13, -1);" />
 									</td>
-	
-									<td>								
+									
+									<!-- Add Method -->											
 			<%					
 										} else if (spt.getType() == CxConstants.SPT_Type_Method) {
 			%>
@@ -303,21 +313,21 @@ function addSpt(groupId, is_spt_list_empty){
 											<nested:optionsCollection property="sipMethodList" label="label" value="value"/>
 										</nested:select>
 									</td>
-								
-									<td>
+
+									<!-- Add Session Case -->																		
 			<%
 										} else if (spt.getType() == CxConstants.SPT_Type_SessionCase) {
 			%>
 										<bean:message key="spt.head.sessionCase" />
 									</td>
 									<td class="tgpFormular">
-										<nested:select property="sessionCase" value="0" styleClass="inputtext" style="width:280px;" 
+										<nested:select property="sessionCase" styleClass="inputtext" 
 											onchange="add_action_for_form(13, -1);">
 											<nested:optionsCollection property="directionOfRequestList" label="name" value="code"/>
 										</nested:select>
 									</td>
-									
-									<td>									
+
+									<!-- Add Session Description -->																			
 			<% 
 									} else if (spt.getType() == CxConstants.SPT_Type_SessionDescription) {
 			%>
@@ -345,8 +355,8 @@ function addSpt(groupId, is_spt_list_empty){
 										</tr>
 										</table>
 									</td>
-
-									<td>
+									
+									<!-- Add SIP Header -->																			
 			<%				
 									} else if (spt.getType() == CxConstants.SPT_Type_SIPHeader) {
 
@@ -360,7 +370,7 @@ function addSpt(groupId, is_spt_list_empty){
 											<td class="tgpFormular">
 												<bean:message key="spt.head.sipHeader" />
 											</td>
-											<td class="tgpFormular" colspan="2">
+											<td class="tgpFormular" colspan="3">
 												<nested:text property="sipHeader" size="10" styleClass="inputtext"
 														style="width:200px;" onchange="add_action_for_form(13, -1);"/>
 											</td>
@@ -380,44 +390,34 @@ function addSpt(groupId, is_spt_list_empty){
 									}
 
 			%>
-								<!-- Condition Negated -->
-								<td nowrap="nowrap">
-									<bean:message key="spt.head.neg" />
-								</td>
-								<td class="tgpFormular">
-									<nested:checkbox property="neg" styleClass="inputtext" onclick="add_action_for_form(13, -1);"/>
-								</td>
+								<!-- Add Registration Type-->
 
-								<!-- Registration Type: Registration -->
 								<td nowrap="nowrap">
-									Reg
-								</td>
-								<td class="tgpFormular">
-									<nested:radio property="rtype" value="rtype_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
-								</td>
-
-								<!-- Registration Type: Re-Registration -->
-								<td nowrap="nowrap">
-									ReReg
-								</td>
-								<td class="tgpFormular">
-									<nested:radio property="rtype" value="rtype_re_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
-								</td>
-
-								<!-- Registration Type: UnRegistration -->
-								<td nowrap="nowrap">
-									DeReg
-								</td>
-								<td class="tgpFormular">
-									<nested:radio property="rtype" value="rtype_de_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
+									<nested:equal value="REGISTER" property="sipMethod">
+										<!-- Only if the method is REGISTER add the registration type field -->								
+										Reg
+										<nested:checkbox property="rtype_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
+	
+										<!-- Registration Type: Re-Registration -->
+										ReReg
+										<nested:checkbox property="rtype_re_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
+	
+										<!-- Registration Type: UnRegistration -->
+										DeReg
+										<nested:checkbox property="rtype_de_reg" styleClass="inputtext" onchange="add_action_for_form(13, -1);"/>
+									</nested:equal>
 								</td>
 								
+								<!-- Add Delete button -->
 								<td>
 									<input type="button" name="delete_button" value="Delete" 
 										onclick="add_action_for_form(6, <%= spt.getSptId() %>);" />		
 								</td>	
 
 							</tr>
+							
+							<!-- Add separators between SPTs -->
+							
 							<tr class="<%= lastGroupId%2 == 1 ? "even" : "odd" %>">
 								<td style="text-align:center;" colspan="12">
 									<logic:equal name="TP_Form" property="condition_type_cnf" value="0">

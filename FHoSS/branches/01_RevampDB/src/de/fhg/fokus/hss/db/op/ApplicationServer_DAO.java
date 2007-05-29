@@ -157,6 +157,24 @@ public class ApplicationServer_DAO {
 		return result;
 	}
 	
+	public static ApplicationServer get_by_Diameter_Address(Session session, String diameter_address){
+		Query query = session.createSQLQuery("select * from application_server where diameter_address like ?")
+			.addEntity(ApplicationServer.class);
+		query.setString(0, diameter_address);
+		ApplicationServer result = null;
+		
+		try{
+			result = (ApplicationServer) query.uniqueResult();
+		}
+		catch(org.hibernate.NonUniqueResultException e){
+			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+			e.printStackTrace();
+		}
+		return result;
+	}
+	
+	
+	
 	public static ApplicationServer get_by_Name(Session session, String name){
 		Query query = session.createSQLQuery("select * from application_server where name like ?")
 			.addEntity(ApplicationServer.class);

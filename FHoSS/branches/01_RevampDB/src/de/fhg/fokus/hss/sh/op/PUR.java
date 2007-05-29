@@ -84,7 +84,6 @@ public class PUR {
 		
 		Session session = HibernateUtil.getCurrentSession();
 		HibernateUtil.beginTransaction();
-
 		try{
 			if (request.flagProxiable == false){
 				logger.warn("You should notice that the Proxiable flag for PUR request was not set!");
@@ -111,12 +110,7 @@ public class PUR {
 			// - 1 - check if the AS is allowed to update information, by checking the combination of AS identity and Data-Reference
 			
 			// in the AS table, the server address is always saved with the sip scheme included!
-			String sip_origin_host = origin_host;
-			if (!origin_host.substring(0, 4).equals("sip:")){
-				sip_origin_host = "sip:" + origin_host;
-			}
-			System.out.println("AS server name: " + sip_origin_host);
-			ApplicationServer as = ApplicationServer_DAO.get_by_Server_Name(session, sip_origin_host);
+			ApplicationServer as = ApplicationServer_DAO.get_by_Diameter_Address(session, origin_host);
 			
 			if (as == null){
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED);

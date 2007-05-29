@@ -53,7 +53,6 @@ public class CxConstants {
 	public static final short IMPU_type_Public_User_Identity = 0;
 	public static final short IMPU_type_Distinct_PSI = 1;
 	public static final short IMPU_type_Wildcarded_PSI = 2;
-	 
 	// Authentication_Parameters_Size
 	public static final int Auth_Parm_Secret_Key_Size = 16;
 	public static final int Auth_Parm_Rand_Size = 16;
@@ -66,9 +65,10 @@ public class CxConstants {
 	public static final int Auth_Parm_Res_Size = 16; // 4-16 octets
 	
 	// Profile_Part_Indicator
+	public static final int Profile_Part_Indicator_Any = -1;
 	public static final int Profile_Part_Indicator_Registered = 0;
 	public static final int Profile_Part_Indicator_UnRegistered = 1;
-
+	public static final String Profile_Part_Indicator_Any_Name = "Any";
 	public static final String Profile_Part_Indicator_Registered_Name = "Registered";
 	public static final String Profile_Part_Indicator_UnRegistered_Name = "Unregistered";
 	
@@ -121,6 +121,10 @@ public class CxConstants {
 	public static final int Registration_Type_Initial_Re_Registration = 1;
 	public static final int Registration_Type_Initial_De_Registration = 2;
 	
+	public static final int RType_Reg_Mask = 1;
+	public static final int RType_Re_Reg_Mask = 2;
+	public static final int RType_De_Reg_Mask = 4;
+	
 	// tDefaultHandling
 	public static final int Default_Handling_Session_Continued = 0;
 	public static final int Default_Handling_Session_Terminated = 1;
@@ -136,10 +140,10 @@ public class CxConstants {
 	public static final int Direction_of_Request_Terminating_Registered = 1;
 	public static final int Direction_of_Request_Terminating_Unregistered = 2;
 	public static final int Direction_of_Request_Originating_Unregistered = 3;
-	public static final String Direction_of_Request_Originating_Session_Name = "Originating-Session";
-	public static final String Direction_of_Request_Terminating_Registered_Name = "Terminating-Registered";
-	public static final String Direction_of_Request_Terminating_Unregistered_Name = "Terminating-UnRegistered";
-	public static final String Direction_of_Request_Originating_Unregistered_Name = "Originating-UnRegistered";
+	public static final String Direction_of_Request_Originating_Session_Name = "Origin - Session";
+	public static final String Direction_of_Request_Terminating_Registered_Name = "Term - Reg";
+	public static final String Direction_of_Request_Terminating_Unregistered_Name = "Term - UnReg";
+	public static final String Direction_of_Request_Originating_Unregistered_Name = "Origin - UnReg";
 	
 	// Auth_Scheme
 	public static final int Auth_Scheme_Unknown = 0;

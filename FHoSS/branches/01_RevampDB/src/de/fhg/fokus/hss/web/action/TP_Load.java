@@ -206,7 +206,7 @@ public class TP_Load extends Action {
 					break;
 
 				case CxConstants.SPT_Type_SessionCase:
-					sptForm.setSessionCase(String.valueOf(spt.getSession_case()));
+					sptForm.setSessionCase(spt.getSession_case());
 					break;
 
 				case CxConstants.SPT_Type_SessionDescription:
@@ -220,21 +220,17 @@ public class TP_Load extends Action {
 			sptForm.setGroup(spt.getGrp());
 			sptForm.setNeg(spt.getCondition_negated()==1?true:false);
 			
-			switch (spt.getRegistration_type()) {
+			int reg_type = spt.getRegistration_type();
 			
-				case CxConstants.Registration_Type_Initial_Registration:
-					sptForm.setRtype("rtype_reg");
-					break;
-					
-				case CxConstants.Registration_Type_Initial_Re_Registration:
-					sptForm.setRtype("rtype_re_reg");
-					break;
-					
-				case CxConstants.Registration_Type_Initial_De_Registration:
-					sptForm.setRtype("rtype_de_reg");
-					break;
+			if ((reg_type & CxConstants.RType_Reg_Mask) != 0){
+				sptForm.setRtype_reg(true);
 			}
-			
+			if ((reg_type & CxConstants.RType_Re_Reg_Mask) != 0){
+				sptForm.setRtype_re_reg(true);
+			}
+			if ((reg_type & CxConstants.RType_De_Reg_Mask) != 0){
+				sptForm.setRtype_de_reg(true);
+			}
 			result.add(sptForm);
 		}
 

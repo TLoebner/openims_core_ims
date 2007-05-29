@@ -49,7 +49,7 @@ package de.fhg.fokus.hss.sh.data;
 
 public class RepositoryDataElement {
 	private String serviceIndication = null;
-	private int sqn = 1;
+	private int sqn = 0;
 	/** can have any value; tag used is Service-Data */
 	private String serviceData = null;
 	
@@ -64,7 +64,7 @@ public class RepositoryDataElement {
 			sBuffer.append(ShDataTags.ServiceIndication_e);
 		}
 		
-		if (sqn > 0){
+		if (sqn >= 0){
 			sBuffer.append(ShDataTags.SequenceNumber_s);
 			sBuffer.append(sqn);
 			sBuffer.append(ShDataTags.SequenceNumber_e);

@@ -179,11 +179,19 @@ public class AS_Form extends ActionForm implements Serializable{
                 	// check if the server_name is a "sip:" URI
                 	actionErrors.add("as.error.incorrect_server_name", new ActionMessage("as.error.incorrect_server_name"));
                 }
+                if (diameter_address == null || diameter_address.equals("")){
+                	actionErrors.add("as.error.diameter_address", new ActionMessage("as.error.diameter_address"));
+                }
 
                 // check if this AS Name was already used for other AS
         		ApplicationServer as = ApplicationServer_DAO.get_by_Name(session, name);
         		if (as != null && as.getId() != id){
         			actionErrors.add("as.error.duplicate_as_name", new ActionMessage("as.error.duplicate_as_name"));
+        		}
+        		
+        		as = ApplicationServer_DAO.get_by_Diameter_Address(session, diameter_address);
+        		if (as != null && as.getId() != id){
+        			actionErrors.add("as.error.duplicate_diameter_name", new ActionMessage("as.error.duplicate_diameter_name"));
         		}
         	}
         	else if (nextAction.equals("attach_ifc")){

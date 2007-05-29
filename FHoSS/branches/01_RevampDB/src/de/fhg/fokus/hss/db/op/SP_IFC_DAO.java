@@ -142,9 +142,11 @@ public class SP_IFC_DAO {
 				"select count(*) from sp_ifc" +
 				"	inner join sp on sp.id=sp_ifc.id_sp" +
 				"	inner join ifc on ifc.id=sp_ifc.id_ifc" + 
-				"		where sp.id=? and ifc.profile_part_ind=?");
+				"		where sp.id=? and (ifc.profile_part_ind=? or ifc.profile_part_ind=?)");
 		query.setInteger(0, id_sp);
 		query.setInteger(1, CxConstants.Profile_Part_Indicator_UnRegistered);
+		query.setInteger(2, CxConstants.Profile_Part_Indicator_Any);
+		
 		BigInteger result = (BigInteger)query.uniqueResult();
 		if (result == null)
 			return 0;
