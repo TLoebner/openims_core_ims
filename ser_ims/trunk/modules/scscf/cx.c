@@ -297,6 +297,8 @@ AAAMessage* Cx_RTA(AAAMessage * rtr)
 			r_public_expire(public_id);
 		}		
 	}
+	Cx_add_vendor_specific_appid(rta_msg,IMS_vendor_id_3GPP,IMS_Cx,0 /*IMS_Cx*/);
+	Cx_add_auth_session_state(rta_msg,1);		
 
 	/* send an RTA back to the HSS */
 	Cx_add_result_code(rta_msg,DIAMETER_SUCCESS);
@@ -340,6 +342,8 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 			//TODO find all r_public that should be updated and update
 		}
 	}	
+	Cx_add_vendor_specific_appid(ppa_msg,IMS_vendor_id_3GPP,IMS_Cx,0 /*IMS_Cx*/);
+	Cx_add_auth_session_state(ppa_msg,1);		
 	
 	Cx_add_result_code(ppa_msg,DIAMETER_SUCCESS);
 	return ppa_msg;
