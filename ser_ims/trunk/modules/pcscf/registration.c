@@ -962,12 +962,12 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 	int len, i;
 	struct ip_addr ip;
 	unsigned short int port;
+	r_contact *c=0;
 
 	if (!pcscf_nat_enable) return CSCF_RETURN_FALSE;
 	
 	if(msg -> first_line.type == SIP_REQUEST) {		
 		/* on request get the destination from the Request-URI */
-		r_contact *c;
 		struct sip_uri uri;
 		str req_uri = msg -> first_line.u.request.uri;
 		
@@ -984,13 +984,13 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 		}	
 		ip = c->pinhole->nat_addr;
 		port = c->pinhole->nat_port;
-		r_unlock(c->hash);	
 	} else {
 		/* on response get the destination from the received addr for the corresponding request */
 		struct sip_msg *req;
 		req = cscf_get_request_from_reply(msg);
 		if(req == NULL) {
 			LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Cannot get request for the transaction\n");
+			if (c) r_unlock(c->hash);
 			return CSCF_RETURN_FALSE;
 		}		
 		ip = req->rcv.src_ip;
@@ -1001,6 +1001,7 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
 		LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
+		if (c) r_unlock(c->hash);
 		return CSCF_RETURN_FALSE;
 	}
 	strcpy(dst.s, "sip:");
@@ -1009,6 +1010,8 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 	for(i = 1; i < ip.len; i++)
 		dst.len += sprintf(dst.s + dst.len, ".%d", ip.u.addr[i]);			
 	dst.len += sprintf(dst.s + dst.len, ":%d", port);
+
+	if (c) r_unlock(c->hash);
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
@@ -1078,15 +1081,18 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	if (!dst.s){
 		LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Error allocating %d bytes\n", len);
 		dst.len=0;
+		r_unlock(c->hash);
 		return CSCF_RETURN_FALSE;
 	}	
 	STR_APPEND(dst,sip_s);
 	STR_APPEND(dst,host);	
 	dst.len += sprintf(dst.s + dst.len, ":%d", c->ipsec->port_us);	
-
+	r_unlock(c->hash);
+	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
 	LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
+	
 	return CSCF_RETURN_TRUE;
 }
 
