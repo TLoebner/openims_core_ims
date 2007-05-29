@@ -5,6 +5,7 @@ package de.fhg.fokus.hss.main;
 
 
 import java.io.ByteArrayInputStream;
+
 import java.util.List;
 import java.util.Set;
 
@@ -25,6 +26,7 @@ import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.diam.DiameterStack;
+import de.fhg.fokus.hss.sh.data.ShDataElement;
 import de.fhg.fokus.hss.sh.data.ShDataParser;
 
 /**
@@ -33,7 +35,30 @@ import de.fhg.fokus.hss.sh.data.ShDataParser;
  */
 public class Tester extends Thread{
 	public void run() {
+		/*
+		InputSource input;
+		String inputString = 
 		
+		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+		"<Sh-Data>" + 
+		"<RepositoryData>" + 
+		"<ServiceIndication>CLIR</ServiceIndication>" + 
+		"<SequenceNumber>0</SequenceNumber>" + 
+		"</RepositoryData>" + 
+		"</Sh-Data>";
+		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
+		ShDataParser parser = new ShDataParser(input);
+
+		ShDataElement shData = parser.getShData();
+		if (shData != null)
+			System.out.println(shData.toString());
+		else
+			System.out.println("ShData is NULL!");
+		
+		List l = shData.getRepositoryDataList();
+		for (int i=0; i < l.size(); i++){
+			System.out.println("Rep:" + l.get(i).toString());
+		}*/
 		/*
 		InputSource input;// = new InputSource(new FileReader("files//online1.xml"));
 		String inputString = 

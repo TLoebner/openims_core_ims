@@ -45,6 +45,8 @@ package de.fhg.fokus.hss.db.model;
 
 import java.io.Serializable;
 
+import de.fhg.fokus.hss.cx.CxConstants;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -71,6 +73,22 @@ public class SPT implements Serializable{
 	public SPT(){
 	}
 
+	public int generateRegistrationType(boolean reg, boolean re_reg, boolean de_reg){
+		int result = 0;
+		
+		if (reg){
+			result |= CxConstants.RType_Reg_Mask; 
+		}
+		if (re_reg){
+			result |= CxConstants.RType_Re_Reg_Mask;
+		}
+		if (de_reg){
+			result |= CxConstants.RType_De_Reg_Mask;
+		}
+		
+		return result;
+	}
+	
 	public int getCondition_negated() {
 		return condition_negated;
 	}

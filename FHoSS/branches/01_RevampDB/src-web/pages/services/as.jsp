@@ -91,6 +91,12 @@ function add_action_for_form(action, associated_ID) {
 						<td>Server Name </td>
 						<td><html:text property="server_name" styleClass="inputtext" style="width:250px;"/> </td>
 					</tr>
+					
+					<tr bgcolor="#FFCC66">
+						<td>Diameter FQDN</td>
+						<td><html:text property="diameter_address" styleClass="inputtext" style="width:250px;"/> </td>
+					</tr>
+
 					<tr bgcolor="#FFCC66">
 						<td>Default Handling</td>
 						<td>
@@ -102,10 +108,6 @@ function add_action_for_form(action, associated_ID) {
 					<tr bgcolor="#FFCC66">
 						<td>Service Info</td>
 						<td><html:text property="service_info" styleClass="inputtext" style="width:250px;"/> </td>
-					</tr>
-					<tr bgcolor="#FFCC66">
-						<td>Diameter Peer</td>
-						<td><html:text property="diameter_address" styleClass="inputtext_readonly" readonly="true" style="width:250px;"/> </td>
 					</tr>
 
 					<tr bgcolor="#FFCC66">

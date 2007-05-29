@@ -557,8 +557,10 @@ public class ShDataParser extends DefaultHandler {
     	
     		InputSource input;// = new InputSource(new FileReader("files//online1.xml"));
     		
+    		
+    	    		
     		String inputString = 
-    			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+    	/*		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
     			"<Sh-Data xmlns=\"urn:ietf:params:xml:ns:pidf\" >" +
     			"<PublicIdentifiers>" +
     				"<IMSPublicIdentity>" +
@@ -585,7 +587,16 @@ public class ShDataParser extends DefaultHandler {
 					"</WildcardedPSI>" +
     			"</PublicIdentifiers>" +
     			
+    			"</Sh-Data>";*/
+    			
+    			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+    			"<Sh-Data>" + 
+    			"<RepositoryData>" + 
+    			"<ServiceIndication>CLIR</ServiceIndication>" + 
+    			"<SequenceNumber>0</SequenceNumber>" + 
+    			"</RepositoryData>" + 
     			"</Sh-Data>";
+    			
     		
     		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
     		ShDataParser parser = new ShDataParser(input);

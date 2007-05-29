@@ -624,6 +624,7 @@ public class SAR {
 					
 					if (crt_ifc.getId_application_server() == -1 || crt_sp_ifc.getPriority() == -1){
 						// error, application server and priority are mandatory!
+						logger.error("Application Server ID or SP_IFC priority value is not defined!\n Aborting...");
 						return null;
 					}
 					
@@ -644,7 +645,7 @@ public class SAR {
 						
 						List list_spt = SPT_DAO.get_all_by_TP_ID(session, tp.getId());
 						if (list_spt == null){
-							logger.error("[SAR][Download-User-Data] SPT list is NULL! Should be at least one SPT asssociated to the TP!");
+							logger.error("SPT list is NULL! Should be at least one SPT asssociated to the TP!\nAborting...");
 							return null;
 						}
 						
@@ -716,33 +717,41 @@ public class SAR {
 							
 							if (crt_spt.getRegistration_type() != -1){
 								sb.append(extension_s);
-								sb.append(registration_type_s);
-								switch (crt_spt.getRegistration_type()){
-									 case CxConstants.Registration_Type_Initial_Registration:
-										 sb.append(zero);
-										 break;
-									 case CxConstants.Registration_Type_Initial_Re_Registration:
-										 sb.append(one);
-										 break;
-									 case CxConstants.Registration_Type_Initial_De_Registration:
-										 sb.append(two);
-										 break;
-										 
+								
+								int reg_type = crt_spt.getRegistration_type();
+								if ((reg_type & CxConstants.RType_Reg_Mask) != 0){
+									sb.append(registration_type_s);
+									sb.append(zero);
+									sb.append(registration_type_e);
+									
 								}
-								sb.append(registration_type_e);
+								if ((reg_type & CxConstants.RType_Re_Reg_Mask) != 0){
+									sb.append(registration_type_s);
+									sb.append(one);
+									sb.append(registration_type_e);
+									
+								}
+								if ((reg_type & CxConstants.RType_De_Reg_Mask) != 0){
+									sb.append(registration_type_s);
+									sb.append(two);
+									sb.append(registration_type_e);
+									
+								}
 								sb.append(extension_e);
 							}
-							
 							sb.append(spt_e);
 						}
-
 						sb.append(tp_e);
 					}
 
 					// add the Application Server
 					ApplicationServer crt_as = ApplicationServer_DAO.get_by_ID(session, crt_ifc.getId_application_server());
-					sb.append(app_server_s);
+					if (crt_as == null){
+						logger.error("Application Server is NULL, Initial Filter Criteria should contain a valid Application Server! \nAborting...");
+						return null;
+					}
 					
+					sb.append(app_server_s);
 					sb.append(server_name_s);
 					sb.append(crt_as.getServer_name());
 					sb.append(server_name_e);
@@ -757,7 +766,6 @@ public class SAR {
 						sb.append(crt_as.getService_info());
 						sb.append(service_info_e);
 					}
-
 					sb.append(app_server_e);
 					
 					if (crt_ifc.getProfile_part_ind() != -1){

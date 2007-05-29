@@ -73,13 +73,15 @@ public class SPT_Form extends ActionForm implements Serializable{
     private String requestUri;
     private String sessionDescLine;
     private String sessionDescContent;
-    private String sessionCase;
+    private int sessionCase;
     private boolean neg;
     private int group;
     private int type;
     private int trigptId;
 
-    private String rtype;
+    private boolean rtype_reg;
+    private boolean rtype_re_reg;
+    private boolean rtype_de_reg;
 
     private static List sptTypeList;
 	private static ArrayList sipMethodList;
@@ -102,9 +104,12 @@ public class SPT_Form extends ActionForm implements Serializable{
     	this.requestUri = null;
     	this.sessionDescContent = null;
     	this.sessionDescLine = null;
-    	this.sessionCase = null;
+    	this.sessionCase = 0;
     	
-    	this.rtype = null;
+    	//this.rtype = null;
+    	this.rtype_reg = false;
+    	this.rtype_re_reg = false;
+    	this.rtype_de_reg = false;
     }
 
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -146,11 +151,12 @@ public class SPT_Form extends ActionForm implements Serializable{
 		SPT_Form.sptTypeList = sptTypeList;
 	}
 
-	public String getSessionCase() {
+
+	public int getSessionCase() {
 		return sessionCase;
 	}
 
-	public void setSessionCase(String sessionCase) {
+	public void setSessionCase(int sessionCase) {
 		this.sessionCase = sessionCase;
 	}
 
@@ -235,12 +241,29 @@ public class SPT_Form extends ActionForm implements Serializable{
 		SPT_Form.sipMethodList = sipMethodList;
 	}
  
-	public String getRtype() {
-		return rtype;
+
+	public boolean isRtype_de_reg() {
+		return rtype_de_reg;
 	}
 
-	public void setRtype(String rtype) {
-		this.rtype = rtype;
+	public void setRtype_de_reg(boolean rtype_de_reg) {
+		this.rtype_de_reg = rtype_de_reg;
+	}
+
+	public boolean isRtype_re_reg() {
+		return rtype_re_reg;
+	}
+
+	public void setRtype_re_reg(boolean rtype_re_reg) {
+		this.rtype_re_reg = rtype_re_reg;
+	}
+
+	public boolean isRtype_reg() {
+		return rtype_reg;
+	}
+
+	public void setRtype_reg(boolean rtype_reg) {
+		this.rtype_reg = rtype_reg;
 	}
 
 	public ArrayList getDirectionOfRequestList() {

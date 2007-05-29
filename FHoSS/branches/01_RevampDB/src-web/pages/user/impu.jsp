@@ -184,19 +184,19 @@ function add_action_for_form(action, associated_ID) {
 								<html:hidden property="user_state" />
 
 								<logic:equal value="0" property="user_state" name="IMPU_Form">
-									<td bgcolor="#FF0000"> NOT-REGISTERED </td>
+									<td bgcolor="#FF6666"> NOT-REGISTERED </td>
 								</logic:equal>
 
 								<logic:equal value="1" property="user_state" name="IMPU_Form">
-									<td bgcolor="#00FF00"> REGISTERED </td>
+									<td bgcolor="#33CC66"> REGISTERED </td>
 								</logic:equal>
 				
 								<logic:equal value="2" property="user_state" name="IMPU_Form">
-									<td bgcolor="#0000FF"> UN-REGISTERED </td>
+									<td bgcolor="#33CCFF"> UN-REGISTERED </td>
 								</logic:equal>
 				
 								<logic:equal value="3" property="user_state" name="IMPU_Form">
-									<td bgcolor="#FFFF00"> AUTH-PENDING </td>
+									<td bgcolor="#FFCC66"> AUTH-PENDING </td>
 								</logic:equal>
 							</tr>
 							</table>		
