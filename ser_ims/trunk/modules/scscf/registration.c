@@ -170,7 +170,7 @@ unsigned char get_auth_scheme_type(str scheme)
 
 
 
-
+static str scscf_allow={"Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, MESSAGE, INFO\r\n",83};
 /**
  * Copies the Path header from REGISTER request to reply, inserts the Service-Route.
  * @param msg - the SIP message to operator on
@@ -199,6 +199,8 @@ int S_add_path_service_routes(struct sip_msg *msg,char *str1,char *str2 )
 	}
 	
 	if (!cscf_add_header_rpl(msg,&scscf_service_route)) return CSCF_RETURN_FALSE;
+	
+	if (!cscf_add_header_rpl(msg,&scscf_allow)) return CSCF_RETURN_FALSE;
 
 	return CSCF_RETURN_TRUE;
 }
