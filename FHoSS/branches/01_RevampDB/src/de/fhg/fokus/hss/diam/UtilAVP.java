@@ -446,6 +446,12 @@ public class UtilAVP {
 		userData.setData(data);
 		message.addAVP(userData);
 	}
+
+	public static void addUserDataSh(DiameterMessage message, String data){
+		AVP userData = new AVP(DiameterConstants.AVPCode.IMS_USER_DATA_SH, true, DiameterConstants.Vendor.V3GPP);
+		userData.setData(data);
+		message.addAVP(userData);
+	}
 	
 	public static void addChargingInformation(DiameterMessage message, ChargingInfo chargingInfo){
 		AVP chargingInfoAVP = new AVP(DiameterConstants.AVPCode.IMS_CHARGING_INFORMATION, true, 

@@ -99,8 +99,6 @@ public class IMPU_Load extends Action {
 			chg_list = ChargingInfo_DAO.get_all(session);
 			form.setSelect_charging_info(chg_list);
 
-			form.setSelect_identity_type(WebConstants.select_identity_type);
-
 			List vn_list;
 			vn_list = VisitedNetwork_DAO.get_all(session);
 			form.setSelect_vn(vn_list);
