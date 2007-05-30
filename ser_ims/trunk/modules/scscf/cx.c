@@ -176,7 +176,8 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 	if (!Cx_add_public_identity(mar,public_identity)) goto error;
 	if (!Cx_add_user_name(mar,private_identity)) goto error;
 	if (!Cx_add_sip_number_auth_items(mar, count)) goto error;
-	if (!Cx_add_sip_auth_data_item_request(mar, algorithm, authorization)) goto error;
+	if (!Cx_add_sip_auth_data_item_request(mar, algorithm, authorization, private_identity, realm, 
+			msg->first_line.u.request.method, server_name)) goto error;
 	if (!Cx_add_server_name(mar,server_name)) goto error;
 	//TODO - add the realm also - and don't add when sending if added here 
 		

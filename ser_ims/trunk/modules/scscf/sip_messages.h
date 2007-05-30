@@ -83,5 +83,6 @@
 #define MSG_500_PACK_AV					"Server Internal Error - while packing auth vectors"
 #define MSG_500_SAR_FAILED				"Server Internal Error - Server Assignment failed"
 #define MSG_500_UPDATE_CONTACTS_FAILED	"Server Internal Error - Update Contacts failed"
+#define MSG_514_HSS_AUTH_FAILURE		"HSS unauthenticated - did not provide the right H(A1) in MAA"
 
 #endif //S_CSCF_SIP_MESSAGES_H_

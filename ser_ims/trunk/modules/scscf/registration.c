@@ -82,22 +82,8 @@ extern int auth_data_timeout;					/**< timeout for a hash entry to expire when e
 extern int av_request_at_once;					/**< how many auth vectors to request in a MAR 				*/
 extern int av_request_at_sync;					/**< how many auth vectors to request in a sync MAR 		*/	
 
-enum authorization_types {
-	AUTH_UNKNOWN			= 0,
-/* 3GPP */	
-	AUTH_AKAV1_MD5			= 1,
-	AUTH_AKAV2_MD5			= 2,
-	AUTH_EARLY_IMS			= 3,
-/* FOKUS */
-	AUTH_MD5				= 4,
-/* CableLabs */	
-	AUTH_DIGEST				= 5,
-/* TISPAN */	
-	AUTH_HTTP_DIGEST_MD5	= 6,	
-	AUTH_NASS_BUNDLED		= 7
-};
 
-static str algorithm_types[] = {
+str algorithm_types[] = {
 	{"Unknown",7},
 	{"AKAv1-MD5",9},
 	{"AKAv2-MD5",9},
@@ -109,7 +95,7 @@ static str algorithm_types[] = {
 	{0,0}
 };
 
-static str auth_scheme_types[] = {
+str auth_scheme_types[] = {
 	{"Unknown",7},
 	{"Digest-AKAv1-MD5",16},
 	{"Digest-AKAv2-MD5",16},
@@ -539,6 +525,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 				response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);
 			break;		
 		case AUTH_DIGEST:
+		case AUTH_HTTP_DIGEST_MD5:
 //			LOG(L_CRIT,"A1: %.*s:%.*s:%.*s\n",private_identity.len,private_identity.s,
 //				realm.len,realm.s,av->authorization.len,av->authorization.s);
 			
@@ -726,6 +713,10 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 				ik_len,ik);
 			x.len = strlen(x.s);
 			break;
+
+		case AUTH_HTTP_DIGEST_MD5:
+			/* ETSI HTTP_DIGEST MD5 */
+			/* this one continues into the next one */			
 		case AUTH_DIGEST:
 			/* Cable-Labs MD5 */
 			/* this one continues into the next one */			
@@ -788,6 +779,9 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 	int item_number;
 	int is_sync=0;
 	str authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0},ip={0,0},ha1={0,0};
+	str response_auth = {0, 0};
+	HASHHEX auth32;
+	HASHHEX result;
 		
 	if (auts.len){
 		authorization.s = pkg_malloc(nonce.len*3/4+auts.len*3/4+8);
@@ -865,12 +859,27 @@ success:
 	}
 	cnt = 0;
 	auth_data = 0;
+	
 	while((Cx_get_auth_data_item_answer(maa,&auth_data,&item_number,
-			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip,&ha1)))
+			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip,&ha1,&response_auth)))
 	{
 		if (ip.len)	av = new_auth_vector(item_number,auth_scheme,empty_s,ip,empty_s,empty_s);
 		else 
-		if (ha1.len) av = new_auth_vector(item_number,auth_scheme,empty_s,ha1,empty_s,empty_s);
+		if (ha1.len)
+		{ 
+			av = new_auth_vector(item_number,auth_scheme,authenticate,ha1,empty_s,empty_s);
+			if (response_auth.len) //HSS check 
+			{
+				bin_to_base16(ha1.s,ha1.len,auth32);			
+				calc_response(auth32, &authenticate, &empty_s,&empty_s,&empty_s,0, &(msg->first_line.u.request.method) ,&server_name , 0,result);
+				LOG(L_INFO,"DBG:"M_NAME":S_MAR: HSS said: %.*s and we  expect %.*s ha1 %.*s\n",
+					response_auth.len,response_auth.s,/*av->authorization.len,av->authorization.s,*/32,result,32,auth32);
+				if (!response_auth.len==32 || strncasecmp(response_auth.s,result,32)){	
+					S_REGISTER_reply(msg,514,MSG_514_HSS_AUTH_FAILURE);
+					goto done;
+				}
+			}
+		}
 		else av = new_auth_vector(item_number,auth_scheme,authenticate,authorization,ck,ik);
 		
 		if (cnt==0) avlist[cnt++]=av;
@@ -1072,7 +1081,26 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 				goto done;
 			}		
 			x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);								
-			break;		
+			break;	
+		case AUTH_HTTP_DIGEST_MD5:
+
+			x->authenticate.len = authenticate.len*2;
+			x->authenticate.s = shm_malloc(x->authenticate.len);
+			if (!x->authenticate.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}		
+			x->authenticate.len = bin_to_base16(authenticate.s,authenticate.len,x->authenticate.s);		
+			
+			x->authorization.len = authorization.len*2;
+			x->authorization.s = shm_malloc(x->authorization.len);
+			if (!x->authorization.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				x->authorization.len=0;
+				goto done;
+			}		
+			x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);								
+			break;	
 		case AUTH_EARLY_IMS:
 			/* early IMS */
 			x->authenticate.len=0;

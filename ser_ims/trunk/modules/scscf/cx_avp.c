@@ -61,6 +61,7 @@
 #include "cx_avp.h"
 #include "../../mem/shm_mem.h"
 #include <stdio.h>
+#include "registration.h"
 
 extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp funcs 		*/
 
@@ -265,7 +266,8 @@ inline int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
 }
 
 
-
+static str s_empty = {0, 0};
+extern str auth_scheme_types[];
 /**
  * Creates and adds a SIP-Auth-Data-Item AVP.
  * @param msg - the Diameter message to add to.
@@ -273,10 +275,11 @@ inline int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
  * @param auth - the value for the authorization AVP
  * @returns 1 on success or 0 on error
  */
-inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str auth)
+inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg, str auth_scheme, str auth, str username, str realm,str method, str server_name)
 {
 	AAA_AVP_LIST list;
 	str group;
+	str etsi_authorization = {0, 0};
 	list.head=0;list.tail=0;
 		
 	if (auth_scheme.len){
@@ -297,6 +300,23 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 			AVP_DONT_FREE_DATA,
 			__FUNCTION__);
 	}
+
+	if (auth_scheme.len==auth_scheme_types[AUTH_HTTP_DIGEST_MD5].len &&
+		strncasecmp(auth_scheme.s,auth_scheme_types[AUTH_HTTP_DIGEST_MD5].s,auth_scheme.len)==0) 
+	{
+		etsi_authorization = Cx_ETSI_sip_authorization(username, realm, s_empty, server_name, s_empty, s_empty, method, s_empty);
+	
+		if (etsi_authorization.len){
+			Cx_add_avp_list(&list,
+				etsi_authorization.s,etsi_authorization.len,
+				AVP_ETSI_SIP_Authorization,
+				AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+				IMS_vendor_id_ETSI,
+				AVP_FREE_DATA,
+				__FUNCTION__);
+		}	
+	}
+
 	if (!list.head) return 1;
 	group = cdpb.AAAGroupAVPS(list);
 	
@@ -309,6 +329,112 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str
 		IMS_vendor_id_3GPP,
 		AVP_FREE_DATA,
 		__FUNCTION__);
+}
+
+/**
+ * Creates and adds a ETSI_sip_authorization AVP.
+ * @param username - UserName
+ * @param realm - Realm
+ * @param nonce - Nonce
+ * @param URI - URI
+ * @param response - Response
+ * @param algoritm - Algorithm
+ * @param method - Method
+ * @param hash - Enitity-Body-Hash
+ * @returns grouped str on success
+ */
+str Cx_ETSI_sip_authorization(str username, str realm, str nonce, str URI, str response, str algorithm, str method, str hash)
+{
+	AAA_AVP_LIST list;
+	str group = {0, 0};
+	list.head=0;list.tail=0;
+		
+	if (username.len){
+		Cx_add_avp_list(&list,
+			username.s,username.len,
+			AVP_ETSI_Digest_Username,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}	
+
+	if (realm.len){
+		Cx_add_avp_list(&list,
+			realm.s,realm.len,
+			AVP_ETSI_Digest_Realm,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}	
+	
+	if (nonce.len){
+		Cx_add_avp_list(&list,
+			nonce.s,nonce.len,
+			AVP_ETSI_Digest_Nonce,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}
+
+	if (URI.len){
+		Cx_add_avp_list(&list,
+			URI.s,URI.len,
+			AVP_ETSI_Digest_URI,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}
+
+	if (response.len){
+		Cx_add_avp_list(&list,
+			response.s,response.len,
+			AVP_ETSI_Digest_Response,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}
+
+	if (algorithm.len){
+		Cx_add_avp_list(&list,
+			algorithm.s,algorithm.len,
+			AVP_ETSI_Digest_Algorithm,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}
+
+	if (method.len){
+		Cx_add_avp_list(&list,
+			method.s,method.len,
+			AVP_ETSI_Digest_Method,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}
+
+	if (hash.len){
+		Cx_add_avp_list(&list,
+			hash.s,hash.len,
+			AVP_ETSI_Digest_Entity_Body_Hash,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,
+			AVP_DONT_FREE_DATA,
+			__FUNCTION__);
+	}
+
+	if (!list.head) return group;
+	group = cdpb.AAAGroupAVPS(list);
+	
+	cdpb.AAAFreeAVPList(&list);
+	
+	return group;
 }
 
 /**
@@ -815,13 +941,15 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
  */
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik,str *ip,str *ha1)
+	str *ck,str *ik,str *ip, str *ha1, str *response_auth)
 {
 	AAA_AVP_LIST list;
+	AAA_AVP_LIST list2;
 	AAA_AVP *avp;
+	AAA_AVP *avp2;
 	str grp;
 	static char buf[64];
-	
+	ha1->s = 0; ha1->len = 0;
 	*auth_data = cdpb.AAAFindMatchingAVP(msg,*auth_data,AVP_IMS_SIP_Auth_Data_Item,
 		IMS_vendor_id_3GPP,0);
 	if (!*auth_data) return 0;
@@ -865,7 +993,7 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authorization,
 		IMS_vendor_id_3GPP,0);
 	if (!avp||!avp->data.s) {authorization->s=0;authorization->len=0;}
-	else *authorization = avp->data;
+	else *authorization = avp->data;	
 
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_Confidentiality_Key,
 		IMS_vendor_id_3GPP,0);
@@ -877,6 +1005,50 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	if (!avp||!avp->data.s) {ik->s=0;ik->len=0;}
 	else *ik = avp->data;
 
+	/* ETSI HTTP Digest */
+
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_ETSI_SIP_Authenticate,IMS_vendor_id_ETSI,0);
+	if (avp  && avp->data.s) 
+	{
+		list2 = cdpb.AAAUngroupAVPS(avp->data);
+		
+		avp2 = cdpb.AAAFindMatchingAVPList(list2,0,AVP_ETSI_Digest_Nonce, IMS_vendor_id_ETSI,0);
+		if (!avp2||!avp2->data.s) {
+			authenticate->s=0;authenticate->len=0;
+			cdpb.AAAFreeAVPList(&list2);
+			return 0;
+		}
+		*authenticate = avp2->data;
+		
+		avp2 = cdpb.AAAFindMatchingAVPList(list2,0,AVP_ETSI_Digest_HA1, IMS_vendor_id_ETSI,0);
+		if (!avp2||!avp2->data.s) {
+			ha1->s = 0; ha1->len = 0;
+			cdpb.AAAFreeAVPList(&list2);
+			return 0;
+		}
+		*ha1 = avp2->data;
+		
+		cdpb.AAAFreeAVPList(&list2);
+	}
+
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_ETSI_SIP_Authentication_Info,IMS_vendor_id_ETSI,0);
+	if (avp  && avp->data.s) 
+	{
+		list2 = cdpb.AAAUngroupAVPS(avp->data);
+		
+		avp2 = cdpb.AAAFindMatchingAVPList(list2,0,AVP_ETSI_Digest_Response_Auth, IMS_vendor_id_ETSI,0);
+		if (!avp2||!avp2->data.s) {
+			response_auth->s=0;response_auth->len=0;
+			cdpb.AAAFreeAVPList(&list2);
+			return 0;
+		}
+		*response_auth = avp2->data;
+		cdpb.AAAFreeAVPList(&list2);
+	}
+	else
+	{
+		response_auth->s=0;response_auth->len=0;
+	}
 	cdpb.AAAFreeAVPList(&list);
 	return 1;
 }

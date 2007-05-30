@@ -71,7 +71,10 @@ int Cx_add_authorization_type(AAAMessage *msg,unsigned int data);
 
 int Cx_add_server_name(AAAMessage *msg,str data);
 int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data);
-int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme,str auth);
+inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg,str auth_scheme, str auth, str username, str realm, str method,str server_name);
+
+str Cx_ETSI_sip_authorization(str username, str realm, str nonce, str URI, str response, str algorithm, str method, str hash);
+
 int Cx_add_server_assignment_type(AAAMessage *msg,unsigned int data);
 int Cx_add_userdata_available(AAAMessage *msg,unsigned int data);
 int Cx_add_result_code(AAAMessage *msg,unsigned int data);
@@ -100,7 +103,7 @@ int Cx_get_auth_data_item_request(AAAMessage *msg,
 		 str *auth_scheme, str *authorization);
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik,str *ip,str *ha1);
+	str *ck,str *ik,str *ip,str *ha1, str *response_auth);
 	
 str Cx_get_destination_host(AAAMessage *msg);	
 str Cx_get_user_data(AAAMessage *msg);	
