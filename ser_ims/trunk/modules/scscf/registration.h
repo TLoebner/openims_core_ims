@@ -81,6 +81,21 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 );
 int S_challenge(struct sip_msg *msg,char *str1,char *str2 );
 
 
+enum authorization_types {
+	AUTH_UNKNOWN			= 0,
+/* 3GPP */	
+	AUTH_AKAV1_MD5			= 1,
+	AUTH_AKAV2_MD5			= 2,
+	AUTH_EARLY_IMS			= 3,
+/* FOKUS */
+	AUTH_MD5				= 4,
+/* CableLabs */	
+	AUTH_DIGEST				= 5,
+/* TISPAN */	
+	AUTH_HTTP_DIGEST_MD5	= 6,	
+	AUTH_NASS_BUNDLED		= 7
+};
+
 /** Enumeration for the Authorization Vector status */
 enum auth_vector_status {
 	AUTH_VECTOR_UNUSED = 0,
