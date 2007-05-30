@@ -275,9 +275,6 @@ public class IMPU_Submit extends Action{
 			
 			List vn_list = VisitedNetwork_DAO.get_all(session);
 			form.setSelect_vn(vn_list);
-
-			// refresh the select_identity_type
-			form.setSelect_identity_type(WebConstants.select_identity_type);		
 			
 			// add parameters to request & refresh select properties
 			if (IMPU_Load.testForDelete(session, form.getId())){

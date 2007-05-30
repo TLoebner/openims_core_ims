@@ -100,7 +100,7 @@ public class LIR {
 			
 			// 2. check if public identity is PSI; if PSI then test activation
 			int type = impu.getType();
-			if (type == CxConstants.IMPU_type_Distinct_PSI || type == CxConstants.IMPU_type_Wildcarded_PSI){
+			if (type == CxConstants.Identity_Type_Distinct_PSI || type == CxConstants.Identity_Type_Wildcarded_PSI){
 				if (impu.getPsi_activation() == 0){
 					throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN); 
 				}

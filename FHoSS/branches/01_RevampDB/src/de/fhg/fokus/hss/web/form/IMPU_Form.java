@@ -122,9 +122,9 @@ public class IMPU_Form extends ActionForm implements Serializable{
     	this.vn_id = -1;
     	this.select_charging_info = null;
     	this.select_sp = null;
-    	this.select_identity_type = null;
     	this.select_vn = null;
     	this.ppr_apply_for = -1;
+    	this.select_identity_type = WebConstants.select_identity_type;
     	this.select_ppr_apply_for = WebConstants.select_ppr_apply_for;
     }
 	

@@ -50,9 +50,9 @@ package de.fhg.fokus.hss.cx;
 public class CxConstants {
 	
 	// Public Idenitity Types
-	public static final short IMPU_type_Public_User_Identity = 0;
+/*	public static final short IMPU_type_Public_User_Identity = 0;
 	public static final short IMPU_type_Distinct_PSI = 1;
-	public static final short IMPU_type_Wildcarded_PSI = 2;
+	public static final short IMPU_type_Wildcarded_PSI = 2;*/
 	// Authentication_Parameters_Size
 	public static final int Auth_Parm_Secret_Key_Size = 16;
 	public static final int Auth_Parm_Rand_Size = 16;
@@ -165,12 +165,12 @@ public class CxConstants {
 	
 	// Identity_Type
 
-	public static final int Identity_Type_Public_User_Identity = 0; 
-	public static final int Identity_Type_Wildcarded_PSI = 1;
-	public static final int Identity_Type_Distinct_PSI = 2;
+	public static final int Identity_Type_Public_User_Identity = 0;
+	public static final int Identity_Type_Distinct_PSI = 1;
+	public static final int Identity_Type_Wildcarded_PSI = 2;
 	public static final String Identity_Type_Public_User_Identity_Name = "Public_User_Identity"; 
-	public static final String Identity_Type_Wildcarded_PSI_Name = "Wildcarded_PSI";
 	public static final String Identity_Type_Distinct_PSI_Name = "Distinct_PSI";
+	public static final String Identity_Type_Wildcarded_PSI_Name = "Wildcarded_PSI";
 	
 	
 	//Condition Type CNF

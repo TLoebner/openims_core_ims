@@ -166,7 +166,7 @@ public class SAR {
 			
 			// 4. check if the public identity is a Pubic Service Identifier; if yes, check the activation
 			int impu_type  = impu.getType();
-			if (impu_type == CxConstants.IMPU_type_Distinct_PSI || impu_type == CxConstants.IMPU_type_Wildcarded_PSI){
+			if (impu_type == CxConstants.Identity_Type_Distinct_PSI || impu_type == CxConstants.Identity_Type_Wildcarded_PSI){
 				if (impu.getPsi_activation() == 0){
 					throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN);
 				}
@@ -482,7 +482,13 @@ public class SAR {
 	public static final String barring_indication_e="</BarringIndication>";
 	public static final String identity_s="<Identity>";
 	public static final String identity_e="</Identity>";
-
+	public static final String identity_type_s="<IdentityType>";
+	public static final String identity_type_e="</IdentityType>";
+	public static final String wildcarded_psi_s="<WildcardedPSI>";
+	public static final String wildcarded_psi_e="</WildcardedPSI>";
+	public static final String display_name_s="<DisplayName>";
+	public static final String display_name_e="</DisplayName>";
+	
 	public static final String ifc_s="<InitialFilterCriteria>";
 	public static final String ifc_e="</InitialFilterCriteria>";
 	public static final String priority_s="<Priority>";
@@ -602,9 +608,42 @@ public class SAR {
 			while (it.hasNext()){
 				IMPU impu = (IMPU)it.next();
 				sb.append(public_id_s);
+				
+				if (impu.getBarring() == 1){
+					// add Barring Indication
+					sb.append(barring_indication_s);
+					sb.append(impu.getBarring());
+					sb.append(barring_indication_e);
+				}
+				
+				// add Identity
 				sb.append(identity_s);
 				sb.append(impu.getIdentity());
 				sb.append(identity_e);
+				
+				// add Extension
+				sb.append(extension_s);
+				// add Identity Type
+				sb.append(identity_type_s);
+				sb.append(impu.getType());
+				sb.append(identity_type_e);
+				
+				if (impu.getType() == CxConstants.Identity_Type_Wildcarded_PSI){
+					sb.append(wildcarded_psi_s);
+					sb.append(impu.getWildcard_psi());
+					sb.append(wildcarded_psi_e);
+				}
+				
+				if (impu.getDisplay_name() != null && !impu.getDisplay_name().equals("")){
+					// add Extension 2 (Display Name)
+					sb.append(extension_s);
+					sb.append(display_name_s);
+					sb.append(impu.getDisplay_name());
+					sb.append(display_name_e);
+					sb.append(extension_e);
+				}
+				sb.append(extension_e);
+
 				sb.append(public_id_e);
 			}
 			

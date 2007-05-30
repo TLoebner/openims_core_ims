@@ -42,9 +42,7 @@
   */
 
 package de.fhg.fokus.hss.sh.op;
-
 import java.io.ByteArrayInputStream;
-import java.util.Vector;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Session;

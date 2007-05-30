@@ -332,7 +332,7 @@ public class UDR {
 				}
 				
 			}
-			UtilAVP.addUserData(response, shData.toString());
+			UtilAVP.addUserDataSh(response, shData.toString());
 			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 		}
 		catch (DatabaseException e){
