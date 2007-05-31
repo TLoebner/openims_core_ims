@@ -188,8 +188,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_add_path() - Add the Path header to the message
  * - P_add_require() - Add the Require header to the message
  * - P_add_p_charging_vector() - Add the P-Charging-Vector header to the message
- * - P_add_integrity_protected() - Add the integrity-protected parameter to the Authorization header
- * - P_add_p_visited_network_id() - Add the P-Visited-Network-Id header to the message
+ * - P_add_integrity_protected("yes"/"no") - Add the integrity-protected parameter to the Authorization header
+ * - P_add_p_visited_network_id("network_identifier") - Add the P-Visited-Network-Id header to the message
  * <p>
  * - P_remove_ck_ik() - remove the Cypher Key and the Integrity Key parameteres from the 
  * WWW-Authorize header
@@ -220,13 +220,13 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * indicated at the registration
  * - P_enforce_service_routes() - enforces the Service-Route headers indicated at registration
  * <p>
- * - P_is_in_dialog() - checks if a requests is in a dialog
- * - P_save_dialog() - saves a dialog in the local list
- * - P_update_dialog() - updates a dialog in the local list
- * - P_drop_dialog() - drops a dialog from the local list
- * - P_follows_dialog_routes() - checks if a subsequent request follows the saved dialog routes
- * - P_enforce_dialog_routes() - enforces the dialog routes
- * - P_record_route() - records route
+ * - P_is_in_dialog("orig"/"term") - checks if a requests is in a dialog
+ * - P_save_dialog("orig"/"term") - saves a dialog in the local list
+ * - P_update_dialog("orig"/"term") - updates a dialog in the local list
+ * - P_drop_dialog("orig"/"term") - drops a dialog from the local list
+ * - P_follows_dialog_routes("orig"/"term") - checks if a subsequent request follows the saved dialog routes
+ * - P_enforce_dialog_routes("orig"/"term") - enforces the dialog routes
+ * - P_record_route("orig"/"term") - records route
  * - P_check_session_expires() - Checks if Session-Expires value is over Min_SE local policy
  * - P_422_session_expires() - Return a 422 response with Min_SE set to local policy 
  * <p>
@@ -239,6 +239,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * <p>
  * - P_follows_via_list() - checks if a response coming from a UE contains the same Via headers sent in the corresponding request
  * - P_enforce_via_list() - enforce a response coming from a UE to contain the same Via headers sent in the corresponding request
+ * - P_remove_header_tag(hdr_name,tag) - Removes tags from headers (for example sec-agree from Require).
  */
 static cmd_export_t pcscf_cmds[]={
 	{"P_add_path",					P_add_path, 				0, 0, REQUEST_ROUTE},
@@ -289,9 +290,10 @@ static cmd_export_t pcscf_cmds[]={
 
 	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
 	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
+	{"P_remove_header_tag",			P_remove_header_tag, 		2, 0, REQUEST_ROUTE},
 	
-	{"P_follows_via_list",			P_follows_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
-	{"P_enforce_via_list",			P_enforce_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"P_follows_via_list",			P_follows_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"P_enforce_via_list",			P_enforce_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_release_call_onreply",		P_release_call_onreply,		1,0,  ONREPLY_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
