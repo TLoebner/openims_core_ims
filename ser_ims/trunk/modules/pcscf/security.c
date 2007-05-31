@@ -819,3 +819,94 @@ delete_others:
 			}	
 	return CSCF_RETURN_TRUE;
 }
+
+
+/**
+ * Remove from <str1> headers the <str2> tag
+ * @param msg - SIP Request
+ * @param str1 - the header to remove from
+ * @param str2 - the tag to remove
+ * @returns #CSCF_RETURN_TRUE if removed, #CSCF_RETURN_FALSE if no changes required or #CSCF_RETURN_FALSE on error
+ */
+int P_remove_header_tag(struct sip_msg *msg,char *str1, char *str2)
+{
+	str hdr_name,tag,x,y;
+	struct hdr_field *hdr;
+	char *c;
+	int found,i,j,changed=0;
+	
+	hdr_name.s = str1;
+	hdr_name.len = strlen(str1);
+
+	tag.s = str2;
+	tag.len = strlen(str2);
+	
+	hdr = cscf_get_header(msg,hdr_name);
+	while (hdr){
+		/* get the original body */
+		x = hdr->body;
+		LOG(L_INFO,"DBG:"M_NAME":P_remove_header_tag(): Original <%.*s> -> <%.*s>\n",
+			hdr_name.len,hdr_name.s,x.len,x.s);
+		
+		/* duplicate the original body */
+		x.len++;
+		STR_PKG_DUP(y,x,"P_remove_header_tag");
+		if (!y.s) goto error;
+		y.len--;
+		y.s[y.len]=0;
+		
+		/* look for occurences of tag and overwrite with \0 */
+		found=0;
+		c = strtok(y.s," \t\r\n,");
+		while (c){
+			if (strlen(c)==tag.len && strncasecmp(c,tag.s,tag.len)==0){
+				found++;
+				memset(c,0,tag.len);
+			}	
+			c = strtok(0," \t\r\n,");
+		}
+		
+		/* if not found just skip to next header */
+		if (!found) goto next;
+				
+		/* compact the remaining tags by removing the \0 */		
+		for(i=0,j=0;i<y.len;i++)
+			if (y.s[i]!=0){ 
+				y.s[j++]=y.s[i];
+			} else {
+				y.s[j++]=',';
+				while(i+1<y.len && y.s[i+1]==0)
+					i++;
+			}
+		y.len = j;
+		if (y.s[y.len-1]==',') y.len--;
+
+		LOG(L_INFO,"DBG:"M_NAME":P_remove_header_tag(): Modified <%.*s> -> <%.*s>\n",
+			hdr_name.len,hdr_name.s,y.len,y.s);
+
+		/* write the changes */
+		if (y.len){
+			/* replace just the content */
+			if (!cscf_replace_string(msg,x,y)){
+				LOG(L_ERR,"ERR:"M_NAME":P_remove_header_tag(): Error replacing string!\n");
+				if (y.s) pkg_free(y.s);
+				goto error;
+			}
+		}else{
+			/* remove the whole header */
+			if (y.s) pkg_free(y.s);
+			if (!cscf_del_header(msg,hdr)){
+				LOG(L_ERR,"ERR:"M_NAME":P_remove_header_tag(): Error removing the whole header!\n");
+				goto error;
+			}
+		}
+		changed++;
+		
+next:
+		hdr = cscf_get_next_header(msg,hdr_name,hdr);
+	}	
+
+	return changed?CSCF_RETURN_TRUE:CSCF_RETURN_FALSE;
+error:
+	return CSCF_RETURN_ERROR;
+}
