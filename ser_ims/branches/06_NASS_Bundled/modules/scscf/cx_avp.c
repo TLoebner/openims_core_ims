@@ -938,7 +938,10 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
  */
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik,str *ip, str *ha1, str *response_auth)
+	str *ck,str *ik,
+	str *ip, 
+	str *ha1, str *response_auth,
+	str *line_identifier)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP_LIST list2;
@@ -974,6 +977,11 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 		ip->len = strlen(buf);
 		ip->s = buf;
 	}
+
+	/* NASS Bundled */
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Line_Identifier, IMS_vendor_id_ETSI,0);
+	if (!avp||!avp->data.s) {line_identifier->s=0;line_identifier->len=0;}
+	else *line_identifier = avp->data;
 
 	/* Digest */
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_CableLabs_Digest_HA1,IMS_vendor_id_CableLabs,0);
