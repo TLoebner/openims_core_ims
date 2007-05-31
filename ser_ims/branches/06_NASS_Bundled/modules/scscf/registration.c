@@ -72,6 +72,7 @@ extern struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs 		*/
 
 unsigned char registration_default_algorithm_type;	/**< fixed default algorithm for registration (if none present)	*/
 extern int registration_disable_early_ims;		/**< if to disable the Early-IMS checks			*/
+extern int registration_disable_nass_bundled;
 
 extern str scscf_name_str;						/**< fixed name of the S-CSCF 					*/
 extern str scscf_service_route;					/**< the service route header					*/
@@ -107,22 +108,23 @@ str auth_scheme_types[] = {
 	{0,0}	
 };
 
-//str digest_akav1={"Digest-AKAv1-MD5",16};
-//str digest_akav2={"Digest-AKAv2-MD5",16};
-//
-//str digest_md5={"Digest-MD5",10};
-//str digest={"Digest",6};
-//str http_digest_md5={"HTTP_DIGEST_MD5",15};
-//
-//str early_ims_security={"Early-IMS-Security",18};
-//str nass_bundled={"NASS-Bundled",12};
-//str unknown={"Unknown",7};
-//
-//
-//str akav1={"AKAv1-MD5",9};
-//str akav2={"AKAv2-MD5",9};
-//str md5={"MD5",3};
-//str hss_selected={"HSS-Selected",12};
+#define get_param(src,name,dst) \
+{\
+	int i,j;\
+	(dst).s=0;(dst).len=0;\
+	for(i=0;i<(src).len-(name).len;i++)\
+		if (strncasecmp((src).s+i,(name).s,(name).len)==0 &&\
+			((src).s[i-1]==' ' ||(src).s[i-1]==';'||(src).s[i-1]=='\t')){\
+			j=i+(name).len;\
+			(dst).s = (src).s+j;\
+			(dst).len = 0;\
+			while(j<(src).len && (src).s[j]!=','&& (src).s[j]!=' '&& (src).s[j]!='\t'&& (src).s[j]!=';') \
+				j++;			\
+			(dst).len = j-i-(name).len;\
+			break;\
+		}		\
+}
+
 
 /**
  * Convert the SIP Algorithm to its type
@@ -398,6 +400,7 @@ int S_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2 )
 
 char *zero_padded="00000000000000000000000000000000";
 static str empty_s={0,0};
+static str cell_id = {"utran-cell-id-3gpp=", 19};
 /**
  * Checks if the message contains a valid response to a valid challenge.
  * @param msg - the SIP message
@@ -416,7 +419,6 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	HASHHEX expected,ha1,hbody;
 	int expected_len=32;
 	auth_vector *av=0;
-	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: Checking if REGISTER is authorized...\n");
 	
@@ -487,6 +489,42 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 				ret = CSCF_RETURN_FALSE;
 		done_early_ims:					
 			if (p) r_unlock(p->hash);
+			if (av) {
+				av->status = AUTH_VECTOR_USELESS;
+				auth_data_unlock(aud_hash);
+			}
+			return ret;						
+		}
+	}
+
+	/* NASS-Bundled */	
+	if (!registration_disable_nass_bundled && !msg->authorization){
+		str access_network_info={0,0};
+		str dsl_location = {0,0};
+		access_network_info = cscf_get_access_network_info(msg, 0);
+		if (access_network_info.len)
+			get_param(access_network_info, cell_id, dsl_location);
+		if (dsl_location.len){
+			int ret = CSCF_RETURN_FALSE;
+			
+			LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: Possible NASS-Bundled Authentication identified\n");
+			do {
+				/* try and do MAR */
+				if (!S_MAR(msg,public_identity,private_identity,1,				
+					auth_scheme_types[AUTH_NASS_BUNDLED],empty_s,empty_s,scscf_name_str,realm)){
+					/* on fail, return not authorized */
+					goto done_nass_bundled;
+				}										
+				av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_UNUSED,0,&aud_hash);
+			} while(!av);
+			LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: HSS said : <%.*s>, P sent : <%.*s>\n",
+				av->authorization.len,av->authorization.s, dsl_location.len, dsl_location.s);
+			if (av->authorization.len == dsl_location.len &&
+				strncasecmp(av->authorization.s, dsl_location.s, dsl_location.len)==0){
+				ret = CSCF_RETURN_TRUE;
+			}else
+				ret = CSCF_RETURN_FALSE;
+		done_nass_bundled:	
 			if (av) {
 				av->status = AUTH_VECTOR_USELESS;
 				auth_data_unlock(aud_hash);
@@ -779,6 +817,7 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 	int item_number;
 	int is_sync=0;
 	str authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0},ip={0,0},ha1={0,0};
+	str line_identifier = {0,0};
 	str response_auth = {0, 0};
 	HASHHEX auth32;
 	HASHHEX result;
@@ -861,7 +900,10 @@ success:
 	auth_data = 0;
 	
 	while((Cx_get_auth_data_item_answer(maa,&auth_data,&item_number,
-			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip,&ha1,&response_auth)))
+			&auth_scheme,&authenticate,&authorization,&ck,&ik,
+			&ip,
+			&ha1,&response_auth,
+			&line_identifier)))
 	{
 		if (ip.len)	av = new_auth_vector(item_number,auth_scheme,empty_s,ip,empty_s,empty_s);
 		else 
@@ -880,6 +922,10 @@ success:
 				}
 			}
 		}
+		else 
+		if (line_identifier.len) {
+			av = new_auth_vector(item_number,auth_scheme,empty_s,line_identifier,empty_s,empty_s);
+		}		
 		else av = new_auth_vector(item_number,auth_scheme,authenticate,authorization,ck,ik);
 		
 		if (cnt==0) avlist[cnt++]=av;
@@ -1114,6 +1160,19 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 			memcpy(x->authorization.s,authorization.s,authorization.len);
 			x->authorization.len = authorization.len;
 			break;
+		case AUTH_NASS_BUNDLED:
+			/* NASS-Bundled */
+			x->authenticate.len=0;
+			x->authenticate.s=0;
+			x->authorization.len = authorization.len;
+			x->authorization.s = shm_malloc(x->authorization.len);
+			if (!x->authorization.s){
+				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				goto done;
+			}		
+			memcpy(x->authorization.s,authorization.s,authorization.len);
+			x->authorization.len = authorization.len;
+			break;			
 		default:		
 			/* all else */
 			x->authenticate.len=0;

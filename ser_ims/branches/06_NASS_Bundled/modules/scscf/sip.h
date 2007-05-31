@@ -127,10 +127,8 @@ struct hdr_field* cscf_get_next_header_type(struct sip_msg * msg ,
 
 str cscf_get_headers_content(struct sip_msg * msg , str header_name);
 
-
-// from pcscf
-
 str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h);
+str cscf_get_access_network_info(struct sip_msg *msg, struct hdr_field **h);
 
 str cscf_get_authorization(struct sip_msg *msg, struct hdr_field **h);
 str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h);
