@@ -60,6 +60,7 @@
 #include "sip.h"
 #include "registrar_storage.h"
 #include "registrar_parser.h"
+#include "registration.h"
 
 extern struct tm_binds tmb;			/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
@@ -141,6 +142,10 @@ AAAMessage* CxRequestHandler(AAAMessage *request,void *param)
 	return 0;		
 }
 
+
+static str s_empty={0,0};
+extern str auth_scheme_types[];
+
 /**
  * Create and send a Multimedia-Authentication-Request and returns the Answer received for it.
  * This function retrieves authentication vectors from the HSS.
@@ -176,8 +181,14 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 	if (!Cx_add_public_identity(mar,public_identity)) goto error;
 	if (!Cx_add_user_name(mar,private_identity)) goto error;
 	if (!Cx_add_sip_number_auth_items(mar, count)) goto error;
-	if (!Cx_add_sip_auth_data_item_request(mar, algorithm, authorization, private_identity, realm, 
+	if (algorithm.len==auth_scheme_types[AUTH_HTTP_DIGEST_MD5].len &&
+		strncasecmp(algorithm.s,auth_scheme_types[AUTH_HTTP_DIGEST_MD5].s,algorithm.len)==0) {
+		if (!Cx_add_sip_auth_data_item_request(mar, algorithm, authorization, private_identity, realm, 
 			msg->first_line.u.request.method, server_name)) goto error;
+	}else{
+		if (!Cx_add_sip_auth_data_item_request(mar, algorithm, authorization, private_identity, realm, 
+			msg->first_line.u.request.method, s_empty)) goto error;		
+	}
 	if (!Cx_add_server_name(mar,server_name)) goto error;
 	//TODO - add the realm also - and don't add when sending if added here 
 		
