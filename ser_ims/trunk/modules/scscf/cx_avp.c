@@ -61,7 +61,6 @@
 #include "cx_avp.h"
 #include "../../mem/shm_mem.h"
 #include <stdio.h>
-#include "registration.h"
 
 extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp funcs 		*/
 
@@ -267,7 +266,6 @@ inline int Cx_add_sip_number_auth_items(AAAMessage *msg,unsigned int data)
 
 
 static str s_empty = {0, 0};
-extern str auth_scheme_types[];
 /**
  * Creates and adds a SIP-Auth-Data-Item AVP.
  * @param msg - the Diameter message to add to.
@@ -301,8 +299,7 @@ inline int Cx_add_sip_auth_data_item_request(AAAMessage *msg, str auth_scheme, s
 			__FUNCTION__);
 	}
 
-	if (auth_scheme.len==auth_scheme_types[AUTH_HTTP_DIGEST_MD5].len &&
-		strncasecmp(auth_scheme.s,auth_scheme_types[AUTH_HTTP_DIGEST_MD5].s,auth_scheme.len)==0) 
+	if (server_name.len) 
 	{
 		etsi_authorization = Cx_ETSI_sip_authorization(username, realm, s_empty, server_name, s_empty, s_empty, method, s_empty);
 	
