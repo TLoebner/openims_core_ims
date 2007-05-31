@@ -823,6 +823,8 @@ delete_others:
 
 /**
  * Remove from <str1> headers the <str2> tag
+ * \note Does not work if you call it multiple times for the same hdr_name!
+ * \note Because of the note above, this needs a fix to accept multiple tags in the str2 parameter!
  * @param msg - SIP Request
  * @param str1 - the header to remove from
  * @param str2 - the tag to remove
