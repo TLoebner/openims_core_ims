@@ -876,7 +876,7 @@ int P_remove_header_tag(struct sip_msg *msg,char *str1, char *str2)
 			if (y.s[i]!=0){ 
 				y.s[j++]=y.s[i];
 			} else {
-				y.s[j++]=',';
+				if (j!=0) y.s[j++]=',';
 				while(i+1<y.len && y.s[i+1]==0)
 					i++;
 			}
