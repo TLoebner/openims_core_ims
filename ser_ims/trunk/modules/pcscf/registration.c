@@ -1073,7 +1073,7 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 		LOG(L_DBG, "ERR:"M_NAME":P_IPSec_relay: we cannot find the contact or its IPSec SAs for <%d://%.*s:%d>.\n", 
 			proto,host.len,host.s,port);
 		if (c) r_unlock(c->hash);
-		return CSCF_RETURN_TRUE;
+		return CSCF_RETURN_FALSE;
 	}					
 
 	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */;
