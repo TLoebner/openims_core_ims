@@ -239,7 +239,6 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	struct cell* t;
 	p_dialog *o;
 	enum p_dialog_direction odir;
-	str previous_header_s;
 	int i;
 	str r;
 	str hdrs={0,0};	
@@ -298,12 +297,12 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	/*trick or treat!*/
 	d->dialog_c->state=DLG_CONFIRMED;
 	
-	if (situation == RELEASE_CALL_WEIRD){		
-		send_request(method_ACK_s,previous_header_s,d->dialog_c,0,0);
-		send_request(method_BYE_s,previous_header_s,d->dialog_c,confirmed_response,d->direction);
+	if (situation == RELEASE_CALL_WEIRD){
+		send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
+		send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
 		//d->dialog_c->state=DLG_EARLY;
 	} else {/*(situation == RELEASE_CALL_EARLY)*/		
-		send_request(method_CANCEL_s,previous_header_s,d->dialog_c,confirmed_response,d->direction);
+		send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
 		//d->dialog_c->state=DLG_EARLY;
 	}
 
