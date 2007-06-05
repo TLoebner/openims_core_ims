@@ -59,26 +59,16 @@ import de.fhg.fokus.hss.diam.*;
 
 public class HSSContainer {
 	private static Logger logger = Logger.getLogger(HSSContainer.class);
-	private static HSSContainer appContainer = null;
-	public LinkedBlockingQueue tasksQueue;
 	
+	public LinkedBlockingQueue tasksQueue;
 	public Worker [] workers;
 	
 	// diameter stack
 	public DiameterStack diamStack;
 	public TomcatServer tomcatServer;
 	
-	//....
-	public static HSSContainer getInstance(){
-		if (appContainer == null){
-			appContainer = new HSSContainer();
-		}
-		
-		return appContainer;
-	}
-	
-	private HSSContainer(){
-		diamStack = new DiameterStack();
+	public HSSContainer(){
+		diamStack = new DiameterStack(this);
 		
 		try{
 			tomcatServer = new TomcatServer();
@@ -105,12 +95,18 @@ public class HSSContainer {
 		}
 		
 		// CxEvents Worker
-		CxEventsWorker cxEventsWorker = new CxEventsWorker(10);
+		CxEventsWorker cxEventsWorker = new CxEventsWorker(diamStack, 10);
 		cxEventsWorker.start();
+		
+		// ShEvents Worker
+		ShEventsWorker shEventsWorker = new ShEventsWorker(diamStack, 10);
+		shEventsWorker.start();
+		
 	}
+		
 	
 	public static void main(String args[]){
-		HSSContainer hssContainer = HSSContainer.getInstance();
+		HSSContainer hssContainer = new HSSContainer();
 		Tester t = new Tester();
 		t.start();
 		
@@ -152,4 +148,6 @@ public class HSSContainer {
 		    }
 		}
 	}
+	
+	
 }

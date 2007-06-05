@@ -55,11 +55,20 @@ public class ShNotification implements Serializable{
 	private int id;
 	private int id_impu;
 	private int id_application_server;
-	private short type;
+	private int data_ref;
+	private String service_indication;
 	private String rep_data;
+	private int sqn;
 	private int id_ifc;
+	private String server_name;
 	private String scscf_name;
 	private int reg_state;
+	private int psi_activation;
+	private String dsai_tag;
+	private int dsai_value;
+	private long hopbyhop;
+	private long endtoend;
+	private int grp;
 
 	public ShNotification(){}
 
@@ -111,6 +120,87 @@ public class ShNotification implements Serializable{
 		this.rep_data = rep_data;
 	}
 
+
+	public String getServer_name() {
+		return server_name;
+	}
+
+	public void setServer_name(String server_name) {
+		this.server_name = server_name;
+	}
+
+	public int getData_ref() {
+		return data_ref;
+	}
+
+	public void setData_ref(int data_ref) {
+		this.data_ref = data_ref;
+	}
+
+	public long getEndtoend() {
+		return endtoend;
+	}
+
+	public void setEndtoend(long endtoend) {
+		this.endtoend = endtoend;
+	}
+
+	public long getHopbyhop() {
+		return hopbyhop;
+	}
+
+	public void setHopbyhop(long hopbyhop) {
+		this.hopbyhop = hopbyhop;
+	}
+
+	public int getDsai_value() {
+		return dsai_value;
+	}
+
+	public void setDsai_value(int dsai_value) {
+		this.dsai_value = dsai_value;
+	}
+
+	public int getGrp() {
+		return grp;
+	}
+
+	public void setGrp(int grp) {
+		this.grp = grp;
+	}
+
+	public int getPsi_activation() {
+		return psi_activation;
+	}
+
+	public void setPsi_activation(int psi_activation) {
+		this.psi_activation = psi_activation;
+	}
+
+	public String getDsai_tag() {
+		return dsai_tag;
+	}
+
+	public void setDsai_tag(String dsai_tag) {
+		this.dsai_tag = dsai_tag;
+	}
+
+	public String getService_indication() {
+		return service_indication;
+	}
+
+	public void setService_indication(String service_indication) {
+		this.service_indication = service_indication;
+	}
+
+	public int getSqn() {
+		return sqn;
+	}
+
+	public void setSqn(int sqn) {
+		this.sqn = sqn;
+	}
+
 	public String getScscf_name() {
 		return scscf_name;
 	}
@@ -118,14 +208,7 @@ public class ShNotification implements Serializable{
 	public void setScscf_name(String scscf_name) {
 		this.scscf_name = scscf_name;
 	}
-
-	public short getType() {
-		return type;
-	}
-
-	public void setType(short type) {
-		this.type = type;
-	}
-
+	
+	
 }
 

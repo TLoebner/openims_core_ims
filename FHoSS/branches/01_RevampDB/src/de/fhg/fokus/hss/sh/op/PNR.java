@@ -43,17 +43,263 @@
 
 package de.fhg.fokus.hss.sh.op;
 
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.db.model.SPT;
+import de.fhg.fokus.hss.db.model.SP_IFC;
+import de.fhg.fokus.hss.db.model.ShNotification;
+import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.model.TP;
+import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
+import de.fhg.fokus.hss.db.op.SPT_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
+import de.fhg.fokus.hss.db.op.ShNotification_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.op.TP_DAO;
+import de.fhg.fokus.hss.diam.DiameterConstants;
+import de.fhg.fokus.hss.diam.DiameterStack;
+import de.fhg.fokus.hss.diam.UtilAVP;
+import de.fhg.fokus.hss.sh.ShConstants;
+import de.fhg.fokus.hss.sh.data.ApplicationServerElement;
+import de.fhg.fokus.hss.sh.data.DSAIElement;
+import de.fhg.fokus.hss.sh.data.InitialFilterCriteriaElement;
+import de.fhg.fokus.hss.sh.data.RepositoryDataElement;
+import de.fhg.fokus.hss.sh.data.SPTElement;
+import de.fhg.fokus.hss.sh.data.ShDataElement;
+import de.fhg.fokus.hss.sh.data.ShIMSDataElement;
+import de.fhg.fokus.hss.sh.data.TriggerPointElement;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
+
 public class PNR {
-	public static void processAnswer(DiameterMessage message){
-		return;
+	private static Logger logger = Logger.getLogger(PNR.class);
+	
+	public static void sendRequest(DiameterStack diameterStack, int id_as, int id_impu, int group){
+		DiameterPeer diameterPeer = diameterStack.diameterPeer;
+		DiameterMessage request = diameterPeer.newRequest(DiameterConstants.Command.PNR, DiameterConstants.Application.Sh);
+		request.flagProxiable = true;
+		
+		// add SessionId
+		UtilAVP.addSessionID(request, diameterPeer.FQDN, diameterStack.getNextSessionID());
+		
+		// add Auth-Session-State and Vendor-Specific-Application-ID
+		UtilAVP.addAuthSessionState(request, DiameterConstants.AVPValue.ASS_No_State_Maintained);
+		UtilAVP.addVendorSpecificApplicationID(request, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
+		
+		boolean dbException = false;
+		try{
+			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
+			
+			ApplicationServer applicationServer = ApplicationServer_DAO.get_by_ID(session, id_as);
+			if (applicationServer == null){
+				logger.error("Application Server was not found in the DB! Aborting...");
+				return;
+			}
+			IMPU impu = IMPU_DAO.get_by_ID(session, id_impu);
+
+			// add Destination-Host and Destination-Realm
+			String destHost = applicationServer.getDiameter_address();
+			UtilAVP.addDestinationHost(request, destHost);
+			UtilAVP.addDestinationRealm(request, destHost.substring(destHost.indexOf('.') + 1));
+			
+			
+			// prepare the ShData to be sent to the AS
+			List<ShNotification> list = ShNotification_DAO.get_all_from_grp(session, group);
+			if (list == null){
+				logger.error("Sh-Notification-List coresponding to the AS:" + applicationServer.getName() + " and IMPU: " + impu.getIdentity() + 
+						" is NULL! Aborting...");
+				return;
+			}
+
+			ShDataElement shData = new ShDataElement();
+			for (int i = 0; i < list.size(); i++){
+				ShNotification sh_notif = list.get(i);
+				PNR.getShNotifData(shData, sh_notif);
+			}
+			
+			// add the ShData to the request
+			UtilAVP.addShData(request, shData.toString());
+			// add the User-Identity
+			UtilAVP.addShUserIdentity(request, impu.getIdentity());
+			
+			// update all the rows from the same group
+			ShNotification_DAO.update_by_grp(session, group, request.hopByHopID, request.endToEndID);
+			
+			// send the request
+			diameterPeer.sendRequestTransactional(applicationServer.getDiameter_address(), request, diameterStack);
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+		
+	}
+
+	public static void getShNotifData(ShDataElement shData, ShNotification shNotification){
+		Session session = HibernateUtil.getCurrentSession();
+		String crt_service_indication = shNotification.getService_indication();
+
+		ShIMSDataElement shIMSData = shData.getShIMSData();
+		if (shIMSData == null){
+			shIMSData = new ShIMSDataElement();
+			shData.setShIMSData(shIMSData);
+		}
+		
+		switch (shNotification.getData_ref()){
+				case  ShConstants.Data_Ref_Repository_Data:
+					RepositoryDataElement repDataElement = new RepositoryDataElement();
+					repDataElement.setServiceData(shNotification.getRep_data());
+					repDataElement.setSqn(shNotification.getSqn());
+					repDataElement.setServiceIndication(crt_service_indication);
+					shData.addRepositoryData(repDataElement);
+					break;
+					
+				case  ShConstants.Data_Ref_IMS_Public_Identity:
+					//....
+					break;
+					
+				case  ShConstants.Data_Ref_IMS_User_State:
+					shIMSData.setImsUserState(shNotification.getReg_state());
+					break;
+					
+				case  ShConstants.Data_Ref_SCSCF_Name:
+					shIMSData.setScscfName(shNotification.getScscf_name());
+					break;
+					
+				case  ShConstants.Data_Ref_iFC:
+					ApplicationServer serviceAS = ApplicationServer_DAO.get_by_Server_Name(session, shNotification.getServer_name());
+					if (serviceAS == null){
+						logger.error("Server-Name AS was not found! Aborting...");
+						return;
+					}
+					
+					IMPU impu = IMPU_DAO.get_by_ID(session, shNotification.getId_impu());
+					if (impu == null){
+						logger.error("IMPU was not found! Aborting...");
+						return;
+					}
+					List ifcList = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, impu.getId_sp());
+					if (ifcList != null){
+						ApplicationServerElement asElement = new ApplicationServerElement();
+						asElement.setDefaultHandling(serviceAS.getDefault_handling());
+						asElement.setServerName(serviceAS.getServer_name());
+						asElement.setServiceInfo(serviceAS.getService_info());
+						
+						Iterator it = ifcList.iterator();
+						while (it.hasNext()){
+							IFC crt_ifc = (IFC) it.next();
+							if (crt_ifc.getId_application_server() == serviceAS.getId()){
+								InitialFilterCriteriaElement ifcElement = new InitialFilterCriteriaElement();
+								
+								ifcElement.setApplicationServer(asElement);
+								SP_IFC sp_ifc = SP_IFC_DAO.get_by_SP_and_IFC_ID(session, impu.getId_sp(), crt_ifc.getId());
+								ifcElement.setPriority(sp_ifc.getPriority());
+								ifcElement.setProfilePartIndicator(crt_ifc.getProfile_part_ind());
+
+								// set the trigger point
+								TP tp = TP_DAO.get_by_ID(session, crt_ifc.getId_tp());
+								TriggerPointElement tpElement = new TriggerPointElement();
+								tpElement.setConditionTypeCNF(tp.getCondition_type_cnf());
+								
+								List sptList = SPT_DAO.get_all_by_TP_ID(session, tp.getId());
+								if (sptList != null){
+									Iterator it2 = sptList.iterator();
+									SPT crt_spt;
+									SPTElement sptElement;
+									while (it2.hasNext()){
+										crt_spt = (SPT) it2.next();
+										sptElement = new SPTElement();
+										sptElement.setConditionNegated(crt_spt.getCondition_negated());
+										sptElement.setGroupID(crt_spt.getGrp());
+										
+										sptElement.setMethod(crt_spt.getMethod());
+										sptElement.setRequestURI(crt_spt.getRequesturi());
+										if (crt_spt.getSession_case() != null){
+											sptElement.setSessionCase(crt_spt.getSession_case());
+										}
+										sptElement.setSessionDescLine(crt_spt.getSdp_line());
+										sptElement.setSessionDescContent(crt_spt.getSdp_line_content());
+										sptElement.setSipHeader(crt_spt.getHeader());
+										sptElement.setSipHeaderContent(crt_spt.getHeader_content());
+										
+										// extension
+										sptElement.addRegistrationType(crt_spt.getRegistration_type());
+										tpElement.addSPT(sptElement);
+									}
+								}
+								ifcElement.setTriggerPoint(tpElement);
+								shIMSData.addInitialFilterCriteria(ifcElement);
+							}
+						}
+					}
+					break;
+					
+				case  ShConstants.Data_Ref_PSI_Activation:
+					shIMSData.setPsiActivation(shNotification.getPsi_activation());
+					break;
+					
+				case  ShConstants.Data_Ref_DSAI:
+					DSAIElement dsai = new DSAIElement();
+					dsai.setTag(shNotification.getDsai_tag());
+					dsai.setValue(shNotification.getDsai_value());
+					shIMSData.addDSAI(dsai);
+					break;
+
+/*				case  ShConstants.Data_Ref_Aliases_Repository_Data:
+					AliasesRepositoryDataElement aliasesRepData = new AliasesRepositoryDataElement();
+					aliasesRepData.setServiceData(shNotification.getRep_data());
+					aliasesRepData.setSqn(shNotification.getSqn());
+					aliasesRepData.setServiceIndication(crt_service_indication);
+					shData.addRepositoryData(aliasesRepData);
+					break;*/
+			}
+		
 	}
 	
+	public static void processResponse(DiameterPeer diameterPeer, DiameterMessage response){
+		boolean dbException = false;
+		try{
+        	Session session = HibernateUtil.getCurrentSession();
+        	HibernateUtil.beginTransaction();
+        	ShNotification_DAO.delete(session, response.hopByHopID, response.endToEndID);
+		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		        	
+		
+	}
+	
+	public static void processTimeout(DiameterPeer diameterPeer, DiameterMessage message){
+		
+	}
 	
 }

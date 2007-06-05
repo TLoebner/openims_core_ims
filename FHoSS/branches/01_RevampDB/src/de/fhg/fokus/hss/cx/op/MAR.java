@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
@@ -85,13 +86,16 @@ public class MAR {
 	private static Logger logger = Logger.getLogger(MAR.class);
 	
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
-		Session session = null;
+		
 		DiameterMessage response = diameterPeer.newResponse(request);
+		response.flagProxiable = true;
+		
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
 		
+		boolean dbException = false;
 		try{
-			session = HibernateUtil.getCurrentSession();
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 			
 			String publicIdentity = UtilAVP.getPublicIdentity(request);
@@ -303,11 +307,17 @@ public class MAR {
 			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
-		
-		finally{
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
 		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		
 		
 		return response;
 	}

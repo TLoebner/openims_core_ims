@@ -44,6 +44,8 @@ package de.fhg.fokus.hss.cx.op;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
@@ -73,16 +75,20 @@ import de.fhg.fokus.hss.db.hibernate.*;
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class UAR {
-
+	private static Logger logger = Logger.getLogger(UAR.class);
+	
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
 		
 		DiameterMessage response = diameterPeer.newResponse(request);
+		response.flagProxiable = true;
+		
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
-		
+
+		boolean dbException = false;
 		try{
-			HibernateUtil.beginTransaction();
 			Session session = HibernateUtil.getCurrentSession();
+			HibernateUtil.beginTransaction();
 		
 			String publicIdentity = UtilAVP.getPublicIdentity(request);
 			String privateIdentity = UtilAVP.getUserName(request);
@@ -261,10 +267,17 @@ public class UAR {
 			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
-		finally{
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
 		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		
 		return response;
 	}
 }

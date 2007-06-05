@@ -48,12 +48,11 @@ import java.util.List;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
-import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
-import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
@@ -67,8 +66,6 @@ import de.fhg.fokus.hss.db.model.TP;
 
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
-import de.fhg.fokus.hss.db.op.IFC_DAO;
-import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.RepositoryData_DAO;
@@ -95,10 +92,6 @@ public class UDR {
 		Session session = null;
 		boolean dbException = false;
 		
-		// add Auth-Session-State and Vendor-Specific-Application-ID
-		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
-		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Sh);
-
 		try{
 			if (request.flagProxiable == false){
 				logger.warn("You should notice that the Proxiable flag for UDR request was not set!");
@@ -113,13 +106,18 @@ public class UDR {
 			String origin_realm = UtilAVP.getOriginatingRealm(request);
 			String dest_realm = UtilAVP.getDestinationRealm(request);
 			
-			String user_identity = UtilAVP.getShUserIdentity(request);;
+			String user_identity = UtilAVP.getShUserIdentity(request);
 			Vector data_ref_vector = UtilAVP.getAllDataReference(request);
 			
 			if (vendor_specific_ID == null || auth_session_state == null || origin_host == null || origin_realm == null ||
 					dest_realm == null || user_identity == null || data_ref_vector == null || data_ref_vector.size() == 0){
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
+
+			// add Auth-Session-State and Vendor-Specific-Application-ID to Response
+			UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
+			UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Sh);
+			
 			session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
@@ -172,60 +170,91 @@ public class UDR {
 			//
 			
 			ShDataElement shData = new ShDataElement();
-			
 			for (int i = 0; i < data_ref_vector.size(); i++){
 				int crt_data_ref = (Integer) data_ref_vector.get(i); 
 				ShIMSDataElement shIMSData = null;
 				
-				switch (crt_data_ref){
+				String crt_service_indication = UtilAVP.getServiceIndication(request);
+				
+				if (crt_data_ref == ShConstants.Data_Ref_Repository_Data && crt_service_indication == null){
+					throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
+				}
+				String server_name = UtilAVP.getServerName(request);
+
+				addShData(shData, crt_data_ref, impu, crt_service_indication, 
+						server_name);
+				
+			}
+			UtilAVP.addShData(response, shData.toString());
+			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+		}
+		catch (HibernateException e){
+			dbException = true;
+			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
+			e.printStackTrace();
+		}
+		catch(ShExperimentalResultException e){
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			e.printStackTrace();
+		}
+/*		catch(ShFinalResultException e){
+			UtilAVP.addResultCode(response, e.getErrorCode());
+			e.printStackTrace();
+		}*/
+		finally{
+			// commit transaction only when a Database doesn't occured
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+		
+		return response;
+	}
+
+	
+	public static void addShData(ShDataElement shData, int crt_data_ref, IMPU impu, String crt_service_indication, 
+			String server_name){
+		
+			Session session = HibernateUtil.getCurrentSession();
+			ShIMSDataElement shIMSData = shData.getShIMSData();
+			if (shIMSData == null){
+				shIMSData = new ShIMSDataElement();
+				shData.setShIMSData(shIMSData);
+			}
+			
+			switch (crt_data_ref){
 					case  ShConstants.Data_Ref_Repository_Data:
-						String service_indication = UtilAVP.getServiceIndication(request);
-						if (service_indication == null){
-							throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
-						}
-						RepositoryData repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, user_identity, service_indication);
+						RepositoryData repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, impu.getIdentity(), 
+								crt_service_indication);
 						RepositoryDataElement repDataElement = new RepositoryDataElement();
 						repDataElement.setServiceData(repData.getRep_data());
 						repDataElement.setSqn(repData.getSqn());
-						repDataElement.setServiceIndication(service_indication);
+						repDataElement.setServiceIndication(crt_service_indication);
 						shData.addRepositoryData(repDataElement);
 						break;
 						
 					case  ShConstants.Data_Ref_IMS_Public_Identity:
-						
 						break;
 						
 					case  ShConstants.Data_Ref_IMS_User_State:
-						shIMSData = shData.getShIMSData();
-						if (shIMSData == null){
-							shIMSData = new ShIMSDataElement();
-							shData.setShIMSData(shIMSData);
-						}
 						shIMSData.setImsUserState(impu.getUser_state());
 						break;
 						
 					case  ShConstants.Data_Ref_SCSCF_Name:
-						shIMSData = shData.getShIMSData();
-						if (shIMSData == null){
-							shIMSData = new ShIMSDataElement();
-							shData.setShIMSData(shIMSData);
-						}
-						
 						List impiList = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, impu.getId());
 						if (impiList != null && impiList.size() > 0){
 							IMPI impi = (IMPI)impiList.get(0);
-							 shIMSData.setScscfName(IMSU_DAO.get_SCSCF_Name_by_IMSU_ID(session, impi.getId_imsu()));
+							String scscfName = IMSU_DAO.get_SCSCF_Name_by_IMSU_ID(session, impi.getId_imsu());
+							shIMSData.setScscfName(scscfName);
+							
+							if (scscfName == null){
+								shIMSData.setAddEmptySCSCFName(true);
+							}
 						}
 						break;
 						
 					case  ShConstants.Data_Ref_iFC:
-						shIMSData = shData.getShIMSData();
-						if (shIMSData == null){
-							shIMSData = new ShIMSDataElement();
-							shData.setShIMSData(shIMSData);
-						}
-						
-						String server_name = UtilAVP.getServerName(request);
 						ApplicationServer serviceAS = ApplicationServer_DAO.get_by_Server_Name(session, server_name);
 						
 						List ifcList = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, impu.getId_sp());
@@ -261,9 +290,12 @@ public class UDR {
 											sptElement = new SPTElement();
 											sptElement.setConditionNegated(crt_spt.getCondition_negated());
 											sptElement.setGroupID(crt_spt.getGrp());
+											
 											sptElement.setMethod(crt_spt.getMethod());
 											sptElement.setRequestURI(crt_spt.getRequesturi());
-											sptElement.setSessionCase(crt_spt.getSession_case());
+											if (crt_spt.getSession_case() != null){
+												sptElement.setSessionCase(crt_spt.getSession_case());
+											}
 											sptElement.setSessionDescLine(crt_spt.getSdp_line());
 											sptElement.setSessionDescContent(crt_spt.getSdp_line_content());
 											sptElement.setSipHeader(crt_spt.getHeader());
@@ -278,6 +310,9 @@ public class UDR {
 									shIMSData.addInitialFilterCriteria(ifcElement);
 								}
 							}
+						}
+						if (shIMSData.getIfcList() == null){
+							shIMSData.setAddEmptyIFCs(true);
 						}
 						break;
 						
@@ -318,45 +353,15 @@ public class UDR {
 						break;
 
 					case  ShConstants.Data_Ref_Aliases_Repository_Data:
-						service_indication = UtilAVP.getServiceIndication(request);
-						if (service_indication == null){
-							throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
-						}
-						repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, user_identity, service_indication);
+						repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, impu.getIdentity(), 
+								crt_service_indication);
 						repDataElement = new RepositoryDataElement();
 						repDataElement.setServiceData(repData.getRep_data());
 						repDataElement.setSqn(repData.getSqn());
-						repDataElement.setServiceIndication(service_indication);
+						repDataElement.setServiceIndication(crt_service_indication);
 						shData.addRepositoryData(repDataElement);
 						break;
 				}
-				
-			}
-			UtilAVP.addUserDataSh(response, shData.toString());
-			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
-		}
-		catch (DatabaseException e){
-			dbException = true;
-			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY.getCode());
-			e.printStackTrace();
-		}
-		catch(ShExperimentalResultException e){
-			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
-			e.printStackTrace();
-		}
-/*		catch(ShFinalResultException e){
-			UtilAVP.addResultCode(response, e.getErrorCode());
-			e.printStackTrace();
-		}*/
-		finally{
-			// commit transaction only when a Database doesn't occured
-			if (!dbException){
-				HibernateUtil.commitTransaction();
-			}
-			HibernateUtil.closeSession();
-		}
 		
-		return response;
-	}
-
+	} 
 }

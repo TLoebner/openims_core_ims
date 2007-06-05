@@ -50,6 +50,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
+import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.IMPI;
@@ -73,20 +74,23 @@ import de.fhg.fokus.hss.db.hibernate.*;
 public class RTR {
 	private static Logger logger = Logger.getLogger(RTR.class);
 	
-	public static void sendRequest(DiameterPeer diameterPeer, DiameterStack diameterStack, String diameter_name,
-			List<IMPU> impuList, List<IMPI> impiList, int reasonCode, String reasonInfo, int grp){
-		
+	public static void sendRequest(DiameterStack diameterStack, String diameter_name,
+		List<IMPU> impuList, List<IMPI> impiList, int reasonCode, String reasonInfo, int grp){
+		DiameterPeer diameterPeer = diameterStack.diameterPeer;
 		DiameterMessage request = diameterPeer.newRequest(DiameterConstants.Command.RTR, DiameterConstants.Application.Cx);
 		request.flagProxiable = true;
 		
+		// add SessionId
+		UtilAVP.addSessionID(request, diameterPeer.FQDN, diameterStack.getNextSessionID());
+
 		// add vendor-specific-application-id & auth-session state
 		UtilAVP.addAuthSessionState(request, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(request, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
-		Session session = null;
+		
 		
 		boolean dbException = false;
 		try{
-			session = HibernateUtil.getCurrentSession();
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
 			if (impiList == null || impiList.size() == 0){

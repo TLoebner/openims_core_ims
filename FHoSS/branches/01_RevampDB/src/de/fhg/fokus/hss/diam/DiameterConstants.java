@@ -126,52 +126,28 @@ public class DiameterConstants
     {
     	/** constant for Capablities Exchange Request */
         public static final int CER = 257;
-        /** constant for Capablities Exchange Answer */
-        public static final int CEA = 257;
         /** constant for Device Watchdog request */
         public static final int DWR = 280;
-        /** constant for Device Watchdog Answer */
-        public static final int DWA = 280;
         /** constant for User Authorization Request */
         public static final int UAR = 300;
-        /** constant for User Authorization Answer */
-        public static final int UAA = 300;
         /** constant for Server Assignment Request */
         public static final int SAR = 301;
-        /** constant for Server Assignment Answer */
-        public static final int SAA = 301;
         /** constant for Location Information Request */
         public static final int LIR = 302;
-        /** constant for Location Information Answer */
-        public static final int LIA = 302;
         /** constant for Multimedia Authentication Request */
         public static final int MAR = 303;
-        /** constant for Multimedia Authentication Answer */
-        public static final int MAA = 303;
         /** constant for Registration Termination Request */
         public static final int RTR = 304;
-        /** constant for Registration Termination Answer */
-        public static final int RTA = 304;
         /** constant for Push Profile Request */
         public static final int PPR = 305;
-        /** constant for Push Profile Answer */
-        public static final int PPA = 305;
         /** constant for User Data Request */
         public static final int UDR = 306;
-        /** constant for User Data Answer */
-        public static final int UDA = 306;
         /** constant for Profile Update Request */
         public static final int PUR = 307;
-        /** constant for Profile Update Answer */
-        public static final int PUA = 307;
         /** constant for Subscriber Notification Request */
         public static final int SNR = 308;
-        /** constant for Subscriber Notification Answer */
-        public static final int SNA = 308;
         /** constant for Push Notification Request */
         public static final int PNR = 309;
-        /** constant for Push Notification Answer */
-        public static final int PNA = 309;
         /** constant for Multimedia Authentication Request for Zh-Interface */
 		public static final int MARzh = 903;
     }
@@ -183,6 +159,7 @@ public class DiameterConstants
         public static final int FRAMED_IP_ADDRESS = 8;
     	public static final int AUTH_APPLICATION_ID = 258;
         public static final int VENDOR_SPECIFIC_APPLICATION_ID = 260;
+        public static final int SESSION_ID = 263;
         public static final int ORIGIN_HOST = 264;
         public static final int ORIGIN_REALM = 296;
         public static final int VENDOR_ID = 266;
@@ -229,14 +206,20 @@ public class DiameterConstants
         public static final int IMS_ORIGINATING_REQUEST = 633;
         
         // Sh AVPs
-        public static final int IMS_USER_IDENTITY = 700;
-        public static final int IMS_MSISDN = 701;
         public static final int IMS_PUBLIC_IDENTITY_SH = 601;
         public static final int IMS_SERVER_NAME_SH = 602;
+        public static final int IMS_USER_IDENTITY = 700;
+        public static final int IMS_MSISDN = 701;
         public static final int IMS_USER_DATA_SH = 702;
         public static final int IMS_DATA_REFERENCE = 703;
         public static final int IMS_SERVICE_INDICATION = 704;
         public static final int IMS_SUBSCRIBTION_REQ_TYPE = 705;
+        public static final int IMS_REQUESTED_DOMAIN = 706;
+        public static final int IMS_CURRENT_LOCATION = 707;
+        public static final int IMS_IDENTITY_SET = 708;
+        public static final int IMS_EXPIRY_TIME = 709;
+        public static final int IMS_SEND_DATA_INDICATION = 710;
+        public static final int IMS_DSAI_TAG = 711;
         
     	public static final int ZH_GUSS = 400;
     	
@@ -310,7 +293,10 @@ public class DiameterConstants
     	RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_READ("IMS_Diameter_Error_User_Data_Cannot_Be_Read",5102),
     	RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED("IMS_Diameter_Error_User_Data_Cannot_Be_Modified",5103),
     	RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_NOTIFIED("IMS_Diameter_Error_User_Data_Cannot_Be_Notified",5104),
-    	RC_IMS_DIAMETER_ERROR_TRANSPARENT_DATA_OUT_OF_SYNC("IMS_Diameter_Error_Transparent_Data_Out_Of_Sync",5105);
+    	RC_IMS_DIAMETER_ERROR_TRANSPARENT_DATA_OUT_OF_SYNC("IMS_Diameter_Error_Transparent_Data_Out_Of_Sync",5105),
+    	RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT("IMS_Diameter_Error_Subs_Data_Absent",5106),
+    	RC_IMS_DIAMETER_ERROR_NO_SUBSCRIPTION_TO_DATA("IMS_Diameter_Error_No_Subscription_To_Data",5107),
+    	RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE("IMS_Diameter_Error_DSAI_Not_Available",5108);
 		
     	/** 5400 to 5419 Reserved for TS29.109	*/
     	

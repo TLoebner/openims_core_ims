@@ -143,6 +143,9 @@ public class ShDataElement {
 	public Vector<RepositoryDataElement> getRepositoryDataList() {
 		return repositoryDataList;
 	}
+	public void setRepositoryDataList(Vector<RepositoryDataElement> repositoryDataList) {
+		this.repositoryDataList = repositoryDataList;
+	}
 
 	public PublicIdentityElement getPublicIdentifiers() {
 		return publicIdentifiers;
@@ -152,9 +155,6 @@ public class ShDataElement {
 		this.publicIdentifiers = publicIdentifiers;
 	}
 
-	public void setRepositoryDataList(Vector<RepositoryDataElement> repositoryDataList) {
-		this.repositoryDataList = repositoryDataList;
-	}
 
 	public ShDataExtensionElement getShDataExtension() {
 		return shDataExtension;

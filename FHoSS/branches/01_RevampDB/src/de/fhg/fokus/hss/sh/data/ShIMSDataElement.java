@@ -54,6 +54,9 @@ public class ShIMSDataElement {
 	private int imsUserState = -1;
 	private ChargingInformationElement chgInformation = null;
 	
+	private boolean addEmptySCSCFName = false;
+	private boolean addEmptyIFCs = false;
+	
 	// Extensions
 	private int psiActivation = -1;
 	private Vector<DSAIElement> dsaiList = null;
@@ -68,7 +71,12 @@ public class ShIMSDataElement {
 			sBuffer.append(scscfName);
 			sBuffer.append(ShDataTags.SCSCFName_e);
 		}
-		if (ifcList != null && ifcList.size() > 0) {
+		else if (addEmptySCSCFName){
+			sBuffer.append(ShDataTags.SCSCFName_s);
+			sBuffer.append(ShDataTags.SCSCFName_e);
+		}
+		
+		if (ifcList != null) {
 			sBuffer.append(ShDataTags.IFCs_s);
 			InitialFilterCriteriaElement ifc;
 			for (int i = 0; i < ifcList.size(); i++){
@@ -77,6 +85,11 @@ public class ShIMSDataElement {
 			}
 			sBuffer.append(ShDataTags.IFCs_e);
 		}
+		else if (addEmptyIFCs){
+			sBuffer.append(ShDataTags.IFCs_s);
+			sBuffer.append(ShDataTags.IFCs_e);
+		}
+		
 		if (imsUserState != -1){
 			sBuffer.append(ShDataTags.IMSUserState_s);
 			sBuffer.append(imsUserState);
@@ -111,7 +124,7 @@ public class ShIMSDataElement {
 	
 	public void addInitialFilterCriteria(InitialFilterCriteriaElement ifc){
 		if (ifcList == null){
-			ifcList = new Vector();
+			ifcList = new Vector<InitialFilterCriteriaElement>();
 		}
 		ifcList.add(ifc);
 	}
@@ -169,6 +182,22 @@ public class ShIMSDataElement {
 
 	public void setPsiActivation(int psiActivation) {
 		this.psiActivation = psiActivation;
+	}
+
+	public boolean isAddEmptyIFCs() {
+		return addEmptyIFCs;
+	}
+
+	public void setAddEmptyIFCs(boolean addEmptyIFCs) {
+		this.addEmptyIFCs = addEmptyIFCs;
+	}
+
+	public boolean isAddEmptySCSCFName() {
+		return addEmptySCSCFName;
+	}
+
+	public void setAddEmptySCSCFName(boolean addEmptySCSCFName) {
+		this.addEmptySCSCFName = addEmptySCSCFName;
 	}
 	
 }

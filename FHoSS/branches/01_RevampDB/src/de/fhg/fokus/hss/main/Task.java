@@ -66,7 +66,7 @@ import de.fhg.fokus.hss.cx.op.*;
 public class Task {
 	private static Logger logger = Logger.getLogger(Task.class);
 	// generic variables
-
+	public DiameterStack diameterStack;
 	// "event_type" - can be 1 - Sending Request, 2 - Processing Request, 3 - Timeout
 	public int event_type;
 	// "interface_type" can be Cx, Sh, Zh etc
@@ -86,9 +86,14 @@ public class Task {
 	public String reasonInfo = null;
 	public String diameter_name = null;
 	
-	public Task (int event_type, String FQDN, int command_code, int interface_type, 
+	// SNR specific variables
+	public int id_application_server = -1;
+	public int id_impu = -1;
+	
+	public Task (DiameterStack diameterStack, int event_type, String FQDN, int command_code, int interface_type, 
 			DiameterMessage message){
 		
+		this.diameterStack = diameterStack;
 		this.event_type = event_type;
 		this.FQDN = FQDN;
 		this.command_code = command_code;
@@ -96,7 +101,8 @@ public class Task {
 		this.message = message;
 	}
 	
-	public Task (int event_type, int command_code, int interface_type){
+	public Task (DiameterStack diameterStack, int event_type, int command_code, int interface_type){
+		this.diameterStack = diameterStack;
 		this.event_type = event_type;
 		this.command_code = command_code;
 		this.interface_type = interface_type;
@@ -104,7 +110,6 @@ public class Task {
 	
 	public DiameterMessage execute (){
 		DiameterMessage response = null;
-		DiameterStack diameterStack = HSSContainer.getInstance().diamStack; 
 		DiameterPeer peer = diameterStack.diameterPeer;
 		
 		if (interface_type == DiameterConstants.Application.Cx){
@@ -127,7 +132,7 @@ public class Task {
 					if (event_type == 1){
 						// the diameter stack is the sender for the message (Initiated message by HSS: PPR or RTR)
 						logger.info("Sending PPR!");
-						PPR.sendRequest(peer, diameterStack, id_impi, id_implicit_set, type, grp);
+						PPR.sendRequest(diameterStack, id_impi, id_implicit_set, type, grp);
 					}
 					else if (event_type == 2){
 						logger.info("Processing PPA!");
@@ -141,7 +146,7 @@ public class Task {
 				case DiameterConstants.Command.RTR:
 					if (event_type == 1){
 						logger.info("Sending RTR!");
-						RTR.sendRequest(peer, diameterStack, diameter_name, impuList, impiList, reasonCode, reasonInfo, grp);
+						RTR.sendRequest(diameterStack, diameter_name, impuList, impiList, reasonCode, reasonInfo, grp);
 					}
 					else if (event_type == 2){
 						logger.info("Processing RTA!");
@@ -167,7 +172,7 @@ public class Task {
 		
 		else if (interface_type == DiameterConstants.Application.Sh){
 			// Sh Commands
-			switch(message.commandCode){
+			switch(command_code){
 			
 				case DiameterConstants.Command.UDR:
 					response = UDR.processRequest(peer, message);
@@ -181,9 +186,22 @@ public class Task {
 			
 				case DiameterConstants.Command.SNR:
 					response = SNR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
 					break;
 		
-				case DiameterConstants.Command.PNA:
+				case DiameterConstants.Command.PNR:
+					if (event_type == 1){
+						// the diameter stack is the sender for the message (Initiated message by HSS: PPR or RTR)
+						logger.info("Sending PNR!");
+						PNR.sendRequest(diameterStack, id_application_server, id_impu, grp);
+					}
+					else if (event_type == 2){
+						logger.info("Processing PNA!");
+						PNR.processResponse(peer, message);
+					} 
+					else{
+						PNR.processTimeout(peer, message);
+					}
 					break;
 			}
 		}

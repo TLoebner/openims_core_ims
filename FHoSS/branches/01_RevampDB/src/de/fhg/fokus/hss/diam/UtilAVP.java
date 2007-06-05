@@ -50,7 +50,6 @@ import java.util.Vector;
 
 import org.hibernate.Session;
 
-
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 import de.fhg.fokus.diameter.DiameterPeer.data.AVPDecodeException;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
@@ -447,7 +446,7 @@ public class UtilAVP {
 		message.addAVP(userData);
 	}
 
-	public static void addUserDataSh(DiameterMessage message, String data){
+	public static void addShData(DiameterMessage message, String data){
 		AVP userData = new AVP(DiameterConstants.AVPCode.IMS_USER_DATA_SH, true, DiameterConstants.Vendor.V3GPP);
 		userData.setData(data);
 		message.addAVP(userData);
@@ -541,6 +540,19 @@ public class UtilAVP {
 		avp.setData(cnt);
 		message.addAVP(avp);
 	}
+
+	
+	public static void addSessionID(DiameterMessage message, String FQDN, int sessionID){
+		AVP avp = new AVP(DiameterConstants.AVPCode.SESSION_ID, true, DiameterConstants.Vendor.DIAM);
+		StringBuffer sBuff = new StringBuffer();
+		sBuff.append(FQDN);
+		sBuff.append(";");
+		sBuff.append(System.currentTimeMillis());
+		sBuff.append(";");
+		sBuff.append(sessionID);
+		avp.setData(sBuff.toString());
+		message.addAVP(avp);
+	}
 	
 	// methods for fields used by Sh Interface
 	
@@ -605,6 +617,28 @@ public class UtilAVP {
 		}
 		return null;
 	}
+	
+	public static Vector getAllServiceIndication(DiameterMessage message){
+		Vector result = null;
+		
+		if (message.avps != null && message.avps.size() > 0){
+			Iterator it = message.avps.iterator();
+			AVP avp;
+			while (it.hasNext()){
+				avp = (AVP) it.next();
+				if (avp.code == DiameterConstants.AVPCode.IMS_SERVICE_INDICATION && 
+						avp.flag_mandatory == true && 
+						avp.vendor_id == DiameterConstants.Vendor.V3GPP){
+					if (result == null){
+						result = new Vector();
+					}
+					result.add(new String(avp.data));
+				}
+			}
+		}
+		
+		return result;
+	}
 
 	public static String getShUserData(DiameterMessage message){
 		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_USER_DATA_SH, true, 
@@ -615,4 +649,65 @@ public class UtilAVP {
 		}
 		return null;
 	}
+	
+	public static int getSubsReqType(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_SUBSCRIBTION_REQ_TYPE, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		if (avp == null){
+			return -1;
+		}
+		
+		return avp.int_data;
+	}
+
+	public static int getExpiryTime(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_EXPIRY_TIME, false, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp == null){
+			return -1;
+		}
+		return avp.int_data;
+	}
+
+	public static int getSendDataIndication(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_SEND_DATA_INDICATION, false, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp == null){
+			return -1;
+		}
+		return avp.int_data;
+	}
+	
+	public static String getDSAITag(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_DSAI_TAG, true, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp == null)
+			return null;
+		
+		return new String(avp.data);
+	}
+	
+	
+	// add methods for Sh
+	public static void addExpiryTime(DiameterMessage message, int expiry_time){
+		AVP avp = new AVP(DiameterConstants.AVPCode.IMS_EXPIRY_TIME, false, 
+				DiameterConstants.Vendor.V3GPP);
+		avp.setData(expiry_time);
+		message.addAVP(avp);
+	}
+	
+	
+	public static void addShUserIdentity(DiameterMessage message, String userIdentity){
+		// return the Public Identity or the MSISDN AVP
+		AVP shUserIdentity = new AVP(DiameterConstants.AVPCode.IMS_USER_IDENTITY, true, 
+				DiameterConstants.Vendor.V3GPP);
+		AVP publicIdentity = new AVP(DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY_SH, true, 
+				DiameterConstants.Vendor.V3GPP);
+		publicIdentity.setData(userIdentity);
+		shUserIdentity.addChildAVP(publicIdentity);
+		message.addAVP(shUserIdentity);
+	}
+	
+
 }

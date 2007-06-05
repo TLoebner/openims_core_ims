@@ -28,7 +28,9 @@
 		<mapping resource="mappings/IMSU.hbm.xml"/>						
 		<mapping resource="mappings/Preferred_SCSCF_Set.hbm.xml"/>			
 		<mapping resource="mappings/RTR_PPR.hbm.xml"/>									
-		<mapping resource="mappings/Shared_IFC_Set.hbm.xml"/>						
+		<mapping resource="mappings/Shared_IFC_Set.hbm.xml"/>			
+		<mapping resource="mappings/ShNotification.hbm.xml"/>			
+		<mapping resource="mappings/ShSubscription.hbm.xml"/>					
 		<mapping resource="mappings/SP_IFC.hbm.xml"/>						
 		<mapping resource="mappings/SP_Shared_IFC_Set.hbm.xml"/>								
 		<mapping resource="mappings/SP.hbm.xml"/>								
