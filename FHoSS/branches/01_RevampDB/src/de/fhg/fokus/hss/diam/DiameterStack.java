@@ -61,12 +61,24 @@ public class DiameterStack implements EventListener, TransactionListener {
 	private static Logger logger = Logger.getLogger(DiameterStack.class);
 	
 	public DiameterPeer diameterPeer = null;
+	public HSSContainer hssContainer = null;
 	
-	public DiameterStack(){
+	public DiameterStack(HSSContainer hssContainer){
+		this.hssContainer = hssContainer;
+		
 		diameterPeer = new DiameterPeer("DiameterPeerHSS.xml");
 		diameterPeer.enableTransactions(10, 1);
 		diameterPeer.addEventListener(this);
 		
+	}
+	private int sessionID = 0; 
+
+	/** Gets the next value for the Session ID Counter. It is used in the second part of the Session-Id 
+	 * field together with the time stamp */
+	public int getNextSessionID(){
+		synchronized (this){
+			return sessionID++;
+		}
 	}
 	
 	public void recvMessage(String FQDN, DiameterMessage request) {
@@ -77,9 +89,9 @@ public class DiameterStack implements EventListener, TransactionListener {
 			return;
 		}
 		
-		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, request);
+		Task task = new Task(hssContainer.diamStack, 2, FQDN, request.commandCode, request.applicationID, request);
 		try{
-			HSSContainer.getInstance().tasksQueue.put(task);
+			hssContainer.tasksQueue.put(task);
 			logger.debug("New task was added to queue!");
 		}
 		catch(InterruptedException e){
@@ -88,9 +100,9 @@ public class DiameterStack implements EventListener, TransactionListener {
 	}
 	
 	public void receiveAnswer(String FQDN, DiameterMessage request, DiameterMessage answer) {
-		Task task = new Task(2, FQDN, request.commandCode, request.applicationID, answer);
+		Task task = new Task(hssContainer.diamStack, 2, FQDN, request.commandCode, request.applicationID, answer);
 		try{
-			HSSContainer.getInstance().tasksQueue.put(task);
+			hssContainer.tasksQueue.put(task);
 			logger.debug("New task was added to queue!");
 		}
 		catch(InterruptedException e){

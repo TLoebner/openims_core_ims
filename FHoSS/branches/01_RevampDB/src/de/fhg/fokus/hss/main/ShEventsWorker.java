@@ -41,35 +41,72 @@
   * 
   */
 
-package de.fhg.fokus.hss.sh;
+package de.fhg.fokus.hss.main;
+
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.ShNotification;
+import de.fhg.fokus.hss.db.op.ShNotification_DAO;
+import de.fhg.fokus.hss.diam.DiameterConstants;
+import de.fhg.fokus.hss.diam.DiameterStack;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
-public class ShConstants {
+public class ShEventsWorker extends Thread{
+	private DiameterStack diameterStack;
+	int timeout;
 	
-	// Data-Reference Constants
-	public static final int Data_Ref_Repository_Data = 0;
-	public static final int Data_Ref_IMS_Public_Identity = 10;
-	public static final int Data_Ref_IMS_User_State = 11;
-	public static final int Data_Ref_SCSCF_Name = 12;
-	public static final int Data_Ref_iFC = 13;
-	public static final int Data_Ref_Location_Info = 14;
-	public static final int Data_Ref_User_State = 15;
-	public static final int Data_Ref_Charging_Info = 16;
-	public static final int Data_Ref_MSISDN = 17;
-	public static final int Data_Ref_PSI_Activation = 18;
-	public static final int Data_Ref_DSAI = 19;
-	public static final int Data_Ref_Aliases_Repository_Data = 20;
+	public ShEventsWorker(DiameterStack diameterStack, int timeout){
+		this.diameterStack = diameterStack;
+		this.timeout = timeout;
+	}
 	
-	
-	// Send-Data-Indication
-	public static final int User_Data_Not_Requested = 0;
-	public static final int User_Data_Requested = 1;
-	
-	// Subs-Req-Type
-	public static final int Subs_Req_Type_Subscribe = 0;
-	public static final int Subs_Req_Type_UnSubscribe = 1;
+	public void run(){
+		try{
+			
+			while (true){
+				Thread.sleep(1000 * timeout);
+				
+				boolean dbException = false;
+				try{
+					Session session = HibernateUtil.getCurrentSession();
+					HibernateUtil.beginTransaction();
+					ShNotification sh_notification = ShNotification_DAO.get_next_available(session);
+					
+					while (sh_notification != null){
+						// mark row(s) that was/were already taken into consideration
+						ShNotification_DAO.mark_all_from_grp(session, sh_notification.getGrp());
+						
+						Task task = new Task (diameterStack, 1, DiameterConstants.Command.PNR, DiameterConstants.Application.Sh);
+						task.id_application_server = sh_notification.getId_application_server();
+						task.id_impu = sh_notification.getId_impu();
+						task.grp = sh_notification.getGrp();
+						diameterStack.hssContainer.tasksQueue.add(task);
+						
+						sh_notification = ShNotification_DAO.get_next_available(session);	
+					}					
+					
+				}
+				catch (HibernateException e){
+					//logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+					e.printStackTrace();
+					dbException = true;
+				}
+				finally{
+					if (!dbException){
+						HibernateUtil.commitTransaction();
+					}
+					HibernateUtil.closeSession();
+				}
+			}
+		}
+		catch(InterruptedException e){
+			e.printStackTrace();
+		}
+	}
 }

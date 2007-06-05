@@ -144,6 +144,7 @@ public class SPTElement {
 	}
 
 	public void setRequestURI(String requestURI) {
+		
 		this.requestURI = requestURI;
 	}
 

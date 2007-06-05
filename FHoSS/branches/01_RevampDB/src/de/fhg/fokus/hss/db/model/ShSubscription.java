@@ -55,9 +55,11 @@ public class ShSubscription implements Serializable {
 	
 	private int id;
 	private int id_application_server;
-	private Integer id_impi;
 	private Integer id_impu;
 	private int data_ref;
+	private String service_indication;
+	private String dsai_tag;
+	private String server_name;
 	private int expires;
 
 	public ShSubscription(){}
@@ -94,17 +96,6 @@ public class ShSubscription implements Serializable {
 		this.id_application_server = id_application_server;
 	}
 
-	public int getId_impi() {
-		return id_impi;
-	}
-
-	public void setId_impi(Integer id_impi) {
-		if (id_impi != null)
-			this.id_impi = id_impi;
-		else
-			this.id_impi = -1;
-	}
-
 	public int getId_impu() {
 		return id_impu;
 	}
@@ -115,5 +106,31 @@ public class ShSubscription implements Serializable {
 		else
 			this.id_impu = -1;
 	}
+
+	public String getDsai_tag() {
+		return dsai_tag;
+	}
+
+	public void setDsai_tag(String dsai_tag) {
+		this.dsai_tag = dsai_tag;
+	}
+
+	public String getService_indication() {
+		return service_indication;
+	}
+
+	public void setService_indication(String service_indication) {
+		this.service_indication = service_indication;
+	}
+
+	public String getServer_name() {
+		return server_name;
+	}
+
+	public void setServer_name(String server_name) {
+		this.server_name = server_name;
+	}
+
+	
 	
 }

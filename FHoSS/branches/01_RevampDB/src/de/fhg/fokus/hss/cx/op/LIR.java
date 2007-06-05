@@ -47,6 +47,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
@@ -74,15 +75,16 @@ public class LIR {
 	
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
 		DiameterMessage response = diameterPeer.newResponse(request);
-
+		response.flagProxiable = true;
+		
 		// add Auth-Session-State and Vendor-Specific-Application-ID
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
 		
-		Session session = null;
+		boolean dbException = false;
 		try{
 			// obtain the hibernate session & transaction
-			session = HibernateUtil.getCurrentSession();
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 			
 			// get the needed AVPs
@@ -184,11 +186,17 @@ public class LIR {
 			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
-		finally{
-			HibernateUtil.commitTransaction();
-			HibernateUtil.closeSession();
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
 		}
-		
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}		
 		return response;
 	}
 }

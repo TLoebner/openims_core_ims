@@ -72,9 +72,13 @@ import de.fhg.fokus.hss.web.util.WebConstants;
 public class PPR {
 	private static Logger logger = Logger.getLogger(PPR.class);
 	
-	public static void sendRequest(DiameterPeer diameterPeer, DiameterStack diameterStack, int id_impi, int id_implicit_set, int type, int grp){		
+	public static void sendRequest(DiameterStack diameterStack, int id_impi, int id_implicit_set, int type, int grp){
+		DiameterPeer diameterPeer = diameterStack.diameterPeer; 
 		DiameterMessage request = diameterPeer.newRequest(DiameterConstants.Command.PPR, DiameterConstants.Application.Cx);
 		request.flagProxiable = true;
+		
+		// add SessionId
+		UtilAVP.addSessionID(request, diameterPeer.FQDN, diameterStack.getNextSessionID());
 		
 		// add Auth-Session-State and Vendor-Specific-Application-ID
 		UtilAVP.addAuthSessionState(request, DiameterConstants.AVPValue.ASS_No_State_Maintained);

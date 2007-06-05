@@ -47,6 +47,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
@@ -91,12 +92,14 @@ public class SAR {
 	
 	public static DiameterMessage processRequest(DiameterPeer diameterPeer, DiameterMessage request){
 		DiameterMessage response = diameterPeer.newResponse(request);
-
+		response.flagProxiable = true;
+		
 		// add Auth-Session-State and Vendor-Specific-Application-ID
 		UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
 		UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Cx);
-		Session session = null;
 		
+		
+		boolean dbException = false;
 		try{
 			String vendorSpecificAppID = UtilAVP.getVendorSpecificApplicationID(request);
 			String authSessionState = UtilAVP.getAuthSessionState(request);
@@ -120,10 +123,11 @@ public class SAR {
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_MISSING_USER_ID);
 			}
 			
-			// 1. check that the public identity & privateIdentity are known in HSS
-			session = HibernateUtil.getCurrentSession();
+			// open db transaction
+			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
+			// 1. check that the public identity & privateIdentity are known in HSS
 			IMPU impu = IMPU_DAO.get_by_Identity(session, publicIdentity);
 			IMPI impi = IMPI_DAO.get_by_Identity(session, privateIdentity);
 			if (publicIdentity != null && impu == null){
@@ -462,10 +466,18 @@ public class SAR {
 			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
 		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
+		}
 		finally{
-			HibernateUtil.commitTransaction();
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
 			HibernateUtil.closeSession();
 		}
+		
 		return response;
 	}
 	
@@ -629,6 +641,11 @@ public class SAR {
 				sb.append(identity_type_e);
 				
 				if (impu.getType() == CxConstants.Identity_Type_Wildcarded_PSI){
+					if (impu.getWildcard_psi() == null || impu.getWildcard_psi().equals("")){
+						logger.error("Wildcarded PSI is NULL or is empty! Please provide a valid Wildcarded PSI! \n Aborting...");
+						return null;
+					}
+					
 					sb.append(wildcarded_psi_s);
 					sb.append(impu.getWildcard_psi());
 					sb.append(wildcarded_psi_e);

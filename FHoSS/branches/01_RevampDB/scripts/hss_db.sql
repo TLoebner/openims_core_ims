@@ -293,30 +293,39 @@ CREATE TABLE `sh_notification` (
   `id` int(11) NOT NULL auto_increment,
   `id_impu` int(11) NOT NULL default '0',
   `id_application_server` int(11) NOT NULL default '0',
-  `type` tinyint(4) NOT NULL default '0',
-  `rep_data` blob NOT NULL,
-  `id_ifc` int(11) NOT NULL default '0',
-  `scscf_name` varchar(255) NOT NULL default '',
-  `reg_state` int(11) NOT NULL default '0',
+  `data_ref` int(11) NOT NULL default '0',
+  `rep_data` blob default NULL,
+  `sqn` int(11) default '0',
+  `service_indication` varchar(255) default NULL,  
+  `id_ifc` int(11) default '0',
+  `server_name` varchar(255) default NULL,
+  `scscf_name` varchar(255) default NULL,
+  `reg_state` int(11) default '0',
+  `psi_activation` int(11) default '0',
+  `dsai_tag` varchar(255) default NULL,
+  `dsai_value` int(11) default '0',
+  `hopbyhop` bigint(20) default '0',
+  `endtoend` bigint(20) default '0',
+  `grp` int(11) NOT NULL default '0',
   PRIMARY KEY  (`id`),
   KEY `idx_id_impu` (`id_impu`),
   KEY `idx_as` (`id_application_server`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Sh Interface Notifications';
-
 --
--- Table structure for table `sh_subscriptions`
+-- Table structure for table `sh_subscription`
 --
 
-DROP TABLE IF EXISTS `sh_subscriptions`;
-CREATE TABLE `sh_subscriptions` (
+DROP TABLE IF EXISTS `sh_subscription`;
+CREATE TABLE `sh_subscription` (
   `id` int(11) NOT NULL auto_increment,
   `id_application_server` int(11) NOT NULL default '0',
-  `id_impi` int(11) default NULL,
-  `id_impu` int(11) default NULL,
+  `id_impu` int(11) NOT NULL,
   `data_ref` int(11) NOT NULL default '0',
-  `expires` int(11) NOT NULL default '0',
+  `service_indication` varchar(255) default NULL,
+  `dsai_tag` varchar(255) default NULL,
+  `server_name` varchar(255) default NULL,
+  `expires` bigint(20) NOT NULL default '0',
   PRIMARY KEY  (`id`),
-  KEY `idx_id_impi` (`id_impi`),
   KEY `idx_id_impu` (`id_impu`),
   KEY `idx_id_as` USING BTREE (`id_application_server`),
   KEY `idx_expires` (`expires`)

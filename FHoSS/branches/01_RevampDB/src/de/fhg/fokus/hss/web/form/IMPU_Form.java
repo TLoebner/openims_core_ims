@@ -131,35 +131,36 @@ public class IMPU_Form extends ActionForm implements Serializable{
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        if (identity == null || ((!identity.startsWith("sip:") && !identity.startsWith("sips:")) && 
-        		(!identity.startsWith("tel:") && !identity.startsWith("tels:")))){
-        	actionErrors.add("identity", new ActionMessage("impu_form.error.identity"));
-        }
-
-        if (this.id_sp == -1){
-        	actionErrors.add("id_sp", new ActionMessage("impu_form.error.id_sp"));
-        }
-
-        if (this.id_charging_info == -1){
-        	actionErrors.add("id_charging_info", new ActionMessage("impu_form.error.id_charging_info"));
-        }
-        
         boolean dbException = false;
         try{
         	Session session = HibernateUtil.getCurrentSession();
         	HibernateUtil.beginTransaction();
+        
+        	if (nextAction.equals("save")){
+        		if (identity == null || ((!identity.startsWith("sip:") && !identity.startsWith("sips:")) && 
+        				(!identity.startsWith("tel:") && !identity.startsWith("tels:")))){
+        			actionErrors.add("identity", new ActionMessage("impu_form.error.identity"));
+        		}
+
+        		if (this.id_sp == -1){
+        			actionErrors.add("id_sp", new ActionMessage("impu_form.error.id_sp"));
+        		}
+
+        		if (this.id_charging_info == -1){
+        			actionErrors.add("id_charging_info", new ActionMessage("impu_form.error.id_charging_info"));
+        		}
+        
         	
-        	IMPU impu = IMPU_DAO.get_by_Identity(session, identity);
-        	if (impu != null && impu.getId() != id){
-        		actionErrors.add("impu_form.error.duplicate_identity", new ActionMessage("impu_form.error.duplicate_identity"));	
+        		IMPU impu = IMPU_DAO.get_by_Identity(session, identity);
+        		if (impu != null && impu.getId() != id){
+        			actionErrors.add("impu_form.error.duplicate_identity", new ActionMessage("impu_form.error.duplicate_identity"));	
+        		}
+        		
+        		if (this.type == CxConstants.Identity_Type_Wildcarded_PSI && (this.wildcard_psi == null || this.wildcard_psi.equals(""))){
+        			actionErrors.add("impu_form.error.missing_wildcarded_psi", new ActionMessage("impu_form.error.missing_wildcarded_psi"));
+        		}
         	}
         }
-		catch(DatabaseException e){
-			logger.error("Database Exception occured!\nReason:" + e.getMessage());
-			e.printStackTrace();
-			dbException = true;
-		}
-		
 		catch (HibernateException e){
 			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
