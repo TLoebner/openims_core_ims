@@ -53,6 +53,7 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.IMPU;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -176,6 +177,16 @@ public class IMPI_DAO {
 		}
 		return list_result;
 	}	
+
+	public static IMPI get_an_IMPI_for_IMPU(Session session, int id_impu){
+		Query query;
+		query = session.createSQLQuery("select * from impi" +
+				"	inner join impi_impu on impi.id=impi_impu.id_impi" +
+				" where impi_impu.id_impu=? limit 1")
+				.addEntity(IMPI.class);
+		query.setInteger(0, id_impu);
+		return (IMPI) query.uniqueResult();
+	}
 	
 	
 	public static int delete_by_ID(Session session, int id){

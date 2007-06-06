@@ -64,10 +64,12 @@ import de.fhg.fokus.hss.cx.CxFinalResultException;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.op.DB_Op;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
+import de.fhg.fokus.hss.db.op.ShNotification_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.UtilAVP;
 import de.fhg.fokus.hss.main.HSSProperties;
@@ -217,6 +219,7 @@ public class MAR {
 			if (orig_host == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
+			
 			switch (user_state){
 			
 				case CxConstants.IMPU_user_state_Registered:
@@ -226,6 +229,9 @@ public class MAR {
 					if (!scscf_name.equals(server_name)){
 						
 						IMSU_DAO.update(session, impi.getId_imsu(), server_name, orig_host);
+						// send Sh Notifications for SCSCF_Name for all of the subscribers
+						ShNotification_DAO.insert_notif_for_SCSCFName(session, impi.getId_imsu(), server_name);									
+
 						IMPU_DAO.update(session, impu.getId(), CxConstants.IMPU_user_state_Auth_Pending);
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
@@ -263,9 +269,23 @@ public class MAR {
 				case CxConstants.IMPU_user_state_Unregistered:
 				case CxConstants.IMPU_user_state_Not_Registered:
 				case CxConstants.IMPU_user_state_Auth_Pending:
+					
+					if (user_state == CxConstants.IMPU_user_state_Unregistered){
+						// reset the unregister state from tables
+						// (If we were in the unregistered state before, an association IMPU-IMPI was set to Unregister)
+						// As the IMPI for the Unregister state was chosen random (in the case of multiple associations), 
+						//the reset is required!!!!!
+						DB_Op.resetUserState(session, impu.getId_implicit_set());
+					}
+					
 					if (scscf_name == null || scscf_name.equals("") || !scscf_name.equals(server_name)){
 						IMSU_DAO.update(session, impi.getId_imsu(), server_name, orig_host);
-						IMPU_DAO.update(session, impu.getId(), CxConstants.IMPU_user_state_Auth_Pending);
+						// send Sh Notifications for SCSCF_Name for all of the subscribers
+						ShNotification_DAO.insert_notif_for_SCSCFName(session, impi.getId_imsu(), server_name);									
+						
+						// set the Auth-Pending State
+						DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), CxConstants.IMPU_user_state_Auth_Pending,
+								true);
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
 						

@@ -66,6 +66,8 @@ import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.SP;
 import de.fhg.fokus.hss.db.model.SPT;
 import de.fhg.fokus.hss.db.model.SP_IFC;
+import de.fhg.fokus.hss.db.model.ShNotification;
+import de.fhg.fokus.hss.db.model.ShSubscription;
 import de.fhg.fokus.hss.db.model.TP;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
@@ -77,10 +79,13 @@ import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.SPT_DAO;
 import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
+import de.fhg.fokus.hss.db.op.ShNotification_DAO;
+import de.fhg.fokus.hss.db.op.ShSubscription_DAO;
 import de.fhg.fokus.hss.db.op.TP_DAO;
 import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.UtilAVP;
 import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.sh.ShConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -135,6 +140,16 @@ public class SAR {
 			}
 			if (privateIdentity != null && impi == null){
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_USER_UNKNOWN); 
+			}
+			
+			// stpre the IMSU ID in id_imsu
+			int id_imsu;
+			if (impi == null){
+				IMPI associatedIMPI = IMPI_DAO.get_an_IMPI_for_IMPU(session, impu.getId());
+				id_imsu = associatedIMPI.getId_imsu();
+			}
+			else{
+				id_imsu = impi.getId_imsu();
 			}
 			
 			
@@ -210,6 +225,12 @@ public class SAR {
 						UtilAVP.addAsssociatedIdentities(response, privateIdentitiesList);
 					}
 					UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+
+					if (serverAssignmentType == CxConstants.Server_Assignment_Type_Registration){
+						// send Sh Notifications for IMS-User-State for all of the subscribers
+						ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+								CxConstants.IMPU_user_state_Registered);
+					}
 					break;
 					
 				case CxConstants.Server_Assignment_Type_Unregistered_User:
@@ -247,6 +268,10 @@ public class SAR {
 					
 					// result code = diameter success
 					UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
+					
+					// send Sh Notifications for IMS-User-State for all of the subscribers
+					ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+							CxConstants.IMPU_user_state_Unregistered);
 					break;
 					
 				case CxConstants.Server_Assignment_Type_Timeout_Deregistration:
@@ -282,12 +307,21 @@ public class SAR {
 									int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
 									if (reg_cnt_for_imsu == 0){
 										IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+										// send Sh Notifications for SCSCF_Name for all of the subscribers
+										ShNotification_DAO.insert_notif_for_SCSCFName(session, id_imsu, "");
 									}
+									// send Sh Notifications for IMS-User-State for all of the subscribers
+									ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+											CxConstants.IMPU_user_state_Not_Registered);
 								}
 								else{
 									DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 											CxConstants.IMPU_user_state_Not_Registered, false);
-									
+
+									// send Sh Notifications for IMS-User-State for all of the subscribers
+									ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+											CxConstants.IMPU_user_state_Not_Registered);
+
 								}
 								break;
 								
@@ -305,7 +339,13 @@ public class SAR {
 								int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
 								if (reg_cnt_for_imsu == 0){
 									IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+									// send Sh Notifications for SCSCF_Name for all of the subscribers
+									ShNotification_DAO.insert_notif_for_SCSCFName(session, id_imsu, "");																		
 								}
+								// send Sh Notifications for IMS-User-State for all of the subscribers
+								ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+										CxConstants.IMPU_user_state_Not_Registered);
+								
 								break;
 						}
 					}
@@ -344,6 +384,9 @@ public class SAR {
 							int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
 							if (reg_cnt_for_imsu == 0){
 								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+								// send Sh Notifications for SCSCF_Name for all of the subscribers
+								ShNotification_DAO.insert_notif_for_SCSCFName(session, id_imsu, "");									
+								
 							}
 						}
 						else{
@@ -352,6 +395,11 @@ public class SAR {
 							DB_Op.setUserState(session, impi.getId(), crt_impu.getId_implicit_set(), 
 									CxConstants.IMPU_user_state_Not_Registered, false);
 						}
+						
+						// send Sh Notifications for IMS-User-State for all of the subscribers
+						ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+								CxConstants.IMPU_user_state_Not_Registered);
+
 					}
 					
 					UtilAVP.addExperimentalResultCode(response, 
@@ -422,6 +470,9 @@ public class SAR {
 								int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
 								if (reg_cnt_for_imsu == 0){
 									IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+									// send Sh Notifications for SCSCF_Name for all of the subscribers
+									ShNotification_DAO.insert_notif_for_SCSCFName(session, id_imsu, "");									
+									
 								}
 							}
 							else{
@@ -430,6 +481,10 @@ public class SAR {
 								DB_Op.setUserState(session, impi.getId(), impu.getId_implicit_set(), 
 										CxConstants.IMPU_user_state_Not_Registered, false);
 							}
+
+							// send Sh Notifications for IMS-User-State for all of the subscribers
+							ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId(), 
+									CxConstants.IMPU_user_state_Not_Registered);							
 							break;
 							
 						case CxConstants.IMPU_user_state_Unregistered:
@@ -445,7 +500,13 @@ public class SAR {
 							int reg_cnt_for_imsu = IMPI_IMPU_DAO.get_Registered_IMPUs_count_for_IMSU_ID(session, impi.getId_imsu());
 							if (reg_cnt_for_imsu == 0){
 								IMSU_DAO.update(session, impi.getId_imsu(), "", "");
+								// send Sh Notifications for SCSCF_Name for all of the subscribers
+								ShNotification_DAO.insert_notif_for_SCSCFName(session, id_imsu, "");																	
 							}
+							// send Sh Notifications for IMS-User-State for all of the subscribers
+							ShNotification_DAO.insert_notif_for_IMS_User_State(session, impu.getId_implicit_set(), 
+									CxConstants.IMPU_user_state_Not_Registered);
+							
 							break;
 							
 						case CxConstants.IMPU_user_state_Auth_Pending:

@@ -43,6 +43,8 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -97,6 +99,16 @@ public class ShSubscription_DAO {
 
 		return (ShSubscription) query.uniqueResult();
 	}	
+
+	public static List get_all_by_IMPU_and_DataRef(Session session, int id_impu, int data_ref){
+		Query query;
+		query = session.createSQLQuery("select * from sh_subscription where id_impu=? and data_ref=?")
+			.addEntity(ShSubscription.class);
+		query.setInteger(0, id_impu);
+		query.setInteger(1, data_ref);
+		return  query.list();
+	}	
+	
 	
 	public static int delete_by_ID(Session session, int id){
 		Query query = session.createSQLQuery("delete from sh_subscription where id=?");

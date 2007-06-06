@@ -273,4 +273,17 @@ public class IMPU_DAO {
 		query.setInteger(0, id_charging_info);
 		return query.list();
 	}
+
+	public static List get_all_IMPU_ID_for_IMSU(Session session, int id_imsu){
+		Query query;
+		query = session.createSQLQuery("select distinct impu.id from impu" +
+				"	inner join impi_impu on impu.id=impi_impu.id_impu" +
+				"	inner join impi on impi.id=impi_impu.id_impi" +
+				" where impi.id_imsu=?")
+				.addScalar("id", Hibernate.INTEGER);
+		query.setInteger(0, id_imsu);
+		return query.list();
+	}
+	
+	
 }
