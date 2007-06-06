@@ -49,7 +49,10 @@ import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.ShNotification;
+import de.fhg.fokus.hss.db.model.ShSubscription;
+import de.fhg.fokus.hss.sh.ShConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -137,4 +140,58 @@ public class ShNotification_DAO {
 		query.executeUpdate();
 	}
 	
+	
+	public static void insert_notif_for_IMS_User_State(Session session, int id_set, int imsUserState){
+		// send Sh notification to all subscribers
+		
+		List impuList = IMPU_DAO.get_all_from_set(session, id_set);
+		
+		if (impuList != null){
+			for (int i = 0; i < impuList.size(); i++){
+				IMPU crtIMPU = (IMPU) impuList.get(i);
+				List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, crtIMPU.getId(), 
+						ShConstants.Data_Ref_IMS_User_State);
+				if (shSubscriptionList != null){
+					for (int j = 0; j < shSubscriptionList.size(); j++){
+						ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+						ShNotification shNotification = new ShNotification();
+						shNotification.setData_ref(ShConstants.Data_Ref_IMS_User_State);
+						shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+						shNotification.setId_application_server(shSubscription.getId_application_server());
+						shNotification.setId_impu(crtIMPU.getId());
+						shNotification.setReg_state(imsUserState);
+						ShNotification_DAO.insert(session, shNotification);
+					}
+				}
+				
+			}
+		}
+	}
+	
+	public static void insert_notif_for_SCSCFName(Session session, int id_imsu, String scscfName){
+		
+		List impuIDList = IMPU_DAO.get_all_IMPU_ID_for_IMSU(session, id_imsu);
+		
+		if (impuIDList != null){
+			for (int i = 0; i < impuIDList.size(); i++){
+				Integer id_impu = (Integer) impuIDList.get(i);
+		
+				// send Sh notification to all subscribers
+				List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, id_impu, 
+						ShConstants.Data_Ref_SCSCF_Name);
+				if (shSubscriptionList != null){
+					for (int j = 0; j < shSubscriptionList.size(); j++){
+						ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+						ShNotification shNotification = new ShNotification();
+						shNotification.setData_ref(ShConstants.Data_Ref_SCSCF_Name);
+						shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+						shNotification.setId_application_server(shSubscription.getId_application_server());
+						shNotification.setId_impu(id_impu);
+						shNotification.setScscf_name(scscfName);
+						ShNotification_DAO.insert(session, shNotification);
+					}
+				}
+			}
+		}	
+	}
 }

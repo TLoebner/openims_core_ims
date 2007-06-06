@@ -90,6 +90,22 @@ public class DB_Op {
 		}
 	}
 	
+	public static void resetUserState(Session session, int id_implicit_set){
+		Query query = session.createSQLQuery(
+				"select * from impi_impu " +
+				"	inner join impu on impi_impu.id_impu=impu.id" +
+				"		where impu.id_implicit_set=?")
+					.addEntity(IMPI_IMPU.class);
+		query.setInteger(0, id_implicit_set);
+
+		List resultList = query.list();
+		Iterator it = resultList.iterator();
+		while (it.hasNext()){
+			IMPI_IMPU impi_impu = (IMPI_IMPU) it.next();
+			impi_impu.setUser_state(CxConstants.IMPU_user_state_Not_Registered);
+			session.saveOrUpdate(impi_impu);
+		}
+	}
 	
 	public static void resetAuthPending(Session session, int id_impi, int id_impu_implicitset){
 		
@@ -111,6 +127,8 @@ public class DB_Op {
 			session.saveOrUpdate(impi_impu);
 		}
 	}
+	
+	
 	
 	public static void deregister_all_IMPUs_for_an_IMPI_ID(Session session, int id_impi){
 

@@ -256,6 +256,10 @@ public class UDR {
 						
 					case  ShConstants.Data_Ref_iFC:
 						ApplicationServer serviceAS = ApplicationServer_DAO.get_by_Server_Name(session, server_name);
+						if (serviceAS == null) {
+							logger.error("The Server-Name AS was not found in the HSS!!! Aborting from addShData()...");
+							return;
+						}
 						
 						List ifcList = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, impu.getId_sp());
 						if (ifcList != null){
