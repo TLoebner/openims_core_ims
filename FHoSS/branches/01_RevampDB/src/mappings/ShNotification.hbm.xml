@@ -13,7 +13,7 @@
 	<property name="id_application_server" type="int" not-null="true"/>
 	<property name="data_ref" type="int" not-null="true"/>
 	<property name="service_indication" type="string" not-null="false"/>							
-	<property name="rep_data" type="string" not-null="false"/>				
+	<property name="rep_data" type="binary" not-null="false"/>				
 	<property name="sqn" type="int" not-null="false"/>				
 	<property name="id_ifc" type="int" not-null="false"/>				
 	<property name="server_name" type="string" not-null="false"/>			

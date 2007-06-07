@@ -49,10 +49,12 @@ import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.ShNotification;
 import de.fhg.fokus.hss.db.model.ShSubscription;
 import de.fhg.fokus.hss.sh.ShConstants;
+import de.fhg.fokus.hss.sh.data.RepositoryDataElement;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -143,19 +145,19 @@ public class ShNotification_DAO {
 	
 	public static void insert_notif_for_IMS_User_State(Session session, int id_set, int imsUserState){
 		// send Sh notification to all subscribers
-		
+		int data_reference = ShConstants.Data_Ref_IMS_User_State;
 		List impuList = IMPU_DAO.get_all_from_set(session, id_set);
 		
 		if (impuList != null){
 			for (int i = 0; i < impuList.size(); i++){
 				IMPU crtIMPU = (IMPU) impuList.get(i);
 				List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, crtIMPU.getId(), 
-						ShConstants.Data_Ref_IMS_User_State);
+						data_reference);
 				if (shSubscriptionList != null){
 					for (int j = 0; j < shSubscriptionList.size(); j++){
 						ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
 						ShNotification shNotification = new ShNotification();
-						shNotification.setData_ref(ShConstants.Data_Ref_IMS_User_State);
+						shNotification.setData_ref(data_reference);
 						shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
 						shNotification.setId_application_server(shSubscription.getId_application_server());
 						shNotification.setId_impu(crtIMPU.getId());
@@ -169,7 +171,7 @@ public class ShNotification_DAO {
 	}
 	
 	public static void insert_notif_for_SCSCFName(Session session, int id_imsu, String scscfName){
-		
+		int data_reference = ShConstants.Data_Ref_SCSCF_Name; 
 		List impuIDList = IMPU_DAO.get_all_IMPU_ID_for_IMSU(session, id_imsu);
 		
 		if (impuIDList != null){
@@ -178,12 +180,12 @@ public class ShNotification_DAO {
 		
 				// send Sh notification to all subscribers
 				List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, id_impu, 
-						ShConstants.Data_Ref_SCSCF_Name);
+						data_reference);
 				if (shSubscriptionList != null){
 					for (int j = 0; j < shSubscriptionList.size(); j++){
 						ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
 						ShNotification shNotification = new ShNotification();
-						shNotification.setData_ref(ShConstants.Data_Ref_SCSCF_Name);
+						shNotification.setData_ref(data_reference);
 						shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
 						shNotification.setId_application_server(shSubscription.getId_application_server());
 						shNotification.setId_impu(id_impu);
@@ -194,4 +196,53 @@ public class ShNotification_DAO {
 			}
 		}	
 	}
+	
+	public static void insert_notif_for_RepData(Session session, int id_impu, RepositoryDataElement repDataElement){
+		int data_reference = ShConstants.Data_Ref_Repository_Data;
+		// send Sh notification to all subscribers
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_DataRef_and_ServInd(session, id_impu, 
+				data_reference, repDataElement.getServiceIndication());
+		
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+				ShNotification shNotification = new ShNotification();
+				shNotification.setData_ref(data_reference);
+				shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+				shNotification.setId_application_server(shSubscription.getId_application_server());
+				shNotification.setId_impu(id_impu);
+				if (repDataElement.getServiceData() != null){
+					shNotification.setRep_data(repDataElement.getServiceData().getBytes());
+				}
+				shNotification.setSqn(repDataElement.getSqn());
+				shNotification.setService_indication(repDataElement.getServiceIndication());
+				
+				ShNotification_DAO.insert(session, shNotification);
+			}
+		}
+	}	
+	
+	public static void insert_notif_for_AliasesRepData(Session session, int id_impu, AliasesRepositoryData aliasesRepData){
+		int data_reference = ShConstants.Data_Ref_Aliases_Repository_Data;
+		
+		// send Sh notification to all subscribers
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, id_impu, 
+				data_reference);
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+				ShNotification shNotification = new ShNotification();
+				shNotification.setData_ref(data_reference);
+				shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+				shNotification.setId_application_server(shSubscription.getId_application_server());
+				shNotification.setId_impu(id_impu);
+				
+				shNotification.setRep_data(aliasesRepData.getRep_data());
+				shNotification.setSqn(aliasesRepData.getSqn());
+				shNotification.setService_indication(aliasesRepData.getService_indication());
+				
+				ShNotification_DAO.insert(session, shNotification);
+			}
+		}
+	}		
 }

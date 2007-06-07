@@ -81,13 +81,14 @@ public class RepositoryData_DAO {
 		return result; 
 	}
 	
-	public static RepositoryData get_by_IMPU_and_ServiceIndication(Session session, String impu_identity, String service_indication){
+	public static RepositoryData get_by_IMPU_and_ServiceIndication(Session session, int id_impu, 
+			String service_indication){
+		
 		Query query;
 		query = session.createSQLQuery("select * from repository_data " +
-				"	inner join impu on impu.id=repository_data.id_impu" +
-				"		where impu.identity=? and repository_data.service_indication=?")
+				"		where id_impu=? and service_indication=?")
 			.addEntity(RepositoryData.class);
-		query.setString(0, impu_identity);
+		query.setInteger(0, id_impu);
 		query.setString(1, service_indication);
 		
 		RepositoryData result = null;
@@ -107,9 +108,4 @@ public class RepositoryData_DAO {
 		return query.executeUpdate();
 	}
 	
-	public static int delete_by_Name(Session session, String name){
-		Query query = session.createSQLQuery("delete from repository_data where name=?");
-		query.setString(0, name);
-		return query.executeUpdate();
-	}	
 }

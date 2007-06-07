@@ -259,6 +259,23 @@ CREATE TABLE `repository_data` (
   KEY `idx_sqn` (`sqn`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Repository Data';
 
+
+--
+-- Table structure for table `aliases_repository_data`
+--
+
+DROP TABLE IF EXISTS `aliases_repository_data`;
+CREATE TABLE `aliases_repository_data` (
+  `id` int(11) NOT NULL auto_increment,
+  `sqn` int(11) NOT NULL default '0',
+  `id_implicit_set` int(11) NOT NULL default '0',
+  `service_indication` varchar(255) NOT NULL default '',
+  `rep_data` blob,
+  PRIMARY KEY  (`id`),
+  KEY `idx_id_implicit_set` (`id_implicit_set`),
+  KEY `idx_sqn` (`sqn`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Aliases Repository Data';
+
 --
 -- Table structure for table `rtr_ppr`
 --

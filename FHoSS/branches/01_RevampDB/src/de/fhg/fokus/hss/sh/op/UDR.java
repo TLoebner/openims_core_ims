@@ -54,6 +54,7 @@ import org.hibernate.Session;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IFC;
@@ -64,6 +65,7 @@ import de.fhg.fokus.hss.db.model.SPT;
 import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.TP;
 
+import de.fhg.fokus.hss.db.op.AliasesRepositoryData_DAO;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
@@ -98,6 +100,10 @@ public class UDR {
 			}
 			// set the proxiable flag for the response
 			response.flagProxiable = true;
+
+			// add Auth-Session-State and Vendor-Specific-Application-ID to Response
+			UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
+			UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Sh);
 			
 			// -0- check for mandatory fields in the message
 			String vendor_specific_ID = UtilAVP.getVendorSpecificApplicationID(request);
@@ -113,10 +119,6 @@ public class UDR {
 					dest_realm == null || user_identity == null || data_ref_vector == null || data_ref_vector.size() == 0){
 				throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
-
-			// add Auth-Session-State and Vendor-Specific-Application-ID to Response
-			UtilAVP.addAuthSessionState(response, DiameterConstants.AVPValue.ASS_No_State_Maintained);
-			UtilAVP.addVendorSpecificApplicationID(response, DiameterConstants.Vendor.V3GPP, DiameterConstants.Application.Sh);
 			
 			session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
@@ -218,20 +220,44 @@ public class UDR {
 		
 			Session session = HibernateUtil.getCurrentSession();
 			ShIMSDataElement shIMSData = shData.getShIMSData();
-			if (shIMSData == null){
-				shIMSData = new ShIMSDataElement();
-				shData.setShIMSData(shIMSData);
+			
+			if (crt_data_ref == ShConstants.Data_Ref_Charging_Info || crt_data_ref == ShConstants.Data_Ref_DSAI || crt_data_ref == ShConstants.Data_Ref_iFC
+					|| crt_data_ref == ShConstants.Data_Ref_IMS_User_State || crt_data_ref == ShConstants.Data_Ref_PSI_Activation ||
+					crt_data_ref == ShConstants.Data_Ref_SCSCF_Name){
+				if (shIMSData == null){
+					shIMSData = new ShIMSDataElement();
+					shData.setShIMSData(shIMSData);
+				}
 			}
+			ShDataExtensionElement shDataExtension = shData.getShDataExtension();
+			if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
+				
+				if (shDataExtension == null){
+					shDataExtension = new ShDataExtensionElement();
+					shData.setShDataExtension(shDataExtension);
+				}				
+			}	
 			
 			switch (crt_data_ref){
 					case  ShConstants.Data_Ref_Repository_Data:
-						RepositoryData repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, impu.getIdentity(), 
+						RepositoryData repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, impu.getId(), 
 								crt_service_indication);
 						RepositoryDataElement repDataElement = new RepositoryDataElement();
-						repDataElement.setServiceData(repData.getRep_data());
+						repDataElement.setServiceData(new String(repData.getRep_data()));
 						repDataElement.setSqn(repData.getSqn());
 						repDataElement.setServiceIndication(crt_service_indication);
 						shData.addRepositoryData(repDataElement);
+						break;
+
+					case  ShConstants.Data_Ref_Aliases_Repository_Data:
+						AliasesRepositoryData aliasesRepData = AliasesRepositoryData_DAO.get_by_setID_and_ServiceIndication(session, 
+								impu.getId_implicit_set(), crt_service_indication);
+						
+						AliasesRepositoryDataElement aliasesRepDataElement = new AliasesRepositoryDataElement();
+						aliasesRepDataElement.setServiceData(new String(aliasesRepData.getRep_data()));
+						aliasesRepDataElement.setSqn(aliasesRepData.getSqn());
+						aliasesRepDataElement.setServiceIndication(crt_service_indication);
+						shDataExtension.addAliasesRepositoryData(aliasesRepDataElement);
 						break;
 						
 					case  ShConstants.Data_Ref_IMS_Public_Identity:
@@ -356,15 +382,6 @@ public class UDR {
 						
 						break;
 
-					case  ShConstants.Data_Ref_Aliases_Repository_Data:
-						repData = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, impu.getIdentity(), 
-								crt_service_indication);
-						repDataElement = new RepositoryDataElement();
-						repDataElement.setServiceData(repData.getRep_data());
-						repDataElement.setSqn(repData.getSqn());
-						repDataElement.setServiceIndication(crt_service_indication);
-						shData.addRepositoryData(repDataElement);
-						break;
 				}
 		
 	} 

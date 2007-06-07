@@ -18,12 +18,14 @@ import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMSU;
 import de.fhg.fokus.hss.db.model.RTR_PPR;
+import de.fhg.fokus.hss.db.model.RepositoryData;
 import de.fhg.fokus.hss.db.op.CapabilitiesSet_DAO;
 import de.fhg.fokus.hss.db.op.DB_Op;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
+import de.fhg.fokus.hss.db.op.RepositoryData_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.sh.data.ShDataElement;
@@ -35,6 +37,27 @@ import de.fhg.fokus.hss.sh.data.ShDataParser;
  */
 public class Tester extends Thread{
 	public void run() {
+		
+		/*Session session = HibernateUtil.getCurrentSession();
+		HibernateUtil.beginTransaction();
+		RepositoryData repData = new RepositoryData();
+		repData.setId_impu(1);
+		repData.setRep_data("asasa".getBytes());
+		repData.setService_indication("asasa");
+		repData.setSqn(1);
+		
+		RepositoryData_DAO.insert(session, repData);
+		HibernateUtil.commitTransaction();
+		int id = repData.getId();
+		
+		session = HibernateUtil.getCurrentSession();
+		HibernateUtil.beginTransaction();
+		
+		repData = RepositoryData_DAO.get_by_ID(session, id);
+		repData.setRep_data(null);
+		//RepositoryData_DAO.delete_by_ID(session, 11);
+		HibernateUtil.commitTransaction();
+		*/
 		/*
 		InputSource input;
 		String inputString = 
