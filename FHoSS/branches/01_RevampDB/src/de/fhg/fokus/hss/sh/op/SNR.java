@@ -53,10 +53,12 @@ import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.RepositoryData;
 import de.fhg.fokus.hss.db.model.ShSubscription;
+import de.fhg.fokus.hss.db.op.AliasesRepositoryData_DAO;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.RepositoryData_DAO;
@@ -191,14 +193,25 @@ public class SNR {
 			// -5- if the Data Reference is RepositoryData or Aliases Repository Data
 			for (int i = 0; i < data_ref_vector.size(); i++){
 				int crt_data_ref = (Integer) data_ref_vector.get(i);
-				if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data || crt_data_ref == ShConstants.Data_Ref_Repository_Data){
-					for (int j = 0; j < service_indication_vector.size(); j++){
+				
+				for (int j = 0; j < service_indication_vector.size(); j++){
+					// iterate through all the service indications
+					if (crt_data_ref == ShConstants.Data_Ref_Repository_Data){
 						String crt_service_indication = (String) service_indication_vector.get(j);
-						RepositoryData rep_data = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(session, impu.getIdentity(), crt_service_indication);
+						RepositoryData rep_data = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(
+								session, impu.getId(), crt_service_indication);
 						if (rep_data == null){
 							throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT);	
 						}
 					}
+					else if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
+						String crt_service_indication = (String) service_indication_vector.get(j);
+						AliasesRepositoryData aliases_rep_data = AliasesRepositoryData_DAO.get_by_setID_and_ServiceIndication(
+								session, impu.getId_implicit_set(), crt_service_indication);
+						if (aliases_rep_data == null){
+							throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT);	
+						}
+					}					
 				}
 			}
 			
@@ -272,12 +285,12 @@ public class SNR {
 								sh_subs.setId_application_server(application_server.getId());
 								sh_subs.setData_ref(crt_data_ref);
 								sh_subs.setId_impu(impu.getId());
+								sh_subs.setService_indication(crt_service_indication);
 								if (expiry_time != -1){
 									sh_subs.setExpires(expiry_time);
 								}
 								ShSubscription_DAO.update(session, sh_subs);
 							}
-							
 						}
 						else{
 							// unsubscribe

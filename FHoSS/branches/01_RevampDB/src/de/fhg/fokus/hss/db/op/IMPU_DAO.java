@@ -51,7 +51,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
-import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
@@ -169,6 +168,16 @@ public class IMPU_DAO {
 		query.setInteger(0, id_implicit_set);
 
 		return (IMPU) query.uniqueResult();
+	}
+	
+	public static List get_aliases_IMPUs(Session session, int id_implicit_set, int id_sp){
+		Query query;
+		query = session.createSQLQuery("select * from impu where id_implicit_set=? and id_sp=?")
+			.addEntity(IMPU.class);
+		query.setInteger(0, id_implicit_set);
+		query.setInteger(1, id_sp);
+
+		return query.list();
 	}
 	
 	public static IMPU get_by_Identity(Session session, String identity){

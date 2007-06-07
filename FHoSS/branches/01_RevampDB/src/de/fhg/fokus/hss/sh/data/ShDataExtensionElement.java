@@ -46,6 +46,7 @@ package de.fhg.fokus.hss.sh.data;
 import java.util.Iterator;
 import java.util.Vector;
 
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -99,6 +100,13 @@ public class ShDataExtensionElement {
 		return sBuffer.toString();
 	}
 
+	public void addAliasesRepositoryData(AliasesRepositoryDataElement aliasesRepositoryData){
+		if (aliasesRepositoryDataList == null){
+			aliasesRepositoryDataList = new Vector<AliasesRepositoryDataElement>();
+		}
+		aliasesRepositoryDataList.add(aliasesRepositoryData);
+	}
+	
 	public Vector<AliasesRepositoryDataElement> getAliasesRepositoryDataList() {
 		return aliasesRepositoryDataList;
 	}

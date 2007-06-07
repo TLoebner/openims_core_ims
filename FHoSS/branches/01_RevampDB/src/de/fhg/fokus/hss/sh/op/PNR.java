@@ -53,6 +53,7 @@ import org.hibernate.Session;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.SPT;
@@ -60,6 +61,7 @@ import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.ShNotification;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.TP;
+import de.fhg.fokus.hss.db.op.AliasesRepositoryData_DAO;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.SPT_DAO;
 import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
@@ -70,12 +72,14 @@ import de.fhg.fokus.hss.diam.DiameterConstants;
 import de.fhg.fokus.hss.diam.DiameterStack;
 import de.fhg.fokus.hss.diam.UtilAVP;
 import de.fhg.fokus.hss.sh.ShConstants;
+import de.fhg.fokus.hss.sh.data.AliasesRepositoryDataElement;
 import de.fhg.fokus.hss.sh.data.ApplicationServerElement;
 import de.fhg.fokus.hss.sh.data.DSAIElement;
 import de.fhg.fokus.hss.sh.data.InitialFilterCriteriaElement;
 import de.fhg.fokus.hss.sh.data.RepositoryDataElement;
 import de.fhg.fokus.hss.sh.data.SPTElement;
 import de.fhg.fokus.hss.sh.data.ShDataElement;
+import de.fhg.fokus.hss.sh.data.ShDataExtensionElement;
 import de.fhg.fokus.hss.sh.data.ShIMSDataElement;
 import de.fhg.fokus.hss.sh.data.TriggerPointElement;
 
@@ -160,19 +164,42 @@ public class PNR {
 		Session session = HibernateUtil.getCurrentSession();
 		String crt_service_indication = shNotification.getService_indication();
 
+		int crt_data_ref = shNotification.getData_ref();
 		ShIMSDataElement shIMSData = shData.getShIMSData();
-		if (shIMSData == null){
-			shIMSData = new ShIMSDataElement();
-			shData.setShIMSData(shIMSData);
+		if (crt_data_ref == ShConstants.Data_Ref_Charging_Info || crt_data_ref == ShConstants.Data_Ref_DSAI || crt_data_ref == ShConstants.Data_Ref_iFC
+				|| crt_data_ref == ShConstants.Data_Ref_IMS_User_State || crt_data_ref == ShConstants.Data_Ref_PSI_Activation ||
+				crt_data_ref == ShConstants.Data_Ref_SCSCF_Name){
+			if (shIMSData == null){
+				shIMSData = new ShIMSDataElement();
+				shData.setShIMSData(shIMSData);
+			}
 		}
+		ShDataExtensionElement shDataExtension = shData.getShDataExtension();
+		if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
+			
+			if (shDataExtension == null){
+				shDataExtension = new ShDataExtensionElement();
+				shData.setShDataExtension(shDataExtension);
+			}				
+		}			
 		
-		switch (shNotification.getData_ref()){
+		switch (crt_data_ref){
 				case  ShConstants.Data_Ref_Repository_Data:
 					RepositoryDataElement repDataElement = new RepositoryDataElement();
-					repDataElement.setServiceData(shNotification.getRep_data());
+					if (shNotification.getRep_data() != null){
+						repDataElement.setServiceData(new String(shNotification.getRep_data()));
+					}
 					repDataElement.setSqn(shNotification.getSqn());
 					repDataElement.setServiceIndication(crt_service_indication);
 					shData.addRepositoryData(repDataElement);
+					break;
+
+				case  ShConstants.Data_Ref_Aliases_Repository_Data:
+					AliasesRepositoryDataElement aliasesRepDataElement = new AliasesRepositoryDataElement();
+					aliasesRepDataElement.setServiceData(new String(shNotification.getRep_data()));
+					aliasesRepDataElement.setSqn(shNotification.getSqn());
+					aliasesRepDataElement.setServiceIndication(crt_service_indication);
+					shDataExtension.addAliasesRepositoryData(aliasesRepDataElement);
 					break;
 					
 				case  ShConstants.Data_Ref_IMS_Public_Identity:
@@ -265,14 +292,6 @@ public class PNR {
 					dsai.setValue(shNotification.getDsai_value());
 					shIMSData.addDSAI(dsai);
 					break;
-
-/*				case  ShConstants.Data_Ref_Aliases_Repository_Data:
-					AliasesRepositoryDataElement aliasesRepData = new AliasesRepositoryDataElement();
-					aliasesRepData.setServiceData(shNotification.getRep_data());
-					aliasesRepData.setSqn(shNotification.getSqn());
-					aliasesRepData.setServiceIndication(crt_service_indication);
-					shData.addRepositoryData(aliasesRepData);
-					break;*/
 			}
 		
 	}

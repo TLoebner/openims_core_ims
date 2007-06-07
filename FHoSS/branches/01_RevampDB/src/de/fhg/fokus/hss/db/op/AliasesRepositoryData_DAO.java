@@ -41,65 +41,70 @@
   * 
   */
 
-package de.fhg.fokus.hss.db.model;
+package de.fhg.fokus.hss.db.op;
 
-import java.io.Serializable;
+import org.apache.log4j.Logger;
+import org.hibernate.Query;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class RepositoryData implements Serializable{
-	private static final long serialVersionUID=1L;
+public class AliasesRepositoryData_DAO {
+	private static Logger logger = Logger.getLogger(AliasesRepositoryData_DAO.class);
 	
-	private int id;
-	private int sqn;
-	private int id_impu;
-	private String service_indication;
-	private byte[] rep_data;
-
-	public RepositoryData(){}
-
-	public int getId() {
-		return id;
+	public static void insert(Session session, AliasesRepositoryData repData){
+		session.save(repData);
+	}
+	
+	public static void update(Session session, AliasesRepositoryData repData){
+		session.saveOrUpdate(repData);
 	}
 
-	public void setId(int id) {
-		this.id = id;
+	public static AliasesRepositoryData get_by_ID(Session session, int id){
+		Query query;
+		query = session.createSQLQuery("select * from aliases_repository_data where id=?")
+			.addEntity(AliasesRepositoryData.class);
+		query.setInteger(0, id);
+		
+		AliasesRepositoryData result = null;
+		try{
+			result = (AliasesRepositoryData) query.uniqueResult();
+		} 
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		
+		return result; 
 	}
-
-	public int getId_impu() {
-		return id_impu;
+	
+	public static AliasesRepositoryData get_by_setID_and_ServiceIndication(Session session, int id_implicit_set, 
+			String service_indication){
+		Query query;
+		query = session.createSQLQuery("select * from aliases_repository_data " +
+				"		where id_implicit_set=? and service_indication=?")
+			.addEntity(AliasesRepositoryData.class);
+		query.setInteger(0, id_implicit_set);
+		query.setString(1, service_indication);
+		
+		AliasesRepositoryData result = null;
+		try{
+			result = (AliasesRepositoryData) query.uniqueResult();
+		} 
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		
+		return result; 
 	}
-
-	public void setId_impu(int id_impu) {
-		this.id_impu = id_impu;
-	}
-
-
-	public String getService_indication() {
-		return service_indication;
-	}
-
-	public void setService_indication(String service_indication) {
-		this.service_indication = service_indication;
-	}
-
-
-	public byte[] getRep_data() {
-		return rep_data;
-	}
-
-	public void setRep_data(byte[] rep_data) {
-		this.rep_data = rep_data;
-	}
-
-	public int getSqn() {
-		return sqn;
-	}
-
-	public void setSqn(int sqn) {
-		this.sqn = sqn;
+	
+	public static int delete_by_ID(Session session, int id){
+		Query query = session.createSQLQuery("delete from aliases_repository_data where id=?");
+		query.setInteger(0, id);
+		return query.executeUpdate();
 	}
 	
 }

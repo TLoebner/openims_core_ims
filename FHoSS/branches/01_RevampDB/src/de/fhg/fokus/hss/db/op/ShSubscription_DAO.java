@@ -50,6 +50,7 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.ShSubscription;
+import de.fhg.fokus.hss.sh.ShConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -109,6 +110,16 @@ public class ShSubscription_DAO {
 		return  query.list();
 	}	
 	
+	public static List get_all_by_IMPU_DataRef_and_ServInd(Session session, int id_impu, int data_ref, String service_indication){
+		Query query;
+		query = session.createSQLQuery("select * from sh_subscription where id_impu=? and data_ref=? and service_indication=?")
+			.addEntity(ShSubscription.class);
+		query.setInteger(0, id_impu);
+		query.setInteger(1, data_ref);
+		query.setString(2, service_indication);
+		
+		return  query.list();
+	}		
 	
 	public static int delete_by_ID(Session session, int id){
 		Query query = session.createSQLQuery("delete from sh_subscription where id=?");
@@ -157,4 +168,13 @@ public class ShSubscription_DAO {
 		return query.executeUpdate();
 	}	
 	
+	public static void delete_subs_for_RepData(Session session, int id_impu, String service_indication){
+		
+		Query query = session.createSQLQuery("delete from sh_subscription where id_impu=? and service_indication=? " +
+			"and data_ref=?");
+		query.setInteger(0, id_impu);
+		query.setString(1, service_indication);
+		query.setInteger(2, ShConstants.Data_Ref_Repository_Data);
+		query.executeUpdate();
+	}
 }
