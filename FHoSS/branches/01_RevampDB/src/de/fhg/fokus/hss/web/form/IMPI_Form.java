@@ -60,7 +60,11 @@ import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.IMPI_IMPU;
+import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.web.util.WebConstants;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -192,6 +196,16 @@ public class IMPI_Form extends ActionForm implements Serializable{
             		actionErrors.add("impi.error.duplicate_identity", new ActionMessage("impi.error.duplicate_identity"));	
             	}
             }
+            else if (nextAction.equals("add_impu")){
+            	IMPU impu = IMPU_DAO.get_by_Identity(session, impu_identity);
+            	if (impu != null){
+            		IMPI_IMPU impi_impu = IMPI_IMPU_DAO.get_by_IMPI_and_IMPU_ID(session, id, impu.getId());
+            		if (impi_impu != null){
+            			actionErrors.add("impi.error.association_exists", new ActionMessage("impi.error.association_exists"));	
+            		}
+            	}
+            }
+            
             else if (nextAction.equals("rtr_all") || nextAction.equals("rtr_selected")){
             	if (rtr_reason == -1){
             		actionErrors.add("impi.error.rtr_reason_missing", new ActionMessage("impi.error.rtr_reason_missing"));

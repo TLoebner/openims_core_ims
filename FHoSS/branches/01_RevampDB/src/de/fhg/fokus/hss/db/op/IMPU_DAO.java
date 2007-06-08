@@ -126,7 +126,7 @@ public class IMPU_DAO {
 		Query query;
 		query = session.createSQLQuery("select * from impi" +
 				"	inner join impi_impu on impi.id=impi_impu.id_impi" +
-				" where impi_impu.id_impu=?")
+				" where impi_impu.id_impu=? order by (impi.id)")
 				.addEntity("impi", IMPI.class);
 		query.setInteger(0, id_impu);
 		return query.list();

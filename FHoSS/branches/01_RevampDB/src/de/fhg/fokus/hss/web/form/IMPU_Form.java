@@ -54,7 +54,11 @@ import org.hibernate.Session;
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.hibernate.DatabaseException;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
@@ -160,6 +164,19 @@ public class IMPU_Form extends ActionForm implements Serializable{
         			actionErrors.add("impu_form.error.missing_wildcarded_psi", new ActionMessage("impu_form.error.missing_wildcarded_psi"));
         		}
         	}
+        	else if (nextAction.equals("add_impu_to_implicitset")){
+        		// test if the new IMPU can been added to the implicit-set
+        		canAddIMPUtoImplicitSet(session, actionErrors);        		
+        	}
+        	else if (nextAction.equals("add_impi")){
+        		IMPI impi = IMPI_DAO.get_by_Identity(session, impi_identity);
+        		if (impi != null){
+        			IMPI_IMPU impi_impu = IMPI_IMPU_DAO.get_by_IMPI_and_IMPU_ID(session, impi.getId(), id);
+        			if (impi_impu != null){
+        				actionErrors.add("impu_form.error.association_exists", new ActionMessage("impu_form.error.association_exists"));
+        			}
+        		}
+        	}
         }
 		catch (HibernateException e){
 			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
@@ -176,7 +193,38 @@ public class IMPU_Form extends ActionForm implements Serializable{
         
         return actionErrors;
     }
-	
+
+    public boolean canAddIMPUtoImplicitSet(Session session, ActionErrors actionErrors){
+		List associatedIMPIs = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, id);
+		IMPU new_impu = IMPU_DAO.get_by_Identity(session, impu_implicitset_identity);
+		
+		if (new_impu != null){
+			List new_impu_associatedIMPIs = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, new_impu.getId());
+			// we add the new impu to the same implicit set, only if is possible (they have the same IMPIs)
+			if (associatedIMPIs == null || new_impu_associatedIMPIs == null){
+				actionErrors.add("impu_form.error.implicitset.different_impis_or_null", new ActionMessage("impu_form.error.implicitset.different_impis_or_null"));
+				return false;
+			}
+			if (associatedIMPIs.size() != new_impu_associatedIMPIs.size()){
+				// error, cannot be added
+				actionErrors.add("impu_form.error.implicitset.different_impis_or_null", new ActionMessage("impu_form.error.implicitset.different_impis_or_null"));
+				return false;
+			}
+
+			for (int i = 0; i < associatedIMPIs.size(); i++){
+				// the two lists are ordered by id => the same ID should corespond to same IMPIs
+				
+				IMPI impi1 = (IMPI) associatedIMPIs.get(i);
+				IMPI impi2 = (IMPI) new_impu_associatedIMPIs.get(i);
+				if (impi1.getId() != impi2.getId()){
+					// error, cannot be added
+					actionErrors.add("impu_form.error.implicitset.different_impis_or_null", new ActionMessage("impu_form.error.implicitset.different_impis_or_null"));
+					return false;
+				}
+			} // for
+		} // if
+    	return true;
+    }
 	
 	public boolean isBarring() {
 		return barring;

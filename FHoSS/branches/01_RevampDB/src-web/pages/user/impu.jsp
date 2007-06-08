@@ -85,14 +85,10 @@ function add_action_for_form(action, associated_ID) {
 </head>
 
 <body>
+	<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+
 	<table align="center" valign="middle" height="100%">
 		<!-- Print errors, if any -->
-		<tr>
-			<td>
-				<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-			</td>
-		</tr>	
-
 		<tr>
 			<td align="center"> <h1> Public User Identity -IMPU-</h1> </td>
 		</tr>
@@ -104,7 +100,7 @@ function add_action_for_form(action, associated_ID) {
 			
 			<tr>
 				<td>
-		 			<table border="0" align="center" width="100%" >						
+		 			<table border="0" align="center" width="400" >						
 		 			<tr>
  						<td>
 			 				<table border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">										
@@ -301,9 +297,7 @@ function add_action_for_form(action, associated_ID) {
 		</td>	
 		
 		<td>	
-
-		
-			<table align="center" valign="middle" width="100%" >										
+			<table align="center" valign="middle" width="400" >										
 			<tr>
 				<td>
 					<table>
@@ -362,16 +356,18 @@ function add_action_for_form(action, associated_ID) {
 					</table>
 				</td>
 			</tr>		
-		
-			<table align="center" valign="middle" width="100%" >										
 			<tr>
 				<td>
 					<table>
 					<tr>
+						<td> <br/> </td>	
+					</tr>	
+												
+					<tr>
 						<td>
-							<br/>	
 							<b>Associate IMPIs </b>
 						</td>
+						
 						<td>
 							<html:text property="impi_identity" value="" styleClass="inputtext" />
 						</td>
@@ -382,6 +378,15 @@ function add_action_for_form(action, associated_ID) {
 					</table>
 				</td>
 			</tr>	
+
+			<tr>
+				<td>
+					<font color="#FF0000">
+						Warning: This IMPI will be associated with all the corresponding IMPUs (within the same implicit-set)!
+					</font>						
+				</td>
+			</tr>
+			
 			<tr>
 				<td>
 					<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
