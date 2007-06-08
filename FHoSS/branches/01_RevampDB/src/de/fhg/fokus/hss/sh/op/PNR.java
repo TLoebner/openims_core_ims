@@ -196,7 +196,9 @@ public class PNR {
 
 				case  ShConstants.Data_Ref_Aliases_Repository_Data:
 					AliasesRepositoryDataElement aliasesRepDataElement = new AliasesRepositoryDataElement();
-					aliasesRepDataElement.setServiceData(new String(shNotification.getRep_data()));
+					if (shNotification.getRep_data() != null){
+						aliasesRepDataElement.setServiceData(new String(shNotification.getRep_data()));
+					}
 					aliasesRepDataElement.setSqn(shNotification.getSqn());
 					aliasesRepDataElement.setServiceIndication(crt_service_indication);
 					shDataExtension.addAliasesRepositoryData(aliasesRepDataElement);

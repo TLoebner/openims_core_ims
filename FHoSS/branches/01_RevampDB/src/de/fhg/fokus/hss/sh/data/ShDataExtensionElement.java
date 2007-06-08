@@ -86,14 +86,12 @@ public class ShDataExtensionElement {
 		}
 		
 		if (aliasesRepositoryDataList != null && aliasesRepositoryDataList.size() > 0){
-			sBuffer.append(ShDataTags.AliasesRepositoryData_s);
 			Iterator<AliasesRepositoryDataElement> it = aliasesRepositoryDataList.iterator();
 			AliasesRepositoryDataElement transparentData;
 			while (it.hasNext()){
 				transparentData = it.next();
 				sBuffer.append(transparentData.toString());
 			}
-			sBuffer.append(ShDataTags.AliasesRepositoryData_e);
 		}
 		
 		sBuffer.append(ShDataTags.ShDataExtension_e);

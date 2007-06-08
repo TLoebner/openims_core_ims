@@ -54,6 +54,7 @@ import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.ShNotification;
 import de.fhg.fokus.hss.db.model.ShSubscription;
 import de.fhg.fokus.hss.sh.ShConstants;
+import de.fhg.fokus.hss.sh.data.AliasesRepositoryDataElement;
 import de.fhg.fokus.hss.sh.data.RepositoryDataElement;
 
 /**
@@ -222,11 +223,19 @@ public class ShNotification_DAO {
 		}
 	}	
 	
-	public static void insert_notif_for_AliasesRepData(Session session, int id_impu, AliasesRepositoryData aliasesRepData){
+	public static void insert_notif_for_AliasesRepData(Session session, int id_impu, 
+			AliasesRepositoryDataElement aliasesRepDataElement){
+		
 		int data_reference = ShConstants.Data_Ref_Aliases_Repository_Data;
 		
+		IMPU impu = IMPU_DAO.get_by_ID(session, id_impu);
+		if (impu == null){
+			logger.error("The provided IMPU ID is not valid! Notification for Aliases Repository Data aborted...");
+			return;
+		}
+		
 		// send Sh notification to all subscribers
-		List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, id_impu, 
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_setID_and_DataRef(session, impu.getId_implicit_set(), 
 				data_reference);
 		if (shSubscriptionList != null){
 			for (int j = 0; j < shSubscriptionList.size(); j++){
@@ -236,13 +245,16 @@ public class ShNotification_DAO {
 				shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
 				shNotification.setId_application_server(shSubscription.getId_application_server());
 				shNotification.setId_impu(id_impu);
-				
-				shNotification.setRep_data(aliasesRepData.getRep_data());
-				shNotification.setSqn(aliasesRepData.getSqn());
-				shNotification.setService_indication(aliasesRepData.getService_indication());
+				if (aliasesRepDataElement.getServiceData() != null){
+					shNotification.setRep_data(aliasesRepDataElement.getServiceData().getBytes());
+				}
+				shNotification.setSqn(aliasesRepDataElement.getSqn());
+				shNotification.setService_indication(aliasesRepDataElement.getServiceIndication());
 				
 				ShNotification_DAO.insert(session, shNotification);
 			}
 		}
 	}		
+	
+	
 }

@@ -180,7 +180,9 @@ public class SNR {
 				
 				// -3b-
 				if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
-					// ... to be completed
+					if (impu.getType() != CxConstants.Identity_Type_Public_User_Identity){
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED);
+					}
 				}
 			}
 
@@ -206,6 +208,8 @@ public class SNR {
 					}
 					else if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
 						String crt_service_indication = (String) service_indication_vector.get(j);
+
+						// the implicitset ID is used to determine the coresponding data from AliasesRepositoryData	
 						AliasesRepositoryData aliases_rep_data = AliasesRepositoryData_DAO.get_by_setID_and_ServiceIndication(
 								session, impu.getId_implicit_set(), crt_service_indication);
 						if (aliases_rep_data == null){
@@ -284,7 +288,14 @@ public class SNR {
 								sh_subs = new ShSubscription();
 								sh_subs.setId_application_server(application_server.getId());
 								sh_subs.setData_ref(crt_data_ref);
-								sh_subs.setId_impu(impu.getId());
+								if (crt_data_ref == ShConstants.Data_Ref_Repository_Data){
+									sh_subs.setId_impu(impu.getId());	
+								}
+								else if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
+									// !!!! for subscriptions to AliasesRepData the "id_impu" from ShSubscription takes the value of the "id_implicit_set" !!!
+									sh_subs.setId_impu(impu.getId_implicit_set());	
+								}
+								
 								sh_subs.setService_indication(crt_service_indication);
 								if (expiry_time != -1){
 									sh_subs.setExpires(expiry_time);
