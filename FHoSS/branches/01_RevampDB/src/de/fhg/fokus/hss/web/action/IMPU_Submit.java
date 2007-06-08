@@ -50,9 +50,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.apache.struts.action.Action;
+import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessage;
+import org.apache.struts.action.ActionMessages;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
@@ -186,9 +189,34 @@ public class IMPU_Submit extends Action{
 				IMPU_DAO.delete_by_ID(session, id);
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
+			else if (nextAction.equals("add_impi")){
+				IMPI impi = IMPI_DAO.get_by_Identity(session, form.getImpi_identity());	
+				if (impi != null){
+					List impuList = IMPU_DAO.get_all_from_set(session, form.getId_impu_implicitset());
+					if (impuList != null){
+						for (int i=0; i < impuList.size(); i++){
+							IMPU crtIMPU = (IMPU) impuList.get(i);
+							IMPI_IMPU_DAO.insert(session, impi.getId(), crtIMPU.getId(), 
+									CxConstants.IMPU_user_state_Not_Registered);		
+						}
+					}
+				}
+				
+				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());			
+			}
 			else if (nextAction.equals("delete_associated_impi")){
-				System.out.println("ASS IMPI:" + form.getAssociated_ID());
-				IMPI_IMPU_DAO.delete_by_IMPI_and_IMPU_ID(session, form.getAssociated_ID(), id);
+				// RTR if necessary
+				//.....
+
+				List impuList = IMPU_DAO.get_all_from_set(session, form.getId_impu_implicitset());
+				if (impuList != null){
+					for (int i=0; i < impuList.size(); i++){
+						IMPU crtIMPU = (IMPU) impuList.get(i);
+						IMPI_IMPU_DAO.delete_by_IMPI_and_IMPU_ID(session, form.getAssociated_ID(), crtIMPU.getId());
+					}
+				}
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 				
@@ -225,33 +253,14 @@ public class IMPU_Submit extends Action{
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
 			
-			else if (nextAction.equals("add_impi")){
-				IMPI impi = IMPI_DAO.get_by_Identity(session, form.getImpi_identity());	
-				if (impi != null){
-					IMPI_IMPU_DAO.insert(session, impi.getId(), form.getId(), CxConstants.IMPU_user_state_Not_Registered);
-				}
-				else{
-/*					ActionMessages actionMessages = new ActionMessages();
-					actionMessages.add(Globals.MESSAGE_KEY, new ActionMessage("impu.error.associated_impu_not_found"));
-					saveMessages(request, actionMessages);*/
-				}
-				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());			
-			}
 			else if (nextAction.equals("add_impu_to_implicitset")){
+				// the current impu
 				IMPU crt_impu = IMPU_DAO.get_by_ID(session, id);
-				IMPU impu = IMPU_DAO.get_by_Identity(session, form.getImpu_implicitset_identity());
-				if (impu != null){
-					//doar dc e posibil, de pus conditia
-					impu.setId_implicit_set(crt_impu.getId_implicit_set());
-					IMPU_DAO.update(session, impu);
-				}
-				else{
-				/*	ActionMessages actionMessages = new ActionMessages();
-					actionMessages.add(Globals.MESSAGE_KEY, new ActionMessage("impu.error.failed_add_impu_to_implicitset"));
-					saveMessages(request, actionMessages);*/
-				}
-
+				// the new impu which will be added to the same implicit set, with the crt_impu
+				IMPU new_impu = IMPU_DAO.get_by_Identity(session, form.getImpu_implicitset_identity());
+				new_impu.setId_implicit_set(crt_impu.getId_implicit_set());
+				IMPU_DAO.update(session, new_impu);
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
@@ -366,4 +375,5 @@ public class IMPU_Submit extends Action{
 		
 		return forward;
 	}
+	
 }

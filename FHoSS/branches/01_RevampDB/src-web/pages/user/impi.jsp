@@ -112,13 +112,10 @@ function disable_other_boxes(){
 </head>
 
 <body>
+	<!-- Print errors, if any -->
+	<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+
 	<table align=center valign=middle height=100%>
-		<!-- Print errors, if any -->
-		<tr>
-			<td>
-				<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-			</td>
-		</tr>	
 		
 		<html:form action="/IMPI_Submit">
 			<html:hidden property="nextAction" value=""/>
@@ -130,7 +127,7 @@ function disable_other_boxes(){
 			</tr>
 			<tr>
 				<td>
-			 		<table border="0" align="center" width="100%" >						
+			 		<table border="0" align="center" width="400" >						
 			 			<tr>
 			 				<td>
 						 		<table border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">						
@@ -321,7 +318,7 @@ function disable_other_boxes(){
 				</table>
 			</td>
 			<td>
-				<table>
+				<table align="center" valign="middle" width="400" >										
 					<logic:notEqual value="-1" property="id" name="IMPI_Form">		
 					<tr>
 						<td>
@@ -415,7 +412,13 @@ function disable_other_boxes(){
 							</table>
 						</td>
 					</tr>	
-						
+					<tr>
+						<td>
+							<font color="#FF0000">
+								Warning: The current IMPI will be associated with all the corresponding IMPUs (within the same implicit-set)!
+							</font>						
+						</td>
+					</tr>
 					<tr>
 						<td>
 							<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
