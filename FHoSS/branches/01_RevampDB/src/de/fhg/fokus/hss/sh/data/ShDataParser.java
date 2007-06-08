@@ -111,6 +111,7 @@ public class ShDataParser extends DefaultHandler {
 			// API for requesting parser features.
 			
 			parser.setFeature("http://xml.org/sax/features/validation", false);
+			
 			// handlers
 			parser.setContentHandler(this);
 			parser.setErrorHandler(this);
@@ -160,6 +161,9 @@ public class ShDataParser extends DefaultHandler {
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.RepositoryData)){
     		repositoryData = new RepositoryDataElement();
+    	}
+    	else if (localName.equalsIgnoreCase(ShDataTags.AliasesRepositoryData)){
+    		aliasesRepData = new AliasesRepositoryDataElement();
     	}
     	else if (localName.equalsIgnoreCase(ShDataTags.Sh_IMS_Data)){
     		shIMSData = new ShIMSDataElement();
@@ -250,6 +254,10 @@ public class ShDataParser extends DefaultHandler {
     		shData.addRepositoryData(repositoryData);
     		repositoryData = null;
     	}
+    	else if (localName.equals(ShDataTags.AliasesRepositoryData)){
+    		shDataExtension.addAliasesRepositoryData(aliasesRepData);
+    		aliasesRepData = null;
+    	}    	
     	else if (localName.equals(ShDataTags.Sh_IMS_Data)){
     		shData.setShIMSData(shIMSData);
     		shIMSData = null;

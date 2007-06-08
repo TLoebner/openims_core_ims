@@ -222,7 +222,7 @@ public class PUR {
 							ShNotification_DAO.insert_notif_for_RepData(session, impu.getId(), repDataElement);
 
 							// this will determine the deletion of the corresnponding subscriptions
-							ShSubscription_DAO.delete_subs_for_RepData(session, impu.getId(), repData.getService_indication());
+							ShSubscription_DAO.delete_subs_for_RepData(session, impu.getId(), repDataElement.getServiceIndication());
 						}
 					}
 					else{
@@ -259,9 +259,9 @@ public class PUR {
 				ShDataExtensionElement shDataExtension = shData.getShDataExtension();
 				Vector<AliasesRepositoryDataElement> aliasesRepDataList = shDataExtension.getAliasesRepositoryDataList();
 				for (int i = 0; i < aliasesRepDataList.size(); i++){
-					AliasesRepositoryDataElement aliasesRepDataElement = shDataExtension.getAliasesRepositoryDataList().get(0);
+					AliasesRepositoryDataElement aliasesRepDataElement = shDataExtension.getAliasesRepositoryDataList().get(i);
 					AliasesRepositoryData aliasesRepData = AliasesRepositoryData_DAO.get_by_setID_and_ServiceIndication(session, 
-							impu.getId(), aliasesRepDataElement.getServiceIndication());
+							impu.getId_implicit_set(), aliasesRepDataElement.getServiceIndication());
 					
 					if (aliasesRepData != null){
 						if (aliasesRepDataElement.getSqn() == 0 || (aliasesRepDataElement.getSqn() - 1) != (aliasesRepData.getSqn() % 65535)){
@@ -281,17 +281,18 @@ public class PUR {
 							AliasesRepositoryData_DAO.update(session, aliasesRepData);
 							
 							// this will trigger the notification for the corresponding subscriptions
-							//....
+							ShNotification_DAO.insert_notif_for_AliasesRepData(session, impu.getId(), aliasesRepDataElement);
 						}
 						else{
 							// Service-Data was not received , the data stored in the HSS repository will be removed!
-							RepositoryData_DAO.delete_by_ID(session, aliasesRepData.getId());
+							AliasesRepositoryData_DAO.delete_by_ID(session, aliasesRepData.getId());
 							
 							// this will trigger the notification for the corresponding subscriptions
-							//....
-							
+							ShNotification_DAO.insert_notif_for_AliasesRepData(session, impu.getId(), aliasesRepDataElement);
+
 							// this will determine the deletion of the corresnponding subscriptions
-							//....
+							ShSubscription_DAO.delete_subs_for_AliasesRepData(session, impu.getId_implicit_set(), 
+									aliasesRepDataElement.getServiceIndication());
 						}
 					}
 					else{

@@ -58,16 +58,19 @@ public class Tester extends Thread{
 		//RepositoryData_DAO.delete_by_ID(session, 11);
 		HibernateUtil.commitTransaction();
 		*/
-		/*
-		InputSource input;
+		
+/*		InputSource input;
 		String inputString = 
 		
 		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-		"<Sh-Data>" + 
-		"<RepositoryData>" + 
-		"<ServiceIndication>CLIR</ServiceIndication>" + 
-		"<SequenceNumber>0</SequenceNumber>" + 
-		"</RepositoryData>" + 
+		"<Sh-Data> " +
+		"<Sh-Data-Extension> " +
+		"<AliasesRepositoryData> " +
+		"<ServiceIndication>service_adi</ServiceIndication> " +
+		"<SequenceNumber>1</SequenceNumber>" +
+		"<ServiceData><data>gicu merge la plimbare</data></ServiceData>" +
+		"</AliasesRepositoryData>" +
+		"</Sh-Data-Extension> " +
 		"</Sh-Data>";
 		input = new InputSource(new ByteArrayInputStream(inputString.getBytes()));
 		ShDataParser parser = new ShDataParser(input);
@@ -78,7 +81,7 @@ public class Tester extends Thread{
 		else
 			System.out.println("ShData is NULL!");
 		
-		List l = shData.getRepositoryDataList();
+		List l = shData.getShDataExtension().getAliasesRepositoryDataList();
 		for (int i=0; i < l.size(); i++){
 			System.out.println("Rep:" + l.get(i).toString());
 		}*/

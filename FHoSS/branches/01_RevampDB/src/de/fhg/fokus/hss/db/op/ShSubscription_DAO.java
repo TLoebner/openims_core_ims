@@ -108,7 +108,17 @@ public class ShSubscription_DAO {
 		query.setInteger(0, id_impu);
 		query.setInteger(1, data_ref);
 		return  query.list();
-	}	
+	}
+	
+	public static List get_all_by_setID_and_DataRef(Session session, int id_implicit_set, int data_ref){
+		Query query;
+		query = session.createSQLQuery("select * from sh_subscription where id_impu=? and data_ref=?")
+			.addEntity(ShSubscription.class);
+		query.setInteger(0, id_implicit_set);
+		query.setInteger(1, data_ref);
+		return  query.list();
+	}		
+	
 	
 	public static List get_all_by_IMPU_DataRef_and_ServInd(Session session, int id_impu, int data_ref, String service_indication){
 		Query query;
@@ -177,4 +187,17 @@ public class ShSubscription_DAO {
 		query.setInteger(2, ShConstants.Data_Ref_Repository_Data);
 		query.executeUpdate();
 	}
+	
+	public static void delete_subs_for_AliasesRepData(Session session, int id_implicit_set, String service_indication){
+		
+		// !!!! for subscriptions to AliasesRepData the "id_impu" from ShSubscription takes the value of the "id_implicit_set" !!!
+		Query query = session.createSQLQuery("delete from sh_subscription where id_impu=? and service_indication=? " +
+			"and data_ref=?");
+		query.setInteger(0, id_implicit_set);
+		query.setString(1, service_indication);
+		query.setInteger(2, ShConstants.Data_Ref_Aliases_Repository_Data);
+		query.executeUpdate();
+	}	
+	
+	
 }
