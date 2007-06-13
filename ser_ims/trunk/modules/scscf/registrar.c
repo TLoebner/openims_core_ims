@@ -219,7 +219,7 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 	int data_available = AVP_IMS_SAR_USER_DATA_NOT_AVAILABLE;
 	int expires;
 
-	LOG(L_DBG,"DBG:"M_NAME":S_assign_server: Checking if REGISTER is authorized...\n");
+	LOG(L_DBG,"DBG:"M_NAME":S_assign_server: Assigning server...\n");
 	
 	/* First check the parameters */
 	if (msg->first_line.type!=SIP_REQUEST)
@@ -560,6 +560,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				}
 			break;
 		case AVP_IMS_SAR_RE_REGISTRATION:
+			reg_state = IMS_USER_REGISTERED;
 			public_identity = cscf_get_public_identity(msg);
 			if (!public_identity.len) {
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
