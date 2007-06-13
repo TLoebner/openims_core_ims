@@ -1464,6 +1464,43 @@ int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr)
 	return nr;
 }
 
+/**
+ * Looks for the Call-ID header
+ * @param msg - the sip message
+ * @param hr - ptr to return the found hdr_field 
+ * @returns the callid value
+ */
+str cscf_get_cseq_method(struct sip_msg *msg,struct hdr_field **hr)
+{
+	struct hdr_field *h;
+	struct cseq_body *cseq;
+	str method = {0,0};
+	
+	if (hr) *hr = 0;	
+	if (!msg) return method;
+	if (parse_headers(msg, HDR_CSEQ_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_cseq: error parsing headers\n");
+		return method;
+	}
+	h = msg->cseq;
+	if (!h){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_cseq: Header CSeq not found\n");
+		return method;
+	}
+	if (hr) *hr = h;
+	if (!h->parsed){
+		cseq = pkg_malloc(sizeof(struct cseq_body));
+		if (!cseq){
+			LOG(L_ERR,"ERR:"M_NAME":cscf_get_cseq: Header CSeq not found\n");
+			return method;
+		}
+		parse_cseq(h->body.s,h->body.s+h->body.len,cseq);
+		h->parsed = cseq;
+	}else
+		cseq = (struct cseq_body*) h->parsed;		
+	return cseq->method;
+}
+
 /** 
  * Returns the corresponding request for a reply, using tm transactions.
  * @param reply - the reply to find request for
@@ -1473,11 +1510,12 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 {
 	struct cell *t;
 	t = tmb.t_gett();
-	if (!t){
+	if (!t || t==(void*) -1){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_request_from_reply: Reply without transaction\n");
 		return 0;
 	}
-	return t->uas.request;
+	if (t) return t->uas.request;
+	else return 0;
 }
 
 
@@ -2834,3 +2872,5 @@ int cscf_get_to_uri(struct sip_msg* msg,str *local_uri)
 	return 1;
 	
 }
+
+

@@ -75,6 +75,7 @@
 #include "scscf_load.h"
 #include "dlg_state.h"
 #include "s_persistency.h"
+#include "ims_pm.h"
 
 MODULE_VERSION
 
@@ -135,6 +136,13 @@ int* registrar_snapshot_version=0; /**< the version of the next registrar snapsh
 int* registrar_step_version=0; /**< the step version within the current registrar snapshot version*/
 
 gen_lock_t* db_lock; /**< lock for db access*/
+
+#ifdef WITH_IMS_PM
+/** IMS PM parameters storage */
+char* ims_pm_node_type="S-CSCF";
+char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
+#endif /* WITH_IMS_PM */
+
 
 /* fixed parameter storage */
 str scscf_name_str;						/**< fixed name of the S-CSCF 							*/
@@ -326,6 +334,12 @@ static param_export_t scscf_params[]={
 	{"persistency_timer_dialogs",		INT_PARAM, &scscf_persistency_timer_dialogs},
 	{"persistency_timer_registrar",		INT_PARAM, &scscf_persistency_timer_registrar},
 	{"scscf_db_url",					STR_PARAM, &scscf_db_url},
+
+#ifdef WITH_IMS_PM
+	{"ims_pm_node_type",				STR_PARAM, &ims_pm_node_type},
+	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
+#endif /* WITH_IMS_PM */
+
 	{0,0,0} 
 };
 
@@ -504,6 +518,11 @@ static int mod_init(void)
 	algo.len = strlen(registration_default_algorithm);
 	registration_default_algorithm_type = get_algorithm_type(algo);	
 	
+
+	#ifdef WITH_IMS_PM
+		ims_pm_init(scscf_name_str,ims_pm_node_type, ims_pm_logfile);	
+	#endif /* WITH_IMS_PM */
+			
 	/* load the send_reply function from sl module */
     sl_reply = find_export("sl_send_reply", 2, 0);
 	if (!sl_reply) {
@@ -756,6 +775,9 @@ static void mod_destroy(void)
 		close_scscf_db_connection(scscf_db);
 	}
 	scscf_db = NULL;
+	#ifdef WITH_IMS_PM
+		ims_pm_destroy();	
+	#endif /* WITH_IMS_PM */	
 }
 
 

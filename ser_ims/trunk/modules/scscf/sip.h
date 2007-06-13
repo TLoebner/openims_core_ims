@@ -109,6 +109,7 @@ str cscf_get_identity_from_ruri(struct sip_msg *msg);
 
 str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr);
 int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr);
+str cscf_get_cseq_method(struct sip_msg *msg,struct hdr_field **hr);
 
 struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply);
 

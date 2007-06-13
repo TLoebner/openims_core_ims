@@ -61,6 +61,7 @@
 #include "registrar_storage.h"
 #include "registrar_parser.h"
 #include "registration.h"
+#include "ims_pm.h"
 
 extern struct tm_binds tmb;			/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
@@ -79,6 +80,9 @@ extern r_hash_slot *registrar;		/**< the contacts */
  */
 int CxAnswerHandler(AAAMessage *response, AAATransaction *t)
 {
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(response);
+	#endif		
 	switch(response->commandCode){
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":CxAnswerHandler: Unkown Command Code %d\n",
@@ -116,6 +120,9 @@ AAAMessage* CxRequestHandler(AAAMessage *request,void *param)
 {
 	if (is_req(request)){		
 		LOG(L_INFO,"INFO:"M_NAME":CxRequestHandler(): We have received a request\n");
+		#ifdef WITH_IMS_PM
+			ims_pm_diameter_request(request);
+		#endif		
 		switch(request->applicationId){
         	case IMS_Cx:
 				switch(request->commandCode){				
@@ -314,6 +321,10 @@ AAAMessage* Cx_RTA(AAAMessage * rtr)
 
 	/* send an RTA back to the HSS */
 	Cx_add_result_code(rta_msg,DIAMETER_SUCCESS);
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(rta_msg);
+	#endif		
+	
 	return rta_msg;
 }
 
