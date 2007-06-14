@@ -76,6 +76,8 @@
 #include "thig_ims_enc.h"
 #include "thig.h"
 
+#include "ims_pm_icscf.h"
+
 MODULE_VERSION
 
 static int icscf_mod_init(void);
@@ -128,6 +130,13 @@ extern str cscf_term_ioi_str;						/**< fixed name of the Terminating network 		
 /* twofish encryption variables (THIG) **/
 keyInstance    ki;			/**< key information, including tables */
 cipherInstance ci;			/**< keeps mode (ECB, CBC) and IV */
+
+#ifdef WITH_IMS_PM
+	/** IMS PM parameters storage */
+	char* ims_pm_node_type="I-CSCF";
+	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
+#endif /* WITH_IMS_PM */
+
 
 /** 
  * Exported functions.
@@ -209,6 +218,11 @@ static param_export_t icscf_params[]={
 	{"icid_gen_addr",			STR_PARAM, &cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM, &cscf_orig_ioi},
 	{"term_ioi",				STR_PARAM, &cscf_term_ioi},
+
+#ifdef WITH_IMS_PM
+	{"ims_pm_node_type",		STR_PARAM, &ims_pm_node_type},
+	{"ims_pm_logfile",			STR_PARAM, &ims_pm_logfile},
+#endif /* WITH_IMS_PM */
 
 	{0,0,0} 
 };
@@ -315,6 +329,11 @@ static int icscf_mod_init(void)
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
 
+	#ifdef WITH_IMS_PM
+		ims_pm_init(icscf_name_str,ims_pm_node_type, ims_pm_logfile);
+		ims_pm_init_icscf();
+	#endif /* WITH_IMS_PM */
+	
 	cscf_icid_value_count = shm_malloc(sizeof(unsigned int));
 	*cscf_icid_value_count = 0;
 	cscf_icid_value_count_lock = lock_alloc();
@@ -364,6 +383,7 @@ static int icscf_mod_init(void)
 	srand((unsigned) time(NULL));
 	thig_key_and_cipher_init(&ki,&ci);
 	LOG(L_INFO,"Twofish encryption ready\n");
+		
 	return 0;
 error:
 	return -1;

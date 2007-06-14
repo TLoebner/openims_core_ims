@@ -58,6 +58,8 @@
 #include "../../sr_module.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
+#include "ims_pm.h"
+
 
 #define MSG_REG_SUBSCRIBE_OK "Subscription to REG saved"
 #define MSG_REG_UNSUBSCRIBE_OK "Subscription to REG dropped"
@@ -91,6 +93,10 @@ typedef struct _r_notification {
 	str content;						/**< content						*/
 	
 	dlg_t *dialog;						/**< dialog to send on				*/
+	
+	#ifdef WITH_IMS_PM
+		unsigned short is_scscf_dereg;		/**< if this is a notification for S-CSCF de-registration */
+	#endif
 	
 	struct _r_notification *next;		/**< next notification in the list	*/
 	struct _r_notification *prev;		/**< previous notification in the list	*/

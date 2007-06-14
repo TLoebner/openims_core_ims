@@ -65,6 +65,7 @@
 #include "sip.h"
 #include "registrar.h"
 #include "registrar_subscribe.h"
+#include "ims_pm_pcscf.h"
 
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
 
@@ -656,7 +657,6 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 	str content_type,body;
 	r_notification *n=0;
 	int expires;
-
 	LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Checking NOTIFY\n");
 	
 //	print_r(L_INFO);
@@ -691,7 +691,10 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 			n = r_notification_parse(body);
 			if (!n){
 				LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Error parsing XML\n");
-			}else {
+			}else {				
+				#ifdef WITH_IMS_PM
+					ims_pm_notify_reg(n,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
+				#endif				
 				if (r_notification_process(n,expires))
 					ret = CSCF_RETURN_TRUE;							
 				r_notification_free(n);
@@ -702,6 +705,7 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 			reginfo.len,reginfo.s,content_type.len,content_type.s);
 		goto error;		
 	}
+			
 			
 	return ret;
 error:

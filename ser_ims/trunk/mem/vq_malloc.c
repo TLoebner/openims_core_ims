@@ -515,6 +515,8 @@ void vqm_status(struct vqm_block* qm)
 	{
 		struct vqm_frag* f;
 		int i;
+		int total_count=0;
+		long unsigned int total_size=0;				
 		mem_counter *root=0,*x;
 		lock_get(process_lock);
 		if (process_no!=0)
@@ -538,10 +540,12 @@ void vqm_status(struct vqm_block* qm)
 				x->count,x->size,
 				x->file, x->func, x->line
 				);
+			total_count+=x->count;total_size+=x->size;				
 			root = x->next;
 			free(x);
 			x = root;
 		}
+		LOG(memlog, " count=%6d size=%10lu bytes in total\n",total_count,total_size);
 		LOG(memlog, "-----------------------------\n");
 		lock_release(process_lock);
 	}

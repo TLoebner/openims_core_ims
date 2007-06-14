@@ -43,31 +43,99 @@
  * 
  */
  
-#ifndef RELEASE_CALL_H_
-#define RELEASE_CALL_H_
 
 /**
- * \file  release_call.h
+ * \file  ims_pm_icscf.c
  * 
- *	S-CSCF initiated call release (for confirmed dialogs)
+ *	I-CSCF IMS Performance Management
  * 
- *  \author Alberto Diez     albertowhiterabbit at yahoo dot es
+ * Scope: logs raw data for computing metrics as in TS 32.409
+ * 
+ *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
 
 
+#include "ims_pm_icscf.h"
+
+#ifdef WITH_IMS_PM
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
 
 
+#include "../../script_cb.h"
 #include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
-#include "dlg_state.h"
 
-#define MAX_TIMES_TO_TRY_TO_RELEASE 5
-
+#include "sip.h"
+#include "cx_avp.h"
 
 
-int release_call(str call_id,str reason);
-int release_call_s(s_dialog *d,str reason);
+extern struct tm_binds tmb;							/**< Structure with pointers to tm funcs 				*/
+
+static str zero={0,0};
+
+void ims_pm_init_icscf()
+{
+	register_script_cb(ims_pm_pre_script,PRE_SCRIPT_CB|REQ_TYPE_CB|RPL_TYPE_CB,0);
+	register_script_cb(ims_pm_post_script,POST_SCRIPT_CB|REQ_TYPE_CB|RPL_TYPE_CB,0);	
+}
 
 
-#endif /*RELEASE_CALL_H_*/
+int ims_pm_pre_script(struct sip_msg *msg,void *param)
+{
+	str method={0,0};
+
+	if (msg->first_line.type == SIP_REQUEST){
+		/* REGISTER */
+		method = msg->first_line.u.request.method;
+		
+	}else{
+//		unsigned int code = msg->first_line.u.reply.statuscode;
+		method = cscf_get_cseq_method(msg,0);
+				
+	}
+	return 1;
+}
+
+
+
+int ims_pm_post_script(struct sip_msg *msg,void *param)
+{
+	return 1;
+}
+
+
+void ims_pm_diameter_request(AAAMessage *msg)
+{	
+	if (!msg) return;
+	switch(msg->applicationId){
+    	case IMS_Cx:
+			switch(msg->commandCode){				
+				case IMS_UAR:														
+					IMS_PM_LOG11(UR_AttUAR,Cx_get_session_id(msg),msg->endtoendId);
+					return ;
+					break;
+			}
+	}	
+}
+
+void ims_pm_diameter_answer(AAAMessage *msg)
+{
+	if (!msg) return;
+	int code=-1;
+	if (!Cx_get_result_code(msg,&code)) 
+		Cx_get_experimental_result_code(msg,&code);
+	switch(msg->applicationId){
+    	case IMS_Cx:
+			switch(msg->commandCode){				
+				case IMS_UAA:
+					if (code>=2000 && code<3000) IMS_PM_LOG12(UR_SuccUAA,Cx_get_session_id(msg),msg->endtoendId,code);
+					else IMS_PM_LOG12(UR_FailUAA,Cx_get_session_id(msg),msg->endtoendId,code);
+					break;
+			}
+	}
+}
+
+#endif /* WITH_IMS_PM */

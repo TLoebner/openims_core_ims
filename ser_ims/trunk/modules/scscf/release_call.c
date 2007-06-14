@@ -1,5 +1,5 @@
 /*
- * $Id: release_call.c 220 2007-04-05 19:26:00Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *

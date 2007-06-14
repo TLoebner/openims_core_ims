@@ -85,6 +85,7 @@
 #include "sdp_util.h"
 #include "p_persistency.h"
 #include "release_call.h"
+#include "ims_pm_pcscf.h"
 
 
 MODULE_VERSION
@@ -181,6 +182,12 @@ int* registrar_step_version; /**< the step version within the current registrar 
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
+
+#ifdef WITH_IMS_PM
+	/** IMS PM parameters storage */
+	char* ims_pm_node_type="P-CSCF";
+	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
+#endif /* WITH_IMS_PM */
 
 
 /** 
@@ -393,6 +400,12 @@ static param_export_t pcscf_params[]={
 	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
 	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
 	{"pcscf_db_url",					STR_PARAM, &pcscf_db_url},
+	
+#ifdef WITH_IMS_PM
+	{"ims_pm_node_type",				STR_PARAM, &ims_pm_node_type},
+	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
+#endif /* WITH_IMS_PM */	
+	
 	{0,0,0} 
 };
 
@@ -560,6 +573,11 @@ static int mod_init(void)
 	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
+
+	#ifdef WITH_IMS_PM
+		ims_pm_init(pcscf_name_str,ims_pm_node_type, ims_pm_logfile);
+		ims_pm_init_pcscf();
+	#endif /* WITH_IMS_PM */
 	
 	cscf_icid_value_count = shm_malloc(sizeof(unsigned int));
 	*cscf_icid_value_count = 0;
@@ -782,6 +800,10 @@ static void mod_destroy(void)
 		close_pcscf_db_connection(pcscf_db);
 	}
 	pcscf_db = NULL;
+
+	#ifdef WITH_IMS_PM
+		ims_pm_destroy();	
+	#endif /* WITH_IMS_PM */		
 }
 
 

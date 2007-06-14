@@ -11,5 +11,7 @@ include ../../Makefile.defs
 auto_gen=
 NAME=icscf.so
 
+#DEFS+= -DWITH_IMS_PM
+
 include ../../Makefile.modules
 

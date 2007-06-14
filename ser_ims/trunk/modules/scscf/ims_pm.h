@@ -1,5 +1,5 @@
 /*
- * $Id: ims_pm.h 220 2007-04-05 19:26:00Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -62,9 +62,7 @@
 #ifndef IMS_PM_H_
 #define IMS_PM_H_
 
-#include "mod.h"
-
-#include "cx.h"
+#include "../../sr_module.h"
 
 #define IMS_PM_DEBUG 1
 
@@ -99,27 +97,49 @@ enum _ims_pm_event_types {
 	UR_FailDeRegCscf			= 21,
 	UR_MeanDeRegCscfSetupTime 	= 22,
 	
-
+	UR_Att3rdPartyReg			= 23,
+	UR_Succ3rdPartyReg			= 24,
+	UR_Fail3rdPartyReg			= 25,
+	UR_Mean3rdPartyRegSetupTime	= 26,
+	
+	UR_AttUAR					= 27,
+	UR_SuccUAA					= 28,
+	UR_FailUAA					= 29,
+	UR_MeanUASetupTime			= 30,
+	
+	UR_AttSAR					= 31,
+	UR_SuccSAA					= 32,
+	UR_FailSAA					= 33,
+	UR_MeanSASetupTime			= 34,
 		
 };
 
 
-#define IMS_PM_LOG(event,ps1,pi1,pi2)  do {ims_pm_log(event,ps1,pi1,pi2);}while(0)  
+#define IMS_PM_LOG(event)  					do {ims_pm_log(event,zero,zero,0,0);	}while(0)  
+#define IMS_PM_LOG01(event,pi1)				do {ims_pm_log(event,zero,zero,pi1,0);	}while(0)
+#define IMS_PM_LOG10(event,ps1)				do {ims_pm_log(event,ps1,zero,0,0);		}while(0)
+#define IMS_PM_LOG11(event,ps1,pi1)			do {ims_pm_log(event,ps1,zero,pi1,0);	}while(0)
+#define IMS_PM_LOG12(event,ps1,pi1,pi2)		do {ims_pm_log(event,ps1,zero,pi1,pi2);	}while(0)
+#define IMS_PM_LOG21(event,ps1,ps2,pi1)  	do {ims_pm_log(event,ps1,ps2,pi1,0);	}while(0)
+#define IMS_PM_LOG22(event,ps1,ps2,pi1,pi2) do {ims_pm_log(event,ps1,ps2,pi1,pi2);	}while(0)
+
 
 void ims_pm_init(str node_name,char* type, char *file_name);
 void ims_pm_destroy();
 
-void ims_pm_log(enum _ims_pm_event_types event,str ps1,int pi1,int pi2);
+void ims_pm_log(enum _ims_pm_event_types event,str ps1,str ps2,int pi1,int pi2);
 
-int ims_pm_pre_script(struct sip_msg *msg,void *param);
-int ims_pm_post_script(struct sip_msg *msg,void *param);
-
-void ims_pm_diameter_request(AAAMessage *msg);
-void ims_pm_diameter_answer(AAAMessage *msg);
 
 #endif /*IMS_PM_H_*/
 #else
 
-#define IMS_PM_LOG(event,ps1,pi1,pi2) 
+#define IMS_PM_LOG(event)  					  
+#define IMS_PM_LOG01(event,pi1)				
+#define IMS_PM_LOG10(event,ps1)				
+#define IMS_PM_LOG11(event,ps1,pi1)			
+#define IMS_PM_LOG12(event,ps1,pi1,pi2)		
+#define IMS_PM_LOG21(event,ps1,ps2,pi1)  	
+#define IMS_PM_LOG22(event,ps1,ps2,pi1,pi2) 
+
 
 #endif /* WITH_IMS_PM */

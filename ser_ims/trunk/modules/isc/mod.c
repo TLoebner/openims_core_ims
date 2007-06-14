@@ -68,12 +68,13 @@
 #include "mark.h"
 #include "isc.h"
 #include "third_party_reg.h"
+#include "ims_pm.h"
 
 MODULE_VERSION
 
 static int isc_init( void );
 static int isc_child_init( int rank );
-static int isc_exit( void );
+static int isc_destroy( void );
 
 int isc_appserver_forward(struct sip_msg *msg,char *str1,char *str2 );
 
@@ -92,6 +93,13 @@ str isc_my_uri_sip={0,0};			/**< Uri of myself to loop the message in str with l
 
 int isc_expires_grace=120;			/**< expires value to add to the expires in the 3rd party register
 										 to prevent expiration in AS */
+
+#ifdef WITH_IMS_PM
+	/** IMS PM parameters storage */
+	char* ims_pm_node_type="S-CSCF.ISC";
+	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
+#endif /* WITH_IMS_PM */
+
 
 /**
  *  Global vars
@@ -135,6 +143,11 @@ static param_export_t isc_params[] = {
 
 	{"expires_grace",	INT_PARAM, & isc_expires_grace},/**< expires value to add to the expires in the 3rd party register
 										 to prevent expiration in AS */
+#ifdef WITH_IMS_PM
+	{"ims_pm_node_type",				STR_PARAM, &ims_pm_node_type},
+	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
+#endif /* WITH_IMS_PM */
+										 
 	{ 0, 0, 0 }
 };
 
@@ -149,7 +162,7 @@ struct module_exports exports = {
 	isc_params,                     /**< Exported parameters */
 	isc_init,                   /**< Module initialization function */
 	(response_function) 0,
-	(destroy_function) isc_exit,
+	(destroy_function) isc_destroy,
 	0,
 	(child_init_function) isc_child_init /**< per-child init function */
 };
@@ -197,6 +210,11 @@ static int isc_init( void )
 	memcpy(isc_my_uri_sip.s,"sip:",4);
 	memcpy(isc_my_uri_sip.s+4,isc_my_uri.s,isc_my_uri.len);	
 	isc_my_uri_sip.s[isc_my_uri_sip.len]=0;	
+
+	#ifdef WITH_IMS_PM
+		ims_pm_init(isc_my_uri_sip,ims_pm_node_type, ims_pm_logfile);
+	#endif /* WITH_IMS_PM */
+
 	return 0;
 error:
 	return -1;
@@ -224,10 +242,14 @@ static int isc_child_init( int rank )
  *	Module termination function.
  * Destroy the ISC structures. 
  */
-static int isc_exit( void )
+static int isc_destroy( void )
 {
 	LOG( L_INFO, "INFO:"M_NAME": - child exit\n" );
-	return 0;
+	
+	#ifdef WITH_IMS_PM
+		ims_pm_destroy();	
+	#endif /* WITH_IMS_PM */	
+	return 0;	
 }
 
 

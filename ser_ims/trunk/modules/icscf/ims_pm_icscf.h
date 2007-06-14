@@ -43,31 +43,37 @@
  * 
  */
  
-#ifndef RELEASE_CALL_H_
-#define RELEASE_CALL_H_
 
 /**
- * \file  release_call.h
+ * \file  ims_pm_icscf.h
  * 
- *	S-CSCF initiated call release (for confirmed dialogs)
+ *	I-CSCF IMS Performance Management
  * 
- *  \author Alberto Diez     albertowhiterabbit at yahoo dot es
+ * Scope: logs raw data for computing metrics as in TS 32.409
+ * 
+ *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
 
 
+#include "ims_pm.h"
 
+#ifdef WITH_IMS_PM
 
-#include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
-#include "dlg_state.h"
+#ifndef IMS_PM_ICSCF_H_
+#define IMS_PM_ICSCF_H_
 
-#define MAX_TIMES_TO_TRY_TO_RELEASE 5
+#include "cx.h"
 
+void ims_pm_init_icscf();
 
+int ims_pm_pre_script(struct sip_msg *msg,void *param);
+int ims_pm_post_script(struct sip_msg *msg,void *param);
 
-int release_call(str call_id,str reason);
-int release_call_s(s_dialog *d,str reason);
+void ims_pm_diameter_request(AAAMessage *msg);
+void ims_pm_diameter_answer(AAAMessage *msg);
 
+#endif /*IMS_PM_ICSCF_H_*/
+#else
 
-#endif /*RELEASE_CALL_H_*/
+#endif /* WITH_IMS_PM */
