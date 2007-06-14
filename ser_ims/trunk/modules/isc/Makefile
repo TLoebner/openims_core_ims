@@ -10,11 +10,9 @@ include ../../Makefile.defs
 auto_gen=
 NAME=isc.so
 
-DEFS +=
-
-LIBS= -L$(LOCALBASE)/lib 
-
 DEFS += -I/usr/include/libxml2
-LIBS += -lxml2
+LIBS += -L$(LOCALBASE)/lib -lxml2
+
+#DEFS += -DWITH_IMS_PM
 
 include ../../Makefile.modules

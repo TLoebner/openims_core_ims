@@ -97,6 +97,8 @@ str cscf_get_access_network_info(struct sip_msg *msg, struct hdr_field **h);
 str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h);
 str cscf_get_charging_vector(struct sip_msg *msg, struct hdr_field **h);
 
+str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr);
+int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr);
 #endif
 
 

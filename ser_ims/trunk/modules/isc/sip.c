@@ -656,3 +656,69 @@ done:
 		cv.len,cv.s);
 	return cv;
 }
+
+/**
+ * Looks for the Call-ID header
+ * @param msg - the sip message
+ * @param hr - ptr to return the found hdr_field 
+ * @returns the callid value
+ */
+str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr)
+{
+	struct hdr_field *h;
+	str call_id={0,0};
+	if (hr) *hr = 0;	
+	if (!msg) return call_id;
+	if (parse_headers(msg, HDR_CALLID_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_call_id: error parsing headers\n");
+		return call_id;
+	}
+	h = msg->callid;
+	if (!h){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_call_id: Header Call-ID not found\n");
+		return call_id;
+	}
+	if (hr) *hr = h;
+	call_id = h->body;	
+	return call_id;
+}
+
+
+/**
+ * Looks for the Call-ID header
+ * @param msg - the sip message
+ * @param hr - ptr to return the found hdr_field 
+ * @returns the callid value
+ */
+int cscf_get_cseq(struct sip_msg *msg,struct hdr_field **hr)
+{
+	struct hdr_field *h;
+	struct cseq_body *cseq;
+	int nr = 0,i;
+	
+	if (hr) *hr = 0;	
+	if (!msg) return 0;
+	if (parse_headers(msg, HDR_CSEQ_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_cseq: error parsing headers\n");
+		return 0;
+	}
+	h = msg->cseq;
+	if (!h){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_cseq: Header CSeq not found\n");
+		return 0;
+	}
+	if (hr) *hr = h;
+	if (!h->parsed){
+		cseq = pkg_malloc(sizeof(struct cseq_body));
+		if (!cseq){
+			LOG(L_ERR,"ERR:"M_NAME":cscf_get_cseq: Header CSeq not found\n");
+			return 0;
+		}
+		parse_cseq(h->body.s,h->body.s+h->body.len,cseq);
+		h->parsed = cseq;
+	}else
+		cseq = (struct cseq_body*) h->parsed;		
+	for(i=0;i<cseq->number.len;i++)
+		nr = (nr*10)+(cseq->number.s[i]-'0');
+	return nr;
+}

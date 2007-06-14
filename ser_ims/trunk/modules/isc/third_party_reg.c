@@ -62,6 +62,7 @@
 #include "../tm/tm_load.h"
 #include "../scscf/scscf_load.h"
 #include "sip.h"
+#include "ims_pm.h"
 
 extern struct tm_binds isc_tmb; /**< Structure with pointers to tm funcs 		*/
 
@@ -213,6 +214,9 @@ static str p_access_network_info_e={"\r\n",2};
 static str p_charging_vector_s={"P-Charging-Vector: ",19};
 static str p_charging_vector_e={"\r\n",2};
 
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
 /**
  * Send a third party registration
  * @param r - the register to send for
@@ -278,7 +282,9 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
                 LOG(L_ERR,"ERR:"M_NAME":r_send_third_party_reg: Error sending in transaction\n");
                 goto error;
         }
-
+		#ifdef WITH_IMS_PM
+			IMS_PM_LOG(UR_Att3rdPartyReg);
+		#endif
         if (h.s) pkg_free(h.s);
         return 1;
 
@@ -301,6 +307,13 @@ void r_third_party_reg_response(struct cell *t,int type,struct tmcb_params *ps)
                 LOG(L_ERR,"INF:"M_NAME":r_third_party_reg_response: No reply\n");
                 return;
         }
+        
+     	#ifdef WITH_IMS_PM
+			if (ps->code>=200 && ps->code<300) 
+				IMS_PM_LOG01(UR_Succ3rdPartyReg,ps->code);
+			else if (ps->code>=300) IMS_PM_LOG01(UR_Fail3rdPartyReg,ps->code);
+		#endif
+		     
         if (ps->code>=200 && ps->code<300){
                 if (ps->rpl)
                         expires = cscf_get_expires_hdr(ps->rpl);

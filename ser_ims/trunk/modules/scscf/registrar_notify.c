@@ -62,6 +62,7 @@
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "sip.h"
+#include "ims_pm.h"
 
 extern struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
 
@@ -504,7 +505,12 @@ static void r_create_notifications(void *pv,void *cv,void *ps,str content,long e
 			content_type,content,s->dialog,s->version++);						
 		if (req_uri.s) pkg_free(req_uri.s);
 		if (subscription_state.s) pkg_free(subscription_state.s);	
-		if (n) add_r_notification(n);		
+		if (n) {
+			#ifdef WITH_IMS_PM
+				n->is_scscf_dereg=(expires==0);
+			#endif 
+			add_r_notification(n);
+		}		
 		
 		if (!for_s) s = s->next;				
 		else s = 0;
@@ -832,12 +838,21 @@ static str subss_hdr2={"\r\n",2};
 static str ctype_hdr1={"Content-Type: ",14};
 static str ctype_hdr2={"\r\n",2};
 
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
 /**
  * Callback for the UAC response to NOTIFY
  */
 void uac_request_cb(struct cell *t,int type,struct tmcb_params *ps)
 {
 	LOG(L_DBG,"DBG:"M_NAME":uac_request_cb: Type %d\n",type);
+	#ifdef WITH_IMS_PM			
+		if ((int) *ps->param){
+			if (ps->code>=200 && ps->code<300) IMS_PM_LOG12(UR_SuccDeRegCscf,cscf_get_call_id(ps->rpl,0),cscf_get_cseq(ps->rpl,0),ps->code);
+			else if (ps->code>=300) IMS_PM_LOG12(UR_FailDeRegCscf,cscf_get_call_id(ps->rpl,0),cscf_get_cseq(ps->rpl,0),ps->code);			
+		}		
+	#endif
 }
 
 /**
@@ -847,6 +862,7 @@ void uac_request_cb(struct cell *t,int type,struct tmcb_params *ps)
 void send_notification(r_notification *n)
 {
 	str h={0,0};
+	int k=0;
 
 	LOG(L_DBG,"DBG:"M_NAME":send_notification: NOTIFY about <%.*s>\n",n->uri.len,n->uri.s);
 	
@@ -883,11 +899,18 @@ void send_notification(r_notification *n)
 	}
 	
 	//LOG(L_CRIT,"DLG:%p\n",n->dialog);
+	#ifdef WITH_IMS_PM
+		k = n->is_scscf_dereg;
+	#endif 
 	if (n->content.len)	
-		tmb.t_request_within(&method, &h, &(n->content), n->dialog, uac_request_cb, 0);		
+		tmb.t_request_within(&method, &h, &(n->content), n->dialog, uac_request_cb, (void*)k);		
 	else 
-		tmb.t_request_within(&method, &h, 0, n->dialog, uac_request_cb, 0);		
+		tmb.t_request_within(&method, &h, 0, n->dialog, uac_request_cb, (void*)k);		
 	if (h.s) pkg_free(h.s);
+	
+	#ifdef WITH_IMS_PM
+		if (n->is_scscf_dereg) IMS_PM_LOG11(UR_AttDeRegCscf,n->dialog->id.call_id,n->dialog->loc_seq.value);
+	#endif 
 }
 
 

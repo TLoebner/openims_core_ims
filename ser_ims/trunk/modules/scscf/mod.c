@@ -75,7 +75,7 @@
 #include "scscf_load.h"
 #include "dlg_state.h"
 #include "s_persistency.h"
-#include "ims_pm.h"
+#include "ims_pm_scscf.h"
 
 MODULE_VERSION
 
@@ -138,9 +138,9 @@ int* registrar_step_version=0; /**< the step version within the current registra
 gen_lock_t* db_lock; /**< lock for db access*/
 
 #ifdef WITH_IMS_PM
-/** IMS PM parameters storage */
-char* ims_pm_node_type="S-CSCF";
-char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
+	/** IMS PM parameters storage */
+	char* ims_pm_node_type="S-CSCF";
+	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
 #endif /* WITH_IMS_PM */
 
 
@@ -520,7 +520,8 @@ static int mod_init(void)
 	
 
 	#ifdef WITH_IMS_PM
-		ims_pm_init(scscf_name_str,ims_pm_node_type, ims_pm_logfile);	
+		ims_pm_init(scscf_name_str,ims_pm_node_type, ims_pm_logfile);
+		ims_pm_init_scscf();
 	#endif /* WITH_IMS_PM */
 			
 	/* load the send_reply function from sl module */

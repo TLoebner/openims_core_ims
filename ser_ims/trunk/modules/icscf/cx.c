@@ -62,6 +62,7 @@
 #include "sip.h"
 #include "registration.h"
 #include "location.h"
+#include "ims_pm_icscf.h"
 
 extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 		*/
 //extern int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
@@ -81,6 +82,7 @@ void CxAnswerHandler(AAAMessage *response, void *param)
 {
 	AAATransaction *t;
 	t = (AAATransaction*)param;
+	
 	if (!param){
 		LOG(L_ERR,"ERR:CxAnswerHandler: Answer received but no transaction\n");
 		return;
@@ -129,7 +131,6 @@ void CxFailureHandler(int is_timeout,void *param,AAAMessage *ans)
 AAAMessage* CxRequestHandler(AAAMessage *request,void *param)
 {
 	LOG(L_INFO,"INF:CxSIRequestHandler: NOT IMPLEMENTED\n");
-	
 	return 0;	
 }
 
@@ -167,8 +168,14 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 	if (!Cx_add_visited_network_id(uar,visited_network_id)) goto error;
 	if (authorization_type!=AVP_IMS_UAR_REGISTRATION)
 		if (!Cx_add_authorization_type(uar,authorization_type)) goto error;
-			
+
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_request(uar);
+	#endif				
 	uaa = cdpb.AAASendRecvMessage(uar,&aaa_peer);
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(uaa);
+	#endif				
 
 	cdpb.AAADropSession(&sessId);
 	
@@ -207,7 +214,14 @@ AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 
 	if (!Cx_add_public_identity(lir,public_identity)) goto error;
 			
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_request(lir);
+	#endif				
 	lia = cdpb.AAASendRecvMessage(lir,&aaa_peer);
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(lia);
+	#endif				
+
 
 	cdpb.AAADropSession(&sessId);
 	

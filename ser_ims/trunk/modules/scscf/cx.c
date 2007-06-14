@@ -61,7 +61,7 @@
 #include "registrar_storage.h"
 #include "registrar_parser.h"
 #include "registration.h"
-#include "ims_pm.h"
+#include "ims_pm_scscf.h"
 
 extern struct tm_binds tmb;			/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
@@ -209,7 +209,13 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 	trans->application_id=mar->applicationId;
 	trans->command_code=mar->commandCode;
 	
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_request(mar);
+	#endif				
 	maa = cdpb.AAASendRecvMessage(mar,&scscf_aaa_peer_str);
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(maa);
+	#endif			
 	
 	cdpb.AAADropSession(&sessId);
 	cdpb.AAADropTransaction(trans);
@@ -274,7 +280,13 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 	trans->application_id=sar->applicationId;
 	trans->command_code=sar->commandCode;
 	
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_request(sar);
+	#endif				
 	saa = cdpb.AAASendRecvMessage(sar,&scscf_aaa_peer_str);
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(saa);
+	#endif				
 	
 	cdpb.AAADropSession(&sessId);
 	cdpb.AAADropTransaction(trans);
