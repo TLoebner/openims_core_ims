@@ -95,8 +95,9 @@ extern time_t time_now;					/**< Current time of the S-CSCF registrar 		*/
 extern int append_branches;				/**< if to append branches						*/
 
 
-
-
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
 /**
  * The Registrar timer looks for expires contacts and removes them
  * @param ticks - the current time
@@ -109,6 +110,9 @@ void registrar_timer(unsigned int ticks, void* param)
 	r_subscriber *s,*sn;
 	int i,assignment_type,sar_res;
 	r_hash_slot *r;
+	#ifdef WITH_IMS_PM
+		int impu_cnt=0,contact_cnt=0,subs_cnt=0;
+	#endif
 	
 	r = param;
 	
@@ -131,6 +135,9 @@ void registrar_timer(unsigned int ticks, void* param)
 						S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_EXPIRED,1);/* send now because we might drop the dialog soon */	
 						del_r_contact(p,c);
 					}
+					#ifdef WITH_IMS_PM
+						else contact_cnt++;
+					#endif
 					
 					c = cn;
 				}
@@ -142,6 +149,9 @@ void registrar_timer(unsigned int ticks, void* param)
 							s->subscriber.len,s->subscriber.s);
 						del_r_subscriber(p,s);
 					}
+					#ifdef WITH_IMS_PM
+						else subs_cnt++;
+					#endif
 					s = sn;
 				}
 				
@@ -167,10 +177,16 @@ void registrar_timer(unsigned int ticks, void* param)
 							}else{
 								LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> deregistration SAR failed.Keeping into registrar, but with no contacts\n",
 									p->aor.len,p->aor.s);
+								#ifdef WITH_IMS_PM
+									impu_cnt++;
+								#endif									
 							}										
 							break;
 						case UNREGISTERED:
 							/* Don't drop it, just keep it for unregistered triggering*/
+							#ifdef WITH_IMS_PM
+								impu_cnt++;
+							#endif									
 							break;
 						case NOT_REGISTERED:								
 							/* to avoid sending SAR when we still have subscribers, but no contact */
@@ -182,12 +198,19 @@ void registrar_timer(unsigned int ticks, void* param)
 							break;
 					}
 				}
+				#ifdef WITH_IMS_PM
+					else impu_cnt++;
+				#endif									
 				p = pn;
 			}
 		r_unlock(i);		
 	}
 	print_r(L_INFO);
-
+	#ifdef WITH_IMS_PM
+		IMS_PM_LOG01(RD_NbrIMPU,impu_cnt);
+		IMS_PM_LOG01(RD_NbrContact,contact_cnt);
+		IMS_PM_LOG01(RD_NbrSubs,subs_cnt);
+	#endif
 }
 
 /**

@@ -67,6 +67,7 @@
 #include "sip.h"
 #include "nat_helper.h"
 #include "security.h"
+#include "ims_pm.h"
 
 
 extern struct tm_binds tmb;				/**< Structure with pointers to tm funcs 	*/
@@ -78,7 +79,9 @@ extern int pcscf_nat_ping; 				/**< whether to ping anything 				*/
 extern int pcscf_nat_pingall; 			/**< whether to ping also the UA that don't look like being behind a NAT */
 extern int pcscf_nat_detection_type; 	/**< the NAT detection tests 				*/
 
-
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
 /**
  * The Registrar timer looks for expires contacts and removes them.
  * For the non-deleted contacts a ping is sent if the UA is behind a NAT.
@@ -89,6 +92,10 @@ void registrar_timer(unsigned int ticks, void* param)
 {
 	r_contact *c,*cn;
 	int i;
+	#ifdef WITH_IMS_PM
+		int impu_cnt=0,contact_cnt=0,ipsec_cnt=0,tls_cnt=0,nat_cnt=0;
+		r_public *rp;
+	#endif
 	
 	LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Called at %d\n",ticks);
 	if (!registrar) registrar = (r_hash_slot*)param;
@@ -120,6 +127,16 @@ void registrar_timer(unsigned int ticks, void* param)
 								del_r_contact(c);
 							}
 						}
+						#ifdef WITH_IMS_PM
+							else {
+									contact_cnt++;
+									for(rp=c->head;rp;rp=rp->next)
+										impu_cnt++;
+									if (c->ipsec) ipsec_cnt++;
+									//if (c->tls) tls_cnt++;				
+									if (c->pinhole) nat_cnt++;
+							}			
+						#endif
 						break;
 					case DEREGISTERED:
 						if (c->expires<=time_now) {
@@ -144,6 +161,13 @@ void registrar_timer(unsigned int ticks, void* param)
 		r_unlock(i);
 	}
 	print_r(L_INFO);
+	#ifdef WITH_IMS_PM
+		IMS_PM_LOG01(RD_NbrContact,contact_cnt);
+		IMS_PM_LOG01(RD_NbrIMPU,impu_cnt);
+		IMS_PM_LOG01(RD_NbrIPSecSA,ipsec_cnt);
+		IMS_PM_LOG01(RD_NbrTLSSA,tls_cnt);
+		IMS_PM_LOG01(RD_NbrNATPinHoles,nat_cnt);
+	#endif
 }
 
 

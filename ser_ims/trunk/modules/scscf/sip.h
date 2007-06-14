@@ -86,6 +86,7 @@ contact_body_t *cscf_parse_contacts(struct sip_msg *msg);
 str cscf_get_path(struct sip_msg *msg);
 str cscf_get_event(struct sip_msg *msg);
 str cscf_get_asserted_identity(struct sip_msg *msg);
+str cscf_get_asserted_identity_domain(struct sip_msg *msg);
 str cscf_get_contact(struct sip_msg *msg);
 
 str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr);

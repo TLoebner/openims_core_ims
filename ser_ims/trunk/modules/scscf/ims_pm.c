@@ -1,7 +1,7 @@
 /*
  * $Id$
  *  
- * Copyright (C) 2004-2006 FhG Fokus
+ * Copyright (C) 2004-200FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -116,13 +116,58 @@ str ims_pm_event_types[] = {
 	{"UR.AttUAR",9},
 	{"UR.SuccUAA",10},
 	{"UR.FailUAA",10},
-	{"UR.MeanUASetupTime",18},
+	{"UR.MeanUATime",18},
 
 	{"UR.AttSAR",9},
 	{"UR.SuccSAA",10},
 	{"UR.FailSAA",10},
-	{"UR.MeanSASetupTime",18},
+	{"UR.MeanSATime",18},
+
+	{"SC.AttSession",13},
+	{"SC.SuccSession",14},
+	{"SC.AnsSession",13},
+	{"SC.FailSession",14},
+	{"SC.NbrSimulAnsSessionMax",25},
+	
+	{"LIQ.AttLIR",10},
+	{"LIQ.SuccLIA",11},
+	{"LIQ.FailLIA",11},
+	{"LIQ.MeanLITime",14},
 		
+	{"IC.AttSessionFromOtherNtwkDmn",29},
+	{"IC.403SessionFromOtherNtwkDmn",29},
+	{"IC.AttSessionToOtherNtwkDmn",27},
+	{"IC.403SessionToOtherNtwkDmn",27},
+	
+	{"RU.AttInitRegOfVisitUsers",25},	
+	{"RU.Nbr3InitRegOfVisitUsers",26},
+	{"RU.RmgUsersOut",14},				
+	
+	{"MA.AttMAR",9},					
+	{"MA.SuccMAA",10},					
+	{"MA.FailMAA",10},					
+	{"MA.MeanMATime",13},
+	
+	{"UP.AttPPR",9},					
+	{"UP.SuccPPA",10},				
+	{"UP.FailPPA",10},					
+	{"UP.MeanPPTime",13},				
+	 
+	{"OTHER.Att",9},					
+	{"OTHER.Succ",10},					
+	{"OTHER.Fail",10},					
+	{"OTHER.MeanTime",14},				
+		
+	{"RD.NbrIMPU",10},			
+	{"RD.NbrContact",13},
+	{"RD.NbrSubs",10},
+	{"RD.NbrIPSecSA",13},
+	{"RD.NbrTLSSA",11},
+	{"RD.NbrNATPinHoles",17},
+	{"RD.NbrDialogs",13},
+	{"RD.NbrAV",8},
+	
+			
 	{0,0}
 };
 

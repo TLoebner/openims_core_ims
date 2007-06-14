@@ -381,6 +381,9 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 	Cx_add_auth_session_state(ppa_msg,1);		
 	
 	Cx_add_result_code(ppa_msg,DIAMETER_SUCCESS);
+	#ifdef WITH_IMS_PM
+		ims_pm_diameter_answer(ppa_msg);
+	#endif			
 	return ppa_msg;
 }
 

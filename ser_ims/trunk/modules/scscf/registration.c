@@ -66,6 +66,7 @@
 #include "sip_messages.h" 
 #include "rfc2617.h"
 #include "s_persistency.h"
+#include "ims_pm.h"
 
 extern struct tm_binds tmb;						/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs 		*/
@@ -1398,6 +1399,11 @@ inline void start_reg_await_timer(auth_vector *av)
 	av->status = AUTH_VECTOR_SENT;
 }
 
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+	static str s_sum={"sum",3};
+#endif
+
 /**
  * Timer callback for reg await timers.
  * Drops the auth vectors that have been sent and are expired
@@ -1411,6 +1417,12 @@ void reg_await_timer(unsigned int ticks, void* param)
 	auth_vector *av,*av_next;
 	auth_hash_slot_t *ad;
 	int i;
+	#ifdef WITH_IMS_PM
+		int av_cnt[AUTH_TYPE_MAX+1],av_cnt_total=0;
+		for(i=0;i<=AUTH_TYPE_MAX;i++)
+			av_cnt[i]=0;					
+	#endif
+	
 	ad = (auth_hash_slot_t*) param;
 	
 	LOG(L_DBG,"DBG:"M_NAME":reg_await_timer: Looking for expired/useless at %d\n",ticks);
@@ -1438,6 +1450,12 @@ void reg_await_timer(unsigned int ticks, void* param)
 					else aud->tail = av->prev;
 					free_auth_vector(av);
 				}
+				#ifdef WITH_IMS_PM
+					else{
+						av_cnt[av->type]++;
+						av_cnt_total++;
+					}
+				#endif
 				av = av_next;
 			}
 			if (!aud->head){
@@ -1461,5 +1479,10 @@ void reg_await_timer(unsigned int ticks, void* param)
 		}
 		auth_data_unlock(i);
 	}
+	#ifdef WITH_IMS_PM
+		for(i=0;i<=AUTH_TYPE_MAX;i++)
+			IMS_PM_LOG11(RD_NbrAV,algorithm_types[i],av_cnt[i]);
+		IMS_PM_LOG11(RD_NbrAV,s_sum,av_cnt_total);
+	#endif	
 }
 

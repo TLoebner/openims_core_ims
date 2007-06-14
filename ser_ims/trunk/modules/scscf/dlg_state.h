@@ -68,6 +68,9 @@ enum s_dialog_method {
 	DLG_METHOD_SUBSCRIBE=2	
 };
 
+/** The last dialog type */
+#define DLG_METHOD_MAX DLG_METHOD_SUBSCRIBE
+
 /** Enumeration for dialog states */
 enum s_dialog_state {
 	DLG_STATE_UNKNOWN=0,

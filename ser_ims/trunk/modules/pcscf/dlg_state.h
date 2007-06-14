@@ -68,6 +68,9 @@ enum p_dialog_method {
 	DLG_METHOD_SUBSCRIBE=2	
 };
 
+/** The last dialog type */
+#define DLG_METHOD_MAX DLG_METHOD_SUBSCRIBE
+
 enum p_dialog_state {
 	DLG_STATE_UNKNOWN=0,
 	DLG_STATE_INITIAL=1,
