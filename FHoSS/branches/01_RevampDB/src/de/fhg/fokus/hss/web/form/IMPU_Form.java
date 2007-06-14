@@ -195,11 +195,11 @@ public class IMPU_Form extends ActionForm implements Serializable{
     }
 
     public boolean canAddIMPUtoImplicitSet(Session session, ActionErrors actionErrors){
-		List associatedIMPIs = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, id);
+		List associatedIMPIs = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, id);
 		IMPU new_impu = IMPU_DAO.get_by_Identity(session, impu_implicitset_identity);
 		
 		if (new_impu != null){
-			List new_impu_associatedIMPIs = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, new_impu.getId());
+			List new_impu_associatedIMPIs = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, new_impu.getId());
 			// we add the new impu to the same implicit set, only if is possible (they have the same IMPIs)
 			if (associatedIMPIs == null || new_impu_associatedIMPIs == null){
 				actionErrors.add("impu_form.error.implicitset.different_impis_or_null", new ActionMessage("impu_form.error.implicitset.different_impis_or_null"));

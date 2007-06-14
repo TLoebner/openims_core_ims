@@ -49,6 +49,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.TP;
 
 /**
@@ -63,6 +64,17 @@ public class TP_DAO {
 	}
 
 	public static void update(Session session, TP tp){
+		if (tp.isDirtyFlag()){
+			List ifcList = IFC_DAO.get_all_by_TP_ID(session, tp.getId());
+			if (ifcList != null){
+				for (int i = 0; i < ifcList.size(); i++){
+					IFC crtIFC = (IFC)ifcList.get(i);
+					// send notification for each corresponfing iFC (if necessary)
+					ShNotification_DAO.insert_notif_for_iFC(session, crtIFC);	
+				}
+			}
+			tp.setDirtyFlag(false);
+		}
 		session.save(tp);
 	}
 

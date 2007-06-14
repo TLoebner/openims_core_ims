@@ -88,6 +88,8 @@ public class ApplicationServer implements Serializable{
 	private int snr_dsai;
 	private int snr_aliases_rep_data;
 	
+	private boolean dirtyFlag = false;
+	
 	public ApplicationServer(){
 		// default values
 
@@ -95,7 +97,8 @@ public class ApplicationServer implements Serializable{
 		this.server_name = null;
 		this.diameter_address = null;
 		this.service_info = null;
-		this.default_handling = 1;
+		this.default_handling = -2;
+		
 		this.rep_data_size_limit = 100;
 		this.udr = 0;
 		this.pur = 0;
@@ -133,6 +136,9 @@ public class ApplicationServer implements Serializable{
 	}
 
 	public void setDefault_handling(int default_handling) {
+		if (this.default_handling != -2 && this.default_handling!= default_handling){
+			dirtyFlag = true;
+		}
 		this.default_handling = default_handling;
 	}
 
@@ -220,6 +226,9 @@ public class ApplicationServer implements Serializable{
 	}
 
 	public void setService_info(String service_info) {
+		if (this.service_info != null && !this.service_info.equals(service_info)){
+			dirtyFlag = true;
+		}
 		this.service_info = service_info;
 	}
 
@@ -397,6 +406,14 @@ public class ApplicationServer implements Serializable{
 
 	public void setUdr_user_state(int udr_user_state) {
 		this.udr_user_state = udr_user_state;
+	}
+
+	public boolean isDirtyFlag() {
+		return dirtyFlag;
+	}
+
+	public void setDirtyFlag(boolean dirtyFlag) {
+		this.dirtyFlag = dirtyFlag;
 	}
 	
 }

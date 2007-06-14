@@ -688,6 +688,14 @@ public class UtilAVP {
 		return new String(avp.data);
 	}
 	
+	public static int getIdentitySet(DiameterMessage message){
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_IDENTITY_SET, false, 
+				DiameterConstants.Vendor.V3GPP);
+		if (avp == null)
+			return -1;
+		
+		return avp.int_data;
+	}	
 	
 	// add methods for Sh
 	public static void addExpiryTime(DiameterMessage message, int expiry_time){

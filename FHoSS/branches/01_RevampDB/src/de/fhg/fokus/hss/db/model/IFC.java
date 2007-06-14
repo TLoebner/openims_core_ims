@@ -54,10 +54,13 @@ public class IFC implements Serializable {
 	
 	private int id;
 	private String name;
-	private Integer profile_part_ind;
-	private Integer id_application_server;
-	private Integer id_tp;
+	private Integer profile_part_ind = -2;
+	private Integer id_application_server = -2;
+	private Integer id_tp = -2;
 	
+	private boolean dirtyFlag = false;
+	// old_id_application_server is needed in Sh-Notification
+	private int old_id_application_server = -2;
 	public IFC(){}
 
 	public int getId() {
@@ -82,9 +85,13 @@ public class IFC implements Serializable {
 
 	public void setProfile_part_ind(Integer profile_part_ind) {
 		if (profile_part_ind == null){
+			// profile part indicator 
 			this.profile_part_ind = -1;
 		}
 		else{
+			if (this.profile_part_ind != -2 && this.profile_part_ind != profile_part_ind.intValue()){
+				dirtyFlag = true;
+			}
 			this.profile_part_ind = profile_part_ind;
 		}
 	}
@@ -98,6 +105,9 @@ public class IFC implements Serializable {
 			this.id_tp = -1;
 		}
 		else {
+			if (this.id_tp != -2 && this.id_tp != id_tp.intValue()){
+				dirtyFlag = true;
+			}
 			this.id_tp = id_tp;
 		}
 	}
@@ -111,9 +121,32 @@ public class IFC implements Serializable {
 			this.id_application_server = -1;
 		}
 		else{
+			if (this.id_application_server != -2 && this.id_application_server != id_application_server.intValue()){
+				this.old_id_application_server = this.id_application_server;
+				dirtyFlag = true;
+			}
 			this.id_application_server = id_application_server;
 		}
 	}
+
+	public boolean isDirtyFlag() {
+		return dirtyFlag;
+	}
+
+	public void setDirtyFlag(boolean dirtyFlag) {
+		this.dirtyFlag = dirtyFlag;
+	}
+
+	public int getOld_id_application_server() {
+		return old_id_application_server;
+	}
+
+	public void setOld_id_application_server(int old_id_application_server) {
+		this.old_id_application_server = old_id_application_server;
+	}
+	
+	
+	
 
 }
 

@@ -175,8 +175,9 @@ public class CxConstants {
 	
 	//Condition Type CNF
 	
-	public static final int ConditionType_CNF = 0; 
-	public static final int ConditionType_DNF = 1;
-	public static final String ConditionType_CNF_Name = "Conjunctive Normal Format"; 
-	public static final String ConditionType_DNF_Name = "Disjunctive Normal Format";
+	public static final int ConditionType_DNF = 0;
+	public static final int ConditionType_CNF = 1; 
+
+ 	public static final String ConditionType_DNF_Name = "Disjunctive Normal Format";
+	public static final String ConditionType_CNF_Name = "Conjunctive Normal Format";
 }

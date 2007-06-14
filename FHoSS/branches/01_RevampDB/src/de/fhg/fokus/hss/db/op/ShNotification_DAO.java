@@ -50,6 +50,8 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
+import de.fhg.fokus.hss.db.model.ApplicationServer;
+import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.ShNotification;
 import de.fhg.fokus.hss.db.model.ShSubscription;
@@ -256,5 +258,125 @@ public class ShNotification_DAO {
 		}
 	}		
 	
+	public static void insert_notif_for_PSI_Activation(Session session, IMPU impu){
+		// send Sh notification to all subscribers
+		int data_reference = ShConstants.Data_Ref_PSI_Activation;
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, impu.getId(), 
+			data_reference);
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+				ShNotification shNotification = new ShNotification();
+				shNotification.setData_ref(data_reference);
+				shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+				shNotification.setId_application_server(shSubscription.getId_application_server());
+				shNotification.setId_impu(impu.getId());
+				shNotification.setPsi_activation(impu.getPsi_activation());
+				ShNotification_DAO.insert(session, shNotification);
+			}
+		}
+	}
+
+	private static void insert_notif_for_iFC(Session session, IFC ifc, ApplicationServer appServ){
+		int data_reference = ShConstants.Data_Ref_iFC;
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_ServerName_and_DataRef(session, appServ.getServer_name(), data_reference);
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+				// get current IMPU from subscription
+				IMPU impu = IMPU_DAO.get_by_ID(session, shSubscription.getId_impu());
+				
+				if (SP_IFC_DAO.get_by_SP_and_IFC_ID(session, impu.getId_sp(), ifc.getId()) != null){
+					// only if the modification of the IFC affected the user's SP, we are sending the notification
+					ShNotification shNotification = new ShNotification();
+					shNotification.setData_ref(data_reference);
+					shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+					shNotification.setId_application_server(shSubscription.getId_application_server());
+					shNotification.setId_impu(shSubscription.getId_impu());
+					shNotification.setServer_name(shSubscription.getServer_name());
+					ShNotification_DAO.insert(session, shNotification);
+				}
+			}
+		}
+	}
+	public static void insert_notif_for_iFC(Session session, IFC ifc){
+		// send Sh notification to all subscribers
+		ApplicationServer appServ = null;
+		if (ifc.getOld_id_application_server() != -2 && ifc.getOld_id_application_server() != ifc.getId_application_server()){
+			// we have to prepare notification for the old AS too
+			appServ = ApplicationServer_DAO.get_by_ID(session, ifc.getOld_id_application_server());
+			insert_notif_for_iFC(session, ifc, appServ);
+		}
+		appServ = ApplicationServer_DAO.get_by_ID(session, ifc.getId_application_server());
+		insert_notif_for_iFC(session, ifc, appServ);
+	}
+
+	public static void insert_notif_for_iFC(Session session, IFC ifc, int id_sp){
+		// send Sh notification to all subscribers
+		int data_reference = ShConstants.Data_Ref_iFC;
+		ApplicationServer appServ = ApplicationServer_DAO.get_by_ID(session, ifc.getId_application_server());
+		
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_ServerName_and_DataRef(session, appServ.getServer_name(), data_reference);
+		
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+				// get current IMPU from subscription
+				IMPU impu = IMPU_DAO.get_by_ID(session, shSubscription.getId_impu());
+				
+				if (impu.getId_sp() == id_sp){
+					// the modification of the IFC affected the SP of the user
+					ShNotification shNotification = new ShNotification();
+					shNotification.setData_ref(data_reference);
+					shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+					shNotification.setId_application_server(shSubscription.getId_application_server());
+					shNotification.setId_impu(shSubscription.getId_impu());
+					shNotification.setServer_name(shSubscription.getServer_name());
+					ShNotification_DAO.insert(session, shNotification);
+				}
+			}
+		}
+	}
 	
+	public static void insert_notif_for_iFC(Session session, ApplicationServer appServer){
+		// send Sh notification to all subscribers
+		int data_reference = ShConstants.Data_Ref_iFC;
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_ServerName_and_DataRef(session, appServer.getServer_name(), data_reference);
+		
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+				
+				// send notifications to all the subscribers
+				ShNotification shNotification = new ShNotification();
+				shNotification.setData_ref(data_reference);
+				shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+				shNotification.setId_application_server(shSubscription.getId_application_server());
+				shNotification.setId_impu(shSubscription.getId_impu());
+				shNotification.setServer_name(shSubscription.getServer_name());
+				ShNotification_DAO.insert(session, shNotification);
+			}
+		}
+	}	
+	
+	public static void insert_notif_for_iFC(Session session, IMPU impu){
+		int data_reference = ShConstants.Data_Ref_iFC;
+
+		List shSubscriptionList = ShSubscription_DAO.get_all_by_IMPU_and_DataRef(session, impu.getId(), data_reference);
+		if (shSubscriptionList != null){
+			for (int j = 0; j < shSubscriptionList.size(); j++){
+				ShSubscription shSubscription = (ShSubscription) shSubscriptionList.get(j);
+
+				ShNotification shNotification = new ShNotification();
+				shNotification.setData_ref(data_reference);
+				shNotification.setGrp(ShNotification_DAO.get_max_grp(session) + 1);
+				shNotification.setId_application_server(shSubscription.getId_application_server());
+				shNotification.setId_impu(shSubscription.getId_impu());
+				shNotification.setServer_name(shSubscription.getServer_name());
+				ShNotification_DAO.insert(session, shNotification);
+				
+			}
+		}
+	}	
+		
 }

@@ -88,6 +88,16 @@ public class IMPI_DAO {
 		return (IMPI) query.uniqueResult();
 	}
 	
+	public static List get_all_IMPI_for_IMPU_ID(Session session, int id_impu){
+		Query query;
+		query = session.createSQLQuery("select * from impi" +
+				"	inner join impi_impu on impi.id=impi_impu.id_impi" +
+				" where impi_impu.id_impu=? order by (impi.id)")
+				.addEntity("impi", IMPI.class);
+		query.setInteger(0, id_impu);
+		return query.list();
+	}
+	
 	public static IMPI get_by_Identity(Session session, String identity){
 		Query query;
 		query = session.createSQLQuery("select * from impi where identity like ?")

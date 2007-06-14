@@ -84,15 +84,6 @@ public class IFC_Submit extends Action{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 					
-			if (id != -1){
-				if (IFC_Load.testForDelete(session, form.getId())){
-					request.setAttribute("deleteDeactivation", "false");
-				}
-				else{
-					request.setAttribute("deleteDeactivation", "true");
-				}
-			}			
-			
 			if (nextAction.equals("save")){
 				IFC ifc = null;
 
@@ -111,7 +102,6 @@ public class IFC_Submit extends Action{
 				
 				ifc.setId_application_server(form.getId_application_server());
 				ifc.setId_tp(form.getId_tp());
-				
 				if (id == -1){
 					IFC_DAO.insert(session, ifc);
 					id = ifc.getId();

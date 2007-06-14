@@ -43,6 +43,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -51,10 +52,12 @@ import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.SP;
 import de.fhg.fokus.hss.db.model.VisitedNetwork;
+import de.fhg.fokus.hss.main.HSSProperties;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -67,17 +70,17 @@ public class IMPU_DAO {
 	}
 	
 	public static void update(Session session, IMPU impu){
+		if (impu.isPsi_dirtyFlag()){
+			ShNotification_DAO.insert_notif_for_PSI_Activation(session, impu);
+			impu.setPsi_dirtyFlag(false);
+		}
+		else if (HSSProperties.iFC_NOTIF_ENABLED && impu.isSp_dirtyFlag()){
+			ShNotification_DAO.insert_notif_for_iFC(session, impu);
+			impu.setSp_dirtyFlag(false);
+		}
 		session.saveOrUpdate(impu);
 	}	
 	
-	public static IMPU update(Session session, int id, short user_state){
-		IMPU impu = (IMPU) session.load(IMPU.class, id);
-		if (impu != null){
-			impu.setUser_state(user_state);
-		}
-		return impu;
-	}
-
 	public static void update_others_from_implicit_set_ID(Session session, int id_impu, int old_implicit_set_id){
 		List l = IMPU_DAO.get_others_from_set(session, id_impu, old_implicit_set_id);
 		if (l != null && l.size() > 0){
@@ -122,15 +125,6 @@ public class IMPU_DAO {
 		return query.list();
 	}
 
-	public static List get_all_IMPI_for_IMPU_ID(Session session, int id_impu){
-		Query query;
-		query = session.createSQLQuery("select * from impi" +
-				"	inner join impi_impu on impi.id=impi_impu.id_impi" +
-				" where impi_impu.id_impu=? order by (impi.id)")
-				.addEntity("impi", IMPI.class);
-		query.setInteger(0, id_impu);
-		return query.list();
-	}
 
 	public static int get_a_registered_IMPI_ID(Session session, int id_impu){
 		Query query;
@@ -179,6 +173,83 @@ public class IMPU_DAO {
 
 		return query.list();
 	}
+	
+	public static List get_all_within_same_IMPI_Associations(Session session, int id_impu){
+		List resultList = new ArrayList();
+		
+		List referenceIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, id_impu);
+		if (referenceIMPIList.size() == 0){
+			return resultList;
+		}
+		
+		IMPI refIMPI = (IMPI) referenceIMPIList.get(0);
+		List allIMPU_ID_List = IMPU_DAO.get_all_IMPU_ID_for_IMSU(session, refIMPI.getId_imsu());
+		if (allIMPU_ID_List == null || allIMPU_ID_List.size() == 0){
+			return resultList;
+		}
+		
+		
+		for (int i = 0; i < allIMPU_ID_List.size(); i++){
+			int crtIMPU_ID = (Integer) allIMPU_ID_List.get(i);
+			List crtIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, crtIMPU_ID);
+			if (crtIMPIList.size() != referenceIMPIList.size()){
+				continue;
+			}
+			for (int j = 0; j < referenceIMPIList.size(); j++){
+				// notice: the two list are ordered by ID!
+				IMPI impi1 = (IMPI) referenceIMPIList.get(j);
+				IMPI impi2 = (IMPI) crtIMPIList.get(j);
+				if (impi1.getId() != impi2.getId())
+					break;
+				if (j == referenceIMPIList.size() - 1){
+					// test was finished successfully!
+					IMPU crtIMPU = IMPU_DAO.get_by_ID(session, crtIMPU_ID);
+					resultList.add(crtIMPU);
+				}
+			}
+		}
+		
+		return resultList;
+	}
+
+	public static List get_all_Registered_within_same_IMPI_Associations(Session session, int id_impu){
+		List resultList = new ArrayList();
+		
+		List referenceIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, id_impu);
+		if (referenceIMPIList.size() == 0){
+			return resultList;
+		}
+		IMPI refIMPI = (IMPI) referenceIMPIList.get(0);
+		List allIMPU_ID_List = IMPU_DAO.get_all_Registered_IMPU_ID_for_IMSU(session, refIMPI.getId_imsu());
+		
+		if (allIMPU_ID_List == null || allIMPU_ID_List.size() == 0){
+			return resultList;
+		}
+		
+		
+		for (int i = 0; i < allIMPU_ID_List.size(); i++){
+			int crtIMPU_ID = (Integer) allIMPU_ID_List.get(i);
+			List crtIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, crtIMPU_ID);
+			if (crtIMPIList.size() != referenceIMPIList.size()){
+				continue;
+			}
+			for (int j = 0; j < referenceIMPIList.size(); j++){
+				// notice: the two list are ordered by ID!
+				IMPI impi1 = (IMPI) referenceIMPIList.get(j);
+				IMPI impi2 = (IMPI) crtIMPIList.get(j);
+				if (impi1.getId() != impi2.getId())
+					break;
+				if (j == referenceIMPIList.size() - 1){
+					// test was finished successfully!
+					IMPU impu = IMPU_DAO.get_by_ID(session, crtIMPU_ID);
+					resultList.add(impu);
+				}
+			}
+		}
+		
+		return resultList;
+	}	
+	
 	
 	public static IMPU get_by_Identity(Session session, String identity){
 		Query query;
@@ -294,5 +365,16 @@ public class IMPU_DAO {
 		return query.list();
 	}
 	
+	public static List get_all_Registered_IMPU_ID_for_IMSU(Session session, int id_imsu){
+		Query query;
+		query = session.createSQLQuery("select distinct impu.id from impu" +
+				"	inner join impi_impu on impu.id=impi_impu.id_impu" +
+				"	inner join impi on impi.id=impi_impu.id_impi" +
+				" where impi.id_imsu=? and impu.user_state=?")
+				.addScalar("id", Hibernate.INTEGER);
+		query.setInteger(0, id_imsu);
+		query.setInteger(1, CxConstants.IMPU_user_state_Registered);
+		return query.list();
+	}
 	
 }

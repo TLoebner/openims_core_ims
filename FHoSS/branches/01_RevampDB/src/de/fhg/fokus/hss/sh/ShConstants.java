@@ -72,4 +72,13 @@ public class ShConstants {
 	// Subs-Req-Type
 	public static final int Subs_Req_Type_Subscribe = 0;
 	public static final int Subs_Req_Type_UnSubscribe = 1;
+	
+	// Identity-Set
+	public static final int Identity_Set_All_Identities = 0;
+	public static final int Identity_Set_Registered_Identities = 1;
+	public static final int Identity_Set_Implicit_Identities = 2;
+	public static final int Identity_Set_Alias_Identities = 3;
+	
+	
+	
 }
