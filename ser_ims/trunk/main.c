@@ -677,7 +677,6 @@ static void sig_usr(int signo)
 			case SIGTERM:
 #ifdef SIG_DEBUG /* signal unsafe stuff follows */
 					LOG(L_INFO, "INFO: signal %d received\n", signo);
-					destroy_routes();
 					/* print memory stats for non-main too */
 					#ifdef PKG_MALLOC
 					LOG(memlog, "Memory status (pkg):\n");

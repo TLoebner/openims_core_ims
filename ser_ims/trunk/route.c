@@ -90,18 +90,14 @@ inline static void destroy_rlist(struct route_list* rt)
 {
 	struct str_hash_entry* e;
 	struct str_hash_entry* tmp;
-	int i;
 
 	if (rt->rlist){
-		for(i=0;i<rt->entries;i++)
-			destroy_actions(rt->rlist[i]);
 		pkg_free(rt->rlist);
 		rt->rlist=0;
 		rt->entries=0;
 	}
 	if (rt->names.table){
 		clist_foreach_safe(rt->names.table, e, tmp, next){
-			if (e->key.s) pkg_free(e->key.s);
 			pkg_free(e);
 		}
 		pkg_free(rt->names.table);
@@ -118,7 +114,6 @@ void destroy_routes()
 	destroy_rlist(&onreply_rt);
 	destroy_rlist(&failure_rt);
 	destroy_rlist(&branch_rt);
-	destroy_rlist(&onsend_rt);	
 }
 
 
