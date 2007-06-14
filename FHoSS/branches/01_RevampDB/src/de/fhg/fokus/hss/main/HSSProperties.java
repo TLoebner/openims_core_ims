@@ -67,11 +67,13 @@ public class HSSProperties {
 	public static String PSI_DEFAULT_IMPI;
 	public static String PSI_DEFAULT_PRI_COLL_CHRG_FN;
 
+	// Authentication & Security settings
 	public static boolean USE_AK = false;
 	public static int IND_LEN = 5;
 	public static int delta = 268435456;
 	public static int L = 32;
 	
+	public static boolean iFC_NOTIF_ENABLED = false;
 	private static String fileName = "hss.properties";
 	
 	static {
@@ -91,6 +93,7 @@ public class HSSProperties {
 			IND_LEN = Integer.parseInt(props.getProperty("IND_LEN"));
 			delta = Integer.parseInt(props.getProperty("delta"));
 			L = Integer.parseInt(props.getProperty("L"));
+			iFC_NOTIF_ENABLED = Boolean.valueOf(props.getProperty("iFC_NOTIF_ENABLED")).booleanValue();
 		}
 		catch (FileNotFoundException e) {
 			LOGGER.error("FileNotFoundException !", e);

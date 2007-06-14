@@ -65,6 +65,10 @@ public class IFC_DAO {
 	}
 	
 	public static void update(Session session, IFC ifc){
+		if (ifc.isDirtyFlag()){
+			ShNotification_DAO.insert_notif_for_iFC(session, ifc);
+			ifc.setDirtyFlag(false);
+		}
 		session.saveOrUpdate(ifc);
 	}
  

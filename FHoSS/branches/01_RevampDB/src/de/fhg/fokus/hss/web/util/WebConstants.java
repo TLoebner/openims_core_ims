@@ -62,8 +62,9 @@ public class WebConstants {
 	static{
 		select_identity_type = new ArrayList<Tuple>();
 		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Public_User_Identity_Name, CxConstants.Identity_Type_Public_User_Identity));
+		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Distinct_PSI_Name, CxConstants.Identity_Type_Distinct_PSI));		
 		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Wildcarded_PSI_Name, CxConstants.Identity_Type_Wildcarded_PSI));
-		select_identity_type.add(new Tuple(CxConstants.Identity_Type_Distinct_PSI_Name, CxConstants.Identity_Type_Distinct_PSI));
+
 	}
 
 	public static final List<Tuple> select_auth_scheme;

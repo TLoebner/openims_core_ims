@@ -53,7 +53,6 @@ import org.hibernate.Session;
 import de.fhg.fokus.diameter.DiameterPeer.DiameterPeer;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
-import de.fhg.fokus.hss.db.model.AliasesRepositoryData;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.SPT;
@@ -61,7 +60,6 @@ import de.fhg.fokus.hss.db.model.SP_IFC;
 import de.fhg.fokus.hss.db.model.ShNotification;
 import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.model.TP;
-import de.fhg.fokus.hss.db.op.AliasesRepositoryData_DAO;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.SPT_DAO;
 import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
@@ -76,6 +74,7 @@ import de.fhg.fokus.hss.sh.data.AliasesRepositoryDataElement;
 import de.fhg.fokus.hss.sh.data.ApplicationServerElement;
 import de.fhg.fokus.hss.sh.data.DSAIElement;
 import de.fhg.fokus.hss.sh.data.InitialFilterCriteriaElement;
+import de.fhg.fokus.hss.sh.data.PublicIdentityElement;
 import de.fhg.fokus.hss.sh.data.RepositoryDataElement;
 import de.fhg.fokus.hss.sh.data.SPTElement;
 import de.fhg.fokus.hss.sh.data.ShDataElement;
@@ -205,15 +204,39 @@ public class PNR {
 					break;
 					
 				case  ShConstants.Data_Ref_IMS_Public_Identity:
-					//....
+					// for the moment Aliases-Identities is interpreted the same as Implicit-Set Identities!
+					IMPU impu = IMPU_DAO.get_by_ID(session, shNotification.getId_impu());
+					List impuList = IMPU_DAO.get_all_from_set(session, impu.getId_implicit_set());
+					if (impuList == null){
+						logger.error("IMPU List is NULL. The list should contain at least one element!");
+						return;
+					}
+					PublicIdentityElement pIdentityElement = shData.getPublicIdentifiers();
+					if (pIdentityElement == null){
+						pIdentityElement = new PublicIdentityElement();
+						shData.setPublicIdentifiers(pIdentityElement);
+					}
+					
+					for (int i = 0; i < impuList.size(); i++){
+						IMPU crtIMPU = (IMPU)impuList.get(i);
+						if (i == 0){
+							// add the identity type for all the IMPUs
+							pIdentityElement.setIdentityType(crtIMPU.getType());
+						}
+						pIdentityElement.addPublicIdentity(crtIMPU.getIdentity());
+					}
 					break;
 					
 				case  ShConstants.Data_Ref_IMS_User_State:
+					
 					shIMSData.setImsUserState(shNotification.getReg_state());
 					break;
 					
 				case  ShConstants.Data_Ref_SCSCF_Name:
 					shIMSData.setScscfName(shNotification.getScscf_name());
+					if (shNotification.getScscf_name() == null){
+						shIMSData.setAddEmptySCSCFName(true);
+					}
 					break;
 					
 				case  ShConstants.Data_Ref_iFC:
@@ -223,17 +246,20 @@ public class PNR {
 						return;
 					}
 					
-					IMPU impu = IMPU_DAO.get_by_ID(session, shNotification.getId_impu());
+					impu = IMPU_DAO.get_by_ID(session, shNotification.getId_impu());
 					if (impu == null){
 						logger.error("IMPU was not found! Aborting...");
 						return;
 					}
+
+					// initialize ApplicationServer
+					ApplicationServerElement asElement = new ApplicationServerElement();
+					asElement.setDefaultHandling(serviceAS.getDefault_handling());
+					asElement.setServerName(serviceAS.getServer_name());
+					asElement.setServiceInfo(serviceAS.getService_info());
+					
 					List ifcList = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, impu.getId_sp());
 					if (ifcList != null){
-						ApplicationServerElement asElement = new ApplicationServerElement();
-						asElement.setDefaultHandling(serviceAS.getDefault_handling());
-						asElement.setServerName(serviceAS.getServer_name());
-						asElement.setServiceInfo(serviceAS.getService_info());
 						
 						Iterator it = ifcList.iterator();
 						while (it.hasNext()){
@@ -248,38 +274,44 @@ public class PNR {
 
 								// set the trigger point
 								TP tp = TP_DAO.get_by_ID(session, crt_ifc.getId_tp());
-								TriggerPointElement tpElement = new TriggerPointElement();
-								tpElement.setConditionTypeCNF(tp.getCondition_type_cnf());
+								if (tp != null){
+									TriggerPointElement tpElement = new TriggerPointElement();
+									tpElement.setConditionTypeCNF(tp.getCondition_type_cnf());
 								
-								List sptList = SPT_DAO.get_all_by_TP_ID(session, tp.getId());
-								if (sptList != null){
-									Iterator it2 = sptList.iterator();
-									SPT crt_spt;
-									SPTElement sptElement;
-									while (it2.hasNext()){
-										crt_spt = (SPT) it2.next();
-										sptElement = new SPTElement();
-										sptElement.setConditionNegated(crt_spt.getCondition_negated());
-										sptElement.setGroupID(crt_spt.getGrp());
+									List sptList = SPT_DAO.get_all_by_TP_ID(session, tp.getId());
+									if (sptList != null){
+										Iterator it2 = sptList.iterator();
+										SPT crt_spt;
+										SPTElement sptElement;
+										while (it2.hasNext()){
+											crt_spt = (SPT) it2.next();
+											sptElement = new SPTElement();
+											sptElement.setConditionNegated(crt_spt.getCondition_negated());
+											sptElement.setGroupID(crt_spt.getGrp());
 										
-										sptElement.setMethod(crt_spt.getMethod());
-										sptElement.setRequestURI(crt_spt.getRequesturi());
-										if (crt_spt.getSession_case() != null){
-											sptElement.setSessionCase(crt_spt.getSession_case());
+											sptElement.setMethod(crt_spt.getMethod());
+											sptElement.setRequestURI(crt_spt.getRequesturi());
+											if (crt_spt.getSession_case() != null){
+												sptElement.setSessionCase(crt_spt.getSession_case());
+											}
+											sptElement.setSessionDescLine(crt_spt.getSdp_line());
+											sptElement.setSessionDescContent(crt_spt.getSdp_line_content());
+											sptElement.setSipHeader(crt_spt.getHeader());
+											sptElement.setSipHeaderContent(crt_spt.getHeader_content());
+										
+											// extension
+											sptElement.addRegistrationType(crt_spt.getRegistration_type());
+											tpElement.addSPT(sptElement);
 										}
-										sptElement.setSessionDescLine(crt_spt.getSdp_line());
-										sptElement.setSessionDescContent(crt_spt.getSdp_line_content());
-										sptElement.setSipHeader(crt_spt.getHeader());
-										sptElement.setSipHeaderContent(crt_spt.getHeader_content());
-										
-										// extension
-										sptElement.addRegistrationType(crt_spt.getRegistration_type());
-										tpElement.addSPT(sptElement);
 									}
+									ifcElement.setTriggerPoint(tpElement);
 								}
-								ifcElement.setTriggerPoint(tpElement);
+								
 								shIMSData.addInitialFilterCriteria(ifcElement);
 							}
+						}
+						if (shIMSData.getIfcList() == null){
+							shIMSData.setAddEmptyIFCs(true);
 						}
 					}
 					break;

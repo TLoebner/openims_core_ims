@@ -63,6 +63,10 @@ public class ApplicationServer_DAO {
 	}
 	
 	public static void update(Session session, ApplicationServer as){
+		if (as.isDirtyFlag()){
+			ShNotification_DAO.insert_notif_for_iFC(session, as);
+			as.setDirtyFlag(false);
+		}
 		session.saveOrUpdate(as);
 	}
 	

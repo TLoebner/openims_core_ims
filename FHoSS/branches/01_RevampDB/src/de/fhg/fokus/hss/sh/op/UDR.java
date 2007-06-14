@@ -68,6 +68,7 @@ import de.fhg.fokus.hss.db.model.TP;
 import de.fhg.fokus.hss.db.op.AliasesRepositoryData_DAO;
 import de.fhg.fokus.hss.db.op.ApplicationServer_DAO;
 import de.fhg.fokus.hss.db.op.ChargingInfo_DAO;
+import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMSU_DAO;
 import de.fhg.fokus.hss.db.op.RepositoryData_DAO;
@@ -170,23 +171,33 @@ public class UDR {
 			
 			// -5- include the data pertinent to the requested Data Reference
 			//
-			
+
 			ShDataElement shData = new ShDataElement();
 			for (int i = 0; i < data_ref_vector.size(); i++){
 				int crt_data_ref = (Integer) data_ref_vector.get(i); 
-				ShIMSDataElement shIMSData = null;
-				
 				String crt_service_indication = UtilAVP.getServiceIndication(request);
 				
 				if (crt_data_ref == ShConstants.Data_Ref_Repository_Data && crt_service_indication == null){
 					throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 				}
+				
+				// get identitySet
+				int identitySet = -1;
+				if (crt_data_ref == ShConstants.Data_Ref_IMS_Public_Identity){
+					identitySet = UtilAVP.getIdentitySet(request);
+					if (identitySet == -1){
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
+					}
+				}
+				
+				// get serverName
 				String server_name = UtilAVP.getServerName(request);
 
-				addShData(shData, crt_data_ref, impu, crt_service_indication, 
-						server_name);
+				// add the Sh-Data to the shData object
+				addShData(shData, crt_data_ref, impu, crt_service_indication, server_name, identitySet);
 				
 			}
+			// add the Sh-Data and send the result 
 			UtilAVP.addShData(response, shData.toString());
 			UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
 		}
@@ -216,7 +227,7 @@ public class UDR {
 
 	
 	public static void addShData(ShDataElement shData, int crt_data_ref, IMPU impu, String crt_service_indication, 
-			String server_name){
+			String server_name, int identitySet){
 		
 			Session session = HibernateUtil.getCurrentSession();
 			ShIMSDataElement shIMSData = shData.getShIMSData();
@@ -261,6 +272,43 @@ public class UDR {
 						break;
 						
 					case  ShConstants.Data_Ref_IMS_Public_Identity:
+						PublicIdentityElement pIdentityElement = shData.getPublicIdentifiers();
+						if (pIdentityElement == null){
+							pIdentityElement = new PublicIdentityElement();
+							shData.setPublicIdentifiers(pIdentityElement);
+						}
+
+						List impuList = null;
+						switch (identitySet){
+							case ShConstants.Identity_Set_All_Identities:
+								impuList = IMPU_DAO.get_all_within_same_IMPI_Associations(session, impu.getId());
+								break;
+								
+							case ShConstants.Identity_Set_Registered_Identities:
+								impuList = IMPU_DAO.get_all_Registered_within_same_IMPI_Associations(session, impu.getId());
+								break;
+								
+							case ShConstants.Identity_Set_Implicit_Identities:
+							case ShConstants.Identity_Set_Alias_Identities:
+								// for the moment Alias_Identities & Implicit_Identities are interpreted as beeing the same thing
+								impuList = IMPU_DAO.get_all_from_set(session, impu.getId_implicit_set());
+								break;
+						}
+						
+						// add the IMPUs to the response
+						if (impuList == null){
+							logger.error("IMPU List is NULL. The list should contain at least one element!");
+							return;
+						}
+						for (int i = 0; i < impuList.size(); i++){
+							IMPU crtIMPU = (IMPU)impuList.get(i);
+							if (i == 0){
+								// add the identity type for all the IMPUs
+								pIdentityElement.setIdentityType(crtIMPU.getType());
+							}
+							pIdentityElement.addPublicIdentity(crtIMPU.getIdentity());
+						}
+						
 						break;
 						
 					case  ShConstants.Data_Ref_IMS_User_State:
@@ -268,7 +316,7 @@ public class UDR {
 						break;
 						
 					case  ShConstants.Data_Ref_SCSCF_Name:
-						List impiList = IMPU_DAO.get_all_IMPI_for_IMPU_ID(session, impu.getId());
+						List impiList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, impu.getId());
 						if (impiList != null && impiList.size() > 0){
 							IMPI impi = (IMPI)impiList.get(0);
 							String scscfName = IMSU_DAO.get_SCSCF_Name_by_IMSU_ID(session, impi.getId_imsu());
@@ -307,36 +355,38 @@ public class UDR {
 
 									// set the trigger point
 									TP tp = TP_DAO.get_by_ID(session, crt_ifc.getId_tp());
-									TriggerPointElement tpElement = new TriggerPointElement();
-									tpElement.setConditionTypeCNF(tp.getCondition_type_cnf());
+									if (tp != null){
+										TriggerPointElement tpElement = new TriggerPointElement();
+										tpElement.setConditionTypeCNF(tp.getCondition_type_cnf());
 									
-									List sptList = SPT_DAO.get_all_by_TP_ID(session, tp.getId());
-									if (sptList != null){
-										Iterator it2 = sptList.iterator();
-										SPT crt_spt;
-										SPTElement sptElement;
-										while (it2.hasNext()){
-											crt_spt = (SPT) it2.next();
-											sptElement = new SPTElement();
-											sptElement.setConditionNegated(crt_spt.getCondition_negated());
-											sptElement.setGroupID(crt_spt.getGrp());
+										List sptList = SPT_DAO.get_all_by_TP_ID(session, tp.getId());
+										if (sptList != null){
+											Iterator it2 = sptList.iterator();
+											SPT crt_spt;
+											SPTElement sptElement;
+											while (it2.hasNext()){
+												crt_spt = (SPT) it2.next();
+												sptElement = new SPTElement();
+												sptElement.setConditionNegated(crt_spt.getCondition_negated());
+												sptElement.setGroupID(crt_spt.getGrp());
 											
-											sptElement.setMethod(crt_spt.getMethod());
-											sptElement.setRequestURI(crt_spt.getRequesturi());
-											if (crt_spt.getSession_case() != null){
-												sptElement.setSessionCase(crt_spt.getSession_case());
+												sptElement.setMethod(crt_spt.getMethod());
+												sptElement.setRequestURI(crt_spt.getRequesturi());
+												if (crt_spt.getSession_case() != null){
+													sptElement.setSessionCase(crt_spt.getSession_case());
+												}
+												sptElement.setSessionDescLine(crt_spt.getSdp_line());
+												sptElement.setSessionDescContent(crt_spt.getSdp_line_content());
+												sptElement.setSipHeader(crt_spt.getHeader());
+												sptElement.setSipHeaderContent(crt_spt.getHeader_content());
+											
+												// extension
+												sptElement.addRegistrationType(crt_spt.getRegistration_type());
+												tpElement.addSPT(sptElement);
 											}
-											sptElement.setSessionDescLine(crt_spt.getSdp_line());
-											sptElement.setSessionDescContent(crt_spt.getSdp_line_content());
-											sptElement.setSipHeader(crt_spt.getHeader());
-											sptElement.setSipHeaderContent(crt_spt.getHeader_content());
-											
-											// extension
-											sptElement.addRegistrationType(crt_spt.getRegistration_type());
-											tpElement.addSPT(sptElement);
 										}
+										ifcElement.setTriggerPoint(tpElement);
 									}
-									ifcElement.setTriggerPoint(tpElement);
 									shIMSData.addInitialFilterCriteria(ifcElement);
 								}
 							}
@@ -346,12 +396,6 @@ public class UDR {
 						}
 						break;
 						
-					case  ShConstants.Data_Ref_Location_Info:
-						break;
-
-					case  ShConstants.Data_Ref_User_State:
-						break;
-
 					case  ShConstants.Data_Ref_Charging_Info:
 						if (shIMSData == null){
 							shIMSData = new ShIMSDataElement();
@@ -367,9 +411,6 @@ public class UDR {
 						shIMSData.setChgInformation(chgInfoElement);
 						break;
 						
-					case  ShConstants.Data_Ref_MSISDN:
-						break;
-						
 					case  ShConstants.Data_Ref_PSI_Activation:
 						if (shIMSData == null){
 							shIMSData = new ShIMSDataElement();
@@ -378,10 +419,19 @@ public class UDR {
 						shIMSData.setPsiActivation(impu.getPsi_activation());
 						break;
 						
-					case  ShConstants.Data_Ref_DSAI:
-						
+					case  ShConstants.Data_Ref_Location_Info:
 						break;
 
+					case  ShConstants.Data_Ref_User_State:
+						break;
+					
+					case  ShConstants.Data_Ref_MSISDN:
+						break;
+						
+					case  ShConstants.Data_Ref_DSAI:
+						break;
+
+						
 				}
 		
 	} 

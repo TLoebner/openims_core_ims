@@ -193,33 +193,41 @@ public class SNR {
 			}
 
 			// -5- if the Data Reference is RepositoryData or Aliases Repository Data
-			for (int i = 0; i < data_ref_vector.size(); i++){
-				int crt_data_ref = (Integer) data_ref_vector.get(i);
-				
-				for (int j = 0; j < service_indication_vector.size(); j++){
-					// iterate through all the service indications
-					if (crt_data_ref == ShConstants.Data_Ref_Repository_Data){
-						String crt_service_indication = (String) service_indication_vector.get(j);
-						RepositoryData rep_data = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(
-								session, impu.getId(), crt_service_indication);
-						if (rep_data == null){
-							throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT);	
+			
+			if (service_indication_vector != null){
+				for (int i = 0; i < data_ref_vector.size(); i++){
+					int crt_data_ref = (Integer) data_ref_vector.get(i);
+					
+					if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data || crt_data_ref == ShConstants.Data_Ref_Repository_Data){
+						
+						for (int j = 0; j < service_indication_vector.size(); j++){
+							// iterate through all the service indications
+							if (crt_data_ref == ShConstants.Data_Ref_Repository_Data){
+								String crt_service_indication = (String) service_indication_vector.get(j);
+								RepositoryData rep_data = RepositoryData_DAO.get_by_IMPU_and_ServiceIndication(
+										session, impu.getId(), crt_service_indication);
+								if (rep_data == null){
+									throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT);	
+								}
+							}
+							else if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
+								String crt_service_indication = (String) service_indication_vector.get(j);
+
+								// the implicitset ID is used to determine the coresponding data from AliasesRepositoryData	
+								AliasesRepositoryData aliases_rep_data = AliasesRepositoryData_DAO.get_by_setID_and_ServiceIndication(
+										session, impu.getId_implicit_set(), crt_service_indication);
+								if (aliases_rep_data == null){
+									throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT);	
+								}
+							}					
 						}
 					}
-					else if (crt_data_ref == ShConstants.Data_Ref_Aliases_Repository_Data){
-						String crt_service_indication = (String) service_indication_vector.get(j);
-
-						// the implicitset ID is used to determine the coresponding data from AliasesRepositoryData	
-						AliasesRepositoryData aliases_rep_data = AliasesRepositoryData_DAO.get_by_setID_and_ServiceIndication(
-								session, impu.getId_implicit_set(), crt_service_indication);
-						if (aliases_rep_data == null){
-							throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT);	
-						}
-					}					
 				}
 			}
 			
 			// -6- ==> -10-
+			int identitySet = UtilAVP.getIdentitySet(request);
+
 			ShDataElement shData = null;			
 			for (int i = 0; i < data_ref_vector.size(); i++){
 				int crt_data_ref = (Integer) data_ref_vector.get(i);
@@ -228,28 +236,40 @@ public class SNR {
 						crt_data_ref != ShConstants.Data_Ref_Repository_Data){
 				
 					if (subs_req_type == 0){
+						ShSubscription sh_subs = null;
 						// subscribe
-						ShSubscription sh_subs = ShSubscription_DAO.get_by_AS_IMPU_and_DataRef(session, 
+						if (crt_data_ref != ShConstants.Data_Ref_DSAI && crt_data_ref != ShConstants.Data_Ref_iFC){
+							sh_subs = ShSubscription_DAO.get_by_AS_IMPU_and_DataRef(session, 
 								application_server.getId(), impu.getId(), crt_data_ref);
-						if (sh_subs == null){
-							sh_subs = new ShSubscription();
-							sh_subs.setId_application_server(application_server.getId());
-							sh_subs.setData_ref(crt_data_ref);
-							sh_subs.setId_impu(impu.getId());
-							if (expiry_time != -1){
-								sh_subs.setExpires(expiry_time);
+							if (sh_subs == null){
+								sh_subs = new ShSubscription();
+								sh_subs.setId_application_server(application_server.getId());
+								sh_subs.setData_ref(crt_data_ref);
+								sh_subs.setId_impu(impu.getId());
+								if (expiry_time != -1){
+									sh_subs.setExpires(expiry_time);
+								}
+							}
+						}
+						else if (crt_data_ref == ShConstants.Data_Ref_DSAI){
+							// [to be implemented]
+						}
+						else if (crt_data_ref == ShConstants.Data_Ref_iFC){
+							sh_subs = ShSubscription_DAO.get_by_AS_IMPU_DataRef_and_ServerName(session, application_server.getId(), 
+									impu.getId(), crt_data_ref, server_name);
+
+							if (sh_subs == null){
+								sh_subs = new ShSubscription();
+								sh_subs.setId_application_server(application_server.getId());
+								sh_subs.setData_ref(crt_data_ref);
+								sh_subs.setId_impu(impu.getId());
+								if (expiry_time != -1){
+									sh_subs.setExpires(expiry_time);
+								}
+								sh_subs.setServer_name(server_name);
 							}
 						}
 						
-						if (crt_data_ref == ShConstants.Data_Ref_DSAI){
-							// test if dsai_tag is null....
-							sh_subs.setDsai_tag(dsai_tag);
-						}
-						else if (crt_data_ref == ShConstants.Data_Ref_iFC){
-							//the same....
-							sh_subs.setServer_name(server_name);
-						}
-					
 						// for both situations (update or new insert) we are updating the fields
 						ShSubscription_DAO.update(session, sh_subs);
 					}
@@ -267,13 +287,14 @@ public class SNR {
 							ShSubscription_DAO.delete_by_AS_IMPU_and_DataRef(session, application_server.getId(), impu.getId(), crt_data_ref);
 						}
 					}
-
+					
+					
 					if (UtilAVP.getSendDataIndication(request) == ShConstants.User_Data_Requested){
 						// we have to add the user data in the response
 						if (shData == null){
 							shData = new ShDataElement();
 						}
-						UDR.addShData(shData, crt_data_ref, impu, null, server_name);
+						UDR.addShData(shData, crt_data_ref, impu, null, server_name, identitySet);
 					}
 				}
 				else{
@@ -314,10 +335,9 @@ public class SNR {
 							if (shData == null){
 								shData = new ShDataElement();
 							}
-							UDR.addShData(shData, crt_data_ref, impu, crt_service_indication, server_name);
+							UDR.addShData(shData, crt_data_ref, impu, crt_service_indication, server_name, identitySet);
 						}
 					}
-					
 				}
 				
 			} // end loop data_ref

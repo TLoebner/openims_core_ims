@@ -58,16 +58,23 @@ public class IMPU implements Serializable{
 	private String identity;
 	private int type;
 	private int barring;
-	private int user_state;
+	private int user_state ;
 	private int id_implicit_set;
 	private String wildcard_psi;
 	private String display_name;
-	private int psi_activation;
+	private int psi_activation = -2;
 	private int can_register;
-
-	private int id_sp;
+	private int id_sp = -2;
 	private int id_charging_info;
-	public IMPU(){}
+	
+	// flag indicating if an update occured for the PSI Activation
+	private boolean psi_dirtyFlag = false;
+	
+	// flag indicating if an update occured for the associated SP	
+	private boolean sp_dirtyFlag = false;
+	
+	public IMPU(){
+	}
 
 	public int getBarring() {
 		return barring;
@@ -138,6 +145,9 @@ public class IMPU implements Serializable{
 	}
 
 	public void setPsi_activation(int psi_activation) {
+		if (this.psi_activation != -2 && this.psi_activation != psi_activation){
+			psi_dirtyFlag = true;
+		}
 		this.psi_activation = psi_activation;
 	}
 
@@ -162,7 +172,25 @@ public class IMPU implements Serializable{
 	}
 
 	public void setId_sp(int id_sp) {
+		if (this.id_sp != -2 && this.id_sp != id_sp){
+			sp_dirtyFlag = true;
+		}
 		this.id_sp = id_sp;
 	}
-	
+
+	public boolean isPsi_dirtyFlag() {
+		return psi_dirtyFlag;
+	}
+
+	public void setPsi_dirtyFlag(boolean psi_dirtyFlag) {
+		this.psi_dirtyFlag = psi_dirtyFlag;
+	}
+
+	public boolean isSp_dirtyFlag() {
+		return sp_dirtyFlag;
+	}
+
+	public void setSp_dirtyFlag(boolean sp_dirtyFlag) {
+		this.sp_dirtyFlag = sp_dirtyFlag;
+	}
 }

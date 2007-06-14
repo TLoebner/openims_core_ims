@@ -86,6 +86,19 @@ public class ShSubscription_DAO {
 		query.setInteger(2, data_ref);
 		return (ShSubscription) query.uniqueResult();
 	}	
+
+	public static ShSubscription get_by_AS_IMPU_DataRef_and_ServerName(Session session, int id_application_server, int id_impu, int data_ref,
+			String server_name){
+		
+		Query query;
+		query = session.createSQLQuery("select * from sh_subscription where id_application_server=? and id_impu=? and data_ref=? and server_name=?")
+			.addEntity(ShSubscription.class);
+		query.setInteger(0, id_application_server);
+		query.setInteger(1, id_impu);
+		query.setInteger(2, data_ref);
+		query.setString(3, server_name);
+		return (ShSubscription) query.uniqueResult();
+	}	
 	
 	public static ShSubscription get_by_AS_IMPU_DataRef_and_ServInd(Session session, int id_application_server, int id_impu,
 			int data_ref, String service_ind){
@@ -118,6 +131,17 @@ public class ShSubscription_DAO {
 		query.setInteger(1, data_ref);
 		return  query.list();
 	}		
+
+	public static List get_all_by_ServerName_and_DataRef(Session session, String server_name, int data_ref){
+		Query query;
+		query = session.createSQLQuery("select * from sh_subscription where server_name=? and data_ref=?")
+			.addEntity(ShSubscription.class);
+		query.setString(0, server_name);
+		query.setInteger(1, data_ref);
+		return  query.list();
+	}		
+	
+	
 	
 	
 	public static List get_all_by_IMPU_DataRef_and_ServInd(Session session, int id_impu, int data_ref, String service_indication){

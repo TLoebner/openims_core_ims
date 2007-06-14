@@ -49,7 +49,9 @@ import org.apache.log4j.Logger;
 import org.hibernate.Query;
 import org.hibernate.Session;
 
+import de.fhg.fokus.hss.db.model.IFC;
 import de.fhg.fokus.hss.db.model.SPT;
+import de.fhg.fokus.hss.main.HSSProperties;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -57,11 +59,31 @@ import de.fhg.fokus.hss.db.model.SPT;
  */
 public class SPT_DAO {
 	private static Logger logger = Logger.getLogger(SPT_DAO.class);
+	
+	private static void prepareNotifications(Session session, SPT spt){
+		// get all the IFCs corresponding to the TP of the current SPT
+		List ifcList = IFC_DAO.get_all_by_TP_ID(session, spt.getId_tp());
+		if (ifcList != null){
+			for (int i = 0; i < ifcList.size(); i++){
+				IFC crtIFC = (IFC) ifcList.get(i);
+				// insert notifications for all the corresponding IFC (if necessary)
+				ShNotification_DAO.insert_notif_for_iFC(session, crtIFC);
+			}
+		}
+	}
+	
 	public static void insert(Session session, SPT spt){
+		if (HSSProperties.iFC_NOTIF_ENABLED){
+			prepareNotifications(session, spt);
+		}
 		session.save(spt);
 	}
 	
 	public static void update(Session session, SPT spt){
+		if (HSSProperties.iFC_NOTIF_ENABLED && spt.isDirtyFlag()){
+			prepareNotifications(session, spt);
+			spt.setDirtyFlag(false);
+		}
 		session.saveOrUpdate(spt);
 	}
 	
@@ -96,6 +118,11 @@ public class SPT_DAO {
 	}	
 	
 	public static int delete_by_ID(Session session, int id){
+		if (HSSProperties.iFC_NOTIF_ENABLED){
+			SPT spt = SPT_DAO.get_by_ID(session, id);
+			prepareNotifications(session, spt);
+		}
+		
 		Query query = session.createSQLQuery("delete from spt where id=?");
 		query.setInteger(0, id);
 		return query.executeUpdate();

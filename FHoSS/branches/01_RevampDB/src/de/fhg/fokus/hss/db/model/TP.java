@@ -54,7 +54,9 @@ public class TP implements Serializable {
 	
 	private int id;
 	private String name;
-	private int condition_type_cnf;
+	private int condition_type_cnf = -2;
+	
+	private boolean dirtyFlag = false;
 	
 	public TP(){}
 
@@ -63,6 +65,9 @@ public class TP implements Serializable {
 	}
 
 	public void setCondition_type_cnf(int condition_type_cnf) {
+		if (this.condition_type_cnf != -2 && this.condition_type_cnf != condition_type_cnf){
+			dirtyFlag = true;
+		}
 		this.condition_type_cnf = condition_type_cnf;
 	}
 
@@ -80,6 +85,14 @@ public class TP implements Serializable {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public boolean isDirtyFlag() {
+		return dirtyFlag;
+	}
+
+	public void setDirtyFlag(boolean dirtyFlag) {
+		this.dirtyFlag = dirtyFlag;
 	}
 
 }

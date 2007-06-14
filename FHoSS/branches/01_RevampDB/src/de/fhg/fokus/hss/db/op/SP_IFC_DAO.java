@@ -52,9 +52,9 @@ import org.hibernate.Session;
 
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.db.model.IFC;
-import de.fhg.fokus.hss.db.model.IMPI;
 import de.fhg.fokus.hss.db.model.SP;
 import de.fhg.fokus.hss.db.model.SP_IFC;
+import de.fhg.fokus.hss.main.HSSProperties;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -64,13 +64,17 @@ public class SP_IFC_DAO {
 	private static Logger logger = Logger.getLogger(SP_IFC_DAO.class);
 	
 	public static void insert(Session session, SP_IFC sp_ifc){
+		if (HSSProperties.iFC_NOTIF_ENABLED){
+			IFC ifc = IFC_DAO.get_by_ID(session, sp_ifc.getId_ifc());
+			ShNotification_DAO.insert_notif_for_iFC(session, ifc, sp_ifc.getId_sp());
+		}
 		session.save(sp_ifc);
 	}
 	
-	public static void update(Session session, SP_IFC sp_ifc){
+/*	public static void update(Session session, SP_IFC sp_ifc){
 		session.saveOrUpdate(sp_ifc);
 	}	
-	
+*/	
 	public static SP_IFC get_by_SP_and_IFC_ID(Session session, int id_sp, int id_ifc){
 		Query query;
 		query = session.createSQLQuery("select * from sp_ifc where id_sp=? and id_ifc=?")
@@ -177,6 +181,11 @@ public class SP_IFC_DAO {
 	}	
 	
 	public static int delete_by_SP_and_IFC_ID(Session session, int id_sp, int id_ifc){
+		if (HSSProperties.iFC_NOTIF_ENABLED){
+			IFC ifc = IFC_DAO.get_by_ID(session, id_ifc);
+			ShNotification_DAO.insert_notif_for_iFC(session, ifc, id_sp);
+		}
+		
 		Query query;
 		query = session.createSQLQuery("delete from sp_ifc where id_sp=? and id_ifc=?");
 		query.setInteger(0, id_sp);

@@ -231,8 +231,10 @@ public class MAR {
 						IMSU_DAO.update(session, impi.getId_imsu(), server_name, orig_host);
 						// send Sh Notifications for SCSCF_Name for all of the subscribers
 						ShNotification_DAO.insert_notif_for_SCSCFName(session, impi.getId_imsu(), server_name);									
-
-						IMPU_DAO.update(session, impu.getId(), CxConstants.IMPU_user_state_Auth_Pending);
+						
+						impu.setUser_state(CxConstants.IMPU_user_state_Auth_Pending);
+						IMPU_DAO.update(session, impu);
+						
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
 						

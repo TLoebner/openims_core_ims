@@ -55,10 +55,9 @@ public class SPT implements Serializable{
 	private static final long serialVersionUID=1L;
 	
 	private int id;
-	private int condition_negated;
 	private int grp;
-
 	private int type;
+	private int condition_negated = -2;
 	private String requesturi;
 	private String method;
 	private String header;
@@ -66,10 +65,10 @@ public class SPT implements Serializable{
 	private Integer session_case;
 	private String sdp_line;
 	private String sdp_line_content;
-	
-	private int registration_type;
+	private int registration_type = -2;
 	private int id_tp;
 	
+	private boolean dirtyFlag = false;
 	public SPT(){
 	}
 
@@ -94,6 +93,9 @@ public class SPT implements Serializable{
 	}
 
 	public void setCondition_negated(int condition_negated) {
+		if (this.condition_negated != -2 && this.condition_negated != condition_negated){
+			dirtyFlag = true;
+		}
 		this.condition_negated = condition_negated;
 	}
 
@@ -142,6 +144,9 @@ public class SPT implements Serializable{
 	}
 
 	public void setMethod(String method) {
+		if (this.method != null && !this.method.equals(method)){
+			this.dirtyFlag = true;
+		}
 		this.method = method;
 	}
 
@@ -150,6 +155,9 @@ public class SPT implements Serializable{
 	}
 
 	public void setRegistration_type(int registration_type) {
+		if (this.registration_type != -2 && this.registration_type != registration_type){
+			this.dirtyFlag = true;
+		}
 		this.registration_type = registration_type;
 	}
 
@@ -158,6 +166,9 @@ public class SPT implements Serializable{
 	}
 
 	public void setRequesturi(String requesturi) {
+		if (this.requesturi != null && !this.requesturi.equals(requesturi)){
+			this.dirtyFlag = true;
+		}
 		this.requesturi = requesturi;
 	}
 
@@ -166,6 +177,10 @@ public class SPT implements Serializable{
 	}
 
 	public void setSdp_line(String sdp_line) {
+		if (this.sdp_line != null && !this.sdp_line.equals(sdp_line)){
+			this.dirtyFlag = true;
+		}
+		
 		this.sdp_line = sdp_line;
 	}
 
@@ -174,6 +189,9 @@ public class SPT implements Serializable{
 	}
 
 	public void setSdp_line_content(String sdp_line_content) {
+		if (this.sdp_line_content != null && !this.sdp_line_content.equals(sdp_line_content)){
+			this.dirtyFlag = true;
+		}
 		this.sdp_line_content = sdp_line_content;
 	}
 
@@ -182,6 +200,9 @@ public class SPT implements Serializable{
 	}
 
 	public void setSession_case(Integer session_case) {
+		if (this.session_case != null && !this.session_case.equals(session_case)){
+			this.dirtyFlag = true;
+		}
 		this.session_case = session_case;
 	}
 
@@ -191,6 +212,14 @@ public class SPT implements Serializable{
 
 	public void setType(int type) {
 		this.type = type;
+	}
+
+	public boolean isDirtyFlag() {
+		return dirtyFlag;
+	}
+
+	public void setDirtyFlag(boolean dirtyFlag) {
+		this.dirtyFlag = dirtyFlag;
 	}
 
 }
