@@ -151,9 +151,5 @@ void print_action(struct action* a);
 void print_actions(struct action* a);
 void print_expr(struct expr* exp);
 
-void destroy_avp_spec(avp_spec_t *avpspec);
-void destroy_expr(struct expr* e);
-void destroy_actions(struct action* a);
-
 #endif
 

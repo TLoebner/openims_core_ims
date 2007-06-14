@@ -50,7 +50,6 @@
 #include "mem/mem.h"
 #include "usr_avp.h"
 #include "ut.h" /* ZSW() */
-#include "sr_module.h"
 
 
 struct expr* mk_exp(int op, struct expr* left, struct expr* right)
@@ -371,8 +370,8 @@ void print_action(struct action* t)
 		case FORCE_SEND_SOCKET_T:
 			DBG("force_send_socket");
 			break;
-		case ASSIGN_T:
-			DBG("assign(");
+		case ASSIGN_T
+	:		DBG("assign(");
 			break;
 		case ADD_T:
 			DBG("assign_add(");
@@ -484,129 +483,5 @@ void print_actions(struct action* a)
 	while(a) {
 		print_action(a);
 		a = a->next;
-	}
-}
-
-
-void destroy_avp_spec(avp_spec_t *avpspec)
-{
-	int type;
-	int_str avpname;
-	if (avpspec) return;
-	type = avpspec->type;
-	avpname = avpspec->name;
-	free_avp_name(&type,&avpname);
-	if (avpname.s.s) pkg_free(avpname.s.s);
-	pkg_free(avpspec);
-}		
-
-void destroy_expr(struct expr* e)
-{
-	if (!e) return;
-	if (e->type == ELEM_T) {
-		switch(e->r_type){
-			case STRING_ST:
-			case NET_ST:
-			case IP_ST:
-				if (e->r.param) pkg_free(e->r.param);
-				break;
-			case ACTION_ST:
-			case ACTIONS_ST:
-				destroy_actions((struct action*)e->r.param);
-				pkg_free(e->r.param);
-				break;
-			case AVP_ST:
-				destroy_avp_spec(e->r.attr);
-				break;
-	//        case SELECT_ST:
-	//		        DBG("select");
-	//		        break;
-			}
-	} else if (e->type==EXP_T){
-		switch(e->op){
-			case LOGAND_OP:
-			case LOGOR_OP:
-					destroy_expr(e->l.expr);
-					destroy_expr(e->r.expr);
-					break;
-			case NOT_OP:
-					destroy_expr(e->l.expr);
-					break;
-		}
-	}
-	pkg_free(e);
-}
-
-
-void destroy_actions(struct action* a)
-{
-	int i;
-	struct action *x,*xn;	
-	
-	x = a;
-	while(x){
-		if (x->type == MODULE_T){
-			long int cnt;
-			cnt = x->val[1].u.number;
-			if (cnt>0){
-				if (x->val[2].type!=MODFIXUP_ST){
-						if (x->val[2].u.data) pkg_free(x->val[2].u.data);
-						x->val[2].u.data = 0;
-				}else{
-					LOG(L_CRIT,"destroy_actions(): Found action val type %d for MODULE_T - unhandled!\n",x->val[2].type);
-				}
-				if (cnt>1){
-					if (x->val[3].type!=MODFIXUP_ST){
-							if (x->val[3].u.data) pkg_free(x->val[3].u.data);
-							x->val[3].u.data = 0;
-					}else{
-						LOG(L_CRIT,"destroy_actions(): Found action val type %d for MODULE_T - unhandled!\n",x->val[3].type);
-					}
-				}
-			}
-		}else
-		for(i=0;i<x->count;i++){
-			
-			switch(x->val[i].type){
-				case STRING_ST:
-					if (x->val[i].u.string) {
-						pkg_free(x->val[i].u.string);
-						x->val[i].u.string = 0;
-					}
-					break;
-				case IP_ST:
-				case SOCKID_ST:
-					if (x->val[i].u.data){
-							pkg_free(x->val[i].u.data);
-						x->val[i].u.data = 0;
-					}
-					break;
-				case EXPR_ST:					
-					destroy_expr((struct expr*)x->val[i].u.data);
-					x->val[i].u.data = 0;
-					break;
-				case ACTION_ST:
-				case ACTIONS_ST:
-					if (x->val[i].u.data){
-						destroy_actions((struct action*)x->val[i].u.data);
-						pkg_free(x->val[i].u.data);
-						x->val[i].u.data = 0;
-					}
-					break;
-				case AVP_ST:
-					destroy_avp_spec((avp_spec_t*)x->val[i].u.attr);
-					x->val[i].u.attr = 0;
-					break;
-				case NUMBER_ST:
-				case NOSUBTYPE:
-					//nothing to free
-					break;
-				default:
-					LOG(L_CRIT,"destroy_actions(): Found action val type %d - unhandled!\n",x->val[i].type);
-			}		
-		}
-		xn = x->next;
-		if (x!=a) pkg_free(x);
-		x = xn;
 	}
 }
