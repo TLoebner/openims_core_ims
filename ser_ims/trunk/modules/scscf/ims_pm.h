@@ -55,7 +55,7 @@
  * 
  */
 
-//#define WITH_IMS_PM
+/*#define WITH_IMS_PM*/
 
 #ifdef WITH_IMS_PM
 
@@ -67,51 +67,95 @@
 #define IMS_PM_DEBUG 1
 
 enum _ims_pm_event_types {
-	OP_NOP						= 0,
+	OP_NOP							= 0,
 
-	OP_NodeStart				= 1,
-	OP_NodeStop					= 2,
+	OP_NodeStart					= 1,
+	OP_NodeStop						= 2,
 	
-	UR_AttInitReg				= 3,
-	UR_SuccInitReg				= 4,
-	UR_FailInitReg				= 5,
-	UR_MeanInitRegSetupTime 	= 6,
+	UR_AttInitReg					= 3,
+	UR_SuccInitReg					= 4,
+	UR_FailInitReg					= 5,
+	UR_MeanInitRegSetupTime		 	= 6,
 
-	UR_AttReReg					= 7,
-	UR_SuccReReg				= 8,
-	UR_FailReReg				= 9,
-	UR_MeanReRegSetupTime 		= 10,
+	UR_AttReReg						= 7,
+	UR_SuccReReg					= 8,
+	UR_FailReReg					= 9,
+	UR_MeanReRegSetupTime 			= 10,
 
-	UR_AttDeRegUe				= 11,
-	UR_SuccDeRegUe				= 12,
-	UR_FailDeRegUe				= 13,
-	UR_MeanDeRegUeSetupTime		= 14,
+	UR_AttDeRegUe					= 11,
+	UR_SuccDeRegUe					= 12,
+	UR_FailDeRegUe					= 13,
+	UR_MeanDeRegUeSetupTime			= 14,
 
-	UR_AttDeRegHss				= 15,
-	UR_SuccDeRegHss				= 16,
-	UR_FailDeRegHss				= 17,
-	UR_MeanDeRegHssSetupTime	= 18,
+	UR_AttDeRegHss					= 15,
+	UR_SuccDeRegHss					= 16,
+	UR_FailDeRegHss					= 17,
+	UR_MeanDeRegHssSetupTime		= 18,
 	
-	UR_AttDeRegCscf				= 19,
-	UR_SuccDeRegCscf			= 20,
-	UR_FailDeRegCscf			= 21,
-	UR_MeanDeRegCscfSetupTime 	= 22,
+	UR_AttDeRegCscf					= 19,
+	UR_SuccDeRegCscf				= 20,
+	UR_FailDeRegCscf				= 21,
+	UR_MeanDeRegCscfSetupTime 		= 22,
 	
-	UR_Att3rdPartyReg			= 23,
-	UR_Succ3rdPartyReg			= 24,
-	UR_Fail3rdPartyReg			= 25,
-	UR_Mean3rdPartyRegSetupTime	= 26,
+	UR_Att3rdPartyReg				= 23,
+	UR_Succ3rdPartyReg				= 24,
+	UR_Fail3rdPartyReg				= 25,
+	UR_Mean3rdPartyRegSetupTime		= 26,
 	
-	UR_AttUAR					= 27,
-	UR_SuccUAA					= 28,
-	UR_FailUAA					= 29,
-	UR_MeanUASetupTime			= 30,
+	UR_AttUAR						= 27,
+	UR_SuccUAA						= 28,
+	UR_FailUAA						= 29,
+	UR_MeanUATime					= 30,
 	
-	UR_AttSAR					= 31,
-	UR_SuccSAA					= 32,
-	UR_FailSAA					= 33,
-	UR_MeanSASetupTime			= 34,
+	UR_AttSAR						= 31,
+	UR_SuccSAA						= 32,
+	UR_FailSAA						= 33,
+	UR_MeanSATime					= 34,
+
+	SC_AttSession					= 35,
+	SC_SuccSession					= 36,
+	SC_AnsSession					= 37,
+	SC_FailSession					= 38,
+	SC_NbrSimulAnsSessionMax		= 39,
+	
+	LIQ_AttLIR						= 40,		
+	LIQ_SuccLIA						= 41,		
+	LIQ_FailLIA						= 42,
+	LIQ_MeanLITime					= 43,		
+	
+	IC_AttSessionFromOtherNtwkDmn 	= 44,
+	IC_403SessionFromOtherNtwkDmn 	= 45,
+	IC_AttSessionToOtherNtwkDmn 	= 46,
+	IC_403SessionToOtherNtwkDmn 	= 47,
+	
+	RU_AttInitRegOfVisitUsers		= 48,
+	RU_Nbr403InitRegOfVisitUsers	= 49,
+	RU_RmgUsersOut					= 50,
+	
+	MA_AttMAR						= 51,
+	MA_SuccMAA						= 52,
+	MA_FailMAA						= 53,
+	MA_MeanMATime					= 54,
+	
+	UP_AttPPR						= 55,
+	UP_SuccPPA						= 56,
+	UP_FailPPA						= 57,
+	UP_MeanPPTime					= 58,
+	 
+	OTHER_Att						= 59,
+	OTHER_Succ						= 60,
+	OTHER_Fail						= 61,
+	OTHER_MeanTime					= 62,
 		
+	RD_NbrIMPU						= 63,
+	RD_NbrContact					= 64,
+	RD_NbrSubs						= 65,
+	RD_NbrIPSecSA					= 66,
+	RD_NbrTLSSA						= 67,
+	RD_NbrNATPinHoles				= 68,			
+	RD_NbrDialogs					= 69,
+	RD_NbrAV						= 70,	
+	
 };
 
 

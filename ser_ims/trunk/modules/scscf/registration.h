@@ -96,6 +96,8 @@ enum authorization_types {
 	AUTH_NASS_BUNDLED		= 7
 };
 
+#define AUTH_TYPE_MAX AUTH_NASS_BUNDLED
+
 /** Enumeration for the Authorization Vector status */
 enum auth_vector_status {
 	AUTH_VECTOR_UNUSED = 0,

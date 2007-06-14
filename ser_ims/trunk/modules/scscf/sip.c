@@ -850,6 +850,25 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 	return id.uri;
 }
 
+/**
+ * Looks for the P-Asserted-Identity header and extracts the domain inside the uri
+ * @param msg - the sip message
+ * @returns the domain in the asserted identity
+ */
+str cscf_get_asserted_identity_domain(struct sip_msg *msg)
+{
+	struct sip_uri puri;
+	str uri = cscf_get_asserted_identity(msg);
+	if (!uri.len) return uri;
+	
+	if (parse_uri(uri.s,uri.len,&puri)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_asserted_identity_domain: error parsing uri <%.*s>\n",
+			uri.len,uri.s);
+		uri.len=0;uri.s=0;
+		return uri;			
+	}
+	return puri.host;
+}
 
 /**
  * Looks for the Contact header and extracts its content
@@ -1779,7 +1798,7 @@ str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h)
 	str vnid={0,0};
 	struct hdr_field *hdr;
 	
-	*h=0;
+	if (h) *h=0;
 	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
 		LOG(L_DBG,"DBG:"M_NAME":cscf_get_visited_network_id: Error parsing until header EOH: \n");
 		return vnid;
@@ -1789,7 +1808,7 @@ str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h)
 		if (hdr->name.len==cscf_p_visited_network_id.len &&
 			strncasecmp(hdr->name.s,cscf_p_visited_network_id.s,hdr->name.len)==0)
 		{
-			*h = hdr;
+			if (h) *h = hdr;
 			vnid = hdr->body;
 			goto done;
 		}

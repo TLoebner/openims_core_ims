@@ -61,6 +61,7 @@
 
 #include "sip.h"
 #include "release_call.h"
+#include "ims_pm.h"
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -639,7 +640,7 @@ int P_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 		return CSCF_RETURN_FALSE;
 }
 
-
+str s_OTHER={"<OTHER>",7};
 str s_INVITE={"INVITE",6};
 str s_SUBSCRIBE={"SUBSCRIBE",9};
 /**
@@ -656,6 +657,24 @@ static enum p_dialog_method get_dialog_method(str method)
 	return DLG_METHOD_OTHER;
 }
 
+#ifdef WITH_IMS_PM
+/** 
+ * Returns the Method string give the method enum id
+ * @param method - the enum id
+ * @returns the string method
+ */	
+static str get_dialog_method_str(enum p_dialog_method method)
+{
+	switch(method){
+		case DLG_METHOD_INVITE:
+			return s_INVITE;
+		case DLG_METHOD_SUBSCRIBE:
+			return s_SUBSCRIBE;
+		default:
+			return s_OTHER;
+	}	
+}
+#endif
 
 static fparam_t fp_422 = FParam_INT(422);
 static fparam_t fp_se_small = FParam_STRING("Session Interval Too Small");
@@ -1516,6 +1535,10 @@ int P_record_route(struct sip_msg *msg,char *str1,char *str2)
 	}
 }
 
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
+
 /**
  * The dialog timer looks for expired dialogs and removes them.
  * @param ticks - the current time
@@ -1525,6 +1548,11 @@ void dialog_timer(unsigned int ticks, void* param)
 {
 	p_dialog *d,*dn;
 	int i;
+	#ifdef WITH_IMS_PM
+		int dialog_cnt[DLG_METHOD_MAX+1];
+		for(i=0;i<=DLG_METHOD_MAX;i++)
+			dialog_cnt[i]=0;
+	#endif
 	
 	LOG(L_DBG,"DBG:"M_NAME":dialog_timer: Called at %d\n",ticks);
 	if (!p_dialogs) p_dialogs = (p_dialog_hash_slot*)param;
@@ -1540,10 +1568,17 @@ void dialog_timer(unsigned int ticks, void* param)
 						if (!terminate_p_dialog(d)) 
 							del_p_dialog(d);					
 				}
+				#ifdef WITH_IMS_PM
+					else dialog_cnt[d->method]++;
+				#endif										
 				d = dn;
 			}
 		d_unlock(i);
 	}
 	print_p_dialogs(L_INFO);
+	#ifdef WITH_IMS_PM
+		for(i=0;i<=DLG_METHOD_MAX;i++)
+			IMS_PM_LOG11(RD_NbrDialogs,get_dialog_method_str(i),dialog_cnt[i]);		
+	#endif	
 }
 

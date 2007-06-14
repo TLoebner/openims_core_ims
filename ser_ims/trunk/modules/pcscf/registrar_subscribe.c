@@ -68,6 +68,7 @@
 #include "../tm/tm_load.h"
 #include "../dialog/dlg_mod.h"
 #include "sip.h"
+#include "ims_pm.h"
 
 extern struct tm_binds tmb;   		/**< Structure with pointers to tm funcs 		*/
 extern dlg_func_t dialogb;			/**< Structure with pointers to dialog funcs			*/
@@ -382,6 +383,11 @@ void r_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 	if (s) subs_unlock(s->hash);		
 }
 
+
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
+
 /**
  * The Subscription timer looks for almost expired subscriptions and subscribes again.
  * @param ticks - the current time
@@ -391,6 +397,9 @@ void subscription_timer(unsigned int ticks, void* param)
 {
 	r_subscription *s,*ns;
 	int i;
+	#ifdef WITH_IMS_PM
+		int subs_cnt=0;
+	#endif
 	for(i=0;i<subscriptions_hash_size;i++){
 		subs_lock(i);
 		s = subscriptions[i].head;
@@ -405,6 +414,9 @@ void subscription_timer(unsigned int ticks, void* param)
 					del_r_subscription_nolock(s);
 				}else{
 					s->attempts_left--;
+					#ifdef WITH_IMS_PM
+						subs_cnt++;
+					#endif
 				}
 			}else if (s->attempts_left==0) {
 				/* we failed to many times, drop the subscription */
@@ -415,6 +427,10 @@ void subscription_timer(unsigned int ticks, void* param)
 				/* if expired, drop it */
 				if (s->expires<time_now) 
 					del_r_subscription_nolock(s);
+				#ifdef WITH_IMS_PM
+					else subs_cnt++;
+				#endif
+					
 				/* if not expired, check for renewal */
 //		Commented as the S-CSCF should adjust the subscription time accordingly				
 //				if ((s->duration<1200 && s->expires-time_now<s->duration/2)||
@@ -430,6 +446,9 @@ void subscription_timer(unsigned int ticks, void* param)
 		subs_unlock(i);
 	}
 	print_subs(L_INFO);
+	#ifdef WITH_IMS_PM
+		IMS_PM_LOG01(RD_NbrSubs,subs_cnt);
+	#endif	
 }
 
 

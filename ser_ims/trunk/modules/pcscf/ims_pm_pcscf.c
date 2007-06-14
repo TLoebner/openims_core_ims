@@ -81,8 +81,6 @@ void ims_pm_init_pcscf()
 	register_script_cb(ims_pm_post_script,POST_SCRIPT_CB|REQ_TYPE_CB|RPL_TYPE_CB,0);	
 }
 
-static str s_register={"REGISTER",8};
-
 int ims_pm_get_registration_type(struct sip_msg *msg)
 {
 	if (P_is_registered(msg,0,0)==CSCF_RETURN_TRUE){
@@ -99,7 +97,12 @@ void ims_pm_register_cb(struct cell* t, int type, struct tmcb_params* ps)
 		case 0:
 			if (code>=200 && code<300) 
 				IMS_PM_LOG12(UR_SuccInitReg,cscf_get_call_id(ps->req,0),cscf_get_cseq(ps->req,0),code);
-			else if (code>=300) IMS_PM_LOG12(UR_FailInitReg,cscf_get_call_id(ps->req,0),cscf_get_cseq(ps->req,0),code);
+			else if (code>=300) {
+				IMS_PM_LOG12(UR_FailInitReg,cscf_get_call_id(ps->req,0),cscf_get_cseq(ps->req,0),code);
+				if (code==403) 
+					IMS_PM_LOG22(RU_Nbr403InitRegOfVisitUsers,cscf_get_call_id(ps->req,0),
+							cscf_get_realm_from_ruri(ps->req),cscf_get_cseq(ps->req,0),code);				
+			}
 			break;
 		case 1:
 			if (code>=200 && code<300) IMS_PM_LOG12(UR_SuccReReg,cscf_get_call_id(ps->req,0),cscf_get_cseq(ps->req,0),code);
@@ -112,33 +115,54 @@ void ims_pm_register_cb(struct cell* t, int type, struct tmcb_params* ps)
 	}
 }
 
+static str s_register={"REGISTER",8};
+static str s_invite={"INVITE",6};
+
 int ims_pm_pre_script(struct sip_msg *msg,void *param)
 {
 	int k;
 	str method={0,0};
 	unsigned int x,y;
 	if (msg->first_line.type == SIP_REQUEST){
-		/* REGISTER */
 		method = msg->first_line.u.request.method;
 		if (method.len==s_register.len && strncasecmp(method.s,s_register.s,s_register.len)==0){
-				k = ims_pm_get_registration_type(msg);
-				switch(k){
-					case 0:
-						IMS_PM_LOG11(UR_AttInitReg,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
-						break;
-					case 1:
-						IMS_PM_LOG11(UR_AttReReg,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
-						break;
-					case 2:
-						IMS_PM_LOG11(UR_AttDeRegUe,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
-						break;
-				}
-				cscf_get_transaction(msg,&x,&y);
-				tmb.register_tmcb(msg,0,TMCB_RESPONSE_OUT,ims_pm_register_cb,(void*)k);
-		}		
+			/* REGISTER */
+			k = ims_pm_get_registration_type(msg);
+			switch(k){
+				case 0:
+					IMS_PM_LOG11(UR_AttInitReg,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
+					IMS_PM_LOG21(RU_AttInitRegOfVisitUsers,cscf_get_call_id(msg,0),
+						cscf_get_realm_from_ruri(msg),cscf_get_cseq(msg,0));
+					break;
+				case 1:
+					IMS_PM_LOG11(UR_AttReReg,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
+					break;
+				case 2:
+					IMS_PM_LOG11(UR_AttDeRegUe,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
+					break;
+			}				
+			cscf_get_transaction(msg,&x,&y);
+			tmb.register_tmcb(msg,0,TMCB_RESPONSE_OUT,ims_pm_register_cb,(void*)k);
+		}	
+		else if (method.len==s_invite.len && strncasecmp(method.s,s_invite.s,s_invite.len)==0){
+			/* INVITE */
+			IMS_PM_LOG11(SC_AttSession,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
+		}else{
+			/* Other requests */
+			IMS_PM_LOG21(OTHER_Att,cscf_get_call_id(msg,0),method,cscf_get_cseq(msg,0));
+		}								
 	}else{
-		//unsigned int code = msg->first_line.u.reply.statuscode;
-		method = cscf_get_cseq_method(msg,0);				
+		unsigned int code = msg->first_line.u.reply.statuscode;
+		method = cscf_get_cseq_method(msg,0);
+		if (method.len==s_invite.len && strncasecmp(method.s,s_invite.s,s_invite.len)==0){
+			/* INVITE response */
+			if (code<300) IMS_PM_LOG12(SC_SuccSession,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0),code);
+			else if (code>=300) IMS_PM_LOG12(SC_FailSession,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0),code);			
+		}else{	
+			/* Other responses */
+			if (code>=200 && code<300) IMS_PM_LOG22(OTHER_Succ,cscf_get_call_id(msg,0),method,cscf_get_cseq(msg,0),code);
+			else if (code>=300)	IMS_PM_LOG22(OTHER_Fail,cscf_get_call_id(msg,0),method,cscf_get_cseq(msg,0),code);
+		}	
 	}
 	return 1;
 }

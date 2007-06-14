@@ -63,6 +63,7 @@
 
 #include "sip.h"
 #include "release_call.h"
+#include "ims_pm.h"
 
 extern struct tm_binds tmb;
 
@@ -658,6 +659,7 @@ int S_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 }
 
 
+str s_OTHER={"<OTHER>",7};
 str s_INVITE={"INVITE",6};
 str s_SUBSCRIBE={"SUBSCRIBE",9};
 /**
@@ -673,7 +675,25 @@ static enum s_dialog_method get_dialog_method(str method)
 		strncasecmp(method.s,s_SUBSCRIBE.s,s_SUBSCRIBE.len)==0) return DLG_METHOD_SUBSCRIBE;
 	return DLG_METHOD_OTHER;
 }
-	
+
+#ifdef WITH_IMS_PM
+/** 
+ * Returns the Method string give the method enum id
+ * @param method - the enum id
+ * @returns the string method
+ */	
+static str get_dialog_method_str(enum s_dialog_method method)
+{
+	switch(method){
+		case DLG_METHOD_INVITE:
+			return s_INVITE;
+		case DLG_METHOD_SUBSCRIBE:
+			return s_SUBSCRIBE;
+		default:
+			return s_OTHER;
+	}	
+}	
+#endif
 
 static fparam_t fp_422 = FParam_INT(422);
 static fparam_t fp_se_small = FParam_STRING("Session Interval Too Small");
@@ -1332,6 +1352,10 @@ int S_is_record_routed(struct sip_msg *msg,char *str1,char *str2)
 }
 
 
+#ifdef WITH_IMS_PM
+	static str zero={0,0};
+#endif
+
 
 /**
  * The dialog timer looks for expires dialogs and removes them
@@ -1342,7 +1366,12 @@ void dialog_timer(unsigned int ticks, void* param)
 {
 	s_dialog *d,*dn;
 	int i;
-	
+	#ifdef WITH_IMS_PM
+		int dialog_cnt[DLG_METHOD_MAX+1];
+		for(i=0;i<=DLG_METHOD_MAX;i++)
+			dialog_cnt[i]=0;
+	#endif
+		
 	LOG(L_DBG,"DBG:"M_NAME":dialog_timer: Called at %d\n",ticks);
 	if (!s_dialogs) s_dialogs = (s_dialog_hash_slot*)param;
 
@@ -1355,12 +1384,19 @@ void dialog_timer(unsigned int ticks, void* param)
 				dn = d->next;
 				if (d->expires<=d_time_now) {
 					if (!terminate_s_dialog(d)) del_s_dialog(d);
-				}						
+				}
+				#ifdef WITH_IMS_PM
+					else dialog_cnt[d->method]++;
+				#endif						
 				d = dn;
 			}
 		d_unlock(i);
 	}
 	print_s_dialogs(L_INFO);
+	#ifdef WITH_IMS_PM
+		for(i=0;i<=DLG_METHOD_MAX;i++)
+			IMS_PM_LOG11(RD_NbrDialogs,get_dialog_method_str(i),dialog_cnt[i]);		
+	#endif						
 }
 
 
