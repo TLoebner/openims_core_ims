@@ -201,6 +201,7 @@ int isc_mark_get_from_msg(struct sip_msg *msg,isc_mark *mark)
 			if (!hdr->parsed){
 				if (parse_rr(hdr) < 0) {
 					LOG(L_ERR, "ERROR:"M_NAME":isc_mark_get_from_msg: Error while parsing Route HF\n");
+					hdr = hdr->next;
 					continue;
 				}
 			}
