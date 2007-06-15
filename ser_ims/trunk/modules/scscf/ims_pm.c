@@ -167,6 +167,39 @@ str ims_pm_event_types[] = {
 	{"RD.NbrDialogs",13},
 	{"RD.NbrAV",8},
 	
+	{"DBU.NbrImsSubscription",22},
+	{"DBU.NbrPriUserId",16},
+	{"DBU.NbrSipPubUserId",19},
+	{"DBU.NbrTelPubUserId",19},
+	{"DBU.NbrPriSrvId",15},
+	{"DBU.NbrSipPubSrvId",18},
+	{"DBU.NbrTelPubSrvId",18},
+	
+	{"DBU.NbrRegPubUserId",19},
+	{"DBU.NbrUnregPubUserId",21},
+	{"DBU.NbrRegPriUsrId",18},
+		
+	{"DTR.AttUDR",10},
+	{"DTR.SuccUDA",11},
+	{"DTR.FailUDA",11},
+	{"DTR.FailUDA.NoReply",19},
+	{"DTR.MeanUDTime",14},
+	
+	{"DTR.AttPUR",10},
+	{"DTR.SuccPUA",11},
+	{"DTR.FailPUA",11},
+	{"DTR.MeanPUTime",14},
+	
+	{"SUB.AttSNR",10},
+	{"SUB.SuccSNA",11},
+	{"SUB.FailSNA",11},
+	{"SUB.MeanSNTime",14},
+	
+	{"NOTIF.AttPNR",12},
+	{"NOTIF.SuccPNA",13},
+	{"NOTIF.FailPNA",13},
+	{"NOTIF.MeanSNTime",16},
+			
 			
 	{0,0}
 };

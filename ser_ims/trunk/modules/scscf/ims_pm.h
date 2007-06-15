@@ -155,7 +155,45 @@ enum _ims_pm_event_types {
 	RD_NbrNATPinHoles				= 68,			
 	RD_NbrDialogs					= 69,
 	RD_NbrAV						= 70,	
+
+	DBU_NbrImsSubscription			= 71,
+	DBU_NbrPriUserId				= 72,
+	DBU_NbrSipPubUserId				= 73,
+	DBU_NbrTelPubUserId				= 74,
+	DBU_NbrPriSrvId					= 75,
+	DBU_NbrSipPubSrvId				= 76,
+	DBU_NbrTelPubSrvId				= 77,
 	
+	DBU_NbrRegPubUserId				= 78,
+	DBU_NbrUnregPubUserId			= 79,
+	DBU_NbrRegPriUsrId				= 80,
+		
+	UR_AttRTR						= 81,
+	UR_SuccRTA						= 82,
+	UR_FailRTA						= 83,
+	UR_MeanRTTime					= 84,
+			
+	DTR_AttUDR						= 85,
+	DTR_SuccUDA						= 86,
+	DTR_FailUDA						= 87,
+	DTR_FailUDA_NoReply				= 88,
+	DTR_MeanUDTime					= 89,
+	
+	DTR_AttPUR						= 90,
+	DTR_SuccPUA						= 91,
+	DTR_FailPUA						= 92,
+	DTR_MeanPUTime					= 93,
+	
+	SUB_AttSNR						= 94,
+	SUB_SuccSNA						= 95,
+	SUB_FailSNA						= 96,
+	SUB_MeanSNTime					= 97,
+	
+	NOTIF_AttPNR					= 98,
+	NOTIF_SuccPNA					= 99,
+	NOTIF_FailPNA					=100,
+	NOTIF_MeanSNTime				=101,
+				
 };
 
 
