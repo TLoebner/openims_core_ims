@@ -788,6 +788,7 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 		authorization.s = pkg_malloc(nonce.len*3/4+auts.len*3/4+8);
 		if (!authorization.s) goto done;
 		authorization.len = base64_to_bin(nonce.s,nonce.len,authorization.s);
+		authorization.len = RAND_LEN;
 		authorization.len += base64_to_bin(auts.s,auts.len,authorization.s+authorization.len);		
 		is_sync=1;
 	}
