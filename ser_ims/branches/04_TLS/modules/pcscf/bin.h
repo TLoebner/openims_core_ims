@@ -1,1 +1,0 @@
-../scscf/bin.h
