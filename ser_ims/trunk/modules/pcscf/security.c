@@ -54,14 +54,15 @@
  * The ipsec_P_*.sh scripts are used to control the IPSec and are give as an 
  * example for usage with the linux-2.6 kernel. ipsec_tools is required for this (setkey).
  * 
- * \todo Add TLS support
+ * Added TLS support
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
  
 #include <signal.h> 
- 
+#include <stdlib.h>
+
 #include "security.h"
 
 
@@ -88,6 +89,9 @@ extern r_hash_slot *registrar;			/**< the contacts */
 extern int r_hash_size;					/**< records tables parameters 	*/
 
 int current_spi=5000;		/**< current SPI value */
+extern int pcscf_use_tls;					/**< whether to use or not tls 						*/
+extern int pcscf_tls_port;					/**< PORT for TLS server 						*/
+extern int tls_disable;
 
 /**
  * Returns the next unused SPI.
@@ -167,24 +171,125 @@ static str s_sha_out={"hmac-sha1",9};
 
 extern time_t time_now;
 
+
+static str s_tls={"tls", 3};
+static str s_ipsec={"ipsec-3gpp", 10};
+static str s_q={"q=", 2};
+
+
 /**
- * Saves the IPSec information into the P-CSCF registrar for this contact.
- * @param req - REGISTER request
- * @param rpl - REGISTER respons
- * @param spi_uc - SPI for UE client
- * @param spi_us - SPI for UE server
- * @param spi_pc - SPI for PCSCF client
- * @param spi_ps - SPI for PCSCF server
- * @param port_uc - port for UE client
- * @param port_us - port for UE server
- * @param ealg_setkey - Chypher algorithm
- * @param ck_esp - Cypher Key
- * @param alg_setkey - Integrity algorithm
- * @param ik_esp - Integrity Key
+ * trims the str 
+ * @param s - str param to trim
  */
-void save_contact_ipsec(struct sip_msg *req,struct sip_msg *rpl,
-	int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str ck_esp,str alg_setkey,str ik_esp)
+static int str_trim(str *s)
+{
+	int i;
+	for (i = 0;i < s->len; i++)
+	{
+		if (s->s[i] != '\r' && s->s[i] != '\t' && s->s[i] != ' ')
+		{
+			break;
+		}
+	}
+	s->s = s->s + i;	
+	s->len -= i;
+
+	for (i = s->len;i >=0; i--)
+	{
+		if (s->s[i] == '\r' && s->s[i] == '\t' && s->s[i] == ' ')
+		{
+			s->len--;
+		}
+		else
+		{
+			break;
+		}
+	}
+	return 1;
+}
+
+static r_security_type cscf_get_security_type(str security_header_body)
+{
+	str sec_type_s;
+	int i;
+	
+	sec_type_s.s = security_header_body.s;
+	sec_type_s.len = security_header_body.len;
+	for (i = 0; i< security_header_body.len; i++)
+		if (security_header_body.s[i] == ';') {
+			sec_type_s.len = i;
+			break;
+		}	
+	str_trim(&sec_type_s);
+	if (sec_type_s.len==s_tls.len &&
+		!strncasecmp(sec_type_s.s, s_tls.s , s_tls.len))
+		return SEC_TLS;
+	else if (sec_type_s.len==s_ipsec.len &&
+			!strncasecmp(sec_type_s.s, s_ipsec.s , s_ipsec.len))
+			return SEC_IPSEC;
+	return SEC_NONE;
+}
+
+/**
+ * Looks for the prefered Client-Security header .
+ * @param req - the SIP message
+ * @param q_cli - output q value of the prefered header
+ * @param s_type - output type of the prefered header (TLS/IPSEC)
+ * @returns the security-client body
+ */
+str cscf_get_pref_security_header(struct sip_msg *req, str header_name,r_security_type *type, float *q)
+{
+	str q_sec={0,0},t_sec;
+	r_security_type q_type=SEC_NONE,t_type;
+	float q_q=-1,t_q;
+	struct hdr_field *hdr=0;	
+	str tmp={0,0};
+	char c;	
+
+		
+	/* first find the highest q */
+	for(hdr = cscf_get_next_header(req,header_name,(void*)0);hdr;hdr = cscf_get_next_header(req,header_name,hdr)){
+		t_sec = hdr->body;
+		/* if unknown type, skip */
+		t_type = cscf_get_security_type(t_sec);
+		if (t_type==SEC_NONE ||
+			(!pcscf_use_ipsec&&t_type==SEC_IPSEC)||
+			(!pcscf_use_tls&&t_type==SEC_TLS)) continue;
+		/* check if q is maximum */
+		get_param(t_sec,s_q,tmp);
+		if (tmp.len) {
+			c = tmp.s[tmp.len];
+			tmp.s[tmp.len]=0;			
+			t_q = atof(tmp.s);
+			tmp.s[tmp.len]=c;
+		}	
+		else t_q = -1;
+		if (t_q > q_q || q_sec.len==0)	{			
+			q_sec = t_sec;
+			q_q = t_q;
+			q_type = t_type;
+		}		
+	}
+
+	if (!q_sec.len) {
+		LOG(L_INFO,"DBG:"M_NAME":cscf_get_pref_security_header: No known Security header found.\n");
+		return q_sec;
+	}	
+	
+	if (type) *type = q_type;
+	if (q) *q = q_q;
+	return q_sec;
+}
+
+
+/**
+ * Saves the Security - Client information into the P-CSCF registrar for this contact.
+ * @param req - REGISTER request
+ * @param hdr - Security header
+ * @param type - Security Type
+ * @param q_value - Preference Value
+ */
+r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_security_type type,float q)
 {
 	contact_t* c=0;
 	contact_body_t* b=0;	
@@ -192,49 +297,140 @@ void save_contact_ipsec(struct sip_msg *req,struct sip_msg *rpl,
 	enum Reg_States reg_state=REG_PENDING;
 	int expires,pending_expires=60;
 	struct sip_uri puri;
-	r_ipsec *ipsec;
-
-	
-	if (parse_headers(rpl, HDR_EOH_F, 0) <0) {
-		LOG(L_ERR,"ERR:"M_NAME":save_contact_ipsec: error parsing headers\n");
-		return ;
-	}	
+	r_security *s=0;
 	
 	b = cscf_parse_contacts(req);
 	
 	if (!b||!b->contacts) {
-		LOG(L_ERR,"ERR:"M_NAME":save_contact_ipsec: No contacts found\n");
-		return;
+		LOG(L_ERR,"ERR:"M_NAME":save_contact_security: No contacts found\n");
+		goto error; 
 	}
 	
 	if (b) c = b->contacts;
 			
 	r_act_time();
-	while(c){
-		LOG(L_DBG,"DBG:"M_NAME":save_contact_ipsec: <%.*s>\n",c->uri.len,c->uri.s);
+	/* the Security works for just 1 contact/registration! */
+	if(c){
+		LOG(L_DBG,"DBG:"M_NAME":save_contact_security: <%.*s>\n",c->uri.len,c->uri.s);
 		
 		expires = time_now+pending_expires;
 		
 		if (parse_uri(c->uri.s,c->uri.len,&puri)<0){
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_ipsec: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
-			goto next;			
+			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
+			goto error;			
 		}
 		if (puri.port_no==0) puri.port_no=5060;
-		LOG(L_DBG,"DBG:"M_NAME":save_contact_ipsec: %d %.*s : %d\n",
+		LOG(L_DBG,"DBG:"M_NAME":save_contact_security: %d %.*s : %d\n",
 			puri.proto, puri.host.len,puri.host.s,puri.port_no);
 
-		ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
-			ealg_setkey,ck_esp,alg_setkey,ik_esp);
-			
-		rc = update_r_contact_sec(puri.host,ipsec->port_us,puri.proto,
-			&(c->uri),&reg_state,&expires,
-			ipsec);
+		if (type == SEC_TLS) 
+			puri.proto = PROTO_TLS;
 
-next:		
-		c = c->next;
+		/* create the r_security structure */
+		s = new_r_security(sec_hdr,type,q);
+		if (!s) goto error;	
+
+		switch(type) {
+			case SEC_NONE:
+				break;
+			case SEC_TLS:
+				// r_tls creation happens on 200
+				break;
+			case SEC_IPSEC:
+			{
+				/* then parse the parameters */
+				r_ipsec *ipsec;	
+				str ck,ik,ealg,alg,tmp;
+				str alg_setkey,ealg_setkey;
+				unsigned int spi_uc,spi_us;
+        		unsigned int spi_pc,spi_ps;
+				int port_uc,port_us;
+				char ck_c[64],ik_c[64];
+				str ck_esp={ck_c,0},ik_esp={ik_c,0};
+									
+				get_qparam(auth,s_ck,ck);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: CK: <%.*s>\n",
+					ck.len,ck.s);
+				get_qparam(auth,s_ik,ik);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: IK: <%.*s>\n",
+					ik.len,ik.s);		
+				get_param(sec_hdr,s_ealg,ealg);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Enc Algorithm: <%.*s>\n",
+					ealg.len,ealg.s);
+				get_param(sec_hdr,s_alg,alg);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Int Algorithm: <%.*s>\n",
+					alg.len,alg.s);
+				/* and for spis */
+				get_param(sec_hdr,s_spi_c,tmp);
+				strtoint(tmp,spi_uc);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-C: %d\n",
+					spi_uc);
+				get_param(sec_hdr,s_spi_s,tmp);
+				strtoint(tmp,spi_us);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-S: %d\n",
+					spi_us);
+				/* and for ports */
+				get_param(sec_hdr,s_port_c,tmp);
+				strtoint(tmp,port_uc);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Port-C: %d\n",
+					port_uc);
+				get_param(sec_hdr,s_port_s,tmp);
+				strtoint(tmp,port_us);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Port-S: %d\n",
+					port_us);
+		
+				ck_esp.s[ck_esp.len++]='0';
+				ck_esp.s[ck_esp.len++]='x';	
+				if (ealg.len == s_des_in.len && strncasecmp(ealg.s,s_des_in.s,ealg.len)==0) {
+					memcpy(ck_esp.s+ck_esp.len,ck.s,32);ck_esp.len+=32;
+					memcpy(ck_esp.s+ck_esp.len,ck.s,16);ck_esp.len+=16;
+					ealg_setkey = s_des_out;
+				}
+				else
+				if (ealg.len == s_aes_in.len && strncasecmp(ealg.s,s_aes_in.s,ealg.len)==0) {
+					memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
+					ealg_setkey = s_aes_out;
+				}else {
+					memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
+					ealg_setkey = s_null_out;
+					ealg = s_null_out;
+				}
+			
+				ik_esp.s[ik_esp.len++]='0';
+				ik_esp.s[ik_esp.len++]='x';		
+				if (alg.len == s_md5_in.len && strncasecmp(alg.s,s_md5_in.s,alg.len)==0) {
+					memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
+					alg_setkey = s_md5_out;
+				}
+				else
+				if (alg.len == s_sha_in.len && strncasecmp(alg.s,s_sha_in.s,alg.len)==0) {		
+					memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
+					memcpy(ik_esp.s+ik_esp.len,"00000000",8);ik_esp.len+=8;
+					alg_setkey = s_sha_out;
+				}else{
+					LOG(L_ERR,"ERR:"M_NAME":save_contact_security: Unknown Integrity algorithm <%.*s>\n",alg.len,alg.s);
+					goto error;
+				}
+				
+				spi_pc=get_next_spi();	
+				spi_ps=get_next_spi();	
+
+				ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
+					ealg_setkey,ck_esp,alg_setkey,ik_esp);
+				if (!ipsec) goto error;
+				s->data.ipsec = ipsec;
+			}
+				break;
+		}
 	}
 	
-	//print_r(L_CRIT);
+	rc = update_r_contact_sec(puri.host,puri.port_no,puri.proto,
+			&(c->uri),&reg_state,&expires,s);						
+
+	return rc;	
+error:
+	if (s) free_r_security(s);
+	return 0;	
 }
 
 /**
@@ -267,185 +463,235 @@ inline int execute_cmd(char *cmd)
 }
 
 
+///**
+// * Process the REGISTER and verify Client-Security.
+// * @param req - Register request
+// * @param str1 - not used
+// * @param str2 - not used
+// * @returns 1 if ok, 0 if not
+// */
+//int P_verify_security(struct sip_msg *req,char *str1, char *str2)
+//{
+//	str sec_cli;
+//	struct hdr_field *h;
+//	struct via_body *vb;
+//	r_contact *c;
+//	r_sec_cli *sc;
+//	int q_cli, sec_type;
+//
+//	
+//	vb = cscf_get_first_via(req,&h);
+//
+//	LOG(L_DBG,"DBG:"M_NAME":P_Verify_Security: Looking for <%d://%.*s:%d> \n",	vb->proto,vb->host.len,vb->host.s,vb->port);
+//
+//	c = get_r_contact(vb->host,vb->port,vb->proto);
+//
+//	r_act_time();
+//	if (!c){
+//		//first register
+//		return CSCF_RETURN_TRUE;
+//	}
+//
+//	if (!r_valid_contact(c) || !c->sec_cli){
+//		r_unlock(c->hash);
+//		return CSCF_RETURN_TRUE;
+//	}
+//
+//	sec_cli = cscf_get_pref_client_sec_verify(req, &q_cli, &sec_type);
+//	if (!sec_cli.len)
+//	{	
+//		LOG(L_ERR,"ERR:"M_NAME":P_Verify_Security: No Security-Verify header found.\n");
+//		c->is_registered = 1;
+//		r_unlock(c->hash);
+//		goto error;
+//	}
+//	
+//	sc = c->sec_cli;
+//	
+//	if (sc->sec.len != sec_cli.len || strncasecmp(sc->sec.s, sec_cli.s, sc->sec.len))
+//	{
+//		LOG(L_ERR,"ERR:"M_NAME":P_Verify_Security: Security-Client test failed <%.*s> != <%.*s>\n", sc->sec.len, sc->sec.s, sec_cli.len, sec_cli.s);
+//		c->is_registered = 1; //register process is in the start 
+//		r_unlock(c->hash);
+//		goto error;
+//	}
+//	
+//	r_unlock(c->hash);
+//	if (sec_type == SEC_TLS)
+//	{
+//		if (req->rcv.dst_port != pcscf_tls_port)
+//			goto error;
+//	}
+//	else
+//	
+//	if (sec_type == SEC_IPSEC)
+//		if (req->rcv.dst_port != pcscf_ipsec_port_s)
+//			goto error;
+//	return CSCF_RETURN_TRUE;
+//error:	
+//	return CSCF_RETURN_FALSE;
+//}
+//
+///**
+// * Test if is the first REGISTER for that contact 
+// * @param req - Register request
+// * @param str1 - not used
+// * @param str2 - not used
+// * @returns 1 if first REGISTER, 0 if not
+// */
+//int P_is_register_pending(struct sip_msg *req,char *str1, char *str2)
+//{
+//	struct via_body *vb;
+//	r_contact *c;
+//	struct hdr_field *h;	
+//
+//	if (tls_disable) 
+//		return CSCF_RETURN_TRUE; //do nothing
+//
+//	vb = cscf_get_first_via(req,&h);
+//	c = get_r_contact(vb->host,vb->port,vb->proto);
+//
+//	r_act_time();
+//	if (!c){
+//		LOG(L_DBG,"DBG:"M_NAME":P_Is_First_Register: No contact found -> true.\n");
+//		return CSCF_RETURN_TRUE;
+//	}
+//	if (c->reg_state==)
+//	{
+//		LOG(L_DBG,"DBG:"M_NAME":P_Is_First_Register: is registerd -> true.\n");
+//		c->is_registered = 0;
+//		r_unlock(c->hash);	
+//		return CSCF_RETURN_TRUE;	
+//	}
+//	LOG(L_DBG,"DBG:"M_NAME":P_Is_First_Register: not first register -> false.\n");
+//	r_unlock(c->hash);
+//	return CSCF_RETURN_FALSE;
+//}
+
+str s_security_client={"Security-Client",15};
+str s_security_verify={"Security-Verify",15};
+
+str s_security_server_s={"Security-Server: ",17};
+str s_security_server_e={"\r\n",2};
+
 /**
  * Process the 401 response for REGISTER and creates the first Security-Associations.
- * Only the SA for P_Inc_Req - Incoming Requests is set now as the next REGISTER
+ * IPSEc: Only the SA for P_Inc_Req - Incoming Requests is set now as the next REGISTER
  * could come over that one. 
  * @param rpl - the 401 response
  * @param str1 - not used
  * @param str2 - not used
  * @returns 1 if ok, 0 if not
  */
-int P_IPSec_401(struct sip_msg *rpl,char *str1, char *str2)
+int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 {
 	struct sip_msg *req;
-	str auth;
 	struct hdr_field *hdr;	
-	str sec_cli,sec_srv={0,0};
-	str ck,ik;
-	char ck_c[64],ik_c[64];
-	str ck_esp={ck_c,0},ik_esp={ik_c,0};
+	str sec_hdr,sec_srv={0,0};
+	r_security_type sec_type;
 	str alg,ealg;
-	str alg_setkey,ealg_setkey;
-	str tmp;
-	unsigned int spi_uc,spi_us;
-	unsigned int spi_pc,spi_ps;
-	int port_uc,port_us;
 	char cmd[256];
-	str ue;
-	
+	r_contact *c;
+	r_ipsec *ipsec;
+	float sec_q=-1;
+	str auth;
 
-	contact_body_t *contact;
-	struct sip_uri uri;
+	if (!pcscf_use_ipsec &&!pcscf_use_tls) goto	ret_false;
 	
 	req = cscf_get_request_from_reply(rpl);
 	if (!req){
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: No transactional request found.\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_security_401: No transactional request found.\n");
 		goto error;
 	}
 	auth = cscf_get_authenticate(rpl,&hdr);
 	if (!auth.len){
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: No authorization header found.\n");
-		goto error; 
-	}
-	sec_cli = cscf_get_security_client(req,&hdr);
-	if (!sec_cli.len){
-		LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: No Security-Client header found.\n");
-		goto error; 
+		LOG(L_ERR,"ERR:"M_NAME":P_security_401: No WWW-Authenticate header found.\n");
+		goto ret_false; 
 	}
 	
-	/* first we look for CK, IK */
-	get_qparam(auth,s_ck,ck);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: CK: <%.*s>\n",
-		ck.len,ck.s);
-	get_qparam(auth,s_ik,ik);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: IK: <%.*s>\n",
-		ik.len,ik.s);
-	
-	/* then for algorithms */
-	get_param(sec_cli,s_ealg,ealg);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: Enc Algorithm: <%.*s>\n",
-		ealg.len,ealg.s);
-	get_param(sec_cli,s_alg,alg);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: Int Algorithm: <%.*s>\n",
-		alg.len,alg.s);
-	/* and for spis */
-	get_param(sec_cli,s_spi_c,tmp);
-	strtoint(tmp,spi_uc);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: SPI-C: %d\n",
-		spi_uc);
-	get_param(sec_cli,s_spi_s,tmp);
-	strtoint(tmp,spi_us);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: SPI-S: %d\n",
-		spi_us);
-	/* and for ports */
-	get_param(sec_cli,s_port_c,tmp);
-	strtoint(tmp,port_uc);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: Port-C: %d\n",
-		port_uc);
-	get_param(sec_cli,s_port_s,tmp);
-	strtoint(tmp,port_us);
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: Port-S: %d\n",
-		port_us);
-	
-	
-	contact = cscf_parse_contacts(req);
-	if (!contact) {		
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: Message contains no Contact!\n");
-		goto error;
+	sec_hdr = cscf_get_pref_security_header(req,s_security_client, &sec_type,&sec_q);
+	if (!sec_hdr.len) {	
+		LOG(L_DBG,"DBG:"M_NAME":P_security_401: No Security-Client header found.\n");
+		goto ret_false;
 	}
-	if (contact->contacts){
-		ue = contact->contacts->uri;
-		if (parse_uri(ue.s,ue.len,&uri)){
-			LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: Error parsing uri <%.*s>\n",ue.len,ue.s);
-			goto error;
-		}
-		ue = uri.host;
-		if (uri.port_no==0) port_uc=5060;
-	}else
-		ue = req->via1->host;
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_401: UE IP: <%.*s> \n",ue.len,ue.s);
-	
-	spi_pc=get_next_spi();	
-	spi_ps=get_next_spi();	
+	LOG(L_INFO,"DBG:"M_NAME":P_security_401: Security-Client header found : <%.*s>.\n", sec_hdr.len, sec_hdr.s);	
 
-	ck_esp.s[ck_esp.len++]='0';
-	ck_esp.s[ck_esp.len++]='x';	
-	if (ealg.len == s_des_in.len && strncasecmp(ealg.s,s_des_in.s,ealg.len)==0) {
-		memcpy(ck_esp.s+ck_esp.len,ck.s,32);ck_esp.len+=32;
-		memcpy(ck_esp.s+ck_esp.len,ck.s,16);ck_esp.len+=16;
-		ealg_setkey = s_des_out;
-	}
-	else
-	if (ealg.len == s_aes_in.len && strncasecmp(ealg.s,s_aes_in.s,ealg.len)==0) {
-		memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
-		ealg_setkey = s_aes_out;
-	}else {
-		memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
-		ealg_setkey = s_null_out;
-		ealg = s_null_out;
-	}
 
-	ik_esp.s[ik_esp.len++]='0';
-	ik_esp.s[ik_esp.len++]='x';		
-	if (alg.len == s_md5_in.len && strncasecmp(alg.s,s_md5_in.s,alg.len)==0) {
-		memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
-		alg_setkey = s_md5_out;
-	}
-	else
-	if (alg.len == s_sha_in.len && strncasecmp(alg.s,s_sha_in.s,alg.len)==0) {		
-		memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
-		memcpy(ik_esp.s+ik_esp.len,"00000000",8);ik_esp.len+=8;
-		alg_setkey = s_sha_out;
-	}else{
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: Unknown Integrity algorithm <%.*s>\n",alg.len,alg.s);
-		goto error;
-	}
-
-	/* try to add the Security-Server header */
-	sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; q=0.1\r\n",
-		ealg.len,ealg.s,
-		alg.len,alg.s,
-		spi_pc,spi_ps,
-		pcscf_ipsec_port_c,pcscf_ipsec_port_s);
-		
-	sec_srv.len = strlen(cmd);
-	sec_srv.s = pkg_malloc(sec_srv.len);
-	if (!sec_srv.s){
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: Error allocating %d pkg bytes \n",sec_srv.len);
-		goto error;
-	}
-	memcpy(sec_srv.s,cmd,sec_srv.len);
-	if (!cscf_add_header(rpl,&sec_srv,HDR_OTHER_T)) {
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_401: Error adding header <%.*s> \n",sec_srv.len,sec_srv.s);
-		pkg_free(sec_srv.s);
-		goto error;
-	}
-
-	/* run the IPSec script */	
-	/* P_Inc_Req */
-	sprintf(cmd,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
-		pcscf_ipsec_P_Inc_Req,
-		ue.len,ue.s,
-		port_uc,
-		pcscf_ipsec_host,
-		pcscf_ipsec_port_s,
-		spi_ps,
-		ealg_setkey.len,ealg_setkey.s,
-		ck_esp.len,ck_esp.s,
-		alg_setkey.len,alg_setkey.s,
-		ik_esp.len,ik_esp.s);
-	execute_cmd(cmd);
-			
 	/* save data into registrar */
-	save_contact_ipsec(req,rpl,
-		spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
-		ealg_setkey,ck_esp,alg_setkey,ik_esp);
+	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q);	
+	if (!c) goto error;
+	switch(sec_type){
+		case SEC_NONE:
+			break;
+		case SEC_TLS:			
+			/* try to add the Security-Server header */		
+			sec_srv.len = s_security_server_s.len+sec_hdr.len+s_security_server_e.len;
+			sec_srv.s = pkg_malloc(sec_srv.len);
+			if (!sec_srv.s){
+				LOG(L_ERR,"ERR:"M_NAME":P_security_401: Error allocating %d pkg bytes \n",sec_srv.len);
+				goto error;
+			}
+			sec_srv.len=0;
+			STR_APPEND(sec_srv,s_security_server_s);
+			STR_APPEND(sec_srv,sec_hdr);
+			STR_APPEND(sec_srv,s_security_server_e);
+
+			if (!cscf_add_header(rpl,&sec_srv,HDR_OTHER_T)) {
+				LOG(L_ERR,"ERR:"M_NAME":P_security_401: Error adding header <%.*s> \n",sec_srv.len,sec_srv.s);
+				pkg_free(sec_srv.s);
+				goto error;
+			}
+			break;
+		case SEC_IPSEC:
+			ipsec = c->security_temp->data.ipsec;
+			/* try to add the Security-Server header */
+			get_param(sec_hdr,s_ealg,ealg);
+			get_param(sec_hdr,s_alg,alg);
+			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; q=0.1\r\n",
+				ealg.len,ealg.s,
+				alg.len,alg.s,
+				ipsec->spi_pc,ipsec->spi_ps,
+				pcscf_ipsec_port_c,pcscf_ipsec_port_s);
+			
+			sec_srv.len = strlen(cmd);
+			sec_srv.s = pkg_malloc(sec_srv.len);
+			if (!sec_srv.s){
+				LOG(L_ERR,"ERR:"M_NAME":P_security_401: Error allocating %d pkg bytes \n",sec_srv.len);
+				goto error;
+			}
+			memcpy(sec_srv.s,cmd,sec_srv.len);
+			if (!cscf_add_header(rpl,&sec_srv,HDR_OTHER_T)) {
+				LOG(L_ERR,"ERR:"M_NAME":P_security_401: Error adding header <%.*s> \n",sec_srv.len,sec_srv.s);
+				pkg_free(sec_srv.s);
+				goto error;
+			}
 	
+			/* run the IPSec script */	
+			/* P_Inc_Req */
+			sprintf(cmd,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+				pcscf_ipsec_P_Inc_Req,
+				c->host.len,c->host.s,
+				ipsec->port_uc,
+				pcscf_ipsec_host,
+				pcscf_ipsec_port_s,
+				ipsec->spi_ps,
+				ipsec->ealg.len,ipsec->ealg.s,
+				ipsec->ck.len,ipsec->ck.s,
+				ipsec->alg.len,ipsec->alg.s,
+				ipsec->ik.len,ipsec->ik.s);
+
+			r_unlock(c->hash);
+				
+			execute_cmd(cmd);
+			break;						
+	}		
 	
-	return 1;	
+
+	return CSCF_RETURN_TRUE;
+ret_false:
+	return CSCF_RETURN_FALSE;
 error:
-	return 0;	
+	return CSCF_RETURN_ERROR;
 }
 
 
@@ -458,116 +704,154 @@ error:
  * @param str2 - not used
  * @returns 1 if ok, 0 if not
  */
-int P_IPSec_200(struct sip_msg *rpl,char *str1, char *str2)
+int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 {
 	struct sip_msg *req;
-	struct hdr_field *hdr;	
-	str sec_cli;
+	str sec_hdr;
+	r_security_type sec_type;
+	float sec_q;
 	struct hdr_field *h;
 	struct via_body *vb;
 	r_contact *c;
 	r_ipsec *i;
 	int expires;
+	
 	char out_rpl[256],out_req[256],inc_rpl[256];
+
+	if (!pcscf_use_ipsec &&!pcscf_use_tls) goto	ret_false;
 
 	req = cscf_get_request_from_reply(rpl);
 	if (!req){
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_200: No transactional request found.\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_security_200: No transactional request found.\n");
 		goto error;
 	}	
-	/* just to jump out if no IPSec is employed - the info is already saved */
-	sec_cli = cscf_get_security_client(req,&hdr);
-	if (!sec_cli.len){
-		LOG(L_DBG,"DBG:"M_NAME":P_ipsec_200: No Security-Client header found.\n");
-		goto error; 
-	}
 
+	sec_hdr = cscf_get_pref_security_header(req,s_security_client, &sec_type,&sec_q);	
+	if (!sec_hdr.len) {	
+		LOG(L_DBG,"DBG:"M_NAME":P_security_200: No Security-Verify header found.\n");
+		goto error;
+	}
+	
 	/* find the expires (reg or dereg?) */
 	expires = cscf_get_max_expires(req);
 	
 	/* get the IPSec info from the registrar */
 	
-	vb = cscf_get_first_via(req,&h);
-//	if (!h||!h->parsed){
-//		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_200: Error extracting sender's id.\n");
-//		goto error;
-//	}		
-//	vb = (struct via_body*) h->parsed;
-	
-	LOG(L_DBG,"DBG:"M_NAME":P_ipsec_200: Looking for <%d://%.*s:%d> \n",
+	vb = cscf_get_first_via(req,&h);	
+	LOG(L_DBG,"DBG:"M_NAME":P_security_200: Looking for <%d://%.*s:%d> \n",
 		vb->proto,vb->host.len,vb->host.s,vb->port);
 
 	c = get_r_contact(vb->host,vb->port,vb->proto);
 		
 	r_act_time();
 	if (!c){
-		LOG(L_ERR,"ERR:"M_NAME":P_ipsec_200: Contact not found\n");		
-		goto error;
-	}
-	if (!r_valid_contact(c)||!c->ipsec){
-		LOG(L_DBG,"DBG:"M_NAME":P_ipsec_200: Contact expired or no IPSec info\n");
-		r_unlock(c->hash);
+		LOG(L_ERR,"ERR:"M_NAME":P_security_200: Contact not found\n");		
 		goto error;
 	}
 	
-	i = c->ipsec;
-		
-	/* P_Out_Rpl */
-	sprintf(out_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
-		pcscf_ipsec_P_Out_Rpl,
-		c->host.len,c->host.s,
-		i->port_uc,
-		pcscf_ipsec_host,
-		pcscf_ipsec_port_s,
-		i->spi_uc,
-		i->ealg.len,i->ealg.s,
-		i->ck.len,i->ck.s,
-		i->alg.len,i->alg.s,
-		i->ik.len,i->ik.s	);					
-
-	/* P_Out_Req */
-	sprintf(out_req,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
-		pcscf_ipsec_P_Out_Req,
-		c->host.len,c->host.s,
-		i->port_us,
-		pcscf_ipsec_host,
-		pcscf_ipsec_port_c,
-		i->spi_us,
-		i->ealg.len,i->ealg.s,
-		i->ck.len,i->ck.s,
-		i->alg.len,i->alg.s,
-		i->ik.len,i->ik.s	);								
-	/* P_Out_Inc_Rpl */
-	sprintf(inc_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
-		pcscf_ipsec_P_Inc_Rpl,
-		c->host.len,c->host.s,
-		i->port_us,
-		pcscf_ipsec_host,
-		pcscf_ipsec_port_c,
-		i->spi_pc,
-		i->ealg.len,i->ealg.s,
-		i->ck.len,i->ck.s,
-		i->alg.len,i->alg.s,
-		i->ik.len,i->ik.s	);								
-		
-	if (expires<=0) {
-		/* Deregister */
-		c->reg_state = DEREGISTERED;
-		r_act_time();
-		c->expires = time_now + 60;
-	}			
-	r_unlock(c->hash);
-
-	//print_r(L_CRIT);
+	if (c->security_temp){
+		if (c->security && c->security->type == SEC_TLS && (c->security->data.tls && (c->security->data.tls->port_tls==req->rcv.src_port)))
+		{
+			/* don't replace security when doing an integrity protected REGISTER with
+			 *  possible attack-garbage from security_temp */
+			P_security_drop(c,c->security_temp);
+			free_r_security(c->security_temp);
+			c->security_temp = 0;
+		}
+		else
+		{	
+			if (c->security) {
+				P_security_drop(c,c->security);
+				free_r_security(c->security);
+			}
+			
+			c->security = c->security_temp;
+			c->security_temp = 0;
+		}
+	}	
 	
-	/* run the IPSec scripts */	
-	/* Registration */
-	execute_cmd(out_rpl);		
-	execute_cmd(out_req);		
-	execute_cmd(inc_rpl);
-	return 1;	
+	switch(sec_type){
+		case SEC_NONE:
+			break;
+		case SEC_TLS:
+			if (c->security) {
+				r_tls *tls;
+				int port_tls = req->rcv.src_port;
+				tls = new_r_tls(port_tls);
+				if (!tls) goto error;
+				c->security->data.tls = tls;
+			} 		
+			r_unlock(c->hash);
+			break;
+		case SEC_IPSEC:
+			if (!r_valid_contact(c)||!c->security||!c->security->data.ipsec ){
+				LOG(L_DBG,"DBG:"M_NAME":P_security_200: Contact expired or no IPSec info\n");
+				r_unlock(c->hash);
+				goto error;
+			}
+			i = c->security->data.ipsec;
+			
+			/* P_Out_Rpl */
+			sprintf(out_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+				pcscf_ipsec_P_Out_Rpl,
+				c->host.len,c->host.s,
+				i->port_uc,
+				pcscf_ipsec_host,
+				pcscf_ipsec_port_s,
+				i->spi_uc,
+				i->ealg.len,i->ealg.s,
+				i->ck.len,i->ck.s,
+				i->alg.len,i->alg.s,
+				i->ik.len,i->ik.s	);					
+	
+			/* P_Out_Req */
+			sprintf(out_req,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+				pcscf_ipsec_P_Out_Req,
+				c->host.len,c->host.s,
+				i->port_us,
+				pcscf_ipsec_host,
+				pcscf_ipsec_port_c,
+				i->spi_us,
+				i->ealg.len,i->ealg.s,
+				i->ck.len,i->ck.s,
+				i->alg.len,i->alg.s,
+				i->ik.len,i->ik.s	);								
+			/* P_Out_Inc_Rpl */
+			sprintf(inc_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+				pcscf_ipsec_P_Inc_Rpl,
+				c->host.len,c->host.s,
+				i->port_us,
+				pcscf_ipsec_host,
+				pcscf_ipsec_port_c,
+				i->spi_pc,
+				i->ealg.len,i->ealg.s,
+				i->ck.len,i->ck.s,
+				i->alg.len,i->alg.s,
+				i->ik.len,i->ik.s	);								
+				
+			if (expires<=0) {
+				/* Deregister */
+				c->reg_state = DEREGISTERED;
+				r_act_time();
+				c->expires = time_now + 60;
+			}			
+			r_unlock(c->hash);
+		
+			//print_r(L_CRIT);
+			
+			/* run the IPSec scripts */	
+			/* Registration */
+			execute_cmd(out_rpl);		
+			execute_cmd(out_req);		
+			execute_cmd(inc_rpl);
+			break;
+	}
+	
+	return CSCF_RETURN_TRUE;
+ret_false:
+	return CSCF_RETURN_FALSE;
 error:
-	return 0;	
+	return CSCF_RETURN_ERROR;
 }
 
 
@@ -578,13 +862,21 @@ error:
  * De-REGISTER and other messages to still reach the client and responses to be relayed 
  * to the network.
  */
-void P_drop_ipsec(r_contact *c)
+void P_security_drop(r_contact *c,r_security *s)
 {
 	char drop[256];
-	if (!c) return;
-	r_ipsec *i = c->ipsec;
-	if (!i) return;
-	sprintf(drop,"%s %.*s %d %d %s %d %d %d %d %d %d",
+	r_ipsec *i;
+	if (!s||!c) return;
+	switch (s->type){
+		case SEC_NONE:
+			break;
+		case SEC_TLS:
+			//TODO!!!
+			break;
+		case SEC_IPSEC:
+			i = s->data.ipsec;
+			if (!i) return;
+			sprintf(drop,"%s %.*s %d %d %s %d %d %d %d %d %d",
 				pcscf_ipsec_P_Drop,
 				c->host.len,c->host.s,
 				i->port_uc,
@@ -596,7 +888,9 @@ void P_drop_ipsec(r_contact *c)
 				i->spi_us,
 				i->spi_pc,
 				i->spi_ps);		
-	execute_cmd(drop);
+			execute_cmd(drop);
+			break;
+	}
 }
 
 
@@ -911,4 +1205,66 @@ next:
 	return changed?CSCF_RETURN_TRUE:CSCF_RETURN_FALSE;
 error:
 	return CSCF_RETURN_ERROR;
+}
+
+
+/**
+ * Look for Security-Client and delete it if found.
+ * @param msg - the SIP message to add to
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not found or #CSCF_RETURN_FALSE on error
+ */
+int P_remove_security_client(struct sip_msg *msg,char *str1,char*str2)
+{
+	struct hdr_field *hdr=0;	
+
+	for(hdr=cscf_get_next_header(msg,s_security_client,0);hdr;hdr=cscf_get_next_header(msg,s_security_client,hdr)){
+		if (!cscf_del_header(msg,hdr)){
+			LOG(L_INFO,"INF:"M_NAME":P_drop_security_client: Error dropping Security-Client header.\n");		
+			return CSCF_RETURN_ERROR; 
+		}		
+	}
+	return CSCF_RETURN_TRUE;
+}
+
+/**
+ * Look for Security-Verify and delete it if found.
+ * @param msg - the SIP message to add to
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not found or #CSCF_RETURN_FALSE on error
+ */
+int P_remove_security_verify(struct sip_msg *msg,char *str1,char*str2)
+{
+	struct hdr_field *hdr=0;	
+
+	for(hdr=cscf_get_next_header(msg,s_security_verify,0);hdr;hdr=cscf_get_next_header(msg,s_security_verify,hdr)){		
+		if (!cscf_del_header(msg,hdr)){
+			LOG(L_INFO,"INF:"M_NAME":P_remove_security_verify: Error dropping Security-Client header.\n");		
+			return CSCF_RETURN_ERROR; 
+		}
+	}
+	return CSCF_RETURN_TRUE;
+}
+
+/**
+ * Removes the Security-Client,Security-Verify headers.
+ * @param msg - the SIP message to remove from
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not found or #CSCF_RETURN_FALSE on error
+ */
+int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2)
+{
+	int r1,r2; r1 = r2 = CSCF_RETURN_FALSE;
+
+	r1=P_remove_security_client(msg,str1,str2);
+	if (r1==CSCF_RETURN_ERROR) return r1;
+	
+	r2=P_remove_security_verify(msg,str1,str2);
+	if (r2==CSCF_RETURN_ERROR) return r2;
+
+	if (r1==CSCF_RETURN_TRUE&&r2==CSCF_RETURN_TRUE) return CSCF_RETURN_TRUE;
+	else return CSCF_RETURN_FALSE;
 }

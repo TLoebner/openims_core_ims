@@ -307,6 +307,170 @@ error:
 
 
 /**
+ * Encode an tls into a binary form
+ * @param x - binary data to append to
+ * @param tls - the r_tls to encode
+ * @returns 1 on succcess or 0 on error
+ */
+int bin_encode_tls(bin_data *x,r_tls *tls)
+{
+	if (!tls){
+		if (!bin_encode_char(x,0)) goto error;
+		return 1;
+	}
+	
+	if (!bin_encode_char(x,1)) goto error;
+
+	if (!bin_encode_ushort(x,tls->port_tls)) goto error;
+	
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_tls: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode a tls from a binary data structure
+ * @param x - binary data to decode from
+ * @param tls - ** to write into
+ * @returns 1 on success or 0 on failure
+ */
+int bin_decode_tls(bin_data *x,r_tls **tls)
+{
+	int len;
+	char c;
+
+	if (!bin_decode_char(x,	&c)) goto error;
+	
+	if (c==0) {
+		*tls = 0;
+		return 1;
+	}
+	
+	len = sizeof(r_tls);
+	*tls = (r_tls*) shm_malloc(len);
+	if (!*tls) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_tls: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(*tls,0,len);
+
+	if (!bin_decode_ushort(x,	&(*tls)->port_tls)) goto error;
+		
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_tls: Error while decoding (at %d (%04x)).\n",x->max,x->max);
+	if (*tls) {
+		shm_free(*tls);
+		*tls = 0;
+	}
+	return 0;
+}
+
+
+
+
+/**
+ * Encode an security into a binary form
+ * @param x - binary data to append to
+ * @param s - the r_security to encode
+ * @returns 1 s succcess or 0 on error
+ */
+int bin_encode_r_security(bin_data *x,r_security *s)
+{
+	if (!s){
+		if (!bin_encode_char(x,0)) goto error;
+		return 1;
+	}
+	
+	if (!bin_encode_char(x,1)) goto error;
+
+	if (!bin_encode_str(x,&(s->sec_header))) goto error;	
+	if (!bin_encode_int(x,s->type)) goto error;
+	switch (s->type){		
+		case SEC_NONE:
+			break;
+		case SEC_TLS:
+			if (!bin_encode_tls(x,s->data.tls)) goto error;
+			break;
+		case SEC_IPSEC:
+			if (!bin_encode_ipsec(x,s->data.ipsec)) goto error;
+			break;		
+	}	
+	if (!bin_encode_int(x,s->q*1000)) goto error; /* yeah yeah.... */
+	
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_security: Error while encoding.\n");
+	return 0;		
+}
+
+/**
+ *	Decode a security from a binary data structure
+ * @param x - binary data to decode from
+ * @param sec - ** to write into
+ * @returns 1 on success or 0 on failure
+ */
+int bin_decode_r_security(bin_data *x,r_security **sec)
+{
+	int len;
+	str s;
+	char c;
+	int y;
+
+	if (!bin_decode_char(x,	&c)) goto error;
+	
+	if (c==0) {
+		*sec = 0;
+		return 1;
+	}
+	
+	len = sizeof(r_security);
+	*sec = (r_security*) shm_malloc(len);
+	if (!*sec) {
+		LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_security: Error allocating %d bytes.\n",len);
+		goto error;
+	}
+	memset(*sec,0,len);
+
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*sec)->sec_header),&s)) goto error;
+	if (!bin_decode_int(x,&y)) goto error;
+	(*sec)->type = y;
+	switch ((*sec)->type){
+		case SEC_NONE:
+			break;		
+		case SEC_TLS:
+			if (!bin_decode_tls(x,&((*sec)->data.tls))) goto error;		
+			break;
+		case SEC_IPSEC:
+			if (!bin_decode_ipsec(x,&((*sec)->data.ipsec))) goto error;
+			break;
+	}	
+	if (!bin_decode_int(x,	&y)) goto error;
+	(*sec)->q = ((float)y)/1000.0;
+	
+	return 1;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_security: Error while decoding (at %d (%04x)).\n",x->max,x->max);
+	if (*sec) {
+		if ((*sec)->sec_header.s) shm_free((*sec)->sec_header.s);
+		switch ((*sec)->type){
+			case SEC_NONE:
+				break;		
+			case SEC_TLS:
+				if ((*sec)->data.tls) free_r_tls((*sec)->data.tls);
+				break;
+			case SEC_IPSEC:
+				if ((*sec)->data.ipsec) free_r_ipsec((*sec)->data.ipsec); 
+				break;
+		}	
+		shm_free(*sec);
+		*sec = 0;
+	}
+	return 0;
+}
+
+/**
  * Encode a pinhole into a binary form
  * @param x - binary data to append to
  * @param u - the dialog to encode
@@ -462,7 +626,8 @@ int bin_encode_r_contact(bin_data *x,r_contact *c)
 	if (!bin_encode_ushort(x,c->port)) goto error;
 	if (!bin_encode_char(x,c->transport)) goto error;
 	
-	if (!bin_encode_ipsec(x,c->ipsec)) goto error;
+	if (!bin_encode_r_security(x,c->security_temp)) goto error;
+	if (!bin_encode_r_security(x,c->security)) goto error;
 	
 	if (!bin_encode_str(x,&(c->uri))) goto error;
 	
@@ -518,7 +683,8 @@ r_contact* bin_decode_r_contact(bin_data *x)
 
 	c->hash = get_contact_hash(c->host,c->port,c->transport,r_hash_size);
 	
-	if (!bin_decode_ipsec(x,&(c->ipsec ))) goto error;
+	if (!bin_decode_r_security(x,&(c->security_temp))) goto error;
+	if (!bin_decode_r_security(x,&(c->security))) goto error;
 	
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->uri),&st)) goto error;
 	
@@ -556,7 +722,8 @@ error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_r_contact: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (c) {
 		if (c->host.s) shm_free(c->host.s);		
-		if (c->ipsec) shm_free(c->ipsec);
+		if (c->security_temp) free_r_security(c->security_temp);
+		if (c->security) free_r_security(c->security);
 		if (c->uri.s) shm_free(c->uri.s);
 		if (c->pinhole) shm_free(c->pinhole);
 		while(c->head){

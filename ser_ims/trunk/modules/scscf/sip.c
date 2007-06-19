@@ -84,6 +84,23 @@
 			(dest) = (dest)*10 + (src).s[i] -'0';\
 }
 
+
+#define get_qparam(src,name,dst) \
+{\
+	int i,j;\
+	(dst).s=0;(dst).len=0;\
+	for(i=0;i<(src).len-(name).len;i++)\
+		if (strncasecmp((src).s+i,(name).s,(name).len)==0){\
+			j=i+(name).len;\
+			(dst).s = (src).s+j;\
+			(dst).len = 0;\
+			while(j<(src).len && (src).s[j]!='\"') \
+				j++;			\
+			(dst).len = j-i-(name).len;\
+			break;\
+		}		\
+}
+
 #define get_param(src,name,dst) \
 {\
 	int i,j;\
@@ -676,8 +693,8 @@ int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *respo
 		}
 	
 	if (h&&h->parsed) {
-		*nonce = ((auth_body_t*)h->parsed)->digest.nonce;
-		*response = ((auth_body_t*)h->parsed)->digest.response;
+		if (nonce) *nonce = ((auth_body_t*)h->parsed)->digest.nonce;
+		if (response) *response = ((auth_body_t*)h->parsed)->digest.response;
 	}
 	
 	return 1;	
@@ -1889,73 +1906,6 @@ str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h)
 	return auth;	
 }
 
-/**
- * Looks for the Security-Client header header and returns its body.
- * @param msg - the SIP message
- * @param h - the hdr_field to fill with the result
- * @returns the security-client body
- */
-str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h)
-{
-	str sec_cli={0,0};
-	struct hdr_field *hdr;
-	*h = 0;
-	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_security_client: Error parsing until header Security-Client: \n");
-		return sec_cli;
-	}
-	hdr = msg->headers;
-	while(hdr){
-		if (hdr->name.len ==15  &&
-			strncasecmp(hdr->name.s,"Security-Client",15)==0)
-		{
-			*h = hdr;
-			sec_cli = hdr->body;
-			break;
-		}
-		hdr = hdr->next;
-	}
-	if (!hdr){
-		LOG(L_DBG, "DBG:"M_NAME":cscf_get_security_client: Message does not contain Security-Client header.\n");
-		return sec_cli;
-	}
-
-	return sec_cli;	
-}
-
-/**
- * Looks for the Security-Verify header header and returns its body.
- * @param msg - the SIP message
- * @param h - the hdr_field to fill with the result
- * @returns the security-verify body
- */
-str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h)
-{
-	str sec_vrf={0,0};
-	struct hdr_field *hdr;
-	*h = 0;
-	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_security_verify: Error parsing until header Security-Verify: \n");
-		return sec_vrf;
-	}
-	hdr = msg->headers;
-	while(hdr){
-		if (hdr->name.len ==15  &&
-			strncasecmp(hdr->name.s,"Security-Verify",15)==0)
-		{
-			*h = hdr;
-			sec_vrf = hdr->body;
-			break;
-		}
-		hdr = hdr->next;
-	}
-	if (!hdr){
-		LOG(L_DBG, "DBG:"M_NAME":cscf_get_security_verify: Message does not contain Security-Verify header.\n");
-		return sec_vrf;
-	}
-
-	return sec_vrf;	
-}
 
 
 

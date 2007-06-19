@@ -75,12 +75,6 @@ int P_add_p_visited_network_id(struct sip_msg *msg,char *str1,char*str2);
 
 int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2);
 
-int P_remove_security_client(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_security_verify(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2);
-
 int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2);
 
 int P_is_registered(struct sip_msg *msg,char *str1,char *str2);
@@ -97,7 +91,7 @@ int P_remove_route(struct sip_msg *msg,char *str1,char *str2);
 
 int P_NAT_relay(struct sip_msg *msg,char *str1,char *str2);
 
-int P_IPSec_relay(struct sip_msg *msg,char *str1,char *str2);
+int P_security_relay(struct sip_msg *msg,char *str1,char *str2);
 
 int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2);
 

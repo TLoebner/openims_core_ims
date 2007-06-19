@@ -409,6 +409,79 @@ void free_r_ipsec(r_ipsec *ipsec)
 	shm_free(ipsec);
 }
 
+/**
+ * Creates a registrar tls container.
+ * This does not insert it in the registrar
+ * the strings are duplicated in shm
+ * @param port_tls - port for UserEndpoint Client
+ * @returns the new r_tls* container or NULL on error
+ */
+r_tls* new_r_tls(int port_tls)
+{
+	r_tls *tls;
+	
+	tls = shm_malloc(sizeof(r_tls));
+	if (!tls) {
+		LOG(L_ERR,"ERR:"M_NAME":new_r_tls(): Unable to alloc %d bytes\n",
+			sizeof(r_tls));
+		return 0;
+	}
+	memset(tls,0,sizeof(r_tls));
+	
+	tls->port_tls = port_tls;
+			
+	return tls;
+}
+		
+/**
+ * Frees memory taken by a r_tls structure
+ * \note Must be called with a lock on the domain to avoid races
+ * @param tls - the r_public to be deallocated
+ */	
+void free_r_tls(r_tls *tls)
+{
+	if (!tls) return;
+	shm_free(tls);
+}
+
+r_security *new_r_security(str sec_header,r_security_type type,float q)
+{
+	r_security *s=0;
+
+	s = shm_malloc(sizeof(r_security));
+	if (!s){
+		LOG(L_ERR,"ERR:"M_NAME":save_contact_security: Error allocating %d bytes.\n",sizeof(r_security));
+		goto error ;
+	}
+	memset(s,0,sizeof(r_security));
+	
+	s->type = type;
+	s->q = q;
+	STR_SHM_DUP(s->sec_header,sec_header,"save_contact_security");
+	if (!s->sec_header.s) goto error;	
+	return s;
+error:
+	if (s) shm_free(s);
+	return 0;
+}
+
+
+void free_r_security(r_security *s)
+{
+	if (!s) return;
+	switch (s->type){
+		case SEC_NONE:
+			break;
+		case SEC_TLS:
+			if (s->data.tls) free_r_tls(s->data.tls);
+			break;
+		case SEC_IPSEC:
+			if (s->data.ipsec) free_r_ipsec(s->data.ipsec);
+			break;		
+	}
+	if (s->sec_header.s) shm_free(s->sec_header.s);
+	shm_free(s);
+}
 
 /**
  * Searches for a r_contact contact and returns it.
@@ -605,7 +678,7 @@ r_contact* update_r_contact(str host,int port,int transport,
  */
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
-	r_ipsec *ipsec)
+	r_security *s)
 {
 	r_contact *c;
 	
@@ -613,21 +686,17 @@ r_contact* update_r_contact_sec(str host,int port,int transport,
 	if (!c){
 		if (uri&&reg_state){
 			c = add_r_contact(host,port,transport,*uri,*reg_state,*expires,(str*) 0,0,0);
-			c->ipsec = ipsec;
+			c->security_temp = s;
 			r_unlock(c->hash);
 			return c;
 		}
 		else return 0;
 	}else{
-		// don't update anything else - might be an attack and the expires will be reset
-		// even updating the ipsec info is attack vulnerable, as we kill the old tunnel
-		// but! this only happens when coupled with IP spoofing as else there will be a new contact created
-		
-		if (c->ipsec){
-			P_drop_ipsec(c);
-			free_r_ipsec(c->ipsec);
-		}
-		c->ipsec = ipsec;		
+		if (c->security_temp){
+			P_security_drop(c,c->security_temp);
+			free_r_security(c->security_temp);
+		}		
+		c->security_temp = s;
 		r_unlock(c->hash);
 		return c;
 	}
@@ -695,8 +764,8 @@ void free_r_contact(r_contact *c)
 		free_r_public(p);
 		p = n;
 	}
-	if (c->ipsec)
-		free_r_ipsec(c->ipsec);
+	if (c->security_temp) free_r_security(c->security_temp);
+	if (c->security) free_r_security(c->security);
 	shm_free(c);
 }
 
@@ -735,12 +804,43 @@ void print_r(int log_level)
 						(unsigned short)c->pinhole->nat_port);
 				
 			} 
-			if (c->ipsec){
-				LOG(log_level,ANSI_GREEN"INF:"M_NAME":        SEC: UAS: %d:%d->%d  UAC: %d:%d<-%d E[%.*s] I[%.*s]\n",
-					c->ipsec->spi_uc,c->ipsec->port_uc,c->ipsec->spi_ps,
-					c->ipsec->spi_us,c->ipsec->port_us,c->ipsec->spi_pc,
-					c->ipsec->ealg.len,c->ipsec->ealg.s,c->ipsec->alg.len,c->ipsec->alg.s);					
+			if (c->security){
+				switch(c->security->type){
+					case SEC_NONE:
+						break;						
+					case SEC_TLS:
+						if (c->security->data.tls)
+						LOG(log_level,ANSI_GREEN"INF:"M_NAME":        TLS: %.*s tls://%.*s:%d\n",
+							c->security->sec_header.len,c->security->sec_header.s,
+							c->host.len,c->host.s,c->security->data.tls->port_tls);
+						break;
+					case SEC_IPSEC:
+						if (c->security->data.ipsec)
+						LOG(log_level,ANSI_GREEN"INF:"M_NAME":        IPSec: UAS: %d:%d->%d  UAC: %d:%d<-%d E[%.*s] I[%.*s]\n",
+							c->security->data.ipsec->spi_uc,c->security->data.ipsec->port_uc,c->security->data.ipsec->spi_ps,
+							c->security->data.ipsec->spi_us,c->security->data.ipsec->port_us,c->security->data.ipsec->spi_pc,
+							c->security->data.ipsec->ealg.len,c->security->data.ipsec->ealg.s,c->security->data.ipsec->alg.len,c->security->data.ipsec->alg.s);
+				}					
 			}
+			if (c->security_temp){
+				switch(c->security_temp->type){
+					case SEC_NONE:
+						break;						
+					case SEC_TLS:
+						if (c->security_temp->data.tls)
+						LOG(log_level,ANSI_GREEN"INF:"M_NAME":        TLS: %.*s tls://%.*s:%d\n",
+							c->security_temp->sec_header.len,c->security_temp->sec_header.s,
+							c->host.len,c->host.s,c->security_temp->data.tls->port_tls);						
+						break;
+					case SEC_IPSEC:
+						if (c->security_temp->data.ipsec)
+						LOG(log_level,ANSI_GREEN"INF:"M_NAME":        Temp.IPSec: UAS: %d:%d->%d  UAC: %d:%d<-%d E[%.*s] I[%.*s]\n",
+							c->security_temp->data.ipsec->spi_uc,c->security_temp->data.ipsec->port_uc,c->security_temp->data.ipsec->spi_ps,
+							c->security_temp->data.ipsec->spi_us,c->security_temp->data.ipsec->port_us,c->security_temp->data.ipsec->spi_pc,
+							c->security_temp->data.ipsec->ealg.len,c->security_temp->data.ipsec->ealg.s,c->security_temp->data.ipsec->alg.len,c->security_temp->data.ipsec->alg.s);
+				}					
+			}
+			
 			p = c->head;
 			while(p){
 				LOG(log_level,ANSI_GREEN"INF:"M_NAME":          P: D[%c] <"ANSI_BLUE"%.*s"ANSI_GREEN"> \n",

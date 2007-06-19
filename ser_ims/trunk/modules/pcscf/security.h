@@ -61,13 +61,14 @@
 #include "registration.h"
 #include "registrar_storage.h"
 
+//int P_Verify_Security(struct sip_msg *req,char *str1, char *str2);
+//int P_Is_First_Register(struct sip_msg *req,char *str1, char *str2);
+int P_security_401(struct sip_msg *rpl,char *str1, char *str2);
 
-int P_IPSec_401(struct sip_msg *rpl,char *str1, char *str2);
+int P_security_200(struct sip_msg *rpl,char *str1, char *str2);
 
-int P_IPSec_200(struct sip_msg *rpl,char *str1, char *str2);
+void P_security_drop(r_contact *c,r_security *s);
 
-
-void P_drop_ipsec(r_contact *c);
 		
 int P_check_via_sent_by(struct sip_msg *msg,char *str1, char *str2);
 int P_add_via_received(struct sip_msg *msg,char *str1, char *str2);		
@@ -75,5 +76,9 @@ int P_add_via_received(struct sip_msg *msg,char *str1, char *str2);
 int P_follows_via_list(struct sip_msg *rpl,char *str1, char *str2);
 int P_enforce_via_list(struct sip_msg *rpl,char *str1, char *str2);
 int P_remove_header_tag(struct sip_msg *msg,char *str1, char *str2);
+
+int P_remove_security_client(struct sip_msg *msg,char *str1,char*str2);
+int P_remove_security_verify(struct sip_msg *msg,char *str1,char*str2);
+int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2);
 
 #endif /* P_CSCF_SECURITY_H */

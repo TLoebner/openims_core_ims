@@ -110,8 +110,11 @@ extern char* cscf_term_ioi;						/**< name of the Terminating network 				*/
 
 int   pcscf_use_ipsec=0;					/**< whether to use or not ipsec 					*/
 char* pcscf_ipsec_host="127.0.0.1";			/**< IP for protected server 						*/
-int   pcscf_ipsec_port_c=4061;				/**< PORT for protected client 						*/
-int   pcscf_ipsec_port_s=4061;				/**< PORT for protected server 						*/
+int   pcscf_ipsec_port_c=4060;				/**< PORT for protected client 						*/
+int   pcscf_ipsec_port_s=4060;				/**< PORT for protected server 						*/
+
+int   pcscf_use_tls=0;						/**< whether to use or not tls 						*/
+int   pcscf_tls_port=4061;					/**< PORT for TLS server 							*/
 
 char* pcscf_ipsec_P_Inc_Req	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Inc_Req.sh";		/**< Req E->P */
 char* pcscf_ipsec_P_Out_Rpl	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Out_Rpl.sh";		/**< Rpl E<-P */
@@ -204,9 +207,12 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_remove_security_verify() - remove the Security-Verify header
  * - P_remove_security_headers() - remove the Security- headers header
  * <p>
- * - P_IPSec_401() - create IPSec Security Associations for the 401 Unauthorized response to REGISTER
- * - P_IPSec_200() - create/drop IPSec Security Associations for the 200 OK response to REGISTER
+ * - P_verify_security() - Verify Register Client Security
+ * - P_is_first_register() - test if is the first Register
+ * - P_security_401() - create IPSec Security Associations for the 401 Unauthorized response to REGISTER
+ * - P_security_200() - create/drop IPSec Security Associations for the 200 OK response to REGISTER
  * - P_is_integrity_protected() - checks if the message was received over a secure channel
+ * - P_security_relay() - forward a message through TLS/IPSec
  * <p>
  * - P_save_location() - save the contacts for the 200 OK response to REGISTER in the local registrar
  * - P_subscribe() - subscribe to the reg event to the S-CSCF for the 200 OK response to REGISTER
@@ -261,10 +267,12 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_remove_security_headers",	P_remove_security_headers, 	0, 0, REQUEST_ROUTE},	
 	{"P_remove_header_tag",			P_remove_header_tag, 		2, 0, REQUEST_ROUTE},
 
-	{"P_IPSec_401",					P_IPSec_401, 				0, 0, ONREPLY_ROUTE},
-	{"P_IPSec_200",					P_IPSec_200,				0, 0, ONREPLY_ROUTE},	
+//	{"P_verify_security",			P_verify_security, 			0, 0, REQUEST_ROUTE},
+//	{"P_is_first_register",			P_is_first_register, 		0, 0, REQUEST_ROUTE},
+	{"P_security_401",				P_security_401, 			0, 0, ONREPLY_ROUTE},
+	{"P_security_200",				P_security_200,				0, 0, ONREPLY_ROUTE},	
 	{"P_is_integrity_protected",	P_is_integrity_protected, 	0, 0, REQUEST_ROUTE},	
-	{"P_IPSec_relay", 				P_IPSec_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"P_security_relay", 			P_security_relay, 			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	
 	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
@@ -327,6 +335,9 @@ static cmd_export_t pcscf_cmds[]={
  * - ipsec_P_Inc_Rpl - path to IPSec setting script/executable for Incoming Replies
  * - ipsec_P_Drop - path to IPSec setting script/executable for dropping all SAs
  * <p>
+ * - use_tls - if to enable the use of TLS
+ * - tls_port - server port for IPSec
+ * <p>
  * - NAT_enable - if to enable NAT detection for signalling
  * - ping - if to ping endpoints to keep pinholes alive
  * - ping_all - if to ping all endpoints, irespective of their IP networks being public
@@ -369,6 +380,8 @@ static param_export_t pcscf_params[]={
 	{"ipsec_port_c",			INT_PARAM,		&pcscf_ipsec_port_c},
 	{"ipsec_port_s", 			INT_PARAM,		&pcscf_ipsec_port_s},
 	
+	{"use_tls", 				INT_PARAM,		&pcscf_use_tls},
+	{"tls_port", 				INT_PARAM,		&pcscf_tls_port},
 	
 	{"ipsec_P_Inc_Req", 		STR_PARAM,		&pcscf_ipsec_P_Inc_Req},
 	{"ipsec_P_Out_Rpl", 		STR_PARAM,		&pcscf_ipsec_P_Out_Rpl},

@@ -136,8 +136,6 @@ str cscf_get_visited_network_id(struct sip_msg *msg, struct hdr_field **h);
 
 str cscf_get_authorization(struct sip_msg *msg, struct hdr_field **h);
 str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h);
-str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h);
-str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h);
 
 str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h);
 time_t cscf_get_session_expires(str expHdr, str *refresher);
