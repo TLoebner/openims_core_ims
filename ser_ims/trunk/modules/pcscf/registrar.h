@@ -64,7 +64,7 @@ void registrar_timer(unsigned int ticks, void* param);
 
 int P_save_location(struct sip_msg *rpl,char *str1, char *str2);
 
-int r_is_integrity_protected(str host,int port,int transport);
+int r_is_integrity_protected(str host,int port,int r_port,int transport);
 
 int r_is_registered(str host,int port,int transport);
 

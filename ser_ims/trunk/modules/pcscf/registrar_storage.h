@@ -87,8 +87,8 @@ typedef struct _r_ipsec {
 	int spi_us;					/**< SPI Server to use					*/	
 	int spi_pc;					/**< SPI Client to use					*/
 	int spi_ps;					/**< SPI Server to use					*/
-	unsigned short port_uc;				/**< Port UE Client						*/
-	unsigned short port_us;				/**< Port UE Server						*/
+	unsigned short port_uc;		/**< Port UE Client						*/
+	unsigned short port_us;		/**< Port UE Server						*/
 	
 	str ealg;					/**< Cypher Algorithm - ESP				*/
 	str ck;						/**< Cypher Key							*/
@@ -96,22 +96,44 @@ typedef struct _r_ipsec {
 	str ik;						/**< Integrity Key						*/
 } r_ipsec;
 
+/** TLS SA Information */
+typedef struct _r_tls {
+	unsigned short port_tls;	/**< Port UE TLS						*/
+} r_tls;
+
+typedef enum _r_sec_type {
+	SEC_NONE	=0,
+	SEC_IPSEC	=1,
+	SEC_TLS		=2,
+} r_security_type;
+
+typedef struct _r_security {
+	str sec_header;				/**< Security Header value 				*/
+	r_security_type type;		/**< Type of security in use			*/ 
+	union {
+		r_ipsec *ipsec;			/**< IPSec SA information, if any		*/
+		r_tls *tls;				/**< TLS SA information, if any 		*/
+	} data;
+	float q;
+} r_security;
+
 /** Registrar Contact Structure */
 typedef struct _r_contact {
 	unsigned int hash;			/**< the hash value 					*/
 	
 	str host;					/**< host of the UE						*/
-	unsigned short port;					/**< port of the UE						*/
+	unsigned short port;		/**< port of the UE						*/
 	char transport;				/**< transport for the UE				*/
-	
-	r_ipsec *ipsec;				/**< IPSec SA information, if any		*/
+			
+	r_security *security_temp;  /**< Security-Client Information		*/
+	r_security *security;	    /**< Security-Client Information		*/
 	
 	str uri;					/**< uri of contact						*/		
 	
 	enum Reg_States reg_state;	/**< registration state					*/
 	time_t expires;				/**< time of expiration					*/
 	
-	unsigned short service_route_cnt;		/**< size of the above vector			*/
+	unsigned short service_route_cnt;/**< size of the above vector		*/
 	str *service_route;			/**< service route entries				*/
 
 	r_nat_dest * pinhole;		/**< address of the receive				*/ 
@@ -125,8 +147,8 @@ typedef struct _r_contact {
 
 /** Registrar Slot Structure */
 typedef struct {
-	r_contact *head;					/**< first contact in the slot			*/
-	r_contact *tail;					/**< last contact in the slot			*/
+	r_contact *head;			/**< first contact in the slot			*/
+	r_contact *tail;			/**< last contact in the slot			*/
 	gen_lock_t *lock;			/**< slot lock 							*/
 } r_hash_slot;
 
@@ -155,6 +177,12 @@ r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int
 	str ealg_setkey,str ck_esp,str alg_setkey,str ik_esp);
 void free_r_ipsec(r_ipsec *ipsec);
 
+r_tls* new_r_tls(int port_tls);
+void free_r_tls(r_tls *tls);
+
+r_security *new_r_security(str sec_header,r_security_type type,float q);
+void free_r_security(r_security *s);
+
 r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States reg_state,int expires,
 	str *service_route,int service_route_cnt);	
 r_contact* get_r_contact(str host,int port,int transport);
@@ -164,7 +192,7 @@ r_contact* update_r_contact(str host,int port,int transport,
 	str *uri,enum Reg_States  *reg_state,int *expires,str **service_route,int *service_route_cnt, r_nat_dest ** pinhole);
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
-	r_ipsec *ipsec);
+	r_security *s);
 void del_r_contact(r_contact *c);
 void free_r_contact(r_contact *c);
 

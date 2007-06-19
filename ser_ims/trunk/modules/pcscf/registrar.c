@@ -117,7 +117,7 @@ void registrar_timer(unsigned int ticks, void* param)
 						if (c->expires<=time_now) {
 							LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and Deregistered.\n",
 								c->uri.len,c->uri.s);		
-							if (c->ipsec){
+							if (c->security){
 								/* If we have IPSec SAs, we keep them 60 seconds more to relay further messages */
 								c->reg_state = DEREGISTERED;
 								c->expires = time_now + 60;
@@ -132,8 +132,8 @@ void registrar_timer(unsigned int ticks, void* param)
 									contact_cnt++;
 									for(rp=c->head;rp;rp=rp->next)
 										impu_cnt++;
-									if (c->ipsec) ipsec_cnt++;
-									//if (c->tls) tls_cnt++;				
+									if (c->security && c->security.type==SEC_IPSEC) ipsec_cnt++;
+									if (c->security && c->security.type==SEC_TLS) tls_cnt++;				
 									if (c->pinhole) nat_cnt++;
 							}			
 						#endif
@@ -142,7 +142,8 @@ void registrar_timer(unsigned int ticks, void* param)
 						if (c->expires<=time_now) {
 							LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",
 								c->uri.len,c->uri.s);		
-							P_drop_ipsec(c);
+							P_security_drop(c,c->security);
+							P_security_drop(c,c->security_temp);
 							del_r_contact(c);
 						}
 						break;
@@ -150,7 +151,8 @@ void registrar_timer(unsigned int ticks, void* param)
 						if (c->expires<=time_now) {
 							LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> Registration pending expired and removed.\n",
 								c->uri.len,c->uri.s);		
-							P_drop_ipsec(c);
+							P_security_drop(c,c->security);
+							P_security_drop(c,c->security_temp);
 							del_r_contact(c);
 						}
 						break;
@@ -354,7 +356,7 @@ error:
  * @param transport - transport of the UE
  * @returns 1 if registered, 0 if not or error
  */
-int r_is_integrity_protected(str host,int port,int transport)
+int r_is_integrity_protected(str host,int port,int r_port,int transport)
 {
 	int ret=0;
 	r_contact *c;
@@ -368,13 +370,38 @@ int r_is_integrity_protected(str host,int port,int transport)
 
 	if (!c) return 0;
 	
-	if (!c->ipsec){
-		r_unlock(c->hash);
-		return 0;
+	if (c->security){
+		switch (c->security->type){
+			case SEC_NONE:
+				break;
+			case SEC_TLS:
+				if (c->security->data.tls&&
+					(c->security->data.tls->port_tls==r_port)){
+					ret = 1;
+				}
+				break;
+			case SEC_IPSEC:
+				if (c->security->data.ipsec&&
+					(c->security->data.ipsec->port_uc==port || c->security->data.ipsec->port_us==port)){
+					ret = 1;
+				}
+				break;
+		}			
 	}
-	
-	if (c->ipsec->port_uc==port || c->ipsec->port_us==port){
-		ret = 1;
+	if (!ret && c->security_temp){
+		switch (c->security_temp->type){
+			case SEC_NONE:
+				break;
+			case SEC_TLS:
+				//nothing to do here becaues TLS security in temp does not mean that the user knows the password!
+				break;
+			case SEC_IPSEC:
+				if (c->security_temp->data.ipsec&&
+					(c->security_temp->data.ipsec->port_uc==port || c->security_temp->data.ipsec->port_us==port)){
+					ret = 1;
+				}
+				break;
+		}			
 	}
 	r_unlock(c->hash);
 	return ret;

@@ -85,6 +85,8 @@ extern int r_hash_size;								/**< records tables parameters 						*/
 
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
 extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
+extern int pcscf_use_tls;							/**< whether to use or not TLS 					*/
+extern int pcscf_tls_port;						/**< PORT for TLS server 						*/
 
 
 /**
@@ -164,10 +166,10 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 	
 	vb = cscf_get_ue_via(msg);
 	
-	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking for <%d://%.*s:%d>\n",
-		vb->proto,vb->host.len,vb->host.s,vb->port);
+	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking for <%d://%.*s:%d,%d>\n",
+		vb->proto,vb->host.len,vb->host.s,vb->port,msg->rcv.src_port);
 	
-	if (r_is_integrity_protected(vb->host,vb->port,vb->proto)) 
+	if (r_is_integrity_protected(vb->host,vb->port,msg->rcv.src_port,vb->proto)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;	
@@ -423,72 +425,6 @@ error:
 }
 
 
-/**
- * Look for Security-Client and delete it if found.
- * @param msg - the SIP message to add to
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not found or #CSCF_RETURN_FALSE on error
- */
-int P_remove_security_client(struct sip_msg *msg,char *str1,char*str2)
-{
-	struct hdr_field *hdr=0;	
-
-	cscf_get_security_client(msg,&hdr);
-	if (hdr){
-		if (!cscf_del_header(msg,hdr)){
-			LOG(L_INFO,"INF:"M_NAME":P_drop_security_client: Error dropping Security-Client header.\n");		
-			return CSCF_RETURN_ERROR; 
-		}
-		return CSCF_RETURN_TRUE;
-	}
-	else
-		return CSCF_RETURN_FALSE;
-}
-
-/**
- * Look for Security-Verify and delete it if found.
- * @param msg - the SIP message to add to
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not found or #CSCF_RETURN_FALSE on error
- */
-int P_remove_security_verify(struct sip_msg *msg,char *str1,char*str2)
-{
-	struct hdr_field *hdr=0;	
-
-	cscf_get_security_verify(msg,&hdr);
-	if (hdr){
-		if (!cscf_del_header(msg,hdr)){
-			LOG(L_INFO,"INF:"M_NAME":P_remove_security_verify: Error dropping Security-Client header.\n");		
-			return CSCF_RETURN_ERROR; 
-		}
-		return CSCF_RETURN_TRUE;
-	}
-	else
-		return CSCF_RETURN_FALSE;
-}
-
-/**
- * Removes the Security-Client,Security-Verify headers.
- * @param msg - the SIP message to remove from
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not found or #CSCF_RETURN_FALSE on error
- */
-int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2)
-{
-	int r1,r2; r1 = r2 = CSCF_RETURN_FALSE;
-
-	r1=P_remove_security_client(msg,str1,str2);
-	if (r1==CSCF_RETURN_ERROR) return r1;
-	
-	r2=P_remove_security_verify(msg,str1,str2);
-	if (r2==CSCF_RETURN_ERROR) return r2;
-
-	if (r1==CSCF_RETURN_TRUE&&r2==CSCF_RETURN_TRUE) return CSCF_RETURN_TRUE;
-	else return CSCF_RETURN_FALSE;
-}
 
 
 /**
@@ -1054,7 +990,7 @@ static str sip_s={"sip:",4};
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if no NAT
  */
-int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2) 
+int P_security_relay(struct sip_msg * msg, char * str1, char * str2) 
 {
 	str dst={0,0};
 	int len;
@@ -1065,17 +1001,17 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	struct cell *t=0;
 	
 
-	if (!pcscf_use_ipsec) return CSCF_RETURN_FALSE;
+	if (!pcscf_use_ipsec||!pcscf_use_tls) return CSCF_RETURN_FALSE;
 
 	if(msg -> first_line.type == SIP_REQUEST) {
 		/* on request, get the destination from the Request-URI */
 		struct sip_uri uri;
 		str req_uri = msg->first_line.u.request.uri;
 		if (parse_uri(req_uri.s,req_uri.len,&uri)<0){
-			LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Error parsing Request-URI: <%.*s>\n",req_uri.len,req_uri.s);
+			LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Error parsing Request-URI: <%.*s>\n",req_uri.len,req_uri.s);
 			return CSCF_RETURN_FALSE;
 		}
-		if(uri.port_no==0) uri.port_no =5060;
+		if (uri.port_no==0) uri.port_no =5060;
 		proto = uri.proto;
 		host = uri.host;		
 		port = uri.port_no;
@@ -1085,7 +1021,7 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 		struct sip_msg *req;
 		req = cscf_get_request_from_reply(msg);
 		if(req == NULL) {
-			LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Cannot get request for the transaction\n");
+			LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Cannot get request for the transaction\n");
 			return CSCF_RETURN_FALSE;
 		}
 		vb = cscf_get_ue_via(req);	
@@ -1096,25 +1032,34 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	}
 
 	c = get_r_contact(host,port,proto);
-	if(!c || !(c->ipsec)) {
-		LOG(L_DBG, "ERR:"M_NAME":P_IPSec_relay: we cannot find the contact or its IPSec SAs for <%d://%.*s:%d>.\n", 
+	if (!c || !c->security || c->security->type==SEC_NONE) {
+		LOG(L_DBG, "ERR:"M_NAME":P_security_relay: we cannot find the contact or its IPSec/TLS SAs for <%d://%.*s:%d>.\n", 
 			proto,host.len,host.s,port);
 		if (c) r_unlock(c->hash);
 		return CSCF_RETURN_FALSE;
 	}					
 
-
-	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */;
+	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */+ 14 /*;transport=tls"*/;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
-		LOG(L_ERR, "ERR:"M_NAME":P_IPSec_relay: Error allocating %d bytes\n", len);
+		LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Error allocating %d bytes\n", len);
 		dst.len=0;
 		r_unlock(c->hash);
 		return CSCF_RETURN_FALSE;
 	}	
 	STR_APPEND(dst,sip_s);
 	STR_APPEND(dst,host);	
-	dst.len += sprintf(dst.s + dst.len, ":%d", c->ipsec->port_us);	
+	switch (c->security->type){
+		case SEC_NONE:
+			break;
+		case SEC_IPSEC:
+			if (c->security->data.ipsec) dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_us);
+			else dst.len += sprintf(dst.s + dst.len, ":%d", port);
+			break;
+		case SEC_TLS:
+			dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", c->security->data.tls->port_tls);
+			break;
+	}	
 	r_unlock(c->hash);
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
@@ -1124,7 +1069,7 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 		/* on reply we have to modify the t->uas->response->dst.to.sin.sin_port/sin_addr */
 		t = tmb.t_gett();
 		if (!t){
-			LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: Can't relay non-transactional responses\n");		
+			LOG(L_INFO, "INFO:"M_NAME":P_security_relay: Can't relay non-transactional responses\n");		
 			return CSCF_RETURN_FALSE;	/* error */
 		}
 #ifdef USE_DNS_FAILOVER
@@ -1132,12 +1077,12 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 #else
 		if (!uri2dst(&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
 #endif
-			LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: Error setting uri as dst <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);		
+			LOG(L_INFO, "INFO:"M_NAME":P_security_relay: Error setting uri as dst <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);		
 			return CSCF_RETURN_FALSE;	/* error */
 		}
 		t->uas.response.dst = dst_info;
 	}	
-	LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
+	LOG(L_INFO, "INFO:"M_NAME":P_security_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	return CSCF_RETURN_TRUE;
 }
 
