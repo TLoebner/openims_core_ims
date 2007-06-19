@@ -967,6 +967,8 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 	struct ip_addr ip;
 	unsigned short int port;
 	r_contact *c=0;
+	struct dest_info dst_info;
+	struct cell *t=0;	
 
 	if (!pcscf_nat_enable) return CSCF_RETURN_FALSE;
 	
@@ -1019,6 +1021,24 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
+
+	if (msg -> first_line.type == SIP_REPLY) {
+		/* on reply we have to modify the t->uas->response->dst.to.sin.sin_port/sin_addr */
+		t = tmb.t_gett();
+		if (!t){
+			LOG(L_INFO, "INFO:"M_NAME":P_NAT_relay: Can't relay non-transactional responses\n");		
+			return CSCF_RETURN_FALSE;	/* error */
+		}
+#ifdef USE_DNS_FAILOVER
+		if (!uri2dst(0,&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+#else
+		if (!uri2dst(&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+#endif
+			LOG(L_INFO, "INFO:"M_NAME":P_NAT_relay: Error setting uri as dst <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);		
+			return CSCF_RETURN_FALSE;	/* error */
+		}
+		t->uas.response.dst = dst_info;
+	}	
 		
 	LOG(L_INFO, "INFO:"M_NAME":P_NAT_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	return CSCF_RETURN_TRUE;
@@ -1041,6 +1061,9 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	r_contact *c=0;
 	int proto, port;
 	str host;
+	struct dest_info dst_info;
+	struct cell *t=0;
+	
 
 	if (!pcscf_use_ipsec) return CSCF_RETURN_FALSE;
 
@@ -1080,6 +1103,7 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 		return CSCF_RETURN_FALSE;
 	}					
 
+
 	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
@@ -1095,8 +1119,25 @@ int P_IPSec_relay(struct sip_msg * msg, char * str1, char * str2)
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
-	LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	
+	if (msg -> first_line.type == SIP_REPLY) {
+		/* on reply we have to modify the t->uas->response->dst.to.sin.sin_port/sin_addr */
+		t = tmb.t_gett();
+		if (!t){
+			LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: Can't relay non-transactional responses\n");		
+			return CSCF_RETURN_FALSE;	/* error */
+		}
+#ifdef USE_DNS_FAILOVER
+		if (!uri2dst(0,&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+#else
+		if (!uri2dst(&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+#endif
+			LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: Error setting uri as dst <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);		
+			return CSCF_RETURN_FALSE;	/* error */
+		}
+		t->uas.response.dst = dst_info;
+	}	
+	LOG(L_INFO, "INFO:"M_NAME":P_IPSec_relay: <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);
 	return CSCF_RETURN_TRUE;
 }
 
