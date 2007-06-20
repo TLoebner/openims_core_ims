@@ -518,12 +518,15 @@ void vqm_status(struct vqm_block* qm)
 		int total_count=0;
 		long unsigned int total_size=0;				
 		mem_counter *root=0,*x;
-		lock_get(process_lock);
+		//lock_get(process_lock);
 		if (process_no!=0)
 			LOG(memlog, "vqm_sums (%p): PKG[%s]\n", qm,pt[process_no].desc);
 		else 
 			LOG(memlog, "vqm_sums (%p): PKG[0]/SHM \n",qm);
-		if (!qm) return;
+		if (!qm) {
+			//lock_release(process_lock);
+			return;
+		}
 	
 		LOG(memlog, "summarizing all alloc'ed. fragments:\n");
 		
@@ -547,7 +550,7 @@ void vqm_status(struct vqm_block* qm)
 		}
 		LOG(memlog, " count=%6d size=%10lu bytes in total\n",total_count,total_size);
 		LOG(memlog, "-----------------------------\n");
-		lock_release(process_lock);
+		//lock_release(process_lock);
 	}
 #endif
 
