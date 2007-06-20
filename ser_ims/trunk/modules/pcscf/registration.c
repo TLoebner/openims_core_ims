@@ -999,16 +999,10 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	str host;
 	struct dest_info dst_info;
 	struct cell *t=0;
-	struct sip_msg *req;
+	struct sip_msg *req = 0;
 
 	if (!pcscf_use_ipsec||!pcscf_use_tls) return CSCF_RETURN_FALSE;
 
-	req = cscf_get_request_from_reply(msg);
-	if(req == NULL) {
-		LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Cannot get request for the transaction\n");
-		return CSCF_RETURN_FALSE;
-	}
-	
 	if(msg -> first_line.type == SIP_REQUEST) {
 		/* on request, get the destination from the Request-URI */
 		struct sip_uri uri;
@@ -1023,7 +1017,12 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 		port = uri.port_no;
 	} else {
 		/* On response get the source from the first via in the corresponding request */
-		struct via_body *vb;	
+		struct via_body *vb;
+		req = cscf_get_request_from_reply(msg);
+		if(req == NULL) {
+			LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Cannot get request for the transaction\n");
+			return CSCF_RETURN_FALSE;
+		}
 		vb = cscf_get_ue_via(req);	
 		if (vb->port==0) vb->port=5060;
 		proto = vb->proto;
@@ -1042,7 +1041,7 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	STR_APPEND(dst,sip_s);
 	STR_APPEND(dst,host);
 
-	if (req->rcv.dst_port == pcscf_tls_port  && pcscf_use_tls)
+	if (msg -> first_line.type != SIP_REQUEST && req->rcv.dst_port == pcscf_tls_port  && pcscf_use_tls)
 	{
 		dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", req->rcv.src_port);
 	}	
@@ -1052,6 +1051,8 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 			LOG(L_DBG, "ERR:"M_NAME":P_security_relay: we cannot find the contact or its IPSec/TLS SAs for <%d://%.*s:%d>.\n", 
 				proto,host.len,host.s,port);
 			if (c) r_unlock(c->hash);
+			if (dst.s)
+				pkg_free(dst.s);
 			return CSCF_RETURN_FALSE;
 		}					
 	
@@ -1068,6 +1069,8 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 					if (req->rcv.dst_port != pcscf_tls_port )  
 					{
 						r_unlock(c->hash);
+						if (dst.s)
+							pkg_free(dst.s);
 						return CSCF_RETURN_FALSE;
 					}
 				}
