@@ -999,10 +999,16 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	str host;
 	struct dest_info dst_info;
 	struct cell *t=0;
-	
+	struct sip_msg *req;
 
 	if (!pcscf_use_ipsec||!pcscf_use_tls) return CSCF_RETURN_FALSE;
 
+	req = cscf_get_request_from_reply(msg);
+	if(req == NULL) {
+		LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Cannot get request for the transaction\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
 	if(msg -> first_line.type == SIP_REQUEST) {
 		/* on request, get the destination from the Request-URI */
 		struct sip_uri uri;
@@ -1018,27 +1024,13 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	} else {
 		/* On response get the source from the first via in the corresponding request */
 		struct via_body *vb;	
-		struct sip_msg *req;
-		req = cscf_get_request_from_reply(msg);
-		if(req == NULL) {
-			LOG(L_ERR, "ERR:"M_NAME":P_security_relay: Cannot get request for the transaction\n");
-			return CSCF_RETURN_FALSE;
-		}
 		vb = cscf_get_ue_via(req);	
 		if (vb->port==0) vb->port=5060;
 		proto = vb->proto;
 		host = vb->host;		
 		port = vb->port;
 	}
-
-	c = get_r_contact(host,port,proto);
-	if (!c || !c->security || c->security->type==SEC_NONE) {
-		LOG(L_DBG, "ERR:"M_NAME":P_security_relay: we cannot find the contact or its IPSec/TLS SAs for <%d://%.*s:%d>.\n", 
-			proto,host.len,host.s,port);
-		if (c) r_unlock(c->hash);
-		return CSCF_RETURN_FALSE;
-	}					
-
+	
 	len = sip_s.len + host.len + 1 /* : */ + 6 /* port */+ 14 /*;transport=tls"*/;
 	dst.s = pkg_malloc(len);
 	if (!dst.s){
@@ -1048,19 +1040,42 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 		return CSCF_RETURN_FALSE;
 	}	
 	STR_APPEND(dst,sip_s);
-	STR_APPEND(dst,host);	
-	switch (c->security->type){
-		case SEC_NONE:
-			break;
-		case SEC_IPSEC:
-			if (c->security->data.ipsec) dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_us);
-			else dst.len += sprintf(dst.s + dst.len, ":%d", port);
-			break;
-		case SEC_TLS:
-			dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", c->security->data.tls->port_tls);
-			break;
+	STR_APPEND(dst,host);
+
+	if (req->rcv.dst_port == pcscf_tls_port  && pcscf_use_tls)
+	{
+		dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", req->rcv.src_port);
 	}	
-	r_unlock(c->hash);
+	else {
+		c = get_r_contact(host,port,proto);
+		if (!c || !c->security || c->security->type==SEC_NONE) {
+			LOG(L_DBG, "ERR:"M_NAME":P_security_relay: we cannot find the contact or its IPSec/TLS SAs for <%d://%.*s:%d>.\n", 
+				proto,host.len,host.s,port);
+			if (c) r_unlock(c->hash);
+			return CSCF_RETURN_FALSE;
+		}					
+	
+		switch (c->security->type){
+			case SEC_NONE:
+				break;
+			case SEC_IPSEC:
+				if (c->security->data.ipsec) dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_us);
+				else dst.len += sprintf(dst.s + dst.len, ":%d", port);
+				break;
+			case SEC_TLS:
+				if(msg -> first_line.type != SIP_REQUEST) {
+					// request received on other port
+					if (req->rcv.dst_port != pcscf_tls_port )  
+					{
+						r_unlock(c->hash);
+						return CSCF_RETURN_FALSE;
+					}
+				}
+				dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", c->security->data.tls->port_tls);
+				break;
+		}	
+		r_unlock(c->hash);
+	}
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	msg -> dst_uri = dst;
