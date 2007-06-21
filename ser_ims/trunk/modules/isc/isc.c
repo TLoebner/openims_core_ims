@@ -246,6 +246,7 @@ void isc_failure(struct cell *t,int type,struct tmcb_params *ps)
 int isc_bootstrap( struct sip_msg *msg, isc_mark *mark)
 {
 //	struct cell *t;
+	str dst_uri={0,0};
 	LOG(L_INFO,"DBG:"M_NAME":isc_bootstrap(): marking for bootstrap \n");
 
 	isc_mark_set(msg,0,mark);
@@ -256,17 +257,17 @@ int isc_bootstrap( struct sip_msg *msg, isc_mark *mark)
 	 */
 	//if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
 	
-	msg->dst_uri.s = pkg_malloc(isc_my_uri_sip.len);
-	if (!msg->dst_uri.s) {
+	dst_uri.s = pkg_malloc(isc_my_uri_sip.len);
+	if (!dst_uri.s) {
 		LOG(L_ERR,"ERR:"M_NAME":isc_forward(): error allocating %d bytes\n",isc_my_uri_sip.len);
 		return ISC_RETURN_ERROR;
 	}
-	msg->dst_uri.len = isc_my_uri_sip.len;
-	memcpy(msg->dst_uri.s,isc_my_uri_sip.s,isc_my_uri_sip.len);	
+	dst_uri.len = isc_my_uri_sip.len;
+	memcpy(dst_uri.s,isc_my_uri_sip.s,isc_my_uri_sip.len);	
 
 	/* append branch */
 	append_branch(msg,msg->first_line.u.request.uri.s,msg->first_line.u.request.uri.len,
-		msg->dst_uri.s,msg->dst_uri.len,0,0);
+		dst_uri.s,dst_uri.len,0,0);
 
 //	/* increase the reply timers to compensate for bootstraping time */
 //	t = isc_tmb.t_gett();
