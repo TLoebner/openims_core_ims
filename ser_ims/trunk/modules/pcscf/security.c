@@ -93,6 +93,8 @@ extern int pcscf_use_tls;					/**< whether to use or not tls 						*/
 extern int pcscf_tls_port;					/**< PORT for TLS server 						*/
 extern int tls_disable;
 
+unsigned long  (* get_tls_session_hash) (struct sip_msg* msg);
+
 /**
  * Returns the next unused SPI.
  * \todo - make sure that this SPI is not used at the moment
@@ -147,6 +149,11 @@ int get_next_spi()
 			(dest) = (dest)*10 + (src).s[i] -'0';\
 }
 
+str s_security_client={"Security-Client",15};
+str s_security_verify={"Security-Verify",15};
+
+str s_security_server_s={"Security-Server: ",17};
+str s_security_server_e={"\r\n",2};
 
 static str s_ck={"ck=\"",4};
 static str s_ik={"ik=\"",4};
@@ -176,6 +183,28 @@ static str s_tls={"tls", 3};
 static str s_ipsec={"ipsec-3gpp", 10};
 static str s_q={"q=", 2};
 
+/**
+ * Looks for  the tls session hash 
+ * @param req - sip msg request 
+ * @returns  tls session hash on success or 0  
+ */
+unsigned long tls_get_session_hash(struct sip_msg *req)
+{
+	unsigned long s_hash = 0;
+	if (!pcscf_use_tls) return 0;
+	if (!get_tls_session_hash)
+		get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
+		if (! get_tls_session_hash) {
+			LOG(L_ERR,"ERR:"M_NAME":tls_get_session_hash: get_tls_session_hash not found !\n");
+			return 0;
+		}
+	s_hash = get_tls_session_hash(req);
+	if (!s_hash){
+		LOG(L_ERR,"ERR:"M_NAME":tls_get_session_hash: Session Hash could not be obtained !\n");
+		return 0;
+	}
+	return s_hash;
+}
 
 /**
  * trims the str 
@@ -208,6 +237,11 @@ static int str_trim(str *s)
 	return 1;
 }
 
+/**
+ * Looks for the security type in the Security header .
+ * @param security_header_body - input security header
+ * @returns the type of security
+ */
 static r_security_type cscf_get_security_type(str security_header_body)
 {
 	str sec_type_s;
@@ -231,11 +265,12 @@ static r_security_type cscf_get_security_type(str security_header_body)
 }
 
 /**
- * Looks for the prefered Client-Security header .
+ * Looks for the prefered Security header .
  * @param req - the SIP message
- * @param q_cli - output q value of the prefered header
- * @param s_type - output type of the prefered header (TLS/IPSEC)
- * @returns the security-client body
+ * @param header_name - SIP header name 
+ * @param type - output value of the security type
+ * @param q - output preferate value
+ * @returns the security body for the provided SIP message
  */
 str cscf_get_pref_security_header(struct sip_msg *req, str header_name,r_security_type *type, float *q)
 {
@@ -283,11 +318,12 @@ str cscf_get_pref_security_header(struct sip_msg *req, str header_name,r_securit
 
 
 /**
- * Saves the Security - Client information into the P-CSCF registrar for this contact.
+ * Saves the Contact Security information into the P-CSCF registrar for this contact.
  * @param req - REGISTER request
- * @param hdr - Security header
+ * @param auth - WWW-Authenticate header
+ * @param sec_hdr - Security header
  * @param type - Security Type
- * @param q_value - Preference Value
+ * @param q - Preference Value
  */
 r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_security_type type,float q)
 {
@@ -416,7 +452,7 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 				spi_ps=get_next_spi();	
 
 				ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
-					ealg_setkey,ck_esp,alg_setkey,ik_esp);
+					ealg_setkey,ealg, ck_esp,alg_setkey,alg, ik_esp);
 				if (!ipsec) goto error;
 				s->data.ipsec = ipsec;
 			}
@@ -462,117 +498,102 @@ inline int execute_cmd(char *cmd)
 	return 1;
 }
 
+/**
+ * Process the REGISTER and verify Client-Security.
+ * @param req - Register request
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns 1 if ok, 0 if not
+ */
+int P_verify_security(struct sip_msg *req,char *str1, char *str2)
+{
+	str sec_hdr;
+	struct hdr_field *h;
+	struct via_body *vb;
+	r_contact *c;
+	r_security *s;
+	r_security_type sec_type;
+	float sec_q;
+	
+	str ealg,alg,tmp;
+	unsigned int spi_pc,spi_ps;;
+	int port_pc,port_ps;
 
-///**
-// * Process the REGISTER and verify Client-Security.
-// * @param req - Register request
-// * @param str1 - not used
-// * @param str2 - not used
-// * @returns 1 if ok, 0 if not
-// */
-//int P_verify_security(struct sip_msg *req,char *str1, char *str2)
-//{
-//	str sec_cli;
-//	struct hdr_field *h;
-//	struct via_body *vb;
-//	r_contact *c;
-//	r_sec_cli *sc;
-//	int q_cli, sec_type;
-//
-//	
-//	vb = cscf_get_first_via(req,&h);
-//
-//	LOG(L_DBG,"DBG:"M_NAME":P_Verify_Security: Looking for <%d://%.*s:%d> \n",	vb->proto,vb->host.len,vb->host.s,vb->port);
-//
-//	c = get_r_contact(vb->host,vb->port,vb->proto);
-//
-//	r_act_time();
-//	if (!c){
-//		//first register
-//		return CSCF_RETURN_TRUE;
-//	}
-//
-//	if (!r_valid_contact(c) || !c->sec_cli){
-//		r_unlock(c->hash);
-//		return CSCF_RETURN_TRUE;
-//	}
-//
-//	sec_cli = cscf_get_pref_client_sec_verify(req, &q_cli, &sec_type);
-//	if (!sec_cli.len)
-//	{	
-//		LOG(L_ERR,"ERR:"M_NAME":P_Verify_Security: No Security-Verify header found.\n");
-//		c->is_registered = 1;
-//		r_unlock(c->hash);
-//		goto error;
-//	}
-//	
-//	sc = c->sec_cli;
-//	
-//	if (sc->sec.len != sec_cli.len || strncasecmp(sc->sec.s, sec_cli.s, sc->sec.len))
-//	{
-//		LOG(L_ERR,"ERR:"M_NAME":P_Verify_Security: Security-Client test failed <%.*s> != <%.*s>\n", sc->sec.len, sc->sec.s, sec_cli.len, sec_cli.s);
-//		c->is_registered = 1; //register process is in the start 
-//		r_unlock(c->hash);
-//		goto error;
-//	}
-//	
-//	r_unlock(c->hash);
-//	if (sec_type == SEC_TLS)
-//	{
-//		if (req->rcv.dst_port != pcscf_tls_port)
-//			goto error;
-//	}
-//	else
-//	
-//	if (sec_type == SEC_IPSEC)
-//		if (req->rcv.dst_port != pcscf_ipsec_port_s)
-//			goto error;
-//	return CSCF_RETURN_TRUE;
-//error:	
-//	return CSCF_RETURN_FALSE;
-//}
-//
-///**
-// * Test if is the first REGISTER for that contact 
-// * @param req - Register request
-// * @param str1 - not used
-// * @param str2 - not used
-// * @returns 1 if first REGISTER, 0 if not
-// */
-//int P_is_register_pending(struct sip_msg *req,char *str1, char *str2)
-//{
-//	struct via_body *vb;
-//	r_contact *c;
-//	struct hdr_field *h;	
-//
-//	if (tls_disable) 
-//		return CSCF_RETURN_TRUE; //do nothing
-//
-//	vb = cscf_get_first_via(req,&h);
-//	c = get_r_contact(vb->host,vb->port,vb->proto);
-//
-//	r_act_time();
-//	if (!c){
-//		LOG(L_DBG,"DBG:"M_NAME":P_Is_First_Register: No contact found -> true.\n");
-//		return CSCF_RETURN_TRUE;
-//	}
-//	if (c->reg_state==)
-//	{
-//		LOG(L_DBG,"DBG:"M_NAME":P_Is_First_Register: is registerd -> true.\n");
-//		c->is_registered = 0;
-//		r_unlock(c->hash);	
-//		return CSCF_RETURN_TRUE;	
-//	}
-//	LOG(L_DBG,"DBG:"M_NAME":P_Is_First_Register: not first register -> false.\n");
-//	r_unlock(c->hash);
-//	return CSCF_RETURN_FALSE;
-//}
+	vb = cscf_get_first_via(req,&h);
 
-str s_security_client={"Security-Client",15};
-str s_security_verify={"Security-Verify",15};
+	LOG(L_INFO,"DBG:"M_NAME":P_verify_security: Looking for <%d://%.*s:%d> \n",	vb->proto,vb->host.len,vb->host.s,vb->port);
 
-str s_security_server_s={"Security-Server: ",17};
-str s_security_server_e={"\r\n",2};
+	c = get_r_contact(vb->host,vb->port,vb->proto);
+
+	r_act_time();
+	if (!c){
+		//first register
+		LOG(L_DBG,"DBG:"M_NAME":P_verify_security: No Contact found ! \n");
+		return CSCF_RETURN_TRUE;
+	}
+
+	if (!r_valid_contact(c) || !c->security_temp){
+		LOG(L_DBG,"DBG:"M_NAME":P_verify_security: No security temp !.\n");
+		r_unlock(c->hash);
+		return CSCF_RETURN_TRUE;
+	}
+
+	sec_hdr = cscf_get_pref_security_header(req,s_security_verify, &sec_type,&sec_q);
+	if (!sec_hdr.len)
+	{	
+		LOG(L_DBG,"DBG:"M_NAME":P_verify_security: No Security-Verify header found.\n");
+		r_unlock(c->hash);
+		return CSCF_RETURN_TRUE;
+	}
+	
+	s = c->security_temp;
+	
+	switch (s->type)
+	{
+	case SEC_NONE:
+		break;
+	case SEC_TLS:
+		if (sec_type != SEC_TLS || req->rcv.dst_port != pcscf_tls_port)
+					goto error;
+		break;
+	case SEC_IPSEC:
+		if (sec_type != SEC_IPSEC || req->rcv.dst_port != pcscf_ipsec_port_s)
+		{
+			LOG(L_INFO,"DBG:"M_NAME":P_verify_security: Not IPSEC tunnel!.\n");
+			r_unlock(c->hash);
+			goto error;
+		}
+		get_param(sec_hdr,s_ealg,ealg);
+		get_param(sec_hdr,s_alg,alg);
+		/* and for spis */
+		get_param(sec_hdr,s_spi_c,tmp);
+		strtoint(tmp,spi_pc);
+		get_param(sec_hdr,s_spi_s,tmp);
+		strtoint(tmp,spi_ps);
+		/* and for ports */
+		get_param(sec_hdr,s_port_c,tmp);
+		strtoint(tmp,port_pc);
+		get_param(sec_hdr,s_port_s,tmp);
+		strtoint(tmp,port_ps);
+		if ((s->data.ipsec->r_ealg.len != ealg.len || strncasecmp(s->data.ipsec->r_ealg.s, ealg.s, ealg.len)) ||
+				(s->data.ipsec->r_alg.len != alg.len || strncasecmp(s->data.ipsec->r_alg.s, alg.s, alg.len)) || 
+				(s->data.ipsec->spi_pc != spi_pc) ||
+				(s->data.ipsec->spi_ps != spi_ps) ||
+				(pcscf_ipsec_port_c != port_pc) ||
+				(pcscf_ipsec_port_s != port_ps))
+		{		
+			LOG(L_INFO,"DBG:"M_NAME":P_verify_security: No valid Security-Verify header!.\n");
+			r_unlock(c->hash);
+			goto error;
+		}
+		break;
+	}
+	r_unlock(c->hash);
+	
+	return CSCF_RETURN_TRUE;
+error:	
+	return CSCF_RETURN_FALSE;
+}
 
 /**
  * Process the 401 response for REGISTER and creates the first Security-Associations.
@@ -589,7 +610,6 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 	struct hdr_field *hdr;	
 	str sec_hdr,sec_srv={0,0};
 	r_security_type sec_type;
-	str alg,ealg;
 	char cmd[256];
 	r_contact *c;
 	r_ipsec *ipsec;
@@ -645,11 +665,9 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 		case SEC_IPSEC:
 			ipsec = c->security_temp->data.ipsec;
 			/* try to add the Security-Server header */
-			get_param(sec_hdr,s_ealg,ealg);
-			get_param(sec_hdr,s_alg,alg);
 			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; q=0.1\r\n",
-				ealg.len,ealg.s,
-				alg.len,alg.s,
+				ipsec->r_ealg.len,ipsec->r_ealg.s,
+				ipsec->r_alg.len,ipsec->r_alg.s,
 				ipsec->spi_pc,ipsec->spi_ps,
 				pcscf_ipsec_port_c,pcscf_ipsec_port_s);
 			
@@ -684,9 +702,8 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 				
 			execute_cmd(cmd);
 			break;						
-	}		
+	}
 	
-
 	return CSCF_RETURN_TRUE;
 ret_false:
 	return CSCF_RETURN_FALSE;
@@ -715,7 +732,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 	r_contact *c;
 	r_ipsec *i;
 	int expires;
-	
+	unsigned long s_hash;
 	char out_rpl[256],out_req[256],inc_rpl[256];
 
 	if (!pcscf_use_ipsec &&!pcscf_use_tls) goto	ret_false;
@@ -750,8 +767,9 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 	}
 	
 	if (c->security_temp){
-		if (c->security && c->security->type == SEC_TLS && (c->security->data.tls && (c->security->data.tls->port_tls==req->rcv.src_port)))
-		{
+		if (c->security && c->security->type == SEC_TLS && 
+				(c->security->data.tls && c->security->data.tls->port_tls==req->rcv.src_port&& 
+				 c->security->data.tls->session_hash!=0 && c->security->data.tls->session_hash == tls_get_session_hash(req))){
 			/* don't replace security when doing an integrity protected REGISTER with
 			 *  possible attack-garbage from security_temp */
 			P_security_drop(c,c->security_temp);
@@ -774,10 +792,23 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 		case SEC_NONE:
 			break;
 		case SEC_TLS:
-			if (c->security) {
+			if (c->security && pcscf_use_tls) {
 				r_tls *tls;
 				int port_tls = req->rcv.src_port;
-				tls = new_r_tls(port_tls);
+				if (!get_tls_session_hash)
+					get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
+					if (! get_tls_session_hash) {
+						LOG(L_ERR,"ERR:"M_NAME":P_security_200: get_tls_session_hash not found !\n");
+						r_unlock(c->hash);
+						goto error;
+					}
+				s_hash = get_tls_session_hash(req);
+				if (!s_hash){
+					LOG(L_ERR,"ERR:"M_NAME":P_security_200: Session Hash could not be obtained !\n");
+					r_unlock(c->hash);
+					goto error;
+				}	
+				tls = new_r_tls(port_tls, s_hash);
 				if (!tls) goto error;
 				c->security->data.tls = tls;
 			} 		

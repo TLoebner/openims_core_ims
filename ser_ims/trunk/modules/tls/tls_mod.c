@@ -183,6 +183,7 @@ gen_lock_t* tls_cfg_lock = NULL;
  * Exported functions
  */
 static cmd_export_t cmds[] = {
+	{"get_tls_session_hash",	get_tls_session_hash, 0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{0, 0, 0, 0, 0}
 };
 

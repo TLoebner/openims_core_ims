@@ -361,13 +361,14 @@ void free_r_public(r_public *p)
  * @param port_uc - port for UserEndpoint Client
  * @param port_us - port for UserEndpoint Server
  * @param ealg_setkey - Cypher Algorithm
+ * @param r_ealg - received Cypher Algorithm
  * @param ck_esp - Cypher Key
- * @param alg_setkey - Integrity Algorithm
+ * @param r_alg - received Integrity Algorithm
  * @param ik_esp - Integrity Key
  * @returns the new r_ipsec* container or NULL on error
  */
 r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str ck_esp,str alg_setkey,str ik_esp)
+	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp)
 {
 	r_ipsec *ipsec;
 	
@@ -386,8 +387,11 @@ r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int
 	ipsec->port_uc = port_uc;
 	ipsec->port_us = port_us;
 	
+	
 	STR_SHM_DUP(ipsec->ealg,ealg_setkey,"new_r_ipsec");
+	STR_SHM_DUP(ipsec->r_ealg,r_ealg,"new_r_ipsec");
 	STR_SHM_DUP(ipsec->alg,alg_setkey,"new_r_ipsec");
+	STR_SHM_DUP(ipsec->r_alg,r_alg,"new_r_ipsec");
 	STR_SHM_DUP(ipsec->ck,ck_esp,"new_r_ipsec");
 	STR_SHM_DUP(ipsec->ik,ik_esp,"new_r_ipsec");
 			
@@ -403,7 +407,9 @@ void free_r_ipsec(r_ipsec *ipsec)
 {
 	if (!ipsec) return;
 	if (ipsec->ealg.s) shm_free(ipsec->ealg.s);
+	if (ipsec->r_ealg.s) shm_free(ipsec->r_ealg.s);
 	if (ipsec->alg.s) shm_free(ipsec->alg.s);
+	if (ipsec->r_alg.s) shm_free(ipsec->r_alg.s);
 	if (ipsec->ck.s) shm_free(ipsec->ck.s);	
 	if (ipsec->ik.s) shm_free(ipsec->ik.s);	
 	shm_free(ipsec);
@@ -414,9 +420,10 @@ void free_r_ipsec(r_ipsec *ipsec)
  * This does not insert it in the registrar
  * the strings are duplicated in shm
  * @param port_tls - port for UserEndpoint Client
+ * @param session_hash - TLS Session hash
  * @returns the new r_tls* container or NULL on error
  */
-r_tls* new_r_tls(int port_tls)
+r_tls* new_r_tls(int port_tls, unsigned long session_hash)
 {
 	r_tls *tls;
 	
@@ -429,7 +436,7 @@ r_tls* new_r_tls(int port_tls)
 	memset(tls,0,sizeof(r_tls));
 	
 	tls->port_tls = port_tls;
-			
+	tls->session_hash = session_hash;		
 	return tls;
 }
 		

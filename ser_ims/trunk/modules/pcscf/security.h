@@ -61,8 +61,7 @@
 #include "registration.h"
 #include "registrar_storage.h"
 
-//int P_Verify_Security(struct sip_msg *req,char *str1, char *str2);
-//int P_Is_First_Register(struct sip_msg *req,char *str1, char *str2);
+int P_verify_security(struct sip_msg *req,char *str1, char *str2);
 int P_security_401(struct sip_msg *rpl,char *str1, char *str2);
 
 int P_security_200(struct sip_msg *rpl,char *str1, char *str2);
