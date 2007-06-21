@@ -207,8 +207,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_remove_security_verify() - remove the Security-Verify header
  * - P_remove_security_headers() - remove the Security- headers header
  * <p>
- * - P_verify_security() - Verify Register Client Security
- * - P_is_first_register() - test if is the first Register
+ * - P_verify_security() - Verify Register Security-Verify
  * - P_security_401() - create IPSec Security Associations for the 401 Unauthorized response to REGISTER
  * - P_security_200() - create/drop IPSec Security Associations for the 200 OK response to REGISTER
  * - P_is_integrity_protected() - checks if the message was received over a secure channel
@@ -267,8 +266,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_remove_security_headers",	P_remove_security_headers, 	0, 0, REQUEST_ROUTE},	
 	{"P_remove_header_tag",			P_remove_header_tag, 		2, 0, REQUEST_ROUTE},
 
-//	{"P_verify_security",			P_verify_security, 			0, 0, REQUEST_ROUTE},
-//	{"P_is_first_register",			P_is_first_register, 		0, 0, REQUEST_ROUTE},
+	{"P_verify_security",			P_verify_security, 			0, 0, REQUEST_ROUTE},
 	{"P_security_401",				P_security_401, 			0, 0, ONREPLY_ROUTE},
 	{"P_security_200",				P_security_200,				0, 0, ONREPLY_ROUTE},	
 	{"P_is_integrity_protected",	P_is_integrity_protected, 	0, 0, REQUEST_ROUTE},	

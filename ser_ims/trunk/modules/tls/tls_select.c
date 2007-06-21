@@ -63,6 +63,50 @@ enum {
 };
 
 
+/**
+ * get TLS Session Hash  
+ * @param msg - sip msg received over a TLS secure connection
+ * @returns session_hash or 0 in case of error
+ */
+unsigned long  get_tls_session_hash(struct sip_msg* msg, char *str1, char *str2)
+{
+	struct tcp_connection* c;
+	struct tls_extra_data* extra;
+	SSL_SESSION *ssl_ses;
+	unsigned long ses_hash;
+	
+	if (msg->rcv.proto != PROTO_TLS) {
+		ERR("get_tls_session_hash: No TLS connection !\n");
+		return 0;
+	}
+	c = tcpconn_get(msg->rcv.proto_reserved1, 0, 0, tls_con_lifetime);
+	if (c && c->type != PROTO_TLS) {
+		ERR("get_tls_session_hash: Connection found but is not TLS !\n");
+		tcpconn_put(c);
+		return 0;
+	}
+
+	if (!c || !c->extra_data) {
+		ERR("get_tls_session_hash: Unable to extract SSL data from TLS connection!\n");
+		return 0;
+	}
+	extra = (struct tls_extra_data*)c->extra_data;
+	
+	ssl_ses = SSL_get_session(extra->ssl) ;
+	if (!ssl_ses)
+	{
+		ERR("get_tls_session_hash: No ssl session found !\n");
+		tcpconn_put(c);
+		return 0;
+	}
+	ses_hash = SSL_SESSION_hash(ssl_ses);
+	
+	tcpconn_put(c);
+	return ses_hash;
+}
+
+
+
 struct tcp_connection* get_cur_connection(struct sip_msg* msg)
 {
 	struct tcp_connection* c;

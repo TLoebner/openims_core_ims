@@ -88,6 +88,7 @@ extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
 extern int pcscf_use_tls;							/**< whether to use or not TLS 					*/
 extern int pcscf_tls_port;						/**< PORT for TLS server 						*/
 
+extern unsigned long  (* get_tls_session_hash) (struct sip_msg* msg);
 
 /**
  * Inserts the Path header.
@@ -159,6 +160,7 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
 	struct via_body *vb;
+	unsigned long s_hash = 0;
 
 
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking if registered\n");
@@ -168,8 +170,21 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 	
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking for <%d://%.*s:%d,%d>\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port,msg->rcv.src_port);
-	
-	if (r_is_integrity_protected(vb->host,vb->port,msg->rcv.src_port,vb->proto)) 
+	if (pcscf_use_tls && msg->rcv.dst_port == pcscf_tls_port){
+		if (!get_tls_session_hash)
+			get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
+			if (! get_tls_session_hash) {
+				LOG(L_ERR,"ERR:"M_NAME":P_is_integrity_protected: get_tls_session_hash not found !\n");
+				return CSCF_RETURN_FALSE;
+			}
+			
+		s_hash = get_tls_session_hash(msg);
+		if (!s_hash){
+			LOG(L_ERR,"ERR:"M_NAME":P_is_integrity_protected: Session Hash could not be obtained !\n");
+			return CSCF_RETURN_FALSE;
+		}
+	}
+	if (r_is_integrity_protected(vb->host,vb->port,msg->rcv.src_port,vb->proto, s_hash)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;	

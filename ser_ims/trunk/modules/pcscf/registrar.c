@@ -353,10 +353,12 @@ error:
  * Finds if the message is integrity protected
  * @param host - host of the UE
  * @param port - port of the UE
+ * @param r_port - received port (added by PCSCF) 
  * @param transport - transport of the UE
+ * @param session_hash - TLS session hash
  * @returns 1 if registered, 0 if not or error
  */
-int r_is_integrity_protected(str host,int port,int r_port,int transport)
+int r_is_integrity_protected(str host,int port,int r_port,int transport, unsigned long session_hash)
 {
 	int ret=0;
 	r_contact *c;
@@ -375,8 +377,10 @@ int r_is_integrity_protected(str host,int port,int r_port,int transport)
 			case SEC_NONE:
 				break;
 			case SEC_TLS:
-				if (c->security->data.tls&&
-					(c->security->data.tls->port_tls==r_port)){
+				if (c->security->data.tls&& 
+					(c->security->data.tls->port_tls==r_port) &&
+					(session_hash!= 0 && c->security->data.tls->session_hash == session_hash) // test same session
+					){
 					ret = 1;
 				}
 				break;

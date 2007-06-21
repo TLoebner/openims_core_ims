@@ -35,5 +35,6 @@
 #include "../../select.h"
 
 extern select_row_t tls_sel[];
+unsigned long  get_tls_session_hash(struct sip_msg* msg,char *str1, char *str2);
 
 #endif /* _TLS_SELECT_H */

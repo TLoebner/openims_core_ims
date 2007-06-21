@@ -91,14 +91,17 @@ typedef struct _r_ipsec {
 	unsigned short port_us;		/**< Port UE Server						*/
 	
 	str ealg;					/**< Cypher Algorithm - ESP				*/
+	str r_ealg;					/**< received Cypher Algorithm - ESP				*/
 	str ck;						/**< Cypher Key							*/
 	str alg;					/**< Integrity Algorithm - AH			*/
+	str r_alg;				/**<received Integrity Algorithm - AH			*/
 	str ik;						/**< Integrity Key						*/
 } r_ipsec;
 
 /** TLS SA Information */
 typedef struct _r_tls {
 	unsigned short port_tls;	/**< Port UE TLS						*/
+	unsigned long session_hash;
 } r_tls;
 
 typedef enum _r_sec_type {
@@ -174,10 +177,10 @@ void del_r_public(r_contact *c,r_public *p);
 void free_r_public(r_public *p);
 
 r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str ck_esp,str alg_setkey,str ik_esp);
+	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp);
 void free_r_ipsec(r_ipsec *ipsec);
 
-r_tls* new_r_tls(int port_tls);
+r_tls* new_r_tls(int port_tls, unsigned long session_hash);
 void free_r_tls(r_tls *tls);
 
 r_security *new_r_security(str sec_header,r_security_type type,float q);

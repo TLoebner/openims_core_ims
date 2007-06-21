@@ -241,8 +241,10 @@ int bin_encode_ipsec(bin_data *x,r_ipsec *ipsec)
 	if (!bin_encode_ushort(x,ipsec->port_us)) goto error;
 	
 	if (!bin_encode_str(x,&(ipsec->ealg))) goto error;
+	if (!bin_encode_str(x,&(ipsec->r_ealg))) goto error;
 	if (!bin_encode_str(x,&(ipsec->ck))) goto error;
 	if (!bin_encode_str(x,&(ipsec->alg))) goto error;
+	if (!bin_encode_str(x,&(ipsec->r_alg))) goto error;
 	if (!bin_encode_str(x,&(ipsec->ik))) goto error;
 	
 	return 1;
@@ -286,8 +288,10 @@ int bin_decode_ipsec(bin_data *x,r_ipsec **ipsec)
 	if (!bin_decode_ushort(x,	&(*ipsec)->port_us)) goto error;
 
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->ealg),&s)) goto error;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->r_ealg),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->ck),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->alg),&s)) goto error;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->r_alg),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->ik),&s)) goto error;
 	
 	return 1;
@@ -295,8 +299,10 @@ error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_ipsec: Error while decoding (at %d (%04x)).\n",x->max,x->max);
 	if (*ipsec) {
 		if ((*ipsec)->ealg.s) shm_free((*ipsec)->ealg.s);
+		if ((*ipsec)->r_ealg.s) shm_free((*ipsec)->r_ealg.s);
 		if ((*ipsec)->ck.s) shm_free((*ipsec)->ck.s);
 		if ((*ipsec)->alg.s) shm_free((*ipsec)->alg.s);
+		if ((*ipsec)->r_alg.s) shm_free((*ipsec)->r_alg.s);
 		if ((*ipsec)->ik.s) shm_free((*ipsec)->ik.s);
 		shm_free(*ipsec);
 		*ipsec = 0;
@@ -322,6 +328,7 @@ int bin_encode_tls(bin_data *x,r_tls *tls)
 	if (!bin_encode_char(x,1)) goto error;
 
 	if (!bin_encode_ushort(x,tls->port_tls)) goto error;
+	if (!bin_encode_uint(x,tls->session_hash)) goto error;
 	
 	return 1;
 error:
@@ -338,6 +345,7 @@ error:
 int bin_decode_tls(bin_data *x,r_tls **tls)
 {
 	int len;
+	unsigned int tmp;
 	char c;
 
 	if (!bin_decode_char(x,	&c)) goto error;
@@ -356,7 +364,8 @@ int bin_decode_tls(bin_data *x,r_tls **tls)
 	memset(*tls,0,len);
 
 	if (!bin_decode_ushort(x,	&(*tls)->port_tls)) goto error;
-		
+	tmp = (*tls)->session_hash;
+	if (!bin_decode_uint(x,	&tmp)) goto error;	
 	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_tls: Error while decoding (at %d (%04x)).\n",x->max,x->max);
