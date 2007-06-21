@@ -250,7 +250,12 @@ int isc_bootstrap( struct sip_msg *msg, isc_mark *mark)
 
 	isc_mark_set(msg,0,mark);
 	/* change destination so it forwards to the app server */
-	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+	
+	/* we can not/should not free the dst_uri because the msg was dupped in shm actually
+	 * then is this a mem-leak? is the new msg->dst_uri.s ever freed?  
+	 */
+	//if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+	
 	msg->dst_uri.s = pkg_malloc(isc_my_uri_sip.len);
 	if (!msg->dst_uri.s) {
 		LOG(L_ERR,"ERR:"M_NAME":isc_forward(): error allocating %d bytes\n",isc_my_uri_sip.len);
