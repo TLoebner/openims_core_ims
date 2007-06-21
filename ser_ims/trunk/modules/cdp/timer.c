@@ -136,18 +136,15 @@ int add_timer(int expires_in,int one_time,callback_f cb,void *ptr)
 		LOG(L_ERR,"ERROR:add_timer(): Minimum expiration time is 1 second!\n");
 		return 0;
 	}
-	lock_get(timers_lock);
 	n = shm_malloc(sizeof(timer_cb_t));
 	if (!n){
 		LOG_NO_MEM("shm",sizeof(timer_cb_t));
-		lock_release(timers_lock);
 		return 0;
 	}
 	n->ptr = shm_malloc(sizeof(void*));
 	if (!n){
 		LOG_NO_MEM("shm",sizeof(void*));
 		shm_free(n);
-		lock_release(timers_lock);
 		return 0;
 	}
 	n->expires = expires_in + time(0);
@@ -155,11 +152,13 @@ int add_timer(int expires_in,int one_time,callback_f cb,void *ptr)
 	n->interval = expires_in;
 	n->cb = cb;
 	*(n->ptr) = ptr;
-	n->prev = timers->tail;
-	n->next = 0;
-	if (!timers->head) timers->head = n;
-	if (timers->tail) timers->tail->next = n;
-	timers->tail = n;
+
+	lock_get(timers_lock);
+		n->prev = timers->tail;
+		n->next = 0;
+		if (!timers->head) timers->head = n;
+		if (timers->tail) timers->tail->next = n;
+		timers->tail = n;
 	lock_release(timers_lock);
 	return 1;
 }
