@@ -83,7 +83,7 @@ done
 [ -z "$REALM" ] && REALM=open-ims.test
 if [ -z "$IMSUSER" ]; 
 then
-	IMSUSER=${IMPU%%@*}
+	IMSUSER=${IMPI%%@*}
 else
 	IMPI="$IMSUSER@$REALM"
 	IMPU="sip:$IMSUSER@$REALM"
