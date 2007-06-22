@@ -88,8 +88,6 @@ extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
 extern int pcscf_use_tls;							/**< whether to use or not TLS 					*/
 extern int pcscf_tls_port;						/**< PORT for TLS server 						*/
 
-extern unsigned long  (* get_tls_session_hash) (struct sip_msg* msg);
-
 /**
  * Inserts the Path header.
  * Path: <sip:term@pcscf.name.com;lr>
@@ -171,13 +169,6 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking for <%d://%.*s:%d,%d>\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port,msg->rcv.src_port);
 	if (pcscf_use_tls && msg->rcv.dst_port == pcscf_tls_port){
-		if (!get_tls_session_hash)
-			get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
-			if (! get_tls_session_hash) {
-				LOG(L_ERR,"ERR:"M_NAME":P_is_integrity_protected: get_tls_session_hash not found !\n");
-				return CSCF_RETURN_FALSE;
-			}
-			
 		s_hash = get_tls_session_hash(msg);
 		if (!s_hash){
 			LOG(L_ERR,"ERR:"M_NAME":P_is_integrity_protected: Session Hash could not be obtained !\n");
@@ -1016,7 +1007,7 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	struct cell *t=0;
 	struct sip_msg *req = 0;
 
-	if (!pcscf_use_ipsec||!pcscf_use_tls) return CSCF_RETURN_FALSE;
+	if (!pcscf_use_ipsec && !pcscf_use_tls) return CSCF_RETURN_FALSE;
 
 	if(msg -> first_line.type == SIP_REQUEST) {
 		/* on request, get the destination from the Request-URI */
@@ -1075,10 +1066,16 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 			case SEC_NONE:
 				break;
 			case SEC_IPSEC:
-				if (c->security->data.ipsec) dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_us);
+				if (pcscf_use_ipsec && c->security->data.ipsec) 
+					dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_us);
 				else dst.len += sprintf(dst.s + dst.len, ":%d", port);
 				break;
 			case SEC_TLS:
+				if (!pcscf_use_tls){
+					r_unlock(c->hash);
+					if (dst.s)
+						pkg_free(dst.s);
+				}
 				if(msg -> first_line.type != SIP_REQUEST) {
 					// request received on other port
 					if (req->rcv.dst_port != pcscf_tls_port )  

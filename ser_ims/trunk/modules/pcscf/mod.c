@@ -741,7 +741,14 @@ static int mod_init(void)
 	if (pcscf_nat_enable && rtpproxy_enable) 
 		if (!rtpproxy_init()) goto error;
 
-
+	if (pcscf_use_tls)
+	{
+		get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
+		if (! get_tls_session_hash) {
+			LOG(L_ERR,"ERR:"M_NAME":mod_init: get_tls_session_hash not found !\n");
+			goto error;
+		}
+	}
 	return 0;
 error:
 	return -1;

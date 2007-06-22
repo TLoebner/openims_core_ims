@@ -93,8 +93,6 @@ extern int pcscf_use_tls;					/**< whether to use or not tls 						*/
 extern int pcscf_tls_port;					/**< PORT for TLS server 						*/
 extern int tls_disable;
 
-unsigned long  (* get_tls_session_hash) (struct sip_msg* msg);
-
 /**
  * Returns the next unused SPI.
  * \todo - make sure that this SPI is not used at the moment
@@ -192,12 +190,6 @@ unsigned long tls_get_session_hash(struct sip_msg *req)
 {
 	unsigned long s_hash = 0;
 	if (!pcscf_use_tls) return 0;
-	if (!get_tls_session_hash)
-		get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
-		if (! get_tls_session_hash) {
-			LOG(L_ERR,"ERR:"M_NAME":tls_get_session_hash: get_tls_session_hash not found !\n");
-			return 0;
-		}
 	s_hash = get_tls_session_hash(req);
 	if (!s_hash){
 		LOG(L_ERR,"ERR:"M_NAME":tls_get_session_hash: Session Hash could not be obtained !\n");
@@ -795,13 +787,6 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 			if (c->security && pcscf_use_tls) {
 				r_tls *tls;
 				int port_tls = req->rcv.src_port;
-				if (!get_tls_session_hash)
-					get_tls_session_hash = (void *)find_export("get_tls_session_hash", 0, 0);
-					if (! get_tls_session_hash) {
-						LOG(L_ERR,"ERR:"M_NAME":P_security_200: get_tls_session_hash not found !\n");
-						r_unlock(c->hash);
-						goto error;
-					}
 				s_hash = get_tls_session_hash(req);
 				if (!s_hash){
 					LOG(L_ERR,"ERR:"M_NAME":P_security_200: Session Hash could not be obtained !\n");
