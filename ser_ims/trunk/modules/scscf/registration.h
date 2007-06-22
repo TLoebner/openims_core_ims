@@ -60,7 +60,7 @@
 #include "../../locking.h"
 
 #define NONCE_LEN 16
-#define RAND_LEN  8
+#define RAND_LEN  16
 
 unsigned char get_algorithm_type(str algorithm);
 unsigned char get_auth_scheme_type(str algorithm);
