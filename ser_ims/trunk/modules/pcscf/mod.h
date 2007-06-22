@@ -208,6 +208,6 @@ int P_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 #define ANSI_CYAN		"\033[01;36m"
 #define ANSI_WHITE		"\033[01;37m"
 
-
+unsigned long (* get_tls_session_hash)(struct sip_msg *msg);
 
 #endif /* P_CSCF_MOD_H */

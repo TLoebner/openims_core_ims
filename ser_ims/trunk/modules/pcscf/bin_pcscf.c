@@ -328,7 +328,6 @@ int bin_encode_tls(bin_data *x,r_tls *tls)
 	if (!bin_encode_char(x,1)) goto error;
 
 	if (!bin_encode_ushort(x,tls->port_tls)) goto error;
-	if (!bin_encode_uint(x,tls->session_hash)) goto error;
 	
 	return 1;
 error:
@@ -345,7 +344,6 @@ error:
 int bin_decode_tls(bin_data *x,r_tls **tls)
 {
 	int len;
-	unsigned int tmp;
 	char c;
 
 	if (!bin_decode_char(x,	&c)) goto error;
@@ -363,9 +361,7 @@ int bin_decode_tls(bin_data *x,r_tls **tls)
 	}
 	memset(*tls,0,len);
 
-	if (!bin_decode_ushort(x,	&(*tls)->port_tls)) goto error;
-	tmp = (*tls)->session_hash;
-	if (!bin_decode_uint(x,	&tmp)) goto error;	
+	if (!bin_decode_ushort(x,	&(*tls)->port_tls)) goto error;	
 	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_decode_tls: Error while decoding (at %d (%04x)).\n",x->max,x->max);
