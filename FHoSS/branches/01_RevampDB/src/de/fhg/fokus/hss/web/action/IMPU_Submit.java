@@ -188,6 +188,7 @@ public class IMPU_Submit extends Action{
 			else if (nextAction.equals("delete")){
 				IMPU_DAO.delete_by_ID(session, id);
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
+				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 			}
 			else if (nextAction.equals("add_impi")){
 				IMPI impi = IMPI_DAO.get_by_Identity(session, form.getImpi_identity());	
@@ -274,6 +275,32 @@ public class IMPU_Submit extends Action{
 				forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
 				
 			}
+			else if (nextAction.equals("ppr")){
+					logger.info("We are sending a PPR message for the user!");
+					IMPU impu = IMPU_DAO.get_by_ID(session, id);
+					if (impu.getUser_state() == CxConstants.IMPU_user_state_Registered || impu.getUser_state() == 
+							CxConstants.IMPU_user_state_Unregistered){
+						
+						logger.warn("IMPU: " + form.getIdentity() + " is not registered! PPR aborted!");
+						// we process the request only if the user is in Registered or Unregistered state
+						int id_impi = IMPU_DAO.get_a_registered_IMPI_ID(session, form.getId());
+						if (id_impi != -1){
+							int grp = RTR_PPR_DAO.get_max_grp(session);
+							// we have only a PPR message for the implicit set!
+							RTR_PPR rtr_ppr = new RTR_PPR();
+							rtr_ppr.setId_impi(id_impi);
+							rtr_ppr.setId_implicit_set(impu.getId_implicit_set());
+							rtr_ppr.setId_impu(impu.getId());
+							// type for PPR is 2
+							rtr_ppr.setType(2);
+							rtr_ppr.setSubtype(form.getPpr_apply_for());
+							rtr_ppr.setGrp(grp);
+							RTR_PPR_DAO.insert(session, rtr_ppr);
+						}
+					}
+					forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
+					forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
+				}
 
 			// refresh the SP and the Charging-Info list
 			List sp_list = SP_DAO.get_all(session);
@@ -326,53 +353,6 @@ public class IMPU_Submit extends Action{
 			HibernateUtil.closeSession();
 		}
 
-		dbException = false;
-		try{
-			Session session = HibernateUtil.getCurrentSession();
-			HibernateUtil.beginTransaction();
-
-			// PPR & RTR
-			if (nextAction.equals("ppr")){
-				logger.info("We are sending a PPR message for the user!");
-				
-				IMPU impu = IMPU_DAO.get_by_ID(session, id);
-				if (impu.getUser_state() == CxConstants.IMPU_user_state_Registered || impu.getUser_state() == CxConstants.IMPU_user_state_Unregistered){
-					logger.warn("IMPU: " + form.getIdentity() + " is not registered! PPR aborted!");
-					// we process the request only if the user is in Registered or Unregistered state
-					int id_impi = IMPU_DAO.get_a_registered_IMPI_ID(session, form.getId());
-					if (id_impi != -1){
-						int grp = RTR_PPR_DAO.get_max_grp(session);
-						// we have only a PPR message for the implicit set!
-						RTR_PPR rtr_ppr = new RTR_PPR();
-						rtr_ppr.setId_impi(id_impi);
-						rtr_ppr.setId_implicit_set(impu.getId_implicit_set());
-						rtr_ppr.setId_impu(impu.getId());
-						// type for PPR is 2
-						rtr_ppr.setType(2);
-						rtr_ppr.setSubtype(form.getPpr_apply_for());
-						rtr_ppr.setGrp(grp);
-						RTR_PPR_DAO.insert(session, rtr_ppr);
-					}
-				}
-			}
-			
-		}
-		catch (HibernateException e){
-			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
-			e.printStackTrace();
-			dbException = true;
-			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
-		}
-		finally{
-			if (!dbException){
-				HibernateUtil.commitTransaction();
-			}
-			HibernateUtil.closeSession();
-		}
-		
-		forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
-		forward = new ActionForward(forward.getPath() +"?id=" + form.getId());
-		
 		return forward;
 	}
 	
