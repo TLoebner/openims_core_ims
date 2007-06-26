@@ -18,6 +18,9 @@
 	<property name="ip" type="string"/>
 	<property name="id_imsu" type="java.lang.Integer" />
 	<property name="line_identifier" type="string"/>
-	
+	<property name="zh_uicc_type" type="int"/>
+	<property name="zh_key_life_time" type="int"/>	
+	<property name="zh_default_auth_scheme" type="int"/>
+		
 </class>
 </hibernate-mapping>

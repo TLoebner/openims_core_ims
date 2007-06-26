@@ -38,7 +38,8 @@
 		<mapping resource="mappings/TP.hbm.xml"/>										
 		<mapping resource="mappings/VisitedNetwork.hbm.xml"/>												
 		<mapping resource="mappings/RepositoryData.hbm.xml"/>				
-		<mapping resource="mappings/AliasesRepositoryData.hbm.xml"/>						
+		<mapping resource="mappings/AliasesRepositoryData.hbm.xml"/>		
+		<mapping resource="mappings/Zh_USS.hbm.xml"/>								
 	</session-factory>
 	
 </hibernate-configuration>

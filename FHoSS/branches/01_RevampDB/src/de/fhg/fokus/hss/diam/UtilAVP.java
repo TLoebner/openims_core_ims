@@ -315,17 +315,11 @@ public class UtilAVP {
 		avp.setData(resultCode);
 		message.addAVP(avp);
 	}
-	
-	public static void addServerName(DiameterMessage message, String serverName){
-		AVP avp = new AVP(DiameterConstants.AVPCode.IMS_SERVER_NAME, true, DiameterConstants.Vendor.V3GPP);
-		avp.setData(serverName);
-		message.addAVP(avp);
-	}
-	
-	public static void addExperimentalResultCode(DiameterMessage message, int resultCode){
+
+	public static void addExperimentalResultCode(DiameterMessage message, int resultCode, int vendor){
 		AVP group = new AVP(DiameterConstants.AVPCode.EXPERIMENTAL_RESULT, true, DiameterConstants.Vendor.DIAM);
 		AVP vendorID = new AVP(DiameterConstants.AVPCode.VENDOR_ID, true, DiameterConstants.Vendor.DIAM);
-		vendorID.setData(DiameterConstants.Vendor.V3GPP);
+		vendorID.setData(vendor);
 		group.addChildAVP(vendorID);
 		
 		AVP expResult = new AVP(DiameterConstants.AVPCode.EXPERIMENTAL_RESULT_CODE, true, DiameterConstants.Vendor.DIAM); 
@@ -333,6 +327,13 @@ public class UtilAVP {
 		group.addChildAVP(expResult);
 		message.addAVP(group);
 	}
+	
+	public static void addServerName(DiameterMessage message, String serverName){
+		AVP avp = new AVP(DiameterConstants.AVPCode.IMS_SERVER_NAME, true, DiameterConstants.Vendor.V3GPP);
+		avp.setData(serverName);
+		message.addAVP(avp);
+	}
+	
 	
 	public static void addVendorSpecificApplicationID(DiameterMessage message, int vendorID, int appID){
         AVP vendorAppID_AVP = new AVP(DiameterConstants.AVPCode.VENDOR_SPECIFIC_APPLICATION_ID, true, DiameterConstants.Vendor.DIAM);
@@ -707,7 +708,6 @@ public class UtilAVP {
 	
 	
 	public static void addShUserIdentity(DiameterMessage message, String userIdentity){
-		// return the Public Identity or the MSISDN AVP
 		AVP shUserIdentity = new AVP(DiameterConstants.AVPCode.IMS_USER_IDENTITY, true, 
 				DiameterConstants.Vendor.V3GPP);
 		AVP publicIdentity = new AVP(DiameterConstants.AVPCode.IMS_PUBLIC_IDENTITY_SH, true, 
@@ -718,4 +718,12 @@ public class UtilAVP {
 	}
 	
 
+	// methods for Zh
+	
+	public static void addGUSS(DiameterMessage message, String gussXML){
+		AVP avp = new AVP(DiameterConstants.AVPCode.IMS_GBA_USER_SEC_SETTINGS, true, 
+				DiameterConstants.Vendor.V3GPP);
+		avp.setData(gussXML);
+		message.addAVP(avp);
+	}
 }

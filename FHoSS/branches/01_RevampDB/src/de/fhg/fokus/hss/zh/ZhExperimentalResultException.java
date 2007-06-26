@@ -1,4 +1,4 @@
- /*
+/*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -41,27 +41,27 @@
   * 
   */
 
-package de.fhg.fokus.hss.sh;
-
+package de.fhg.fokus.hss.zh;
 import de.fhg.fokus.hss.diam.DiameterConstants;
-
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShExperimentalResultException extends Exception{
+
+public class ZhExperimentalResultException extends Exception{
 	private int errorCode;
 	private int vendor;
 	
-	public ShExperimentalResultException(String message, int errorCode, int vendor){
+	public ZhExperimentalResultException(String message, int errorCode, int vendor){
 		super(message);
 		this.errorCode = errorCode;
 		this.vendor = vendor;
 	}
 
-	public ShExperimentalResultException(DiameterConstants.ResultCode resultCode){
+	public ZhExperimentalResultException(DiameterConstants.ResultCode resultCode){
 		super (resultCode.getName());
 		this.errorCode = resultCode.getCode();
+		this.vendor = resultCode.getVendor();
 	}
 	
 	public int getErrorCode() {
@@ -80,5 +80,4 @@ public class ShExperimentalResultException extends Exception{
 		this.vendor = vendor;
 	}
 	
-
 }

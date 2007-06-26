@@ -1,4 +1,4 @@
- /*
+/*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -41,44 +41,42 @@
   * 
   */
 
-package de.fhg.fokus.hss.sh;
-
-import de.fhg.fokus.hss.diam.DiameterConstants;
+package de.fhg.fokus.hss.zh;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShExperimentalResultException extends Exception{
-	private int errorCode;
-	private int vendor;
+
+public class ZhConstants{
 	
-	public ShExperimentalResultException(String message, int errorCode, int vendor){
-		super(message);
-		this.errorCode = errorCode;
-		this.vendor = vendor;
-	}
-
-	public ShExperimentalResultException(DiameterConstants.ResultCode resultCode){
-		super (resultCode.getName());
-		this.errorCode = resultCode.getCode();
-	}
-	
-	public int getErrorCode() {
-		return errorCode;
-	}
-
-	public void setErrorCode(int errorCode) {
-		this.errorCode = errorCode;
-	}
-
-	public int getVendor() {
-		return vendor;
-	}
-
-	public void setVendor(int vendor) {
-		this.vendor = vendor;
-	}
-	
+	// GAA Service Types
+	public static int GAA_Service_Type_Unspecific_Service = 0;
+	public static int GAA_Service_Type_PKI_Portal = 1;
+	public static int GAA_Service_Type_Authentication_Proxy = 2;
+	public static int GAA_Service_Type_Presence = 3;
+	public static int GAA_Service_Type_MBMS = 4;
+	public static int GAA_Service_Type_Liberty_Alliance_Project = 5;
+	public static String GAA_Service_Type_Unspecific_Service_Name = "Unspecific Service";
+	public static String GAA_Service_Type_PKI_Portal_Name = "PKI-Portal";
+	public static String GAA_Service_Type_Authentication_Proxy_Name = "Authentication Proxy";
+	public static String GAA_Service_Type_Presence_Name = "Presence";
+	public static String GAA_Service_Type_MBMS_Name = "MBMS";
+	public static String GAA_Service_Type_Liberty_Alliance_Project_Name = "Liberty Alliance Project";
+ 
+	// Flags for PKI Portal Service Type
+	public static int GAA_Authorization_Authentication_Allowed = 1;
+	public static int GAA_Authorization_Non_Repudiation_Allowed = 2;
+	public static String GAA_Authorization_Authentication_Allowed_Name = "Authentication Allowed";
+	public static String GAA_Authorization_Non_Repudiation_Allowed_Name = "Non-Repudiation Allowed";
+ 
+	// UICC Types
+	public static int UICC_Type_Basic_GBA = 0;
+	public static int UICC_Type_GBA_U = 1;
+	public static String UICC_Type_Basic_GBA_Name = "GBA";
+	public static String UICC_Type_GBA_U_Name = "GBA_U";
+ 
+	// default Key Life Time
+	public static int Default_Key_Life_Time = 3600;
 
 }

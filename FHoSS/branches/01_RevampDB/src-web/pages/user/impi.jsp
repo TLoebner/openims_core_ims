@@ -291,6 +291,22 @@ function disable_other_boxes(){
 											<html:text property="line_identifier" styleClass="inputtext"/> 
 										</td>
 									</tr>
+									<tr bgcolor="#FFCC66">
+										<td>
+											GUSS
+										</td>
+										<td>
+										<%
+											if (id != -1){
+										%>
+											<a href="/hss.web.console/GBA_USS_Load.do?id_impi=<%=id%>">
+												Configure 	
+											</a>
+										<%
+											}
+										%>	
+										</td>
+									</tr>
 							</table>		
 						</td>
 					</tr>

@@ -75,7 +75,7 @@ public class TP_DAO {
 			}
 			tp.setDirtyFlag(false);
 		}
-		session.save(tp);
+		session.saveOrUpdate(tp);
 	}
 
 	public static TP get_by_ID(Session session, int id){

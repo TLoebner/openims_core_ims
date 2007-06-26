@@ -167,19 +167,19 @@ public class LIR {
 						}
 						else{
 							UtilAVP.addExperimentalResultCode(response,
-									DiameterConstants.ResultCode.RC_IMS_DIAMETER_UNREGISTERED_SERVICE.getCode());
+									DiameterConstants.ResultCode.RC_IMS_DIAMETER_UNREGISTERED_SERVICE.getCode(), DiameterConstants.Vendor.V3GPP);
 						}
 					}
 					else{
 						UtilAVP.addExperimentalResultCode(response, 
-								DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED.getCode());
+								DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED.getCode(), DiameterConstants.Vendor.V3GPP);
 					}
 					break;
 			}
 			
 		}
 		catch(CxExperimentalResultException e){
-			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode(), e.getVendor());
 			e.printStackTrace();
 		}
 		catch(CxFinalResultException e){

@@ -355,7 +355,7 @@ public class SNR {
 			e.printStackTrace();
 		}
 		catch(ShExperimentalResultException e){
-			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode(), e.getVendor());
 			e.printStackTrace();
 		}
 /*		catch(ShFinalResultException e){

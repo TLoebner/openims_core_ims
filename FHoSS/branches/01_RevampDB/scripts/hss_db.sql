@@ -148,6 +148,9 @@ CREATE TABLE `impi` (
   `sqn` varchar(64) NOT NULL default '0',
   `ip` varchar(64) NOT NULL default '',
   `line_identifier` varchar(64) NOT NULL default '',
+  `zh_uicc_type` int(11) default '0',
+  `zh_key_life_time` int(11) default '3600',  
+  `zh_default_auth_scheme` int(11) NOT NULL default '1',
   PRIMARY KEY  (`id`),
   KEY `idx_identity` (`identity`),
   KEY `idx_id_imsu` (`id_imsu`)
@@ -456,6 +459,23 @@ CREATE TABLE `visited_network` (
   PRIMARY KEY  (`id`),
   KEY `idx_identity` (`identity`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Visited Networks';
+
+
+--
+-- Table structure for table `zh_uss`
+--
+
+DROP TABLE IF EXISTS `zh_gba_uss`;
+CREATE TABLE `zh_gba_uss` (
+  `id` int(11) NOT NULL auto_increment,
+  `id_impi` int(11) NOT NULL default '0',
+  `type` int(11) NOT NULL default '1',
+  `flags` int(11) NOT NULL default '0',
+  `naf_group` varchar(255) default NULL,
+  PRIMARY KEY  (`id`),
+  KEY `idx_impi` (`id_impi`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Zh-User Security Settings';
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

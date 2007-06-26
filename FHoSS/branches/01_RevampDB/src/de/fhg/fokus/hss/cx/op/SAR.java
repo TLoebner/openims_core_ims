@@ -403,7 +403,8 @@ public class SAR {
 					}
 					
 					UtilAVP.addExperimentalResultCode(response, 
-							DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUCCESS_SERVER_NAME_NOT_STORED.getCode());
+							DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUCCESS_SERVER_NAME_NOT_STORED.getCode(), 
+							DiameterConstants.Vendor.V3GPP);
 					break;
 					
 				case CxConstants.Server_Assignment_Type_No_Assignment:
@@ -416,7 +417,8 @@ public class SAR {
 					if (!scscf_name.equals(serverName)){
 						if (!scscf_name.equals("")){
 							UtilAVP.addExperimentalResultCode(response, 
-									DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITY_ALREADY_REGISTERED.getCode());	
+									DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITY_ALREADY_REGISTERED.getCode(), 
+									DiameterConstants.Vendor.V3GPP);	
 						}
 						else{
 							UtilAVP.addResultCode(response, 
@@ -520,7 +522,7 @@ public class SAR {
 			}
 		}
 		catch(CxExperimentalResultException e){
-			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode(), e.getVendor());
 			e.printStackTrace();
 		}
 		catch(CxFinalResultException e){

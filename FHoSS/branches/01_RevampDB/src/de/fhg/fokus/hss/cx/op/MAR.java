@@ -322,7 +322,7 @@ public class MAR {
 			}
 		}	
 		catch(CxExperimentalResultException e){
-			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode(), e.getVendor());
 			e.printStackTrace();
 		}
 		catch(CxFinalResultException e){
@@ -344,7 +344,7 @@ public class MAR {
 		return response;
 	}
 	
-	private static AuthenticationVector synchronize(Session session, byte [] authorization, int auth_scheme, IMPI impi){
+	private static AuthenticationVector synchronize(Session session, byte [] sipAuthorization, int auth_scheme, IMPI impi){
     	logger.info("Handling Synchronization between Mobile Station and Home Environment!");
 
         byte [] secretKey = HexCodec.getBytes(impi.getK(), CxConstants.Auth_Parm_Secret_Key_Size);
@@ -368,21 +368,17 @@ public class MAR {
 		        
 		        sqnHe = DigestAKA.getNextSQN(sqnHe, HSSProperties.IND_LEN);
 
-		        byte [] nonce = new byte[32];
+		        //byte [] nonce = new byte[32];
 		        byte [] auts = new byte[14];
 		        int k = 0;
-		        for (int i = 0; i < 32; i++, k++){
-	        		nonce[k] = authorization[i]; 
-		        }
-		        k = 0;
-		        for (int i = 32; i < 46; i++, k++){
-	        		auts[k] = authorization[i]; 
+		        for (int i = sipAuthorization.length - auts.length; i < sipAuthorization.length; i++, k++){
+	        		auts[k] = sipAuthorization[i]; 
 		        }
 		        
 		        byte [] rand = new byte[16];
 		        k = 0;
 		        for (int i = 0; i < 16; i++, k++){
-	        		rand[k] = nonce[i]; 
+	        		rand[k] = sipAuthorization[i]; 
 		        }
 
 		        byte[] ak = null;
