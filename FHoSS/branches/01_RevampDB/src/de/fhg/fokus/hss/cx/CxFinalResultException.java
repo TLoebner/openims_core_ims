@@ -49,15 +49,18 @@ import de.fhg.fokus.hss.diam.DiameterConstants;
 
 public class CxFinalResultException extends Exception{
 	private int errorCode;
+	private int vendor;
 	
-	public CxFinalResultException(String message, int errorCode){
+	public CxFinalResultException(String message, int errorCode, int vendor){
 		super(message);
 		this.errorCode = errorCode;
+		this.vendor = vendor;
 	}
 
 	public CxFinalResultException(DiameterConstants.ResultCode resultCode){
 		super (resultCode.getName());
 		this.errorCode = resultCode.getCode();
+		this.vendor = resultCode.getVendor();
 	}
 	
 	public int getErrorCode() {
@@ -67,4 +70,13 @@ public class CxFinalResultException extends Exception{
 	public void setErrorCode(int errorCode) {
 		this.errorCode = errorCode;
 	}
+
+	public int getVendor() {
+		return vendor;
+	}
+
+	public void setVendor(int vendor) {
+		this.vendor = vendor;
+	}
+	
 }

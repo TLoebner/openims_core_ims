@@ -93,7 +93,7 @@ public class TP_Submit extends Action{
 		try{
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
-
+			
 			if (id != -1){
 				if (TP_Load.testForDelete(session, id)){
 					request.setAttribute("deleteDeactivation", "false");
@@ -126,6 +126,7 @@ public class TP_Submit extends Action{
 				else{
 					TP_DAO.update(session, tp);
 				}
+
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}
@@ -135,6 +136,10 @@ public class TP_Submit extends Action{
 				if (!TP_Load.setForm(form, tp)){
 					logger.error("The TP with the ID:" + id + " was not loaded from database!");
 				}
+				// reload SPTs
+				List spt_Form_List = TP_Load.getSpts(session, id);
+				form.setSpts(spt_Form_List);
+				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}
@@ -196,6 +201,10 @@ public class TP_Submit extends Action{
 							break;
 					}
 					SPT_DAO.insert(session, spt);
+
+					// reload SPTs
+					List spt_Form_List = TP_Load.getSpts(session, id);
+					form.setSpts(spt_Form_List);
 				}
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
@@ -204,12 +213,19 @@ public class TP_Submit extends Action{
 			}
 			else if (nextAction.equals("save_spt")){
 				saveSpts(session, form, id);
+
+				// reload SPTs
+				List spt_Form_List = TP_Load.getSpts(session, id);
+				form.setSpts(spt_Form_List);
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);
 			}
 			else if (nextAction.equals("delete_spt")){
 				SPT_DAO.delete_by_ID(session, form.getAssociated_ID());
+				// reload SPTs
+				List spt_Form_List = TP_Load.getSpts(session, id);
+				form.setSpts(spt_Form_List);
 				
 				forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 				forward =  new ActionForward(forward.getPath() +"?id=" + id);

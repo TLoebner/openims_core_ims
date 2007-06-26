@@ -1,4 +1,4 @@
- /*
+/*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -41,44 +41,52 @@
   * 
   */
 
-package de.fhg.fokus.hss.sh;
+package de.fhg.fokus.hss.db.op;
 
-import de.fhg.fokus.hss.diam.DiameterConstants;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.hibernate.Query;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.model.Zh_USS;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShExperimentalResultException extends Exception{
-	private int errorCode;
-	private int vendor;
+
+public class Zh_USS_DAO {
+	private static Logger logger = Logger.getLogger(Zh_USS_DAO.class);
 	
-	public ShExperimentalResultException(String message, int errorCode, int vendor){
-		super(message);
-		this.errorCode = errorCode;
-		this.vendor = vendor;
+	public static void insert(Session session, Zh_USS zh_uss){
+		session.save(zh_uss);
 	}
 
-	public ShExperimentalResultException(DiameterConstants.ResultCode resultCode){
-		super (resultCode.getName());
-		this.errorCode = resultCode.getCode();
-	}
-	
-	public int getErrorCode() {
-		return errorCode;
+	public static void update(Session session, Zh_USS zh_uss){
+		session.saveOrUpdate(zh_uss);
 	}
 
-	public void setErrorCode(int errorCode) {
-		this.errorCode = errorCode;
-	}
+	public static Zh_USS get_by_ID(Session session, int id){
+		Query query;
+		query = session.createSQLQuery("select * from zh_uss where id=?")
+			.addEntity(Zh_USS.class);
+		query.setInteger(0, id);
 
-	public int getVendor() {
-		return vendor;
-	}
+		return (Zh_USS) query.uniqueResult();
+	}	
 
-	public void setVendor(int vendor) {
-		this.vendor = vendor;
+	public static int delete_by_ID(Session session, int id){
+		Query query = session.createSQLQuery("delete from zh_uss where id=?");
+		query.setInteger(0, id);
+		return query.executeUpdate();
 	}
 	
-
+	public static List get_all_for_IMPI_ID(Session session, int id_impi){
+		Query query = session.createSQLQuery("select * from zh_uss where id_impi=?")
+			.addEntity(Zh_USS.class);
+		query.setInteger(0, id_impi);
+		return query.list();
+	}
+	
 }

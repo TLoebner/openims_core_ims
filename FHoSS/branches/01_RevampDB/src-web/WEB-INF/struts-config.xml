@@ -66,7 +66,9 @@
 		<!-- SPT -->		
 		<form-bean name="SPT_Form" type="de.fhg.fokus.hss.web.form.SPT_Form"/>
 
-
+		<!-- GBA & USS -->		
+		<form-bean name="GBA_USS_Form" type="de.fhg.fokus.hss.web.form.GBA_USS_Form"/>
+		<form-bean name="USS_Form" type="de.fhg.fokus.hss.web.form.USS_Form"/>
 	</form-beans>
 
 
@@ -323,7 +325,17 @@
 			<forward name="success" path="/pages/network/preferred_scscf_set_search_result.jsp" />
 			<forward name="failure" path="/pages/errorPage.jsp"/>
 		</action>
-				
+		
+		<!-- GBA & USS -->
+		<action path="/GBA_USS_Load" name="GBA_USS_Form" type="de.fhg.fokus.hss.web.action.GBA_USS_Load" validate="false">
+			<forward name="success" path="/pages/user/gba_uss.jsp" />
+			<forward name="failure" path="/pages/errorPage.jsp"/>
+		</action>
+		
+		<action path="/GBA_USS_Submit" name="GBA_USS_Form" type="de.fhg.fokus.hss.web.action.GBA_USS_Submit" input="/GBA_USS_Load.do" validate="true">
+			<forward name="success" path="/pages/user/gba_uss.jsp" />
+			<forward name="failure" path="/pages/user/gba_uss.jsp" />
+		</action>
 	</action-mappings>
 
 

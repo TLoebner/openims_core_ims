@@ -165,7 +165,7 @@ public class UAR {
 						throw new CxExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_ROAMING_NOT_ALLOWED);
 					}
 					if (impu.getCan_register() == 0){
-						throw new CxFinalResultException("", 1);
+						throw new CxFinalResultException(DiameterConstants.ResultCode.DIAMETER_AUTHORIZATION_REJECTED);
 					}
 
 					List cap_set_mand_list = CapabilitiesSet_DAO.get_all_from_set(session, imsu.getId_capabilities_set(), 1);
@@ -187,7 +187,8 @@ public class UAR {
 						UtilAVP.addServerName(response, serverName);
 					if (authorizationType == DiameterConstants.AVPValue.UAT_Registration){
 						UtilAVP.addExperimentalResultCode(response, 
-								DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
+								DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode(), 
+								DiameterConstants.Vendor.V3GPP);
 					}
 					else if (authorizationType == DiameterConstants.AVPValue.UAT_De_Registration){
 						UtilAVP.addResultCode(response, DiameterConstants.ResultCode.DIAMETER_SUCCESS.getCode());
@@ -203,7 +204,8 @@ public class UAR {
 						if (serverName != null && !serverName.equals(""))						
 							UtilAVP.addServerName(response, serverName);	
 						UtilAVP.addExperimentalResultCode(response, 
-								DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
+								DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode(),
+								DiameterConstants.Vendor.V3GPP);
 					}
 					break;
 					
@@ -212,7 +214,8 @@ public class UAR {
 					
 					if (authorizationType == DiameterConstants.AVPValue.UAT_De_Registration){
 						UtilAVP.addExperimentalResultCode(response, 
-								DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED.getCode());
+								DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED.getCode(),
+								DiameterConstants.Vendor.V3GPP);
 					}
 					else if (authorizationType == DiameterConstants.AVPValue.UAT_Registration){
 						
@@ -222,7 +225,8 @@ public class UAR {
 							if (serverName != null && !serverName.equals(""))						
 								UtilAVP.addServerName(response, serverName);
 							UtilAVP.addExperimentalResultCode(response, 
-									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
+									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode(),
+									DiameterConstants.Vendor.V3GPP);
 							break;
 						}
 						
@@ -232,7 +236,8 @@ public class UAR {
 							if (serverName != null && !serverName.equals(""))						
 								UtilAVP.addServerName(response, serverName);
 							UtilAVP.addExperimentalResultCode(response, 
-									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
+									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode(),
+									DiameterConstants.Vendor.V3GPP);
 							break;
 						}
 						list = IMPI_IMPU_DAO.get_all_IMPU_of_IMSU_with_User_State(session, 
@@ -242,7 +247,8 @@ public class UAR {
 							
 							UtilAVP.addServerName(response, serverName);
 							UtilAVP.addExperimentalResultCode(response, 
-									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode());
+									DiameterConstants.ResultCode.RC_IMS_DIAMETER_SUBSEQUENT_REGISTRATION.getCode(),
+									DiameterConstants.Vendor.V3GPP);
 							break;
 						}
 						
@@ -253,14 +259,15 @@ public class UAR {
 						
 						UtilAVP.addServerCapabilities(response, cap_set_mand_list, cap_set_opt_list);
 						UtilAVP.addExperimentalResultCode(response, 
-								DiameterConstants.ResultCode.RC_IMS_DIAMETER_FIRST_REGISTRATION.getCode());
+								DiameterConstants.ResultCode.RC_IMS_DIAMETER_FIRST_REGISTRATION.getCode(),
+								DiameterConstants.Vendor.V3GPP);
 						
 					}
 					break;
 			}
 		}
 		catch(CxExperimentalResultException e){
-			UtilAVP.addExperimentalResultCode(response, e.getErrorCode());
+			UtilAVP.addExperimentalResultCode(response, e.getErrorCode(), e.getVendor());
 			e.printStackTrace();
 		} 
 		catch (CxFinalResultException e) {

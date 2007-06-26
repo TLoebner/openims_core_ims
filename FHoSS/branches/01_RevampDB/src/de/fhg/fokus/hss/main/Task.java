@@ -207,6 +207,14 @@ public class Task {
 		}
 		else if (interface_type == DiameterConstants.Application.Zh){
 			// Zh commands
+			switch(command_code){
+				case DiameterConstants.Command.MARzh:
+					logger.info("Processing Zh-MAR!");
+					response = de.fhg.fokus.hss.zh.op.MAR.processRequest(peer, message);
+					peer.sendMessage(FQDN, response);
+					break;
+			}
+			
 		}
 		
 		return response;

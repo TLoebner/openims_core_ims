@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.fhg.fokus.hss.cx.CxConstants;
+import de.fhg.fokus.hss.zh.ZhConstants;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -79,16 +80,6 @@ public class WebConstants {
 		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_NASS_Bundle_Name, CxConstants.Auth_Scheme_NASS_Bundle));
 	}
 	
-	/*
-	public static final List select_user_state;
-	static{
-		select_user_state = new ArrayList();
-		select_user_state.add(CxConstants.IMPU_user_state_Not_Registered);
-		select_user_state.add(CxConstants.IMPU_user_state_Registered);
-		select_user_state.add(CxConstants.IMPU_user_state_Unregistered);
-		select_user_state.add(CxConstants.IMPU_user_state_Auth_Pending);
-	}
-*/
 	public static final List<Tuple> select_default_handling;
 	static{
 		select_default_handling = new ArrayList<Tuple>();
@@ -185,4 +176,39 @@ public class WebConstants {
 		select_rtr_reason.add(new Tuple(CxConstants.RTR__Remove_S_CSCF_Name, CxConstants.RTR_Remove_S_CSCF));
 	}
 	
+	// Zh Select Lists
+	public static final ArrayList<Tuple> select_uicc_type;
+	static{
+		select_uicc_type = new ArrayList<Tuple>();
+		select_uicc_type.add(new Tuple(ZhConstants.UICC_Type_Basic_GBA_Name, ZhConstants.UICC_Type_Basic_GBA));
+		select_uicc_type.add(new Tuple(ZhConstants.UICC_Type_GBA_U_Name, ZhConstants.UICC_Type_GBA_U));
+	}
+	
+
+	// we have for Zh only AKA and MD5
+	public static final List<Tuple> select_zh_auth_scheme;
+	static{
+		select_zh_auth_scheme = new ArrayList<Tuple>();
+		select_zh_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_AKAv1_Name, CxConstants.Auth_Scheme_AKAv1));
+		select_zh_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_AKAv2_Name, CxConstants.Auth_Scheme_AKAv2));
+		select_zh_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_MD5_Name, CxConstants.Auth_Scheme_MD5));
+	}
+	
+	public static final List<Tuple> select_uss_type;
+	static{
+		select_uss_type = new ArrayList<Tuple>();
+		select_uss_type.add(new Tuple(ZhConstants.GAA_Service_Type_Unspecific_Service_Name, 
+				ZhConstants.GAA_Service_Type_Unspecific_Service));
+		select_uss_type.add(new Tuple(ZhConstants.GAA_Service_Type_PKI_Portal_Name, 
+				ZhConstants.GAA_Service_Type_PKI_Portal));
+		select_uss_type.add(new Tuple(ZhConstants.GAA_Service_Type_Authentication_Proxy_Name, 
+				ZhConstants.GAA_Service_Type_Authentication_Proxy));
+		select_uss_type.add(new Tuple(ZhConstants.GAA_Service_Type_Presence_Name, 
+				ZhConstants.GAA_Service_Type_Presence));
+		select_uss_type.add(new Tuple(ZhConstants.GAA_Service_Type_MBMS_Name, 
+				ZhConstants.GAA_Service_Type_MBMS));
+		select_uss_type.add(new Tuple(ZhConstants.GAA_Service_Type_Liberty_Alliance_Project_Name, 
+				ZhConstants.GAA_Service_Type_Liberty_Alliance_Project));
+		
+	}
 }

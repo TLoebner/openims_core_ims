@@ -127,7 +127,6 @@ public class ApplicationServer implements Serializable{
 		this.snr_psi_activation = 0;
 		this.snr_dsai = 0;
 		this.snr_aliases_rep_data = 0;
-		
 	}
 
 	// getters & setters

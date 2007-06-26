@@ -98,12 +98,17 @@ public class IMPU_DAO {
 				}
 			}
 		}
-		/*query = session.createSQLQuery("update impu set id_implicit_set=? where id_implicit_set=? and id !=?");
-		query.setInteger(0, new_implicit_set_id);
-		query.setInteger(1, old_implicit_set_id);
-		query.setInteger(2, id_impu);
-		query.executeUpdate();*/
 	}
+	
+	public static IMPU get_by_ID(Session session, int id){
+		Query query;
+		query = session.createSQLQuery("select * from impu where id=?")
+			.addEntity(IMPU.class);
+		query.setInteger(0, id);
+
+		return (IMPU) query.uniqueResult();
+	}
+
 	
 	public static List get_all_VisitedNetworks_by_IMPU_ID(Session session, int id_impu){
 		Query query;
@@ -125,7 +130,17 @@ public class IMPU_DAO {
 		return query.list();
 	}
 
-
+	public static List get_all_for_IMPI_ID(Session session, int id_impi){
+		Query query;
+		query = session.createSQLQuery("select * from impu" +
+				"	inner join impi_impu on impi_impu.id_impu=impu.id" +
+				" where impi_impu.id_impi=?")
+				.addEntity("impu", IMPU.class);
+		query.setInteger(0, id_impi);
+		return query.list();
+	}
+	
+		
 	public static int get_a_registered_IMPI_ID(Session session, int id_impu){
 		Query query;
 		query = session.createSQLQuery("select id_impi from impi_impu" +
@@ -138,22 +153,7 @@ public class IMPU_DAO {
 			return -1;
 		return result;
 	}
-	
-	public static int delete_VisitedNetwork_for_IMPU(Session session, int id_impu, int id_vn){
-		Query query = session.createSQLQuery("delete from impu_visited_network where id_impu=? and id_visited_network=?");
-		query.setInteger(0, id_impu);
-		query.setInteger(1, id_vn);
-		return query.executeUpdate();
-	}
-	
-	public static IMPU get_by_ID(Session session, int id){
-		Query query;
-		query = session.createSQLQuery("select * from impu where id=?")
-			.addEntity(IMPU.class);
-		query.setInteger(0, id);
-
-		return (IMPU) query.uniqueResult();
-	}
+		
 
 	public static IMPU get_one_from_set(Session session, int id_implicit_set){
 		Query query;
@@ -296,11 +296,6 @@ public class IMPU_DAO {
 		return result;
 	}
 	
-	public static int delete_by_ID(Session session, int id){
-		Query query = session.createSQLQuery("delete from impu where id=?");
-		query.setInteger(0, id);
-		return query.executeUpdate();
-	}
 	
 	public static List get_all_from_set(Session session, int id_set){
 		Query query;
@@ -376,5 +371,18 @@ public class IMPU_DAO {
 		query.setInteger(1, CxConstants.IMPU_user_state_Registered);
 		return query.list();
 	}
-	
+
+	public static int delete_by_ID(Session session, int id){
+		Query query = session.createSQLQuery("delete from impu where id=?");
+		query.setInteger(0, id);
+		return query.executeUpdate();
+	}
+
+	public static int delete_VisitedNetwork_for_IMPU(Session session, int id_impu, int id_vn){
+		Query query = session.createSQLQuery("delete from impu_visited_network where id_impu=? and id_visited_network=?");
+		query.setInteger(0, id_impu);
+		query.setInteger(1, id_vn);
+		return query.executeUpdate();
+	}
+
 }

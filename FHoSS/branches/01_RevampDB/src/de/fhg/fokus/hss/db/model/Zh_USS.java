@@ -1,4 +1,4 @@
- /*
+/*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -41,44 +41,65 @@
   * 
   */
 
-package de.fhg.fokus.hss.sh;
+package de.fhg.fokus.hss.db.model;
 
-import de.fhg.fokus.hss.diam.DiameterConstants;
+import java.io.Serializable;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShExperimentalResultException extends Exception{
-	private int errorCode;
-	private int vendor;
+public class Zh_USS implements Serializable {
+	private static final long serialVersionUID=1L;
 	
-	public ShExperimentalResultException(String message, int errorCode, int vendor){
-		super(message);
-		this.errorCode = errorCode;
-		this.vendor = vendor;
-	}
-
-	public ShExperimentalResultException(DiameterConstants.ResultCode resultCode){
-		super (resultCode.getName());
-		this.errorCode = resultCode.getCode();
-	}
+	private int id;
+	private int id_impi;
+	private int type;
+	private int flags;
+	private String naf_group;
 	
-	public int getErrorCode() {
-		return errorCode;
+	public Zh_USS(){}
+
+	public int getFlags() {
+		return flags;
 	}
 
-	public void setErrorCode(int errorCode) {
-		this.errorCode = errorCode;
+	public void setFlags(int flags) {
+		this.flags = flags;
 	}
 
-	public int getVendor() {
-		return vendor;
+	public int getId() {
+		return id;
 	}
 
-	public void setVendor(int vendor) {
-		this.vendor = vendor;
+	public void setId(int id) {
+		this.id = id;
 	}
+
+	public int getId_impi() {
+		return id_impi;
+	}
+
+	public void setId_impi(int id_impi) {
+		this.id_impi = id_impi;
+	}
+
+	public String getNaf_group() {
+		return naf_group;
+	}
+
+	public void setNaf_group(String naf_group) {
+		this.naf_group = naf_group;
+	}
+
+	public int getType() {
+		return type;
+	}
+
+	public void setType(int type) {
+		this.type = type;
+	}
+
 	
 
 }

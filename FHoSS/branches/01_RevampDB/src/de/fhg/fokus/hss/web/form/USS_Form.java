@@ -1,4 +1,4 @@
- /*
+/*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -41,44 +41,101 @@
   * 
   */
 
-package de.fhg.fokus.hss.sh;
+package de.fhg.fokus.hss.web.form;
 
-import de.fhg.fokus.hss.diam.DiameterConstants;
+import org.apache.log4j.Logger;
+import org.apache.struts.action.ActionErrors;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessage;
+
+import de.fhg.fokus.hss.web.util.WebConstants;
+
+import java.io.Serializable;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
-public class ShExperimentalResultException extends Exception{
-	private int errorCode;
-	private int vendor;
+
+
+public class USS_Form extends ActionForm implements Serializable{
+	private static Logger logger = Logger.getLogger(USS_Form.class);
+	private static final long serialVersionUID=1L;
+
+	private int id_uss;
+	private int type;
+	//private int flags;
+	private boolean auth_allowed;
+	private boolean non_repudiation_allowed;
+	private String nafGroup;
 	
-	public ShExperimentalResultException(String message, int errorCode, int vendor){
-		super(message);
-		this.errorCode = errorCode;
-		this.vendor = vendor;
-	}
-
-	public ShExperimentalResultException(DiameterConstants.ResultCode resultCode){
-		super (resultCode.getName());
-		this.errorCode = resultCode.getCode();
-	}
-	
-	public int getErrorCode() {
-		return errorCode;
-	}
-
-	public void setErrorCode(int errorCode) {
-		this.errorCode = errorCode;
-	}
-
-	public int getVendor() {
-		return vendor;
-	}
-
-	public void setVendor(int vendor) {
-		this.vendor = vendor;
+	private static List select_uss_type;
+	static{
+    	select_uss_type = WebConstants.select_uss_type;
 	}
 	
+    public void reset(ActionMapping actionMapping, HttpServletRequest request){
+    	this.type = 0;
+    	this.auth_allowed = false;
+    	this.non_repudiation_allowed = false;
+    	this.nafGroup = null;
+ 	}
+	
+    public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
+        ActionErrors actionErrors = new ActionErrors();
 
+        return actionErrors;
+    }
+
+	public int getId_uss() {
+		return id_uss;
+	}
+
+	public void setId_uss(int id_uss) {
+		this.id_uss = id_uss;
+	}
+
+	public boolean isAuth_allowed() {
+		return auth_allowed;
+	}
+
+	public void setAuth_allowed(boolean auth_allowed) {
+		this.auth_allowed = auth_allowed;
+	}
+
+	public boolean isNon_repudiation_allowed() {
+		return non_repudiation_allowed;
+	}
+
+	public void setNon_repudiation_allowed(boolean non_repudiation_allowed) {
+		this.non_repudiation_allowed = non_repudiation_allowed;
+	}
+
+	public String getNafGroup() {
+		return nafGroup;
+	}
+
+	public void setNafGroup(String nafGroup) {
+		this.nafGroup = nafGroup;
+	}
+
+	public int getType() {
+		return type;
+	}
+
+	public void setType(int type) {
+		this.type = type;
+	}
+
+	public List getSelect_uss_type() {
+		return select_uss_type;
+	}
+
+	public void setSelect_uss_type(List select_uss_type) {
+		this.select_uss_type = select_uss_type;
+	}
 }

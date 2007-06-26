@@ -67,6 +67,9 @@ public class IMPI implements Serializable{
 	private String ip;
 	private Integer id_imsu;
 	private String line_identifier;
+	private int zh_uicc_type;
+	private int zh_key_life_time;
+	private int zh_default_auth_scheme;
 	
 	public IMPI(){}
 
@@ -198,6 +201,31 @@ public class IMPI implements Serializable{
 
 	public void setLine_identifier(String line_identifier) {
 		this.line_identifier = line_identifier;
+	}
+
+
+	public int getZh_key_life_time() {
+		return zh_key_life_time;
+	}
+
+	public void setZh_key_life_time(int zh_key_life_time) {
+		this.zh_key_life_time = zh_key_life_time;
+	}
+
+	public int getZh_uicc_type() {
+		return zh_uicc_type;
+	}
+
+	public void setZh_uicc_type(int zh_uicc_type) {
+		this.zh_uicc_type = zh_uicc_type;
+	}
+
+	public int getZh_default_auth_scheme() {
+		return zh_default_auth_scheme;
+	}
+
+	public void setZh_default_auth_scheme(int zh_default_auth_scheme) {
+		this.zh_default_auth_scheme = zh_default_auth_scheme;
 	}
 	
 	
