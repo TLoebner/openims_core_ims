@@ -211,4 +211,8 @@ public class WebConstants {
 				ZhConstants.GAA_Service_Type_Liberty_Alliance_Project));
 		
 	}
+	
+	// Tomcat Security Permissions 
+	public static final String Security_Permission_ADMIN = "admin";
+	public static final String Security_Permission_USER = "user";
 }

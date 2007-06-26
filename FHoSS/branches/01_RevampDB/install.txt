@@ -81,12 +81,12 @@ mysql -u admin -p <userdata.sql
  	
  	6.4.2 for the web interface
  	read-only user:
- 		user: hss
- 		password: hss
+ 		user: user
+ 		password: user
 
  	administrator:
- 		user: hssAdmin
- 		password: hss	
+ 		user: admin
+ 		password: admin	
  		
 7. Running the FHoSS
 --------------------

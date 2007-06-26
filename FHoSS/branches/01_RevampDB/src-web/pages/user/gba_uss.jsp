@@ -11,7 +11,7 @@
 	prefix="nested"%>
 
 <%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.cx.CxConstants, de.fhg.fokus.hss.zh.ZhConstants,
-	de.fhg.fokus.hss.web.form.*, de.fhg.fokus.hss.util.SecurityPermissions" %>
+	de.fhg.fokus.hss.web.form.* " %>
 <html>
 <head>
 <%

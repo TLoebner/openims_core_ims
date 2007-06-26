@@ -8,7 +8,7 @@
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
 <%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.db.op.*, de.fhg.fokus.hss.web.util.*,
-	de.fhg.fokus.hss.db.hibernate.*, org.hibernate.Session, de.fhg.fokus.hss.util.SecurityPermissions" %>
+	de.fhg.fokus.hss.db.hibernate.*, org.hibernate.Session" %>
 <jsp:useBean id="attached_cap" type="java.util.List" scope="request"></jsp:useBean>
 <html>
 <head>

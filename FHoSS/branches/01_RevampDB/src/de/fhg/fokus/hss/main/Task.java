@@ -158,12 +158,12 @@ public class Task {
 					
 					break;
 				case DiameterConstants.Command.SAR:
-					System.out.println("Processing SAR!");
+					logger.info("Processing SAR!");
 					response = SAR.processRequest(peer, message);
 					peer.sendMessage(FQDN, response);
 					break;
 				case DiameterConstants.Command.UAR:
-					System.out.println("Processing UAR!");
+					logger.info("Processing UAR!");
 					response = UAR.processRequest(peer, message);
 					peer.sendMessage(FQDN, response);
 					break;

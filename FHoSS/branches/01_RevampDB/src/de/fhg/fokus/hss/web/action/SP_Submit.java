@@ -150,7 +150,6 @@ public class SP_Submit extends Action{
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}
 			else if (nextAction.equals("attach_shared_ifc")){
-				System.out.println("attach shared IFC:" + form.getShared_ifc_id());
 				SP_Shared_IFC_Set sp_shared_ifc = new SP_Shared_IFC_Set();
 				sp_shared_ifc.setId_sp(id);
 				sp_shared_ifc.setId_shared_ifc_set(form.getShared_ifc_id());
@@ -166,7 +165,6 @@ public class SP_Submit extends Action{
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}
 			else if (nextAction.equals("detach_ifc")){
-				System.out.println("delete IFC:" + form.getAssociated_ID());
 				SP_IFC_DAO.delete_by_SP_and_IFC_ID(session, id, form.getAssociated_ID());
 
 				// perform refresh
@@ -179,7 +177,6 @@ public class SP_Submit extends Action{
 				forward =  new ActionForward(forward.getPath() + "?id=" + id);
 			}
 			else if (nextAction.equals("detach_shared_ifc")){
-				System.out.println("delete shared:" + form.getAssociated_ID());
 				SP_Shared_IFC_Set_DAO.delete_by_SP_and_Shared_IFC_ID(session, id, form.getAssociated_ID());
 
 				// perform refresh

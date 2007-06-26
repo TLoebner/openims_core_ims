@@ -49,7 +49,6 @@ import org.apache.log4j.Logger;
 import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
-import org.apache.struts.action.ActionMessage;
 
 import de.fhg.fokus.hss.cx.CxConstants;
 import de.fhg.fokus.hss.web.util.WebConstants;
@@ -68,20 +67,25 @@ import javax.servlet.http.HttpServletRequest;
 
 
 public class GBA_USS_Form extends ActionForm implements Serializable{
-	private static Logger logger = Logger.getLogger(GBA_USS_Form.class);
 	private static final long serialVersionUID=1L;
+	private static Logger logger = Logger.getLogger(GBA_USS_Form.class);
+	
 	private String identity;
 	private int id_impi;
     private int uicc_type;
     private int key_life_time;
     private int default_auth_scheme;
-    private List ussList;
+    private transient List ussList;
     
 	private String nextAction;
 	private int associated_ID;
-	private List select_uicc_type;
-	private List select_zh_auth_scheme;
+	private static List select_uicc_type;
+	private static List select_zh_auth_scheme;
 	
+	static{
+    	select_uicc_type = WebConstants.select_uicc_type;
+    	select_zh_auth_scheme = WebConstants.select_zh_auth_scheme;
+	}
     public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id_impi = 0;
     	this.identity = null;
@@ -96,8 +100,6 @@ public class GBA_USS_Form extends ActionForm implements Serializable{
     	};
 
     	this.ussList = LazyList.decorate(new ArrayList(), factory);
-    	this.select_uicc_type = WebConstants.select_uicc_type;
-    	this.select_zh_auth_scheme = WebConstants.select_zh_auth_scheme;
  	}
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -174,16 +176,9 @@ public class GBA_USS_Form extends ActionForm implements Serializable{
 		return select_uicc_type;
 	}
 
-	public void setSelect_uicc_type(List select_uicc_type) {
-		this.select_uicc_type = select_uicc_type;
-	}
-
 	public List getSelect_zh_auth_scheme() {
 		return select_zh_auth_scheme;
 	}
 
-	public void setSelect_zh_auth_scheme(List select_zh_auth_scheme) {
-		this.select_zh_auth_scheme = select_zh_auth_scheme;
-	}
 	
 }

@@ -76,7 +76,7 @@ public class HSSContainer {
 			tomcatServer.startTomcat();
         }
 		catch(Exception e){
-			System.out.println("Exception occured during starting Tomcat!\nExiting from HSS...");
+			logger.error("Exception occured during starting Tomcat!\nExiting from HSS...");
 			e.printStackTrace();
 			System.exit(-1);
 		}
@@ -115,7 +115,7 @@ public class HSSContainer {
 			hssContainer.tomcatServer.stopTomcat();
         }
 		catch(Exception e){
-			System.out.println("Exception occured during stoping Tomcat!\nExiting from HSS...");
+			logger.error("Exception occured during stoping Tomcat!\nExiting from HSS...");
 			e.printStackTrace();
 			System.exit(-1);
 		}

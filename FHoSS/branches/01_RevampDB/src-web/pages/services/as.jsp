@@ -7,7 +7,7 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.util.SecurityPermissions" %>
+<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.* " %>
 <html>
 <head>
 

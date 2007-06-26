@@ -140,6 +140,7 @@ public class IMPI_Form extends ActionForm implements Serializable{
     	
     	this.impu_identity = null;
     	this.imsu_name = null;
+    	
     	//this.select_imsu = null;
     	//this.associated_impu_set = null;
     	this.associated_ID = -1;

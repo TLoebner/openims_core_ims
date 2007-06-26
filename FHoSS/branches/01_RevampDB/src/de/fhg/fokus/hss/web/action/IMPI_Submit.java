@@ -76,6 +76,7 @@ import de.fhg.fokus.hss.db.op.RTR_PPR_DAO;
 import de.fhg.fokus.hss.db.hibernate.*;
 import de.fhg.fokus.hss.web.form.IMPI_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
+import de.fhg.fokus.hss.zh.ZhConstants;
 
 
 /**
@@ -106,6 +107,10 @@ public class IMPI_Submit extends Action{
 				if (id == -1){
 					// create
 					impi = new IMPI();
+					// set default values for the Zh variables 
+					impi.setZh_default_auth_scheme(CxConstants.Auth_Scheme_AKAv1);
+					impi.setZh_key_life_time(ZhConstants.Default_Key_Life_Time);
+					impi.setZh_uicc_type(ZhConstants.UICC_Type_Basic_GBA);
 				}
 				else{
 					// update
@@ -121,12 +126,9 @@ public class IMPI_Submit extends Action{
 				impi.setAmf(HexCodec.decode(form.getAmf()));
 				impi.setOp(HexCodec.decode(form.getOp()));
 				impi.setSqn(form.getSqn());
-				
 				impi.setId_imsu(form.getId_imsu());
-				
 				impi.setDefault_auth_scheme(form.getDefault_auth_scheme());
 				impi.setLine_identifier(form.getLine_identifier());
-
 				if (id == -1){
 					if (form.getAlready_assigned_imsu_id() > 0){
 						impi.setId_imsu(form.getAlready_assigned_imsu_id());

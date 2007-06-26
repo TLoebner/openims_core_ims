@@ -5,7 +5,7 @@
 	prefix="bean"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-html"
 	prefix="html"%>
-<%@ page import="de.fhg.fokus.hss.util.SecurityPermissions" %>
+<%@ page import="de.fhg.fokus.hss.web.util.WebConstants" %>
 
 <html>
 <head>
@@ -28,35 +28,35 @@
 			<li> <b> Visited Networks </b> <br>			
 
 			<a href="visited_network_search.jsp" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPU)) { %>
+			<% if(request.isUserInRole(WebConstants.Security_Permission_ADMIN)) { %>
 				<a href="/hss.web.console/VN_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
 			<!-- Charging Sets -->
 			<li> <b> Charging Sets </b> <br>
 			<a href="charging_set_search.jsp" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+			<% if(request.isUserInRole(WebConstants.Security_Permission_ADMIN)) { %>
 				<a href="/hss.web.console/CS_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
 			<!-- Capability-->
 			<li> <b> Capability </b> <br>
 			<a href="capability_search.jsp" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+			<% if(request.isUserInRole(WebConstants.Security_Permission_ADMIN)) { %>
 				<a href="/hss.web.console/Cap_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
 			<!-- Capability Sets-->
 			<li> <b> Capability Sets </b> <br>
 			<a href="capability_set_search.jsp" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+			<% if(request.isUserInRole(WebConstants.Security_Permission_ADMIN)) { %>
 				<a href="/hss.web.console/CapS_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 
 			<!-- Preferred S-CSCF Sets -->
 			<li> <b> Preferred S-CSCF Sets </b> <br>
 			<a href="preferred_scscf_set_search.jsp" target="content"> Search </a> <br>
-			<% if(request.isUserInRole(SecurityPermissions.SP_IMPI)) { %>
+			<% if(request.isUserInRole(WebConstants.Security_Permission_ADMIN)) { %>
 				<a href="/hss.web.console/PrefS_Load.do?id=-1" target="content"> Create </a> <br>
 			<% } %> <br>
 

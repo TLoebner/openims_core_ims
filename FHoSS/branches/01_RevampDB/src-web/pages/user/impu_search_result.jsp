@@ -6,7 +6,7 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import=" java.util.*, de.fhg.fokus.hss.util.SecurityPermissions, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.cx.CxConstants, 
+<%@ page import=" java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.cx.CxConstants, 
 	de.fhg.fokus.hss.web.util.* " %>
 	
 <jsp:useBean id="resultList" type="java.util.List" scope="request"></jsp:useBean>
