@@ -92,7 +92,6 @@ public class DiameterStack implements EventListener, TransactionListener {
 		Task task = new Task(hssContainer.diamStack, 2, FQDN, request.commandCode, request.applicationID, request);
 		try{
 			hssContainer.tasksQueue.put(task);
-			logger.debug("New task was added to queue!");
 		}
 		catch(InterruptedException e){
 			e.printStackTrace();
@@ -103,7 +102,6 @@ public class DiameterStack implements EventListener, TransactionListener {
 		Task task = new Task(hssContainer.diamStack, 2, FQDN, request.commandCode, request.applicationID, answer);
 		try{
 			hssContainer.tasksQueue.put(task);
-			logger.debug("New task was added to queue!");
 		}
 		catch(InterruptedException e){
 			e.printStackTrace();

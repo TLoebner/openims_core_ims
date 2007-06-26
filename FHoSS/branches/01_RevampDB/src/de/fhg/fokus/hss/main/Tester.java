@@ -38,14 +38,13 @@ import de.fhg.fokus.hss.zh.op.MAR;
  */
 public class Tester extends Thread{
 	public void run() {
-		
+		/*
 		Session session = HibernateUtil.getCurrentSession();
 		HibernateUtil.beginTransaction();
 		IMPI impi = IMPI_DAO.get_by_ID(session, 1);
 		System.out.println("\nGUSS:\n" + MAR.getGUSS(session, impi));
 		HibernateUtil.commitTransaction();
 		
-		/*
 		RepositoryData repData = new RepositoryData();
 		repData.setId_impu(1);
 		repData.setRep_data("asasa".getBytes());

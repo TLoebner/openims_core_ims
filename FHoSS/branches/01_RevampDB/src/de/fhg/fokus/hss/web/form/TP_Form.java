@@ -84,16 +84,20 @@ public class TP_Form extends ActionForm implements Serializable{
 	private int condition_type_cnf;
 	
 	// SPT properties	
-	private List spts;
+	private transient List spts;
 	private int type;
 	private int group;
 	
 	private int ifc_id;
 	private int associated_ID;
 	private List select_ifc;
-	private List select_condition_type;
 	private List select_spt;
 	private String nextAction;
+	
+	private static List select_condition_type;
+	static {
+		select_condition_type = WebConstants.select_condition_type_cnf;
+	}
 	
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
@@ -107,16 +111,12 @@ public class TP_Form extends ActionForm implements Serializable{
         };
 
         this.spts = LazyList.decorate(new ArrayList(), factory);
-
     	this.type = 0;
     	this.group = 1;
-
     	this.nextAction = null;
     	this.ifc_id = -1;
     	this.associated_ID = -1;
     	this.select_ifc = null;
-    	this.select_condition_type = WebConstants.select_condition_type_cnf;
-
     }
 	
     public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
@@ -242,10 +242,6 @@ public class TP_Form extends ActionForm implements Serializable{
 
 	public List getSelect_condition_type() {
 		return select_condition_type;
-	}
-
-	public void setSelect_condition_type(List select_condition_type) {
-		this.select_condition_type = select_condition_type;
 	}
 
 	public List getSelect_spt() {

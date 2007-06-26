@@ -6,7 +6,7 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="de.fhg.fokus.hss.util.SecurityPermissions, de.fhg.fokus.hss.db.model.*, java.util.*, de.fhg.fokus.hss.auth.HexCodec" %>
+<%@ page import="de.fhg.fokus.hss.db.model.*, java.util.*, de.fhg.fokus.hss.auth.HexCodec" %>
 
 <jsp:useBean id="resultList" type="java.util.List" scope="request"></jsp:useBean>
 <jsp:useBean id="maxPages" type="java.lang.String" scope="request"></jsp:useBean>

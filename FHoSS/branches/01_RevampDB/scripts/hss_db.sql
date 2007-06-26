@@ -465,8 +465,8 @@ CREATE TABLE `visited_network` (
 -- Table structure for table `zh_uss`
 --
 
-DROP TABLE IF EXISTS `zh_gba_uss`;
-CREATE TABLE `zh_gba_uss` (
+DROP TABLE IF EXISTS `zh_uss`;
+CREATE TABLE `zh_uss` (
   `id` int(11) NOT NULL auto_increment,
   `id_impi` int(11) NOT NULL default '0',
   `type` int(11) NOT NULL default '1',

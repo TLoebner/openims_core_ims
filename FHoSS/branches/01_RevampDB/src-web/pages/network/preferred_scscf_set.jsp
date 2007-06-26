@@ -10,7 +10,7 @@
 	prefix="logic"%>
 	
 <%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.db.op.*, de.fhg.fokus.hss.web.util.*,
-	de.fhg.fokus.hss.db.hibernate.*, org.hibernate.Session, de.fhg.fokus.hss.util.SecurityPermissions" %>
+	de.fhg.fokus.hss.db.hibernate.*, org.hibernate.Session " %>
 
 <html>
 <head>

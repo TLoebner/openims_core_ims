@@ -116,7 +116,6 @@ public class UtilAVP {
 	public static String getVisitedNetwork(DiameterMessage message){
 		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_VISITED_NETWORK_IDENTIFIER, true, 
 				DiameterConstants.Vendor.V3GPP);
-		System.out.println("AVP is:"  + avp);
 		if (avp != null){
 			return new String(avp.data);
 		}
@@ -305,7 +304,6 @@ public class UtilAVP {
 		}
 
 		if ((mandatory_cap_list != null && mandatory_cap_list.size() > 0) || (optional_cap_list != null && optional_cap_list.size() > 0)){
-			System.out.println("\n\n\nAdding CAPAAA");
 			message.addAVP(server_cap);	
 		}
 	}

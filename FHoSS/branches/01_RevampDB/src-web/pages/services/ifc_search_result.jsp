@@ -6,7 +6,7 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.util.SecurityPermissions" %>
+<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.* " %>
 
 <jsp:useBean id="resultList" type="java.util.List" scope="request"></jsp:useBean>
 <jsp:useBean id="maxPages" type="java.lang.String" scope="request"></jsp:useBean>
@@ -98,8 +98,11 @@ function rowsPerPageChanged(){
 								if (ifc.getProfile_part_ind() == 0){
 									out.println("Registered");
 								}
-								else{
+								else if (ifc.getProfile_part_ind() == 1){
 									out.println("Unregistered");
+								}
+								else {
+									out.println("Any");								
 								}
 							%>
 						</td>

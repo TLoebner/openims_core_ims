@@ -43,12 +43,15 @@
 
 package de.fhg.fokus.hss.main;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author adp dot fokus dot fraunhofer dot de 
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class Worker extends Thread{
-	
+	private static Logger logger = Logger.getLogger(Worker.class);
+
 	private HSSContainer appContainer;
 	
 	public Worker(HSSContainer appContainer){
@@ -63,7 +66,7 @@ public class Worker extends Thread{
 				task.execute();
 			} 
 			catch (InterruptedException e) {
-				System.out.println("InterruptedException ocurred!");
+				logger.error("Interrupted Exception ocurred in Worker!");
 				e.printStackTrace();
 			}
 		}

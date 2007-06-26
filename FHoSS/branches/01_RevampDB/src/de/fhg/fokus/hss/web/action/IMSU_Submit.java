@@ -125,7 +125,6 @@ public class IMSU_Submit extends Action{
 				forward = actionMapping.findForward(WebConstants.FORWARD_DELETE);
 			}
 			else if (nextAction.equals("delete_impi")){
-				System.out.println("delete impi" + form.getAssociated_ID());
 				IMPI impi = IMPI_DAO.get_by_ID(session, form.getAssociated_ID());
 				
 				if (impi != null){
@@ -136,8 +135,6 @@ public class IMSU_Submit extends Action{
 			}
 			
 			else if (nextAction.equals("add_impi")){
-				System.out.println("add impi" + form.getImpi_identity());
-				
 				IMPI impi = IMPI_DAO.get_by_Identity(session, form.getImpi_identity());
 				if (impi != null){
 					impi.setId_imsu(id);

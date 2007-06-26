@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: LoggerHelper.java 119 2007-02-06 16:48:35 +0000 (Tue, 06 Feb 2007) adp $
  *
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -42,13 +42,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
  * 
  */
-package de.fhg.fokus.hss.util;
+package de.fhg.fokus.hss.web.util;
+
 
 import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
-import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
 
 import java.io.StringWriter;

@@ -126,8 +126,4 @@ public class HexCodec
     	return null;
     }
     
-    public static void main(String args[]){
-    	
-    	System.out.println(HexCodec.decode("0"));
-    }
 }
