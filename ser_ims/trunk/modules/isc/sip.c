@@ -375,7 +375,7 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 {
 	struct cell *t;
 	t = isc_tmb.t_gett();
-	if (!t){
+	if (!t || t==(void*) -1){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_request_from_reply: Reply without transaction\n");
 		return 0;
 	}
