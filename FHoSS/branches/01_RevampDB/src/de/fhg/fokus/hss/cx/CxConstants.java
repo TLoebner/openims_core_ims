@@ -153,15 +153,15 @@ public class CxConstants {
 	public static final int Auth_Scheme_Digest = 8;
 	public static final int Auth_Scheme_HTTP_Digest_MD5 = 16;		
 	public static final int Auth_Scheme_Early = 32;
-	public static final int Auth_Scheme_NASS_Bundle = 64;
+	public static final int Auth_Scheme_NASS_Bundled = 64;
 	public static final String Auth_Scheme_Unknown_Name = "Unknown";
 	public static final String Auth_Scheme_AKAv1_Name = "Digest-AKAv1-MD5";
 	public static final String Auth_Scheme_AKAv2_Name = "Digest-AKAv2-MD5";
 	public static final String Auth_Scheme_MD5_Name = "Digest-MD5";
 	public static final String Auth_Scheme_Digest_Name = "Digest";
-	public static final String Auth_Scheme_HTTP_Digest_MD5_Name = "HTTP-Digest-MD5";		
+	public static final String Auth_Scheme_HTTP_Digest_MD5_Name = "HTTP_DIGEST_MD5";		
 	public static final String Auth_Scheme_Early_Name = "Early-IMS";
-	public static final String Auth_Scheme_NASS_Bundle_Name = "NASS-Bundle";
+	public static final String Auth_Scheme_NASS_Bundled_Name = "NASS-Bundled";
 	
 	// Identity_Type
 

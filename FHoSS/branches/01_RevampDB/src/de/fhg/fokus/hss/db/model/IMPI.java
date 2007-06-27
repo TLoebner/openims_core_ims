@@ -101,7 +101,7 @@ public class IMPI implements Serializable{
 				result |= CxConstants.Auth_Scheme_Early; 
 			}
 			if (nass_bundle){
-				result |= CxConstants.Auth_Scheme_NASS_Bundle; 
+				result |= CxConstants.Auth_Scheme_NASS_Bundled; 
 			}
 			
 			return result;

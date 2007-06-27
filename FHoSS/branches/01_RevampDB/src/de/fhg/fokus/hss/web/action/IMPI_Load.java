@@ -188,7 +188,7 @@ public class IMPI_Load extends Action {
 					form.setEarly(true);
 				}
 				
-				if ((auth_scheme & CxConstants.Auth_Scheme_NASS_Bundle) != 0){
+				if ((auth_scheme & CxConstants.Auth_Scheme_NASS_Bundled) != 0){
 					form.setNass_bundle(true);
 				}
 				

@@ -77,7 +77,7 @@ public class WebConstants {
 		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_Digest_Name, CxConstants.Auth_Scheme_Digest));
 		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_HTTP_Digest_MD5_Name, CxConstants.Auth_Scheme_HTTP_Digest_MD5));
 		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_Early_Name, CxConstants.Auth_Scheme_Early));
-		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_NASS_Bundle_Name, CxConstants.Auth_Scheme_NASS_Bundle));
+		select_auth_scheme.add(new Tuple(CxConstants.Auth_Scheme_NASS_Bundled_Name, CxConstants.Auth_Scheme_NASS_Bundled));
 	}
 	
 	public static final List<Tuple> select_default_handling;

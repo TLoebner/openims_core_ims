@@ -152,6 +152,15 @@ public class MAR {
 					else if (data.equals(CxConstants.Auth_Scheme_MD5_Name)){
 						auth_scheme = CxConstants.Auth_Scheme_MD5;
 					}
+					else if (data.equals(CxConstants.Auth_Scheme_Digest_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_Digest;
+					}
+					else if (data.equals(CxConstants.Auth_Scheme_HTTP_Digest_MD5_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_HTTP_Digest_MD5;
+					}
+					else if (data.equals(CxConstants.Auth_Scheme_NASS_Bundled_Name)){
+						auth_scheme = CxConstants.Auth_Scheme_NASS_Bundled;
+					}
 					else if (data.equals(CxConstants.Auth_Scheme_Early_Name)){
 						auth_scheme = CxConstants.Auth_Scheme_Early;
 					}
@@ -220,6 +229,10 @@ public class MAR {
 				throw new CxExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 			}
 			
+			String realm = UtilAVP.getDestinationRealm(request);
+			String uri = UtilAVP.getRequestUri(request);
+			String method = UtilAVP.getRequestMethod(request);
+			
 			switch (user_state){
 			
 				case CxConstants.IMPU_user_state_Registered:
@@ -237,8 +250,7 @@ public class MAR {
 						
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
-						
-						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi, realm, uri, method);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, avList.size());
 							UtilAVP.addAuthVectors(response, avList);
@@ -252,9 +264,8 @@ public class MAR {
 					else{
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
-
 						
-						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi, realm, uri, method);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -290,8 +301,7 @@ public class MAR {
 								true);
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
-						
-						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi, realm, uri, method);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -306,7 +316,7 @@ public class MAR {
 					else{
 						UtilAVP.addPublicIdentity(response, publicIdentity);
 						UtilAVP.addUserName(response, privateIdentity);
-						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi);
+						List avList = MAR.generateAuthVectors(session, auth_scheme, av_count, impi, realm, uri, method);
 						if (avList != null){
 							UtilAVP.addSIPNumberAuthItems(response, av_count);
 							UtilAVP.addAuthVectors(response, avList);
@@ -455,7 +465,7 @@ public class MAR {
 			}
 	}
 
-	public static AuthenticationVector generateAuthVector(Session session, int auth_scheme, IMPI impi){
+	public static AuthenticationVector generateAuthVector(Session session, int auth_scheme, IMPI impi, String realm, String uri, String method){
 		
         byte [] secretKey = HexCodec.getBytes(impi.getK(), CxConstants.Auth_Parm_Secret_Key_Size);
         byte [] amf = impi.getAmf();
@@ -533,6 +543,51 @@ public class MAR {
                 }        		
             	return av;
             	
+    		case CxConstants.Auth_Scheme_Digest:
+    			// Authentication Scheme is Digest
+        		logger.debug("Auth-Scheme is Digest");
+        
+        		byte [] ha1= null;
+        		secretKey = impi.getK().getBytes();
+        		
+        		if (realm ==null)
+        			realm = impi.getIdentity().substring(impi.getIdentity().indexOf("@")+1);
+        		ha1 = MD5Util.av_HA1(impi.getIdentity().getBytes(),realm.getBytes(), secretKey);
+    			av = new AuthenticationVector(auth_scheme, realm.getBytes(), ha1);
+    			return av;
+    		case CxConstants.Auth_Scheme_HTTP_Digest_MD5:
+    			// Authentication Scheme is HTTP_Digest_MD5
+        		logger.debug("Auth-Scheme is HTTP_Digest_MD5");
+        
+        		ha1= null;
+        		secretKey = impi.getK().getBytes();
+        		
+        		if (realm == null)
+        			realm = impi.getIdentity().substring(impi.getIdentity().indexOf("@")+1);
+        	
+        		ha1 = MD5Util.av_HA1(impi.getIdentity().getBytes(),realm.getBytes(), secretKey);
+        		
+    			try {
+    				randomAccess = SecureRandom.getInstance("SHA1PRNG");
+    			} 
+    			catch (NoSuchAlgorithmException e) {
+    				e.printStackTrace();
+    				return null;
+    			}
+
+    			byte[] authenticate = new byte[16];
+    			randomAccess.setSeed(System.currentTimeMillis());
+    			randomAccess.nextBytes(authenticate);
+    			byte [] ha1_hex = HexCodec.encode(ha1).getBytes();
+    			byte [] result = MD5Util.calcResponse(ha1_hex, authenticate, method.getBytes() /*from request */,uri.getBytes() /*from request */);
+    			av = new AuthenticationVector(auth_scheme,realm, authenticate, ha1, result);
+    			return av;
+    		case CxConstants.Auth_Scheme_NASS_Bundled:
+    			// Authentication Scheme is NASS_Bundled
+        		logger.debug("Auth-Scheme is NASS_BUNDLED");
+    			av = new AuthenticationVector(auth_scheme, impi.getLine_identifier());
+    			return av;
+    			
     		case CxConstants.Auth_Scheme_Early:
     			logger.debug("Auth-Scheme is Early IMS");
     			av = new AuthenticationVector(auth_scheme, impi.getIp());
@@ -543,12 +598,12 @@ public class MAR {
 		
 	}
 	
-	public static List generateAuthVectors(Session session, int auth_scheme, int av_cnt, IMPI impi){
+	public static List generateAuthVectors(Session session, int auth_scheme, int av_cnt, IMPI impi, String realm, String uri, String method){
         List avList = null;
 
         AuthenticationVector av = null;
         for (long ix = 0; ix < av_cnt; ix++){
-        	av = generateAuthVector(session, auth_scheme, impi);
+        	av = generateAuthVector(session, auth_scheme, impi, realm, uri, method);
         	if (av == null)
         		break;
         	if (avList == null)
