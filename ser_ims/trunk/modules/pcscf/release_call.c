@@ -311,7 +311,7 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	 * and very tricky too*/
 	t=tmb.t_gett();
 	
-	if (t && t->uas.request) {
+	if (t && t!=(void*) -1  && t->uas.request) {
 		/*first trick: i really want to get this reply sent even though we are onreply*/
 		*tmb.route_mode=MODE_ONFAILURE;
 		
