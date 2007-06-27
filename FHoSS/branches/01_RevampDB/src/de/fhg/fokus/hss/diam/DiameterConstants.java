@@ -116,6 +116,11 @@ public class DiameterConstants
         public static final int DIAM = 0;
         /** constant for v3gpp */
         public static final int V3GPP = 10415;
+        /** constant for ETSI */
+        public static final int VETSI = 13019;		/**< Vendor Id for ETSI */
+        /** constant for CableLabs */
+        public static final int VCableLabs = 4491;	/**< Vendor Id for CableLabs */
+     
     }
 
     /** 
@@ -223,6 +228,37 @@ public class DiameterConstants
         
         // Zh AVPs
     	public static final int IMS_GBA_USER_SEC_SETTINGS = 400;
+    	
+    	public static final int AVP_Line_Identifier										= 500;
+    	public static final int AVP_ETSI_SIP_Authenticate 							= 501; 
+    	public static final int AVP_ETSI_SIP_Authorization 							= 502; 
+    	public static final int AVP_ETSI_SIP_Authentication_Info 					= 503; 
+    	public static final int AVP_ETSI_Digest_Realm 								= 504;  
+    	public static final int AVP_ETSI_Digest_Nonce 								= 505;  
+    	public static final int AVP_ETSI_Digest_Domain								= 506;  
+    	public static final int AVP_ETSI_Digest_Opaque 							= 507;  
+    	public static final int AVP_ETSI_Digest_Stale 								= 508;  
+    	public static final int AVP_ETSI_Digest_Algorithm 							= 509;  
+    	public static final int AVP_ETSI_Digest_QoP 									= 510;  
+    	public static final int AVP_ETSI_Digest_HA1 									= 511;  
+    	public static final int AVP_ETSI_Digest_Auth_Param 						= 512;  
+    	public static final int AVP_ETSI_Digest_Username 							= 513;  
+    	public static final int AVP_ETSI_Digest_URI 									= 514;  
+    	public static final int AVP_ETSI_Digest_Response 							= 515;  
+    	public static final int AVP_ETSI_Digest_CNonce 								= 516;  
+    	public static final int AVP_ETSI_Digest_Nonce_Count 						= 517;  
+    	public static final int AVP_ETSI_Digest_Method 								= 518;  
+    	public static final int AVP_ETSI_Digest_Entity_Body_Hash 				= 519;  
+    	public static final int AVP_ETSI_Digest_Nextnonce 						= 520;  
+    	public static final int AVP_ETSI_Digest_Response_Auth					= 521;
+    	
+    	public static final int AVP_CableLabs_SIP_Digest_Authenticate 		= 228;
+    	public static final int AVP_CableLabs_Digest_Realm 						= 209;
+    	public static final int AVP_CableLabs_Digest_Domain 					= 206;
+    	public static final int AVP_CableLabs_Digest_Algorithm 					= 204;
+    	public static final int AVP_CableLabs_Digest_QoP 							= 208;
+    	public static final int AVP_CableLabs_Digest_HA1 							= 207;
+    	public static final int AVP_CableLabs_Digest_Auth_Param 				= 205;
     	
     }
     public class AVPValue{

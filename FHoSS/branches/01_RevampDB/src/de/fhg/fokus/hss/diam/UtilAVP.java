@@ -219,6 +219,74 @@ public class UtilAVP {
 		return -1;
 	}
 	
+	public static String getRequestUri(DiameterMessage message){
+		AVP cAvp= null;
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_SIP_AUTH_DATA_ITEM, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		if (avp == null)
+			return null;
+		
+		try {
+			avp.ungroup();
+			cAvp = avp.findChildAVP(DiameterConstants.AVPCode.AVP_ETSI_SIP_Authorization, true, 
+					DiameterConstants.Vendor.VETSI);
+			if (cAvp == null)
+				return null;
+		} 
+		catch (AVPDecodeException e) {
+			e.printStackTrace();
+			return null;
+		}
+		
+		try {
+			cAvp.ungroup();
+			AVP uriAvp = cAvp.findChildAVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_URI, true, 
+					DiameterConstants.Vendor.VETSI);
+			if (uriAvp == null)
+				return null;
+			return new String(uriAvp.data);
+		}
+		catch (AVPDecodeException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	public static String getRequestMethod(DiameterMessage message){
+		AVP cAvp= null;
+		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_SIP_AUTH_DATA_ITEM, true, 
+				DiameterConstants.Vendor.V3GPP);
+
+		if (avp == null)
+			return null;
+		
+		try {
+			avp.ungroup();
+			cAvp = avp.findChildAVP(DiameterConstants.AVPCode.AVP_ETSI_SIP_Authorization, true, 
+					DiameterConstants.Vendor.VETSI);
+			if (cAvp == null)
+				return null;
+		} 
+		catch (AVPDecodeException e) {
+			e.printStackTrace();
+			return null;
+		}
+		
+		try {
+			cAvp.ungroup();
+			AVP uriAvp = cAvp.findChildAVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Method, true, 
+					DiameterConstants.Vendor.VETSI);
+			if (uriAvp == null)
+				return null;
+			return new String(uriAvp.data);
+		}
+		catch (AVPDecodeException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
 	public static int getUserDataAlreadyAvailable(DiameterMessage message){
 		AVP avp = message.findAVP(DiameterConstants.AVPCode.IMS_USER_DATA_ALREADY_AVAILABLE, true, 
 				DiameterConstants.Vendor.V3GPP);
@@ -367,6 +435,66 @@ public class UtilAVP {
 	    message.addAVP(userNameAVP);
 	}
 	
+	public static AVP addEtsiSipAuthenticate(String realm, byte[] nonce, String domain, String algorithm, byte[] auth_ha1)
+	{
+		AVP etsiSipAuth = new AVP(DiameterConstants.AVPCode.AVP_ETSI_SIP_Authenticate, true, DiameterConstants.Vendor.VETSI);	
+		if (realm != null)
+		{
+			AVP realmAVP = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Realm, 
+		    		true, DiameterConstants.Vendor.VETSI);
+		    realmAVP.setData(realm);
+		    etsiSipAuth.addChildAVP(realmAVP);
+		}	
+		
+		if (nonce != null)
+		{
+			AVP nonceAVP = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Nonce, 
+		    		true, DiameterConstants.Vendor.VETSI);
+		    nonceAVP.setData(nonce);
+		    etsiSipAuth.addChildAVP(nonceAVP);
+		}
+
+		if (domain != null)
+		{
+			AVP domainAVP = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Domain, 
+		    		true, DiameterConstants.Vendor.VETSI);
+		    domainAVP.setData(domain);
+		    etsiSipAuth.addChildAVP(domainAVP);
+		}
+
+		if (algorithm != null)
+		{
+			AVP algAVP = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Algorithm, 
+		    		true, DiameterConstants.Vendor.VETSI);
+		    algAVP.setData(algorithm);
+		    etsiSipAuth.addChildAVP(algAVP);
+		}
+
+		if (auth_ha1 != null)
+		{
+			AVP ha1AVP = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_HA1, 
+		    		true, DiameterConstants.Vendor.VETSI);
+		    ha1AVP.setData(auth_ha1);
+		    etsiSipAuth.addChildAVP(ha1AVP);
+		}		
+		
+		return etsiSipAuth;
+	}
+	
+	public static AVP addEtsiSipAuthenticationInfo(byte [] r_auth)
+	{	
+		AVP etsiSipAuth = new AVP(DiameterConstants.AVPCode.AVP_ETSI_SIP_Authentication_Info, true, DiameterConstants.Vendor.VETSI);
+		if (r_auth != null)
+		{
+			AVP authAVP = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Response_Auth, 
+		    		true, DiameterConstants.Vendor.VETSI);
+			authAVP.setData(r_auth);
+		    etsiSipAuth.addChildAVP(authAVP);
+		}	
+		
+		return etsiSipAuth;
+	}
+	
 	public static void addAuthVectors(DiameterMessage message, List avList){
 		if (avList == null){
 			return;
@@ -396,6 +524,15 @@ public class UtilAVP {
             	case CxConstants.Auth_Scheme_MD5:
             		authScheme.setData(CxConstants.Auth_Scheme_MD5_Name);
             		break;
+            	case CxConstants.Auth_Scheme_Digest:
+            		authScheme.setData(CxConstants.Auth_Scheme_Digest_Name);
+            		break;
+            	case CxConstants.Auth_Scheme_HTTP_Digest_MD5:
+            		authScheme.setData(CxConstants.Auth_Scheme_HTTP_Digest_MD5_Name);
+            		break;
+            	case CxConstants.Auth_Scheme_NASS_Bundled:
+            		authScheme.setData(CxConstants.Auth_Scheme_NASS_Bundled_Name);
+            		break;
             	case CxConstants.Auth_Scheme_Early:
             		authScheme.setData(CxConstants.Auth_Scheme_Early_Name);
             		break;
@@ -407,6 +544,34 @@ public class UtilAVP {
                 AVP ip = new AVP(DiameterConstants.AVPCode.FRAMED_IP_ADDRESS, true, DiameterConstants.Vendor.V3GPP);
                 ip.setData((av.getIp()));
                 authDataItem.addChildAVP(ip);
+            }
+            else if(((av.getAuth_scheme() & CxConstants.Auth_Scheme_NASS_Bundled) != 0)){
+            	AVP ip = new AVP(DiameterConstants.AVPCode.AVP_Line_Identifier, true, DiameterConstants.Vendor.VETSI);
+                ip.setData((av.getIp()));
+                authDataItem.addChildAVP(ip);
+            }
+            else if(((av.getAuth_scheme() & CxConstants.Auth_Scheme_Digest) != 0)){
+            	 AVP authenticate = new AVP(DiameterConstants.AVPCode.AVP_CableLabs_Digest_Realm, true, 
+                 		DiameterConstants.Vendor.VCableLabs);
+                 authenticate.setData(av.getSipAuthenticate());
+                 authDataItem.addChildAVP(authenticate);
+
+                 AVP authorization = new AVP(DiameterConstants.AVPCode.AVP_CableLabs_Digest_HA1, true, 
+                 		DiameterConstants.Vendor.VCableLabs);
+                 authorization.setData(av.getSipAuthorization());
+                 authDataItem.addChildAVP(authorization);
+            } 
+            else if(((av.getAuth_scheme() & CxConstants.Auth_Scheme_HTTP_Digest_MD5) != 0)){
+            	AVP authenticate = new AVP(DiameterConstants.AVPCode.AVP_ETSI_Digest_Realm, true, 
+                 		DiameterConstants.Vendor.VCableLabs);
+                 authenticate.setData(av.getSipAuthenticate());
+                 authDataItem.addChildAVP(authenticate);
+                 AVP etsi_auth = UtilAVP.addEtsiSipAuthenticate(av.getRealm(), av.getSipAuthenticate(), null, CxConstants.Auth_Scheme_HTTP_Digest_MD5_Name, av.getHA1());
+                 AVP etsi_auth_info = UtilAVP.addEtsiSipAuthenticationInfo(av.getResult());
+                 if (etsi_auth != null)
+                	 authDataItem.addChildAVP(etsi_auth);
+                 if (etsi_auth_info != null)
+                	 authDataItem.addChildAVP(etsi_auth_info);
             }
             else{
                 AVP authenticate = new AVP(DiameterConstants.AVPCode.IMS_SIP_AUTHENTICATE, true, 
@@ -434,8 +599,8 @@ public class UtilAVP {
                 	authDataItem.addChildAVP(integrityKey);
                 }
                 
-                message.addAVP(authDataItem);
             }
+            message.addAVP(authDataItem);
 		}
 	}
 	

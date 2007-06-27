@@ -46,6 +46,7 @@
 package de.fhg.fokus.hss.auth;
 
 import java.net.Inet4Address;
+import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
 
 /**
  * This class represents authententication vector that is produced in an HSS
@@ -92,7 +93,23 @@ public class AuthenticationVector {
 	 * the integrity key
 	 */
 	private byte [] integrityKey; // 16 bytes
+	
+	
+	/**
+	 * the realm
+	 */
+	private String realm;
 
+	/**
+	 * the ha1 
+	 */
+	private byte[] ha1;
+	
+	/**
+	 * the digest result 
+	 */
+	private byte[] result;
+	
 	public AuthenticationVector(){}
 
 	public AuthenticationVector(byte [] sipAuthorization) {
@@ -103,6 +120,14 @@ public class AuthenticationVector {
 		this.auth_scheme = auth_scheme;
 		this.sipAuthenticate = sipAuthenticate;
 		this.sipAuthorization = sipAuthorization;
+	}
+	
+	public AuthenticationVector(int auth_scheme, String realm, byte [] sipAuthenticate, byte [] ha1, byte [] result) {
+		this.auth_scheme = auth_scheme;
+		this.realm = realm;
+		this.sipAuthenticate = sipAuthenticate;
+		this.ha1 = ha1;
+		this.result = result;
 	}
 	
 	public AuthenticationVector(int auth_scheme, String ip) {
@@ -203,5 +228,29 @@ public class AuthenticationVector {
 
 	public void setSipAuthorization(byte[] sipAuthorization) {
 		this.sipAuthorization = sipAuthorization;
+	}
+	
+	public byte[] getHA1() {
+		return ha1;
+	}
+	
+	public void setHA1(byte [] ha1) {
+		this.ha1 = ha1;
+	}
+	
+	public byte[] getResult() {
+		return result;
+	}
+	
+	public void setResult(byte [] result) {
+		this.result = result;
+	}
+	
+	public String getRealm() {
+		return realm;
+	}
+	
+	public void setRealm(String realm) {
+		this.realm = realm;
 	}
 }
