@@ -52,6 +52,6 @@ int process_incoming(peer *p,AAAMessage *msg,void* ptr)
 	        LOG(L_ERR,"process_incoming(): Received unserviced AppID [%d]\n",msg->applicationId);
                ans = send_unknown_request_answer(msg);               	
 	}
-	if (ans) AAASendMessage(ans,&(p->fqdn),0,0);
+	if (ans) AAASendMessageToPeer(ans,&(p->fqdn),0,0);
 	return 1;
 }
