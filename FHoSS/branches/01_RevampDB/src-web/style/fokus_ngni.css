@@ -9,7 +9,10 @@ html, body, div, p, h1, h2, h3, span, a, td, form, img {
 	font-family:			Verdana, Arial, Helvetica, sans-serif;
 	color:					#333333;
 	/*text-align:				left;*/
-	line-height:			140%; }
+	line-height:			140%; 
+	font-size: 12px;
+	}
+
 
 table{
 	padding:				0;

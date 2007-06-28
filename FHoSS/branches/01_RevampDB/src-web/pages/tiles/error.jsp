@@ -9,6 +9,7 @@
 	
 <logic:messagesPresent>
 <font color="#FF0000">
+	<br/>
 	<bean:message key="error.header" /><br>
 	<html:errors/>
 </font>
