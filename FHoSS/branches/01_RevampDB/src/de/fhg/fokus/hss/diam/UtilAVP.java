@@ -554,11 +554,25 @@ public class UtilAVP {
                 	for (int i = 0; i< sip.length() ; i++)
                 		if (sip.charAt(i) == '.' && k < fIpLen)
                 		{
-                			result[k++] = (byte)Integer.parseInt(sip.substring(poz,i));
+                			try {
+                				result[k++] = (byte)Integer.parseInt(sip.substring(poz,i));
+                			}
+                			catch (NumberFormatException nfe)
+                			{
+                				result[k++] = -1;
+                			}
                 			poz = i + 1;
                 		}
-                	if (k < fIpLen)
-                		result[k]= (byte) Integer.parseInt(sip.substring(poz));
+                	if (k < fIpLen && poz < sip.length())
+                	{
+                		try {
+                			result[k]= (byte) Integer.parseInt(sip.substring(poz));
+                		}
+                		catch (NumberFormatException nfe)
+            			{
+            				result[k] = -1;
+            			}
+                	}
                 	ip.setData(result);
                     authDataItem.addChildAVP(ip);
                 }
