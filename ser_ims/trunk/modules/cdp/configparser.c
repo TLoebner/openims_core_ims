@@ -120,9 +120,11 @@ dp_config* parse_dp_config(char* filename)
 	FILE *f=0;
 	dp_config *x=0;
 	xmlDocPtr doc=0;
-	xmlNodePtr root=0,child=0;
+	xmlNodePtr root=0,child=0,nephew=0;
 	xmlChar *xc=0;
 	int k;
+	routing_entry *re,*rei;
+	routing_realm *rr,*rri;
 
 	parser_init();
 
@@ -199,15 +201,15 @@ dp_config* parse_dp_config(char* filename)
 			//PEER
 			x->peers_cnt++;		
 		}
-		if (xmlStrlen(child->name)==8 && strncasecmp((char*)child->name,"Acceptor",8)==0){
+		else if (xmlStrlen(child->name)==8 && strncasecmp((char*)child->name,"Acceptor",8)==0){
 			//Acceptor
 			x->acceptors_cnt++;		
 		}
-		if (xmlStrlen(child->name)==4 && (strncasecmp((char*)child->name,"Auth",4)==0||
+		else if (xmlStrlen(child->name)==4 && (strncasecmp((char*)child->name,"Auth",4)==0||
 			strncasecmp((char*)child->name,"Acct",4)==0)){
 			//Application
 			x->applications_cnt++;		
-		}		
+		}	
 	}
 	x->peers = shm_malloc(x->peers_cnt*sizeof(peer_config));
 	if (!x->peers){
@@ -244,7 +246,7 @@ dp_config* parse_dp_config(char* filename)
 			x->peers[x->peers_cnt].port = atoi((char*)xc);						
 			x->peers_cnt++;		
 		}
-		if (xmlStrlen(child->name)==8 && strncasecmp((char*)child->name,"Acceptor",8)==0){
+		else if (xmlStrlen(child->name)==8 && strncasecmp((char*)child->name,"Acceptor",8)==0){
 			//Acceptor
 			xc = xmlGetProp(child,(xmlChar*)"bind");			
 			quote_trim_dup(&(x->acceptors[x->acceptors_cnt].bind),(char*)xc);			
@@ -252,7 +254,7 @@ dp_config* parse_dp_config(char* filename)
 			x->acceptors[x->acceptors_cnt].port = atoi((char*)xc);						
 			x->acceptors_cnt++;		
 		}
-		if (xmlStrlen(child->name)==4 && ((char*)strncasecmp((char*)child->name,"Auth",4)==0||
+		else if (xmlStrlen(child->name)==4 && ((char*)strncasecmp((char*)child->name,"Auth",4)==0||
 			strncasecmp((char*)child->name,"Acct",4)==0)){
 			//Application
 			xc = xmlGetProp(child,(xmlChar*)"id");			
@@ -264,7 +266,87 @@ dp_config* parse_dp_config(char* filename)
 			else
 				x->applications[x->applications_cnt].type = DP_ACCOUNTING;										
 			x->applications_cnt++;		
-		}		
+		}	
+		else if (xmlStrlen(child->name)==12 && ((char*)strncasecmp((char*)child->name,"DefaultRoute",12)==0)){
+			if (!x->r_table) {
+				x->r_table = shm_malloc(sizeof(routing_table));
+				memset(x->r_table,0,sizeof(routing_table));
+			}
+			re = new_routing_entry();
+			if (re){			
+				xc = xmlGetProp(child,(xmlChar*)"FQDN");
+				quote_trim_dup(&(re->fqdn),(char*)xc);			
+				xc = xmlGetProp(child,(xmlChar*)"metric");			
+				re->metric = atoi((char*)xc);			
+				
+				/* add it the list in ascending order */
+				if (! x->r_table->routes || re->metric <= x->r_table->routes->metric){
+					re->next = x->r_table->routes;
+					x->r_table->routes = re;
+				}else{
+					for(rei=x->r_table->routes;rei;rei=rei->next)
+						if (!rei->next){
+							rei->next = re;
+							break;						
+						}else{
+							if (re->metric <= rei->next->metric){
+								re->next = rei->next;
+								rei->next = re;
+								break;
+							}
+						}				
+				}
+			}					
+		}
+		else if (xmlStrlen(child->name)==5 && ((char*)strncasecmp((char*)child->name,"Realm",5)==0)){
+			if (!x->r_table) {
+				x->r_table = shm_malloc(sizeof(routing_table));
+				memset(x->r_table,0,sizeof(routing_table));
+			}
+			rr = new_routing_realm();
+			if (rr){			
+				xc = xmlGetProp(child,(xmlChar*)"name");
+				quote_trim_dup(&(rr->realm),(char*)xc);			
+				
+				if (!x->r_table->realms) {				
+					x->r_table->realms = rr;
+				}else{				
+					for(rri=x->r_table->realms;rri->next;rri=rri->next);
+					rri->next = rr;				
+				}			
+				for(nephew = child->children; nephew; nephew = nephew->next)
+					if (nephew->type == XML_ELEMENT_NODE){
+						if (xmlStrlen(nephew->name)==5 && ((char*)strncasecmp((char*)nephew->name,"Route",5)==0))
+						{
+							re = new_routing_entry();
+							if (re) {
+								xc = xmlGetProp(nephew,(xmlChar*)"FQDN");
+								quote_trim_dup(&(re->fqdn),(char*)xc);			
+								xc = xmlGetProp(nephew,(xmlChar*)"metric");			
+								re->metric = atoi((char*)xc);			
+								
+								/* add it the list in ascending order */
+								if (! rr->routes || re->metric <= rr->routes->metric){
+									re->next = rr->routes;
+									rr->routes = re;
+								}else{
+									for(rei=rr->routes;rei;rei=rei->next)
+										if (!rei->next){
+											rei->next = re;
+											break;						
+										}else{
+											if (re->metric <= rei->next->metric){
+												re->next = rei->next;
+												rei->next = re;
+												break;
+											}
+										} 					
+								}
+							}
+						}
+					}
+			}		
+		}
 	}
 	
 	if (doc) xmlFreeDoc(doc);	
