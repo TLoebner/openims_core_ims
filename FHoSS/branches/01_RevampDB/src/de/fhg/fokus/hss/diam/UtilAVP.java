@@ -541,9 +541,27 @@ public class UtilAVP {
             authDataItem.addChildAVP(authScheme);
             
             if(((av.getAuth_scheme() & CxConstants.Auth_Scheme_Early) != 0)){
-                AVP ip = new AVP(DiameterConstants.AVPCode.FRAMED_IP_ADDRESS, true, DiameterConstants.Vendor.V3GPP);
-                ip.setData((av.getIp()));
-                authDataItem.addChildAVP(ip);
+                AVP ip = new AVP(DiameterConstants.AVPCode.FRAMED_IP_ADDRESS, true, 0);
+                String sip = av.getIp();
+                if (sip != null)
+                {
+                	byte fIpLen = 6;
+                	int poz = 0,k = 2;
+                	byte [] result = new byte[fIpLen] ;
+                	result[0] = 0;
+                	result[1] = 1;
+  
+                	for (int i = 0; i< sip.length() ; i++)
+                		if (sip.charAt(i) == '.' && k < fIpLen)
+                		{
+                			result[k++] = (byte)Integer.parseInt(sip.substring(poz,i));
+                			poz = i + 1;
+                		}
+                	if (k < fIpLen)
+                		result[k]= (byte) Integer.parseInt(sip.substring(poz));
+                	ip.setData(result);
+                    authDataItem.addChildAVP(ip);
+                }
             }
             else if(((av.getAuth_scheme() & CxConstants.Auth_Scheme_NASS_Bundled) != 0)){
             	AVP ip = new AVP(DiameterConstants.AVPCode.AVP_Line_Identifier, true, DiameterConstants.Vendor.VETSI);

@@ -160,7 +160,7 @@ public class CxConstants {
 	public static final String Auth_Scheme_MD5_Name = "Digest-MD5";
 	public static final String Auth_Scheme_Digest_Name = "Digest";
 	public static final String Auth_Scheme_HTTP_Digest_MD5_Name = "HTTP_DIGEST_MD5";		
-	public static final String Auth_Scheme_Early_Name = "Early-IMS";
+	public static final String Auth_Scheme_Early_Name = "Early-IMS-Security";
 	public static final String Auth_Scheme_NASS_Bundled_Name = "NASS-Bundled";
 	
 	// Identity_Type
