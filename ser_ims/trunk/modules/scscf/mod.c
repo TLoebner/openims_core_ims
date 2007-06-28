@@ -87,7 +87,7 @@ static void mod_destroy(void);
 /* parameters storage */
 char* scscf_name="sip:scscf.open-ims.test:6060";	/**< name of the S-CSCF */
 
-char* scscf_aaa_peer="hss.open-ims.test";/**< FQDN of the Diameter Peer (HSS) */
+char* scscf_forced_hss_peer="";			/**< FQDN of the Forced Diameter Peer (HSS) */
 
 char *scscf_user_data_dtd=0; 			/* Path to "CxDataType.dtd" 	 							*/
 char *scscf_user_data_xsd=0; 			/* Path to "CxDataType_Rel6.xsd" or "CxDataType_Rel7.xsd"	*/
@@ -154,7 +154,7 @@ str scscf_service_route;				/**< the service route header							*/
 str scscf_service_route_uri;			/**< just the service route uri 						*/
 str scscf_registration_min_expires;		/**< fixed minimum registration expiration time 		*/
 str scscf_subscription_min_expires;		/**< fixed minimum subscription expiration time 		*/
-str scscf_aaa_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 				*/
+str scscf_forced_hss_peer_str;			/**< fixed FQDN of the forced Diameter Peer (HSS) 		*/
 
 int * callback_singleton;				/**< Cx callback singleton 								*/
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
@@ -255,7 +255,7 @@ static cmd_export_t scscf_cmds[]={
  * Exported parameters. 
  * - name - name fo the S-CSCF
  * <p>
- * - aaa_peer - FQDN of the Diameter Peer (HSS)
+ * - forced_hss_peer - FQDN of the Diameter Peer (HSS) to force for HSS communication
  * <p>
  * - auth_data_hash_size - size of the authentication vectors hash table
  * - auth_vector_timeout - time-out for a used vector to expire if no answer received
@@ -297,7 +297,7 @@ static cmd_export_t scscf_cmds[]={
 static param_export_t scscf_params[]={ 
 	{"name", 							STR_PARAM, &scscf_name},
 
-	{"aaa_peer", 						STR_PARAM, &scscf_aaa_peer},
+	{"forced_hss_peer",					STR_PARAM, &scscf_forced_hss_peer},
 
 	{"auth_data_hash_size", 			INT_PARAM, &auth_data_hash_size},
 	{"auth_vector_timeout", 			INT_PARAM, &auth_vector_timeout},
@@ -511,8 +511,8 @@ static int mod_init(void)
 	scscf_name_str.s = scscf_name;
 	scscf_name_str.len = strlen(scscf_name);
 	if (!build_record_service_route()) goto error;
-	scscf_aaa_peer_str.s = scscf_aaa_peer;
-	scscf_aaa_peer_str.len = strlen(scscf_aaa_peer);
+	scscf_forced_hss_peer_str.s = scscf_forced_hss_peer;
+	scscf_forced_hss_peer_str.len = strlen(scscf_forced_hss_peer);
 	
 	algo.s = registration_default_algorithm;
 	algo.len = strlen(registration_default_algorithm);

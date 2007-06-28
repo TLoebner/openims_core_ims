@@ -78,7 +78,9 @@ extern dp_config *config; 				/**< DiameterPeer configuration structure */
  * - AAAFreeMessage() - free up the memory used in a Diameter message
  * <p>
  * - AAASendMessage() - asynchronously send a message
+ * - AAASendMessageToPeer() - asynchronously send a message to a forced peer
  * - AAASendRecvMessage() - synchronously send a message and get the response
+ * - AAASendRecvMessageToPeer() - synchronously send a message and get the response to a forced peer 
  * <p>
  * - AAACreateSession() - create a diameter #AAASessionId
  * - AAADropSession() - drop a diameter #AAASessionId
@@ -107,7 +109,9 @@ static cmd_export_t cdp_cmds[] = {
 	{"AAAFreeMessage",				(cmd_function)AAAFreeMessage,			NO_SCRIPT, 0, 0},
 
 	{"AAASendMessage",				(cmd_function)AAASendMessage,			NO_SCRIPT, 0, 0},
+	{"AAASendMessageToPeer",		(cmd_function)AAASendMessageToPeer,		NO_SCRIPT, 0, 0},
 	{"AAASendRecvMessage",			(cmd_function)AAASendRecvMessage, 		NO_SCRIPT, 0, 0},
+	{"AAASendRecvMessageToPeer",	(cmd_function)AAASendRecvMessageToPeer,	NO_SCRIPT, 0, 0},
 
 
 	{"AAACreateSession",			(cmd_function)AAACreateSession,			NO_SCRIPT, 0, 0},

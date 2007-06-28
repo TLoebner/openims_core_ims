@@ -70,7 +70,7 @@ extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 
 
 extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp funcs 		*/
 
-str aaa_peer;	/**< FQDN of the Diameter peer to send requests to */
+extern str icscf_forced_hss_peer_str;	/**< FQDN of the Diameter peer to send requests to */
 
 /**
  * Handler for incoming Diameter responses.
@@ -172,7 +172,10 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_request(uar);
 	#endif				
-	uaa = cdpb.AAASendRecvMessage(uar,&aaa_peer);
+	if (icscf_forced_hss_peer_str.len)
+		uaa = cdpb.AAASendRecvMessageToPeer(uar,&icscf_forced_hss_peer_str);
+	else 
+		uaa = cdpb.AAASendRecvMessage(uar);	
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_answer(uaa);
 	#endif				
@@ -217,7 +220,10 @@ AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_request(lir);
 	#endif				
-	lia = cdpb.AAASendRecvMessage(lir,&aaa_peer);
+	if (icscf_forced_hss_peer_str.len)
+		lia = cdpb.AAASendRecvMessageToPeer(lir,&icscf_forced_hss_peer_str);
+	else 
+		lia = cdpb.AAASendRecvMessage(lir);
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_answer(lia);
 	#endif				

@@ -270,11 +270,11 @@ AAAMessage *AAANewMessage(
 	avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
 		dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
 	if (!avp) {
-		LOG(L_ERR,"ERR:AAASendMessage: Failed creating Destination Host avp\n");
+		LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
 		return 0;
 	}
 	if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-		LOG(L_ERR,"ERR:AAASendMessage: Failed adding Destination Host avp to message\n");
+		LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
 		AAAFreeAVP(&avp);
 		return 0;
 	}
@@ -284,11 +284,11 @@ AAAMessage *AAANewMessage(
 	avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
 		dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
 	if (!avp) {
-		LOG(L_ERR,"ERR:AAASendMessage: Failed creating Destination Realm avp\n");
+		LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
 		return 0;
 	}
 	if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-		LOG(L_ERR,"ERR:AAASendMessage: Failed adding Destination Realm avp to message\n");
+		LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
 		AAAFreeAVP(&avp);
 		return 0;
 	}		

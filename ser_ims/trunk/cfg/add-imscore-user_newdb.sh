@@ -1,6 +1,6 @@
 #!/bin/sh
 # 
-# $Id: add-imscore-user.sh 186 2007-03-09 12:58:35Z jsbach $
+# $Id$
 # 
 # add-imscore-user.sh
 # Version: 0.4
