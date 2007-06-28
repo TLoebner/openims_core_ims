@@ -16,7 +16,7 @@
 	
 	<Auth id="16777216" vendor="10415"/>
 
-<!-- Realm Routing configuration
+<!-- Realm Routing configuration - Uncomment and Edit!
 
 	<Realm name="open-ims.test">
 		<Route FQDN="hss1.open-ims.test" metric="10"/>
