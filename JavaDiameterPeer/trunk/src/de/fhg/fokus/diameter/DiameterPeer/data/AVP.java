@@ -441,6 +441,12 @@ public class AVP {
 	
 	/** Origin-Realm AVP code. */
 	public static final int Origin_Realm		= 296;
+
+	/** Destination-Host AVP code. */
+	public static final int Destination_Host	= 293;
+	
+	/** Destination-Realm AVP code. */
+	public static final int Destination_Realm	= 283;
 	
 	/** Auth-Application-Id AVP code */
 	public static final int Auth_Application_Id	= 258;

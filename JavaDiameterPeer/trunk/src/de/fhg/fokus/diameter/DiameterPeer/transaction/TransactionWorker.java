@@ -154,6 +154,34 @@ public class TransactionWorker extends Thread implements EventListener{
 
 		return sent;
 	}
+
+	/**
+	 * Sends a Diameter request.  
+	 * 
+	 * @param req		Diameter request to be sent.
+	 * @param tl		TransactionListener that handles the corresponding 
+	 * 					Diameter answer within a transaction.
+	 * @return			true if Diameter request sent successfully.
+	 */
+	public boolean sendRequestTransactional(DiameterMessage req,TransactionListener tl)
+	{
+		boolean sent=false;
+		DiameterTransaction dt;
+		if (!req.flagRequest) {
+			System.err.println("DiameterTransaction:sendMessageTransactional() is only for Requests!");
+			return false;
+		}
+		dt = addTransaction(req,tl,false);
+		sent = dp.sendMessage(req);
+		if (!sent){
+			takeTransaction(req);
+			return false;
+		}
+		dt.expires = req.networkTime + this.timeout;
+
+		return sent;
+	}
+	
 	
 	/**
 	 * Sends a Diameter request and blocks the thread until a Diameter answer 
@@ -190,6 +218,40 @@ public class TransactionWorker extends Thread implements EventListener{
 		return dt.answer;
 	}	
 
+	/**
+	 * Sends a Diameter request and blocks the thread until a Diameter answer 
+	 * returned or timeout.
+	 * 
+	 * @param req		Diameter request to be sent.	
+	 * @return Diameter answer returned within the transaction; null if timeout.
+	 */
+	public DiameterMessage sendRequestBlocking(DiameterMessage req)
+	{
+		boolean sent;
+		DiameterTransaction dt;
+		if (!req.flagRequest) {
+			System.err.println("DiameterTransaction:sendMessageBlocking() is only for Requests!");
+			return null;
+		}
+		dt = addTransaction(req,null,true);
+		sent = dp.sendMessage(req);
+		if (!sent){
+			takeTransaction(req);
+			return null;
+		}
+		dt.expires = req.networkTime + this.timeout;
+		try {
+//			synchronized(dt) {
+			sych.acquire();	
+//			dt.wait();
+//			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		return dt.answer;
+	}	
+	
 	/**
 	 * Handles the received Diameter answers. They will be handled by 
 	 * corresponding TransactionListeners. 

@@ -58,6 +58,7 @@ import de.fhg.fokus.diameter.DiameterPeer.peer.Application;
 import de.fhg.fokus.diameter.DiameterPeer.peer.Peer;
 import de.fhg.fokus.diameter.DiameterPeer.peer.PeerManager;
 import de.fhg.fokus.diameter.DiameterPeer.peer.StateMachine;
+import de.fhg.fokus.diameter.DiameterPeer.routing.RoutingEngine;
 import de.fhg.fokus.diameter.DiameterPeer.transaction.TransactionListener;
 import de.fhg.fokus.diameter.DiameterPeer.transaction.TransactionWorker;
 import de.fhg.fokus.diameter.DiameterPeer.transport.Acceptor;
@@ -118,8 +119,8 @@ public class DiameterPeer {
 	/** Supported Applications */
 	public Vector<Application> AuthApp,AcctApp;
 	
-	/** Routing table */
-	public HashMap<String, TreeMap<Integer, String>> routingTable;
+	/** Routing Engine */
+	public RoutingEngine routingTable=null;
 	
 	/** PeerManger manages connection with other Diameter peers */
 	public PeerManager peerManager;
@@ -321,60 +322,32 @@ public class DiameterPeer {
 	}
 	
 	/* configure routing table */
-	private boolean initRoutingTable(Document config) {
-		
-		Node n;
+	private void initRoutingTable(Document config) {		
 		NodeList nl, nlc;
+		String fqdn,realm;
+		int metric;
 		
-		String r = null ;
-		TreeMap<Integer, String> s = null;
+		this.routingTable = new RoutingEngine();
+		nl = config.getDocumentElement().getElementsByTagName("DefaultRoute");
+		for(int i=0;i<nl.getLength();i++){
+			fqdn = nl.item(i).getAttributes().getNamedItem("FQDN").getNodeValue();
+			metric = Integer.valueOf(nl.item(i).getAttributes().getNamedItem("metric").getNodeValue());
+			routingTable.addDefaultRoute(fqdn, metric);
+		}
+		nl = config.getDocumentElement().getElementsByTagName("Realm");
+		for(int i=0;i<nl.getLength();i++){
+			realm = nl.item(i).getAttributes().getNamedItem("name").getNodeValue();
+			nlc = nl.item(i).getChildNodes();
+			for(int j=0;j<nlc.getLength();j++)
+				if (nlc.item(j).getNodeName().equalsIgnoreCase("Route")){
+					fqdn = nlc.item(j).getAttributes().getNamedItem("FQDN").getNodeValue();
+					metric = Integer.valueOf(nlc.item(j).getAttributes().getNamedItem("metric").getNodeValue());
+					routingTable.addRealmRoute(realm, fqdn, metric);
+				}
+		}
+		 
+	}
 		
-		// get <Routing> tag
-		n = config.getDocumentElement().getElementsByTagName("Routing").item(0);
-		try {
-			if ((nl = n.getChildNodes())!=null) {
-				LOGGER.debug("Diameter routing table ...");
-				routingTable = new HashMap<String, TreeMap<Integer, String>>();
-				for (int i=0; i<nl.getLength(); i++) {
-					// get <Realm> tag
-					if (nl.item(i).getNodeName() == "Realm" && nl.item(i).hasAttributes()) {
-						r = nl.item(i).getAttributes().getNamedItem("name").getNodeValue();
-						LOGGER.debug("Realm: " + r);
-						nlc = nl.item(i).getChildNodes();
-						if (nlc != null) {
-							s = new TreeMap<Integer, String>();
-							for(int j=0; j<nlc.getLength(); j++)
-								// get <Server> tag
-								if (nlc.item(j).getNodeName() == "Server" && nlc.item(j).hasAttributes()) {
-									Integer metric = Integer.valueOf(nlc.item(j).getAttributes().getNamedItem("metric").getNodeValue());
-									String name = nlc.item(j).getAttributes().getNamedItem("FQDN").getNodeValue();
-									//LOGGER.debug("metric: " + metric.toString() + " FQDN: " + name);
-									s.put(metric, name);
-								}
-						} else return false; // <Server> tag missing
-						LOGGER.debug(s.toString());
-					}
-					routingTable.put(r, s);
-				}		
-				return true;
-			}
-		} catch (NullPointerException e) {}
-		return false; 
-	}
-	
-	
-	/**
-	 * Experimental implematation of realm routing.
-	 * 
-	 * @param realm Realm name.
-	 * @return The Fully Qualified Domain Name corresponding to the realm.
-	 */
-	public String searchRoutingTable(String realm) {
-		TreeMap<Integer, String> s;
-		s = routingTable.get(realm);
-		return s.get(s.firstKey());
-	}
-	
 	
 	private void startWorkers()
 	{
@@ -498,6 +471,27 @@ public class DiameterPeer {
 	}
 
 	/**
+	 * Sends a Diameter message to a realm routed peer.
+	 * 
+	 * @param msg 		Diameter message should be sent.
+	 * @return true, if the message is sent successfully.  
+	 */
+	public boolean sendMessage(DiameterMessage msg)
+	{
+		Peer p;
+		if (routingTable==null){
+			LOGGER.error("DiameterPeer: RoutingTable not initialized!");
+			return false;
+		}
+		p = routingTable.getRoute(msg,peerManager);
+		if (p==null){
+			LOGGER.error("DiameterPeer: No suitable peer to route to could be found.");
+			return false;
+		}
+		return p.sendMessage(msg);
+	}
+
+	/**
 	 * Sends a Diameter request and a TransactionWorker handles the answer. 
 	 *
 	 * @param peerFQDN 	FQDN of the peer.
@@ -508,6 +502,22 @@ public class DiameterPeer {
 	public boolean sendRequestTransactional(String peerFQDN,DiameterMessage req,TransactionListener tl)
 	{
 		if (this.transactionWorker!=null) return transactionWorker.sendRequestTransactional(peerFQDN,req,tl);
+		else {
+			LOGGER.error("DiameterPeer:sendRequestTransactional(): Transactions are not enabled on this peer!");
+			return false;
+		}
+	}
+
+	/**
+	 * Sends a Diameter request and a TransactionWorker handles the answer. 
+	 *
+	 * @param req		Diameter request.
+	 * @param tl		TransactionListener.
+	 * @return true of a message is sent successfully, otherwise false.
+	 */
+	public boolean sendRequestTransactional(DiameterMessage req,TransactionListener tl)
+	{
+		if (this.transactionWorker!=null) return transactionWorker.sendRequestTransactional(req,tl);
 		else {
 			LOGGER.error("DiameterPeer:sendRequestTransactional(): Transactions are not enabled on this peer!");
 			return false;
@@ -525,6 +535,22 @@ public class DiameterPeer {
 	public DiameterMessage sendRequestBlocking(String peerFQDN,DiameterMessage req)
 	{
 		if (this.transactionWorker!=null) return transactionWorker.sendRequestBlocking(peerFQDN,req);
+		else {
+			LOGGER.error("DiameterPeer:sendRequestBlocking(): Transactions are not enabled on this peer!");
+			return null;
+		}
+	}
+
+	/**
+	 * Sends a Diameter message to a realm routing determined peer. The thread will wait for
+	 * a Diameter answer until it arrives or timeout.
+	 * 
+	 * @param req 		Diameter message should be sent.
+	 * @return The Diameter answer returned. Null if timeout.
+	 */	
+	public DiameterMessage sendRequestBlocking(DiameterMessage req)
+	{
+		if (this.transactionWorker!=null) return transactionWorker.sendRequestBlocking(req);
 		else {
 			LOGGER.error("DiameterPeer:sendRequestBlocking(): Transactions are not enabled on this peer!");
 			return null;
