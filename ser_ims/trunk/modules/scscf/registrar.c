@@ -114,9 +114,9 @@ void registrar_timer(unsigned int ticks, void* param)
 	ims_public_identity *pi=0;
 	r_hash_slot *r;
 	
-        #ifdef WITH_IMS_PM
-                int impu_cnt=0,contact_cnt=0,subs_cnt=0;
-        #endif
+	#ifdef WITH_IMS_PM
+		int impu_cnt=0,contact_cnt=0,subs_cnt=0;
+	#endif
 
 
 	r = param;
@@ -140,11 +140,9 @@ void registrar_timer(unsigned int ticks, void* param)
 						S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_EXPIRED,1);/* send now because we might drop the dialog soon */	
 						del_r_contact(p,c);
 					}
-					  #ifdef WITH_IMS_PM
-                                                else contact_cnt++;
-                                          #endif
-
-					
+					#ifdef WITH_IMS_PM
+						else contact_cnt++;
+					#endif
 					c = cn;
 				}
 				s = p->shead;
@@ -155,10 +153,9 @@ void registrar_timer(unsigned int ticks, void* param)
 							s->subscriber.len,s->subscriber.s);
 						del_r_subscriber(p,s);
 					}
-					 #ifdef WITH_IMS_PM
-                                                else subs_cnt++;
-                                         #endif
-  
+					#ifdef WITH_IMS_PM
+						else subs_cnt++;
+					#endif
 					s = sn;
 				}
 				
@@ -171,66 +168,56 @@ void registrar_timer(unsigned int ticks, void* param)
 							sar_res = SAR(0,cscf_get_realm_from_uri(p->aor),p->aor,p->s->private_identity,assignment_type,0);
 							
 							if (sar_res==1){
-        				               	  if (!p->s){
-								   LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Problem r_public does not contain IMS Subscription <%.*s> \n",p->aor.len,p->aor.s);
-								   break;
-							   }
-				                           for(j=0;j<p->s->service_profiles_cnt;j++)
-                                				for(n=0;n<p->s->service_profiles[j].public_identities_cnt;n++){
-				                                        pi = &(p->s->service_profiles[j].public_identities[n]);
-									 if(strncasecmp(pi->public_identity.s,p->aor.s,p->aor.len)==0) continue;
-									   rpublic= get_r_public(pi->public_identity);
-									    if(!rpublic){
-	                                                                         LOG(L_INFO,"INFO:"M_NAME":registrar_timer: ino rpublic");
-        	                                                                 continue;
-                	                                                    }
-
-									   c2 = rpublic->head;
-						                           while(c2){
-					                                        cn2 = c2->next;
-                                        					if (!r_valid_contact(c2)){
-					                                                LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",c2->uri.len,c2->uri.s);
-					                                                S_event_reg(rpublic,c2,0,IMS_REGISTRAR_CONTACT_EXPIRED,1);/* send now because we might drop the dialog soon */	
-                                        					        del_r_contact(rpublic,c2);
-					                                        }
-										 #ifdef WITH_IMS_PM
-        					                                        else contact_cnt++;
-					                                         #endif
-
-
-                                        			                c2 = cn2;
-					                                   }
-						                           s2 = rpublic->shead;
-					                                   while(s2){
-					                                        sn2 = s2->next;
-                                        					if (!r_valid_subscriber(s2)){
-				                                    	            LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Subscriber <%.*s> expired and removed.\n",s2->subscriber.len,s2->subscriber.s);
-				                                        	        del_r_subscriber(rpublic,s2);
-	  	                          				            }
-										  #ifdef WITH_IMS_PM
-                                        					        else subs_cnt++;
-					                                          #endif
-
-                					                        s2 = sn2;
-					                                   }
-								
-                                				if (!rpublic->head){/* no more contacts, then deregister it */
-									if (!rpublic->shead)  {/* delete it if there are no more subscribers for it */     
-                	                                                        LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> removed.\n",
-        	                                                                        rpublic->aor.len,rpublic->aor.s);
-	                                                                        del_r_public(rpublic);
-                        	                                        }else{/* else mark it unregistered - to avoid more SAR */
-                                	                                        LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> kept unregistered - has subscribers.\n",
-                                        	                                rpublic->aor.len,rpublic->aor.s);                                                
-                                                	                        rpublic->reg_state = NOT_REGISTERED;                                       
-                                                        	        }
+								if (!p->s){
+									LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Problem r_public does not contain IMS Subscription <%.*s> \n",
+										p->aor.len,p->aor.s);
+									break;
 								}
-
-								r_unlock(rpublic->hash);
-							}
-
-
-									 
+								for(j=0;j<p->s->service_profiles_cnt;j++)
+									for(n=0;n<p->s->service_profiles[j].public_identities_cnt;n++){
+										
+										pi = &(p->s->service_profiles[j].public_identities[n]);
+										if(strncasecmp(pi->public_identity.s,p->aor.s,p->aor.len)==0) continue;
+										rpublic = get_r_public(pi->public_identity);
+										if(!rpublic){
+											LOG(L_INFO,"INFO:"M_NAME":registrar_timer: ino rpublic");
+											continue;
+										}
+										
+										c2 = rpublic->head;
+										while(c2){
+											cn2 = c2->next;
+											if (!r_valid_contact(c2)){
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",c2->uri.len,c2->uri.s);
+												S_event_reg(rpublic,c2,0,IMS_REGISTRAR_CONTACT_EXPIRED,1);/* send now because we might drop the dialog soon */	
+												del_r_contact(rpublic,c2);
+											}
+											c2 = cn2;
+										}
+										
+										s2 = rpublic->shead;
+										while(s2){
+											sn2 = s2->next;
+											if (!r_valid_subscriber(s2)){
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Subscriber <%.*s> expired and removed.\n",s2->subscriber.len,s2->subscriber.s);
+												del_r_subscriber(rpublic,s2);
+											}										  
+											s2 = sn2;
+										}
+								
+										if (!rpublic->head){/* no more contacts, then deregister it */
+											if (!rpublic->shead)  {/* delete it if there are no more subscribers for it */     
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> removed.\n",
+													rpublic->aor.len,rpublic->aor.s);
+												del_r_public(rpublic);
+											}else{/* else mark it unregistered - to avoid more SAR */
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> kept unregistered - has subscribers.\n",
+											        rpublic->aor.len,rpublic->aor.s);                                                
+												rpublic->reg_state = NOT_REGISTERED;                                       
+											}
+										}
+										r_unlock(rpublic->hash);
+								}
 
 							  LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> deregistered.\n",
 									p->aor.len,p->aor.s);
@@ -247,18 +234,18 @@ void registrar_timer(unsigned int ticks, void* param)
 								LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> deregistration SAR failed.Keeping into registrar, but with no contacts\n",
 									p->aor.len,p->aor.s);
 								#ifdef WITH_IMS_PM
-                                                                        impu_cnt++;
-                                                                #endif
-
+									impu_cnt++;
+								#endif
 							}										
 							break;
+							
 						case UNREGISTERED:
 							/* Don't drop it, just keep it for unregistered triggering*/
 							 #ifdef WITH_IMS_PM
-                                                                impu_cnt++;
-                                                        #endif
-  
+								impu_cnt++;
+							#endif
 							break;
+							
 						case NOT_REGISTERED:								
 							/* to avoid sending SAR when we still have subscribers, but no contact */
 							if (!p->shead)	{/* delete it if there are no more subscribers for it */						
@@ -270,21 +257,18 @@ void registrar_timer(unsigned int ticks, void* param)
 					}
 				}
 				#ifdef WITH_IMS_PM
-                                        else impu_cnt++;
-                                #endif
-
+					else impu_cnt++;
+				#endif
 				p = pn;
 			}
 		r_unlock(i);		
 	}
 	print_r(L_INFO);
 	#ifdef WITH_IMS_PM
-                IMS_PM_LOG01(RD_NbrIMPU,impu_cnt);
-                IMS_PM_LOG01(RD_NbrContact,contact_cnt);
-                IMS_PM_LOG01(RD_NbrSubs,subs_cnt);
-        #endif
-
-
+		IMS_PM_LOG01(RD_NbrIMPU,impu_cnt);
+		IMS_PM_LOG01(RD_NbrContact,contact_cnt);
+		IMS_PM_LOG01(RD_NbrSubs,subs_cnt);
+	#endif
 }
 
 /**
@@ -659,177 +643,178 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 			
 			break;
 		case AVP_IMS_SAR_RE_REGISTRATION:
+			reg_state = IMS_USER_REGISTERED;
 			public_identity = cscf_get_public_identity(msg);
-                        rpublic= get_r_public(public_identity);
-                        if (!public_identity.len) {
-                                LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
-                                goto error;
-                        }
+            if (!public_identity.len) {
+                    LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
+                    goto error;
+            }
+            rpublic= get_r_public(public_identity);
 
-                        if (!rpublic) break;
-                        if (!rpublic->s) break;
-                        for(i=0;i<rpublic->s->service_profiles_cnt;i++)
-                                for(j=0;j<rpublic->s->service_profiles[i].public_identities_cnt;j++){
-                                        pi = &(rpublic->s->service_profiles[i].public_identities[j]);
+            if (!rpublic) break;
+            if (!rpublic->s) break;
+            for(i=0;i<rpublic->s->service_profiles_cnt;i++)
+				for(j=0;j<rpublic->s->service_profiles[i].public_identities_cnt;j++){
+					pi = &(rpublic->s->service_profiles[i].public_identities[j]);
+					if(strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0) continue;
 
+					p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
+					if (!p){
+						LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+							pi->public_identity.len,pi->public_identity.s);
+							goto error;
+					}
 
-					 if(strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0) continue;
+		 			if (!registration_disable_early_ims && sent_by.len) {
+						if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
+							STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+                    }
+    		        if (is_star){
+                    		LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
+                    }else{
+		                for(h=msg->contact;h;h=h->next)
+    		                if (h->type==HDR_CONTACT_T && h->parsed)
+                		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+                            		expires = r_calc_expires(ci,expires_hdr);
+                                    if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
+                                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+                                            ci->uri.len,ci->uri.s);
+		                                goto error;
+            		                }
+                    		        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
+                        		        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
+                                    else
+                                        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
 
-                                          p =update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
-                                          if (!p){
-                                                    LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                                                pi->public_identity.len,pi->public_identity.s);
-                                                        goto error;
-                                          }
+		                              //  r_add_contact(msg,c->uri,c->expires-time_now);
+        		                }
+           			}
 
-					 if (!registration_disable_early_ims && sent_by.len) {
-                		                if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
-                                			STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
-		                        }
-                		        if (is_star){
-                                		LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
-		                        }else{
-                		                for(h=msg->contact;h;h=h->next)
-                        		                if (h->type==HDR_CONTACT_T && h->parsed)
-                                		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-                                                		expires = r_calc_expires(ci,expires_hdr);
-		                                                if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
-        		                                                LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                		                                                ci->uri.len,ci->uri.s);
-                        		                                goto error;
-                                		                }
-                                        		        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-                                                		        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-		                                                else
-        		                                                S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-
-                		                              //  r_add_contact(msg,c->uri,c->expires-time_now);
-                        		                }
-                       			}
-
-                                    r_unlock(p->hash);
-                                        
-                                }
+                    r_unlock(p->hash);
+                            
+			}
 			p=rpublic;
 			if (!registration_disable_early_ims && sent_by.len) {
-                                if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
-                                STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+				if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
+				STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+			}
+            if (is_star){
+                LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
+            }else{
+                for(h=msg->contact;h;h=h->next)
+                    if (h->type==HDR_CONTACT_T && h->parsed)
+                     for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+                        expires = r_calc_expires(ci,expires_hdr);
+                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
+                            LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+                                ci->uri.len,ci->uri.s);
+                            goto error;
                         }
-                        if (is_star){
-                                LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
-                        }else{
-                                for(h=msg->contact;h;h=h->next)
-                                        if (h->type==HDR_CONTACT_T && h->parsed)
-                                         for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-                                                expires = r_calc_expires(ci,expires_hdr);
-                                                if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
-                                                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                                                ci->uri.len,ci->uri.s);
-                                                        goto error;
-                                                }
-                                                if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-                                                        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-                                                else
-                                                        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
+                        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
+                            S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
+                        else
+                            S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
 
-                                                r_add_contact(msg,c->uri,c->expires-time_now);
-                                        }
-                        }
+                        r_add_contact(msg,c->uri,c->expires-time_now);
+                    }
+            }
 			r_unlock(rpublic->hash);
-			
 			break;		
+			
 		case AVP_IMS_SAR_USER_DEREGISTRATION:
 			public_identity = cscf_get_public_identity(msg);
-			rpublic= get_r_public(public_identity);
 			if (!public_identity.len) {
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
 				goto error;
 			}
+			rpublic= get_r_public(public_identity);
 
 			if (!rpublic) break;
 			if (!rpublic->s) break;
-                        for(i=0;i<rpublic->s->service_profiles_cnt;i++)
-                                for(j=0;j<rpublic->s->service_profiles[i].public_identities_cnt;j++){
-                                        pi = &(rpublic->s->service_profiles[i].public_identities[j]);
+            for(i=0;i<rpublic->s->service_profiles_cnt;i++)
+                for(j=0;j<rpublic->s->service_profiles[i].public_identities_cnt;j++){
+                    pi = &(rpublic->s->service_profiles[i].public_identities[j]);
                                       
-						if(strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0)	continue;
+					if(strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0)	continue;
 						
-						p =update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
-                                                if (!p){
-                                                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                                                pi->public_identity.len,pi->public_identity.s);
-                                                        goto error;
-                                                }
-                                                s_used++;
-						 if (is_star){
-        			                                c = p->head;
-                                			        while(c){
-			                                                c->expires = time_now;
-                        			                        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                     	                          			//r_add_contact(msg,c->uri,0);
-			                                                del_r_contact(p,c);	
-                        			                        c = c->next;
-			                                        }
-                        		        }else{
-			                                        for(h=msg->contact;h;h=h->next)
-                        			                        if (h->type==HDR_CONTACT_T && h->parsed)
-                                                				 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-				                                                        c = get_r_contact(p,ci->uri);
-                                				                        if (c) {
-                                                                				c->expires = time_now;
-				                                                                S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                     
-                                				                                //r_add_contact(msg,c->uri,0);
-                	                                               				del_r_contact(p,c);
-		        		                                                }
-                                        	        		}
-			                	}
-	                        		        hash = p->hash;
-			                                if (!p->head) {
-                			                        //reg_state = IMS_USER_NOT_REGISTERED;
-                        	        		        //update_r_public(p,&reg_state,s);
-		                	                        del_r_public(p);
-                		        	        }
+					p =update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
+                    if (!p){
+                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+                            pi->public_identity.len,pi->public_identity.s);
+	                    goto error;
+                    }
+                    s_used++;
+					if (is_star){
+			            c = p->head;
+				        while(c){
+		                    c->expires = time_now;
+		                    S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                     	                          			
+		                    //r_add_contact(msg,c->uri,0);
+		                    del_r_contact(p,c);	
+		                    c = c->next;
+			            }
+					}else{
+                        for(h=msg->contact;h;h=h->next)
+	                        if (h->type==HDR_CONTACT_T && h->parsed)
+                				 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+                                    c = get_r_contact(p,ci->uri);
+			                        if (c) {
+										c->expires = time_now;
+										S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                     
+										//r_add_contact(msg,c->uri,0);
+										del_r_contact(p,c);
+                                	}
+							}
+					}
+					hash = p->hash;
+                    if (!p->head) {
+						//reg_state = IMS_USER_NOT_REGISTERED;
+						//update_r_public(p,&reg_state,s);
+						del_r_public(p);
+					}
                                                 
-                                                r_unlock(p->hash);
+					r_unlock(p->hash);
                                        
-                                }
-					//deregister public identity that is on the message
-			        p =rpublic;
-                                if (!p){
-                                         LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                                                pi->public_identity.len,pi->public_identity.s);
-                                         goto error;
-                                }
+			}
+			//deregister public identity that is on the message
+			p =rpublic;
+			if (!p){
+				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+					pi->public_identity.len,pi->public_identity.s);
+				goto error;
+			}
 
-				 if (is_star){
-                                         c = p->head;
-                                         while(c){
-                                               c->expires = time_now;
-                                               S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                                                                        r_add_contact(msg,c->uri,0);
-                                               del_r_contact(p,c);
-                                               c = c->next;
-                                         }
-                                 }else{
-                                    for(h=msg->contact;h;h=h->next)
-                                        if (h->type==HDR_CONTACT_T && h->parsed)
-                                            for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-                                                    c = get_r_contact(p,ci->uri);
-                                                    if (c) {
-                                                         c->expires = time_now;
-                                                         S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
-                                                         r_add_contact(msg,c->uri,0);
-                                                         del_r_contact(p,c);
-                                                    }
- 		                             }
-                	         }
-                                 hash = rpublic->hash;
-                                 if (!p->head) {
-                                       del_r_public(p);
-                                 }
-
-                                r_unlock(p->hash);
+			if (is_star){
+				c = p->head;
+				while(c){
+					c->expires = time_now;
+					S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                                                                        
+					r_add_contact(msg,c->uri,0);
+					del_r_contact(p,c);
+					c = c->next;
+				}
+			}else{
+				for(h=msg->contact;h;h=h->next)
+					if (h->type==HDR_CONTACT_T && h->parsed)
+						for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+							c = get_r_contact(p,ci->uri);
+							if (c) {
+								c->expires = time_now;
+								S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
+								r_add_contact(msg,c->uri,0);
+								del_r_contact(p,c);
+							}
+						}
+			}
+			hash = rpublic->hash;
+			if (!p->head) {
+				del_r_public(p);
+			}
+			
+			r_unlock(p->hash);
+			
 			break;
 						
-
 		case AVP_IMS_SAR_UNREGISTERED_USER:			
 			reg_state = IMS_USER_UNREGISTERED;
 			r_act_time();
