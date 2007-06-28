@@ -72,6 +72,71 @@ error:
 }
 
 /**
+ * Create a new dp_config.
+ */
+inline routing_realm *new_routing_realm()
+{
+	routing_realm *x;	
+	x = shm_malloc(sizeof(routing_realm));
+	if (!x) {
+		LOG_NO_MEM("shm",sizeof(routing_realm));
+		goto error;
+	}	
+	memset(x,0,sizeof(routing_realm));
+	return x;
+error:
+	LOG(L_ERR,"ERROR:%s(): failed to create new routing_realm.\n",__FUNCTION__);	
+	return 0;
+}
+
+/**
+ * Create a new dp_config.
+ */
+inline routing_entry *new_routing_entry()
+{
+	routing_entry *x;	
+	x = shm_malloc(sizeof(routing_entry));
+	if (!x) {
+		LOG_NO_MEM("shm",sizeof(routing_entry));
+		goto error;
+	}	
+	memset(x,0,sizeof(routing_entry));
+	return x;
+error:
+	LOG(L_ERR,"ERROR:%s(): failed to create new routing_entry.\n",__FUNCTION__);	
+	return 0;
+}
+
+
+/** 
+ * Free the space claimed by a routing entry
+ */
+inline void free_routing_entry(routing_entry *re)
+{
+	if (!re) return;
+	if (re->fqdn.s) shm_free(re->fqdn.s);
+	shm_free(re);
+}
+
+/** 
+ * Free the space claimed by a routing realm
+ */
+inline void free_routing_realm(routing_realm *rr)
+{
+	routing_entry *re,*ren;
+	if (!rr) return;
+	if (rr->realm.s) shm_free(rr->realm.s);
+	for(re=rr->routes;re;re=ren){
+		ren = re->next;
+		free_routing_entry(re);
+	}
+	shm_free(rr);
+}
+
+
+
+
+/**
  * Frees the memory held by a dp_config.
  */
 inline void free_dp_config(dp_config *x)
@@ -95,7 +160,21 @@ inline void free_dp_config(dp_config *x)
 		}		
 		shm_free(x->acceptors);
 	}
-	if (x->applications) shm_free(x->applications);	
+	if (x->applications) shm_free(x->applications);
+	
+	if (x->r_table) {
+		routing_realm *rr,*rrn;
+		routing_entry *re,*ren;
+		for(rr=x->r_table->realms;rr;rr=rrn){
+			rrn = rr->next;
+			free_routing_realm(rr);
+		}
+		for(re=x->r_table->routes;re;re=ren){
+			ren = re->next;
+			free_routing_entry(re);
+		}
+		shm_free(x->r_table);
+	}	
 	shm_free(x);
 }
 
@@ -132,4 +211,20 @@ inline void log_dp_config(int level,dp_config *x)
 			(x->applications[i].type==DP_AUTHORIZATION)?"Auth":"Acct",
 			x->applications[i].id,
 			x->applications[i].vendor);	
+	if (x->r_table){
+		routing_realm *rr;
+		routing_entry *re;
+		LOG(level,"\tRouting Table : \n");
+		for(rr=x->r_table->realms;rr;rr=rr->next){
+			LOG(level,"\t\tRealm: %.*s\n",
+				rr->realm.len,rr->realm.s);
+			for(re=rr->routes;re;re=re->next)		
+				LOG(level,"\t\t\tRoute: [%4d] %.*s\n",
+					re->metric,re->fqdn.len,re->fqdn.s);			
+		}
+		for(re=x->r_table->routes;re;re=re->next)		
+			LOG(level,"\t\tDefaultRoute: [%4d] %.*s\n",
+				re->metric,re->fqdn.len,re->fqdn.s);			
+	}
+	
 }

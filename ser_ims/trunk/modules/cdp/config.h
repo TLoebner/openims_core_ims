@@ -80,6 +80,26 @@ typedef struct {
 	} type;			/**< type of the application */
 } app_config;
 
+/** Routing Table Entry */
+typedef struct _routing_entry {
+	str fqdn;				/**< FQDN of the server 				*/
+	int metric;				/**< The metric of the route			*/
+	struct _routing_entry *next;
+} routing_entry;
+
+/** Routing Table realm */
+typedef struct _routing_realm {
+	str realm;				/**< the realm to identify				*/
+	routing_entry *routes;	/**< ordered list of routes				*/
+	struct _routing_realm *next; /**< the next realm in the table	*/
+} routing_realm;
+
+/** Routing Table configuration */
+typedef struct {
+	routing_realm *realms;	/**< list of realms				 	*/
+	routing_entry *routes;	/**< ordered list of default routes 	*/
+} routing_table;
+
 /** Full Diameter Peer configuration. */
 typedef struct {
 	str fqdn;					/**< own FQDN */
@@ -105,11 +125,17 @@ typedef struct {
 	
 	app_config *applications;	/**< list of supporter applications */
 	int applications_cnt;		/**< size of list of supporter applications*/
+	
+	routing_table *r_table;		/**< realm routing table */
 } dp_config;
 
 
 dp_config *new_dp_config();
+routing_realm *new_routing_realm();
+routing_entry *new_routing_entry();
 void free_dp_config(dp_config *x);
+void free_routing_realm(routing_realm *rr);
+void free_routing_entry(routing_entry *re);
 inline void log_dp_config(int level,dp_config *x);
 
 dp_config* parse_dp_config(char* filename);

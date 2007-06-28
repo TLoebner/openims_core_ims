@@ -122,5 +122,20 @@
 <!ATTLIST Peer\
 	id			CDATA				#REQUIRED\
 	vendor		CDATA				#REQUIRED\
->";
+>\
+<!ELEMENT Realm (Route*)>\
+<!ATTLIST Realm\
+	name		CDATA				#REQUIRED\
+>\
+<!ELEMENT Route (#PCDATA)>\
+<!ATTLIST Route\
+	FQDN		CDATA				#REQUIRED\
+	metric		CDATA				#REQUIRED\
+>\
+<!ELEMENT DefaultRoute (#PCDATA)>\
+<!ATTLIST DefaultRoute\
+	FQDN		CDATA				#REQUIRED\
+	metric		CDATA				#REQUIRED\
+>\
+";
 
