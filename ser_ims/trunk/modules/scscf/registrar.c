@@ -113,6 +113,7 @@ void registrar_timer(unsigned int ticks, void* param)
 	int i,j,n,assignment_type,sar_res;
 	ims_public_identity *pi=0;
 	r_hash_slot *r;
+	int rpublic_hash;
 	
 	#ifdef WITH_IMS_PM
 		int impu_cnt=0,contact_cnt=0,subs_cnt=0;
@@ -168,6 +169,7 @@ void registrar_timer(unsigned int ticks, void* param)
 							sar_res = SAR(0,cscf_get_realm_from_uri(p->aor),p->aor,p->s->private_identity,assignment_type,0);
 							
 							if (sar_res==1){
+								/* SAR successful, de-register everything in this implicit set */
 								if (!p->s){
 									LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Problem r_public does not contain IMS Subscription <%.*s> \n",
 										p->aor.len,p->aor.s);
@@ -175,20 +177,22 @@ void registrar_timer(unsigned int ticks, void* param)
 								}
 								for(j=0;j<p->s->service_profiles_cnt;j++)
 									for(n=0;n<p->s->service_profiles[j].public_identities_cnt;n++){
-										
 										pi = &(p->s->service_profiles[j].public_identities[n]);
-										if(strncasecmp(pi->public_identity.s,p->aor.s,p->aor.len)==0) continue;
-										rpublic = get_r_public(pi->public_identity);
+										if (pi->public_identity.len == p->aor.len &&
+											strncasecmp(pi->public_identity.s,p->aor.s,p->aor.len)==0) continue;
+										rpublic = get_r_public_previous_lock(pi->public_identity,p->hash);
 										if(!rpublic){
-											LOG(L_INFO,"INFO:"M_NAME":registrar_timer: ino rpublic");
+											LOG(L_INFO,"INFO:"M_NAME":registrar_timer: The implicit set public identity <%.*s> was not found in the registrar",
+												pi->public_identity.len,pi->public_identity.s);
 											continue;
 										}
+										rpublic_hash = rpublic->hash;
 										
 										c2 = rpublic->head;
 										while(c2){
 											cn2 = c2->next;
 											if (!r_valid_contact(c2)){
-												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",c2->uri.len,c2->uri.s);
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed (because of implicit set).\n",c2->uri.len,c2->uri.s);
 												S_event_reg(rpublic,c2,0,IMS_REGISTRAR_CONTACT_EXPIRED,1);/* send now because we might drop the dialog soon */	
 												del_r_contact(rpublic,c2);
 											}
@@ -199,7 +203,7 @@ void registrar_timer(unsigned int ticks, void* param)
 										while(s2){
 											sn2 = s2->next;
 											if (!r_valid_subscriber(s2)){
-												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Subscriber <%.*s> expired and removed.\n",s2->subscriber.len,s2->subscriber.s);
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Subscriber <%.*s> expired and removed (because of implicit set).\n",s2->subscriber.len,s2->subscriber.s);
 												del_r_subscriber(rpublic,s2);
 											}										  
 											s2 = sn2;
@@ -207,17 +211,18 @@ void registrar_timer(unsigned int ticks, void* param)
 								
 										if (!rpublic->head){/* no more contacts, then deregister it */
 											if (!rpublic->shead)  {/* delete it if there are no more subscribers for it */     
-												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> removed.\n",
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> removed (because of implicit set).\n",
 													rpublic->aor.len,rpublic->aor.s);
 												del_r_public(rpublic);
 											}else{/* else mark it unregistered - to avoid more SAR */
-												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> kept unregistered - has subscribers.\n",
+												LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> kept unregistered - has subscribers (because of implicit set).\n",
 											        rpublic->aor.len,rpublic->aor.s);                                                
 												rpublic->reg_state = NOT_REGISTERED;                                       
 											}
 										}
-										r_unlock(rpublic->hash);
-								}
+										/* because the lock was taken with a previous lock */
+										if (rpublic_hash!=i) r_unlock(rpublic_hash);
+									}
 
 							  LOG(L_DBG,"DBG:"M_NAME":registrar_timer: User <%.*s> deregistered.\n",
 									p->aor.len,p->aor.s);
@@ -493,7 +498,6 @@ success:
 		assignment_type==AVP_IMS_SAR_ADMINISTRATIVE_DEREGISTRATION
 	   )
 	{
-		  
 		drop_auth_userdata(private_identity,public_identity);
 	}
 	
@@ -582,7 +586,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	ims_public_identity *pi=0;
 	struct hdr_field *h;
 	contact_t *ci;
-	int reg_state,expires_hdr,expires,hash;
+	int reg_state,expires_hdr,expires,hash,rpublic_hash;
 	str public_identity,sent_by={0,0};
 	
 //	if (!*s) return 1;
@@ -649,51 +653,14 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                     LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
                     goto error;
             }
-            rpublic= get_r_public(public_identity);
 
-            if (!rpublic) break;
-            if (!rpublic->s) break;
-            for(i=0;i<rpublic->s->service_profiles_cnt;i++)
-				for(j=0;j<rpublic->s->service_profiles[i].public_identities_cnt;j++){
-					pi = &(rpublic->s->service_profiles[i].public_identities[j]);
-					if(strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0) continue;
-
-					p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
-					if (!p){
-						LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-							pi->public_identity.len,pi->public_identity.s);
-							goto error;
-					}
-
-		 			if (!registration_disable_early_ims && sent_by.len) {
-						if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
-							STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
-                    }
-    		        if (is_star){
-                    		LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
-                    }else{
-		                for(h=msg->contact;h;h=h->next)
-    		                if (h->type==HDR_CONTACT_T && h->parsed)
-                		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-                            		expires = r_calc_expires(ci,expires_hdr);
-                                    if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
-                                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                            ci->uri.len,ci->uri.s);
-		                                goto error;
-            		                }
-                    		        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-                        		        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-                                    else
-                                        S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-
-		                              //  r_add_contact(msg,c->uri,c->expires-time_now);
-        		                }
-           			}
-
-                    r_unlock(p->hash);
-                            
+            p = get_r_public(public_identity);
+			if (!p){
+				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - not found in registrar\n",
+					public_identity.len,public_identity.s);
+				goto error;
 			}
-			p=rpublic;
+
 			if (!registration_disable_early_ims && sent_by.len) {
 				if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
 				STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
@@ -714,11 +681,50 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                             S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
                         else
                             S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-
                         r_add_contact(msg,c->uri,c->expires-time_now);
                     }
-            }
-			r_unlock(rpublic->hash);
+            }            
+
+			/* now update the implicit set */
+			if (p->s)
+            for(i=0;i<p->s->service_profiles_cnt;i++)
+				for(j=0;j<p->s->service_profiles[i].public_identities_cnt;j++){
+					pi = &(p->s->service_profiles[i].public_identities[j]);
+					if (public_identity.len==pi->public_identity.len &&
+						strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0) continue;
+
+					rpublic = update_r_public_previous_lock(pi->public_identity,p->hash,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
+					if (!rpublic){
+						LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+							pi->public_identity.len,pi->public_identity.s);
+						continue;
+					}
+
+		 			if (!registration_disable_early_ims && sent_by.len) {
+						if (rpublic->early_ims_ip.s) shm_free(rpublic->early_ims_ip.s);
+							STR_SHM_DUP(rpublic->early_ims_ip,sent_by,"IP Early IMS");
+                    }
+    		        if (is_star){
+                    		LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
+                    }else{
+		                for(h=msg->contact;h;h=h->next)
+    		                if (h->type==HDR_CONTACT_T && h->parsed)
+                		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+                            		expires = r_calc_expires(ci,expires_hdr);
+                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path))){
+                                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
+                                            ci->uri.len,ci->uri.s);
+		                                goto error;
+            		                }
+                    		        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
+                        		        S_event_reg(rpublic,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
+                                    else
+                                        S_event_reg(rpublic,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
+        		                }
+           			}
+                    if (rpublic->hash!=p->hash) r_unlock(rpublic->hash);                            
+			}
+			r_unlock(p->hash);
 			break;		
 			
 		case AVP_IMS_SAR_USER_DEREGISTRATION:
@@ -727,68 +733,20 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
 				goto error;
 			}
-			rpublic= get_r_public(public_identity);
+			p = get_r_public(public_identity);
 
-			if (!rpublic) break;
-			if (!rpublic->s) break;
-            for(i=0;i<rpublic->s->service_profiles_cnt;i++)
-                for(j=0;j<rpublic->s->service_profiles[i].public_identities_cnt;j++){
-                    pi = &(rpublic->s->service_profiles[i].public_identities[j]);
-                                      
-					if(strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0)	continue;
-						
-					p =update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2);
-                    if (!p){
-                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                            pi->public_identity.len,pi->public_identity.s);
-	                    goto error;
-                    }
-                    s_used++;
-					if (is_star){
-			            c = p->head;
-				        while(c){
-		                    c->expires = time_now;
-		                    S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                     	                          			
-		                    //r_add_contact(msg,c->uri,0);
-		                    del_r_contact(p,c);	
-		                    c = c->next;
-			            }
-					}else{
-                        for(h=msg->contact;h;h=h->next)
-	                        if (h->type==HDR_CONTACT_T && h->parsed)
-                				 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-                                    c = get_r_contact(p,ci->uri);
-			                        if (c) {
-										c->expires = time_now;
-										S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                     
-										//r_add_contact(msg,c->uri,0);
-										del_r_contact(p,c);
-                                	}
-							}
-					}
-					hash = p->hash;
-                    if (!p->head) {
-						//reg_state = IMS_USER_NOT_REGISTERED;
-						//update_r_public(p,&reg_state,s);
-						del_r_public(p);
-					}
-                                                
-					r_unlock(p->hash);
-                                       
-			}
-			//deregister public identity that is on the message
-			p =rpublic;
 			if (!p){
-				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-					pi->public_identity.len,pi->public_identity.s);
+				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - not found in registrar\n",
+					public_identity.len,public_identity.s);
 				goto error;
 			}
 
+			//deregister public identity that is on the message
 			if (is_star){
 				c = p->head;
 				while(c){
 					c->expires = time_now;
-					S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                                                                        
+					S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
 					r_add_contact(msg,c->uri,0);
 					del_r_contact(p,c);
 					c = c->next;
@@ -806,13 +764,53 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							}
 						}
 			}
-			hash = rpublic->hash;
-			if (!p->head) {
+
+			/* now update the implicit set */
+			if (p->s)
+            for(i=0;i<p->s->service_profiles_cnt;i++)
+                for(j=0;j<p->s->service_profiles[i].public_identities_cnt;j++){
+                    pi = &(p->s->service_profiles[i].public_identities[j]);
+					if (public_identity.len == pi->public_identity.len && 
+						strncasecmp(pi->public_identity.s,public_identity.s,public_identity.len)==0)	continue;
+						
+					rpublic = update_r_public_previous_lock(pi->public_identity,p->hash,&reg_state,s,ccf1,ccf2,ecf1,ecf2);				
+                    if (!rpublic){
+                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
+                            pi->public_identity.len,pi->public_identity.s);
+	                    continue;
+                    }
+                    s_used++;
+					if (is_star){
+			            c = rpublic->head;
+				        while(c){
+		                    c->expires = time_now;
+		                    S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                     	                          			
+		                    del_r_contact(p,c);	
+		                    c = c->next;
+			            }
+					}else{
+						for(h=msg->contact;h;h=h->next)
+	                    	if (h->type==HDR_CONTACT_T && h->parsed)
+								for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+									c = get_r_contact(rpublic,ci->uri);
+									if (c) {
+										c->expires = time_now;
+										S_event_reg(rpublic,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                     
+										del_r_contact(rpublic,c);
+									}
+							}
+					}
+					rpublic_hash = rpublic->hash;
+                    if (!rpublic->head) 
+						del_r_public(rpublic);
+                                                
+					if (p->hash!=rpublic_hash) r_unlock(rpublic_hash);
+				}
+
+			hash = p->hash;
+			if (!p->head) 
 				del_r_public(p);
-			}
-			
-			r_unlock(p->hash);
-			
+			r_unlock(hash);			
 			break;
 						
 		case AVP_IMS_SAR_UNREGISTERED_USER:			

@@ -653,6 +653,31 @@ r_public* get_r_public_nolock(str aor)
 }
 
 /**
+ * Searches for a r_public record and returns, with a previous lock aquired.
+ * \note Aquires the lock on the hash slot on success AND if the previous lock lock was not previously aquired,
+ *  so release it when you are done, but be careful to only release it if the new lock!=previous_lock.
+ * @param aor - the address of record to look for
+ * @param locked_hash - previous lock, already aquired.
+ * @returns - the r_public found, 0 if not found
+ */
+r_public* get_r_public_previous_lock(str aor,int locked_hash)
+{
+	r_public *p=0;
+	unsigned int hash;
+	hash = get_aor_hash(aor,r_hash_size);
+	if (hash!=locked_hash) r_lock(hash);
+	p = registrar[hash].head;
+	while(p){
+		if (p->aor.len == aor.len &&
+			strncasecmp(p->aor.s,aor.s,aor.len)==0) return p;
+		p = p->next;
+	}
+	if (hash!=locked_hash) r_unlock(hash);
+	return 0;
+}
+
+
+/**
  * Creates and Adds a new r_public record. 
  * \note Aquires the lock on the hash_slot on success, so release it when you are done.
  * \note When calling be sure that get_r_public(aor) returns 0, to avoid unreachable duplicates
@@ -675,6 +700,35 @@ r_public* add_r_public(str aor,enum Reg_States reg_state,ims_subscription *s)
 		if (p->prev) p->prev->next = p;
 		registrar[hash].tail = p;
 		if (!registrar[hash].head) registrar[hash].head=p;
+	return p;
+}
+
+/**
+ * Creates and Adds a new r_public record with a previous lock already aquired. 
+ * \note Aquires the lock on the hash_slot on success and if the hash slot was not
+ * previously locked, so release it when you are done if different than locked_hash.
+ * \note When calling be sure that get_r_public(aor) returns 0, to avoid unreachable duplicates
+ * @param aor - the address of record
+ * @param locked_hash - the previously locked hash
+ * @param reg_state - current registration state
+ * @param s - the subscription attached
+ * @returns the newly added r_public or NULL on error
+ */
+r_public* add_r_public_previous_lock(str aor,int locked_hash,enum Reg_States reg_state,ims_subscription *s)
+{
+	r_public *p;
+	unsigned int hash;
+
+	p = new_r_public(aor,reg_state,s);
+	hash = p->hash;
+	if (!p) return 0;	
+	p->next=0;
+	if (hash!=locked_hash) 
+		r_lock(hash);
+			p->prev=registrar[hash].tail;
+			if (p->prev) p->prev->next = p;
+			registrar[hash].tail = p;
+			if (!registrar[hash].head) registrar[hash].head=p;
 	return p;
 }
 
@@ -752,6 +806,83 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 		return p;
 	}
 }
+
+/**
+ * Updates the r_public with the new reg_state and ims_subscription values, with a previous lock on the registrar.
+ * If not found, it will be inserted.
+ * \note Aquires the lock on the hash_slot on success and if the lock is different from previous_lock, so release it
+ *  when you are done and if different then from previous lock.
+ * @param aor - the address of record
+ * @param locked_hash - the previous lock on the registrar
+ * @param reg_state - new registration state, NULL if no update necessary
+ * @param s - the new subscription attached, NULL if no update necessary
+ * @returns the update r_public or NULL on error
+ */
+r_public* update_r_public_previous_lock(str aor,int locked_hash,enum Reg_States *reg_state,ims_subscription **s,
+	str *ccf1, str *ccf2, str *ecf1, str *ecf2)
+{
+	r_public *p;
+	p = get_r_public_previous_lock(aor,locked_hash);
+	if (!p){
+		if (reg_state && *reg_state && *reg_state!=NOT_REGISTERED && s){
+			p = add_r_public_previous_lock(aor,locked_hash,*reg_state,*s);
+			if (!p) return p;			
+			if (ccf1) {
+				if (p->ccf1.s) shm_free(p->ccf1.s);
+				STR_SHM_DUP(p->ccf1,*ccf1,"SHM CCF1");
+			}
+			if (ccf2) {
+				if (p->ccf2.s) shm_free(p->ccf2.s);
+				STR_SHM_DUP(p->ccf2,*ccf2,"SHM CCF2");
+			}
+			if (ecf1) {
+				if (p->ecf1.s) shm_free(p->ecf1.s);
+				STR_SHM_DUP(p->ecf1,*ecf1,"SHM ECF1");
+			}
+			if (ecf2) {
+				if (p->ecf2.s) shm_free(p->ecf2.s);
+				STR_SHM_DUP(p->ecf2,*ecf2,"SHM ECF2");
+			}
+			return p;
+		}
+		else return 0;
+	}else{
+		if (reg_state) p->reg_state = *reg_state;
+		if (*s) {
+			if (p->s){
+				lock_get(p->s->lock);
+				if (p->s->ref_count==1){
+					free_user_data(p->s);
+				}else{
+					p->s->ref_count--;
+					lock_release(p->s->lock);
+				}
+			}			
+			p->s = *s;
+			lock_get(p->s->lock);
+				p->s->ref_count++;
+			lock_release(p->s->lock);
+		}
+		if (ccf1) {
+			if (p->ccf1.s) shm_free(p->ccf1.s);
+			STR_SHM_DUP(p->ccf1,*ccf1,"SHM CCF1");
+		}
+		if (ccf2) {
+			if (p->ccf2.s) shm_free(p->ccf2.s);
+			STR_SHM_DUP(p->ccf2,*ccf2,"SHM CCF2");
+		}
+		if (ecf1) {
+			if (p->ecf1.s) shm_free(p->ecf1.s);
+			STR_SHM_DUP(p->ecf1,*ecf1,"SHM ECF1");
+		}
+		if (ecf2) {
+			if (p->ecf2.s) shm_free(p->ecf2.s);
+			STR_SHM_DUP(p->ecf2,*ecf2,"SHM ECF2");
+		}
+		return p;
+	}
+}
+
 
 
 /**
