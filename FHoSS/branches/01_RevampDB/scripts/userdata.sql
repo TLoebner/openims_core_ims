@@ -95,7 +95,7 @@ UNLOCK TABLES;
 
 /*!40000 ALTER TABLE `impi` DISABLE KEYS */;
 LOCK TABLES `impi` WRITE;
-INSERT INTO `impi` VALUES (4,1,'alice@open-ims.test','alice',1,1,'\0\0','\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0','000000000000','','',0,3600,1),(2,2,'bob@open-ims.test','bob',1,1,'\0\0','\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0','000000000000','','',0,3600,1);
+INSERT INTO `impi` VALUES (4,1,'alice@open-ims.test','alice',127,1,'\0\0','\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0','000000000000','','',0,3600,1),(2,2,'bob@open-ims.test','bob',127,1,'\0\0','\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0','000000000000','','',0,3600,1);
 UNLOCK TABLES;
 /*!40000 ALTER TABLE `impi` ENABLE KEYS */;
 

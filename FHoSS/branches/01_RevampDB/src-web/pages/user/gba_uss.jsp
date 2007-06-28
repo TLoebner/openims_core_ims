@@ -11,7 +11,7 @@
 	prefix="nested"%>
 
 <%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.cx.CxConstants, de.fhg.fokus.hss.zh.ZhConstants,
-	de.fhg.fokus.hss.web.form.* " %>
+	de.fhg.fokus.hss.web.form.*, de.fhg.fokus.hss.web.util.WebConstants " %>
 <html>
 <head>
 <%
@@ -59,25 +59,32 @@ function addUSS(id_impi){
 </head>
 
 <body>
-	<!-- Print errors, if any -->
-	<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> GBA-USS Settings </h1> 			
+			<br/><br/>			
+		</td>
+	<tr>	
+		<td align="left">
+			<!-- Print errors, if any -->
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+		</td>
+	</tr>
+	</table> <!-- title-table -->
 
 	<html:form action="/GBA_USS_Submit">
 		<html:hidden property="nextAction" value=""/>
 		<html:hidden property="associated_ID" value=""/>
 		<html:hidden property="id_impi" />
 	
-		<table align=center valign=middle height=100%>
-	
-		<tr>
-			<td align="center"><h1> GBA-USS Settings </h1></td>
-		</tr>
+		<table id="main-table" align="center" valign="middle">
 		<tr>
 			<td>
-	 			<table border="0" align="center" width="350" >						
+	 			<table id="impi-table" border="0" align="center" width="350" >						
 	 			<tr>
  					<td>
-						<table border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">						
+						<table id="fields-table" class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">						
 						
 						<!-- Private Identity -->
 						<tr bgcolor="#FFCC66">
@@ -112,13 +119,12 @@ function addUSS(id_impi){
 								</html:select>
 							</td>
 						</tr>
-						
-						</table>
+						</table> <!-- fields-table -->
 					</td>
 				</tr>	
  				<tr>
  					<td>
-						<table align="center">			
+						<table id="buttons-table" class="as" align="center">			
 						<tr>
 							<td>
 								<a href="/hss.web.console/IMPI_Load.do?id=<%=id_impi%>">
@@ -128,34 +134,44 @@ function addUSS(id_impi){
 						</tr>
 						<tr>
 							<td align=center> <br/>
-								<html:button property="save_button" value="Save" onclick="add_action_for_form(1, -1);"/>				
+								<%
+									 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+								%>							
+										<html:button property="save_button" value="Save" onclick="add_action_for_form(1, -1);"/>				
+								<%
+									}
+								%>	
 								<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2, -1);"/> 
 							</td>
 						</tr>
-						</table>			
+						</table> <!-- buttons-table -->			 
 					</td>
 				</tr>	
-				</table>		
+				</table> <!-- impi-table -->		
 			</td>
 			<td> <br/> </td>
 		</tr>
-		
 		<tr>		
 			<td>
-				<table>
+				<table id="uss-main-table">
 				<tr>
 					<td> <b> User Security Settings List </b> </td>
 				</tr>
 				<tr>
 					<td>		
-						<table class="as" border="0" cellspacing="1" align="center" width="600" style="border:2px solid #FF6600;">							
+						<table id="uss-fields-table" class="as" border="0" cellspacing="1" align="center" width="600" style="border:2px solid #FF6600;">							
 						<tr class="header">
 							<td class="header"> Type </td>			
 							<td class="header"> Flags </td>
 							<td class="header"> NAF Group </td>
-							<td class="header"> Delete </td>
+							<%
+								 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+							%>							
+									<td class="header"> Delete </td>
+							<%
+								}
+							%>	
 						</tr>
-							
 						<%
 							int idx = 0;
 						%>
@@ -192,30 +208,41 @@ function addUSS(id_impi){
 										style="width:200px;" onchange="add_action_for_form(13, -1);"/>
 								</td>
 								
+								<%
+									 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+								%>								
 								<!-- Add Delete button -->
 								<td>
 									<input type="button" name="delete_button" value="Delete" 
 										onclick="add_action_for_form(6, <%= uss.getId_uss() %>);" />		
 								</td>	
+								<%
+									}
+								%>
 							</tr>
 								
 							<%	
 								idx++;
 							%>
 						</nested:iterate>
-						</table>
+						</table> <!-- uss-fields-table -->
 						
+						<%
+							 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+						%>						
 						<a href="javascript:addUSS(<%= id_impi %>);">
 							<img src="/hss.web.console/images/add_obj.gif" width="16"
 								height="16" alt="Add" />
 						</a>
+						<%
+							}
+						%>						
 					</td>
 				</tr>
-				</table>
+				</table> <!-- uss-main-table -->
 			</td>
 		</tr>
-		</table>
-</html:form>
-
+		</table> <!-- main-table -->
+	</html:form>
 </body>
 </html>

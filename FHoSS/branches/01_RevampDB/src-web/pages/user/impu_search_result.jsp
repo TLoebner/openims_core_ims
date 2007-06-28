@@ -15,16 +15,15 @@
 <jsp:useBean id="rowPerPage" type="java.lang.String" scope="request"></jsp:useBean>
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-<head>
-<link rel="stylesheet" type="text/css"
-	href="/hss.web.console/style/fokus_ngni.css">
 
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title><bean:message key="result.title" /></title>
 
 <script type="text/javascript" language="JavaScript">
-
 function submitForm(pageId){
 	document.IMPU_SearchForm.crtPage.value = pageId;
 	document.IMPU_SearchForm.submit();
@@ -34,103 +33,107 @@ function rowsPerPageChanged(){
 	document.IMPU_SearchForm.crtPage.value = 1;
 	document.IMPU_SearchForm.submit();
 }
-
 </script> 
-
-
 </head>
 
 <body>
-	<center><h1><br/><br/> Public User Identity - Search Results </h1></center>
-	<table align=center valign=middle height=80%>
-		<tr><td>
-	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">	
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Public User Identity - Search Results </h1> 
+			<br/><br/>		
+		</td>
+	</tr>
+	</table>
 
-				<tr class="header">
-					<td class="header"> ID </td>
-					<td class="header"> Identity </td>
-					<td class="header"> Implicit-Set ID </td>
-					<td class="header"> Type </td>
-					<td class="header"> Reg. Status </td>
-					<td class="header"> Barring </td>
-				</tr>
+	<table id="main-table" align="center" valign="middle">
+	<tr>
+		<td>
+	 		<table id="result-table" class="as" width="600" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">	
+			<tr class="header">
+				<td class="header"> ID </td>
+				<td class="header"> Identity </td>
+				<td class="header"> Implicit-Set ID </td>
+				<td class="header"> Type </td>
+				<td class="header"> Reg. Status </td>
+				<td class="header"> Barring </td>
+			</tr>
 
-				<%
-				if (resultList != null && resultList.size() > 0){
-					IMPU impu;
-					int idx = 0;
-					Iterator it = resultList.iterator();
+			<%
+			if (resultList != null && resultList.size() > 0){
+				IMPU impu;
+				int idx = 0;
+				Iterator it = resultList.iterator();
 					
-					while (it.hasNext()){
-						impu = (IMPU) it.next();
-				%>		
-					<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
-						<td>
-							<%= impu.getId() %>
-						</td>
-						<td> 
-							<a href="/hss.web.console/IMPU_Load.do?id=<%= impu.getId() %>"> 
-								<%= impu.getIdentity() %>
-							</a>	
-						</td>
-						<td>
-							<%= impu.getId_implicit_set() %>
-						</td>
-						
-						<td>
-							<%= ((Tuple)WebConstants.select_identity_type.get(impu.getType())).getName() %>
-						</td>
+				while (it.hasNext()){
+					impu = (IMPU) it.next();
+			%>		
+				<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
+					<td>
+						<%= impu.getId() %>
+					</td>
+					<td> 
+						<a href="/hss.web.console/IMPU_Load.do?id=<%= impu.getId() %>"> 
+							<%= impu.getIdentity() %>
+						</a>	
+					</td>
+					<td>
+						<%= impu.getId_implicit_set() %>
+					</td>
+					
+					<td>
+						<%= ((Tuple)WebConstants.select_identity_type.get(impu.getType())).getName() %>
+					</td>
 
-						<td>
-							<%
-								if (impu.getUser_state() == CxConstants.IMPU_user_state_Registered){
-									out.println("Registered");
-								}
-								else if (impu.getUser_state() == CxConstants.IMPU_user_state_Not_Registered){
-									out.println("Not-Registered");
-								}
-								else if (impu.getUser_state() == CxConstants.IMPU_user_state_Unregistered){
-									out.println("Unregistered");
-								}
-								if (impu.getUser_state() == CxConstants.IMPU_user_state_Auth_Pending){
-									out.println("Auth-Pending");
-								}
-							%>
-						</td>
+					<td>
+						<%
+							if (impu.getUser_state() == CxConstants.IMPU_user_state_Registered){
+								out.println("Registered");
+							}
+							else if (impu.getUser_state() == CxConstants.IMPU_user_state_Not_Registered){
+								out.println("Not-Registered");
+							}
+							else if (impu.getUser_state() == CxConstants.IMPU_user_state_Unregistered){
+								out.println("Unregistered");
+							}
+							if (impu.getUser_state() == CxConstants.IMPU_user_state_Auth_Pending){
+								out.println("Auth-Pending");
+							}
+						%>
+					</td>
 
-						<td>
-							<% 
-								if (impu.getBarring() == 1){
-									out.println("true");
-								}
-								else{
-									out.println("false");
-								}
-							 %>
-						</td>
-					</tr>
-				<%		
+					<td>
+						<% 
+							if (impu.getBarring() == 1){
+								out.println("true");
+							}
+							else{
+								out.println("false");
+							}
+						 %>
+					</td>
+				</tr>
+			<%		
 			
 						idx++;		
 					} //while
 				} // if
 				else{	
-				%>
-					<tr>
-						<td>
-							<bean:message key="result.emptyResultSet" />
-						</td>
-					</tr>						
-				<%
+			%>
+				<tr>
+					<td>
+						<bean:message key="result.emptyResultSet" />
+					</td>
+				</tr>						
+			<%
 				}
-				%>	
-			</table>
+			%>	
+			</table> <!-- result-table -->
 		</td>
 	</tr>		
 	<tr>
 		<td colspan="3" class="header">
 			<html:form action="/IMPU_Search">
-				
 				<table align="center">
 					<tr>
 						<td>
@@ -170,6 +173,6 @@ function rowsPerPageChanged(){
 			</html:form>
 		</td>
 	</tr>
-	</table>
+	</table> <!-- main-table -->
 </body>
 </html>
