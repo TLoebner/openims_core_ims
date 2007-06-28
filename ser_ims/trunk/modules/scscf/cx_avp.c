@@ -970,7 +970,7 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Framed_IP_Address,0,0);
 	if (!avp||!avp->data.s) {ip->s=0;ip->len=0;}
 	else {
-		sprintf(buf,"%u.%u.%u.%u",avp->data.s[2],avp->data.s[3],avp->data.s[4],avp->data.s[5]);
+		sprintf(buf,"%u.%u.%u.%u",(unsigned char)avp->data.s[2],(unsigned char)avp->data.s[3],(unsigned char)avp->data.s[4],(unsigned char)avp->data.s[5]);
 		ip->len = strlen(buf);
 		ip->s = buf;
 	}
