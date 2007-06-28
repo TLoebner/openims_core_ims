@@ -16,4 +16,19 @@
 	
 	<Auth id="16777216" vendor="10415"/>
 
+<!-- Realm Routing configuration
+
+	<Realm name="open-ims.test">
+		<Route FQDN="hss1.open-ims.test" metric="10"/>
+		<Route FQDN="hss2.open-ims.test" metric="20"/>
+	</Realm>
+	<Realm name="another.open-ims.test">
+		<Route FQDN="hss3.open-ims.test" metric="10"/>
+		<Route FQDN="hss2.open-ims.test" metric="20"/>		
+	</Realm>
+	<DefaultRoute FQDN="hss.open-ims.test" metric="10"/>
+	<DefaultRoute FQDN="hss4.open-ims.test" metric="20"/>
+
+-->
+
 </DiameterPeer>

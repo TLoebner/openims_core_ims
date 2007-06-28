@@ -97,7 +97,7 @@ char* icscf_db_nds_table="nds_trusted_domains";				/**< NDS table in DB */
 char* icscf_db_scscf_table="s_cscf";						/**< S-CSCF table in db */
 char* icscf_db_capabilities_table="s_cscf_capabilities";	/**< S-CSCF capabilities table in db */
 
-char* icscf_aaa_peer="hss.open-ims.test";					/**< Diameter Peer FQDN (HSS) */
+char* icscf_forced_hss_peer="";								/**< Forced Diameter Peer FQDN (HSS) */
 
 int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists	*/
 
@@ -120,7 +120,7 @@ str icscf_thig_param_str;	/**< fixed THIG parameter name */
 str icscf_thig_path_str;	/**< fixed Path header */
 str icscf_thig_rr_str;		/**< fixed Record-route header */
 str icscf_default_realm_str;/**< fixed default realm */
-str aaa_peer;				/**< fixed Diameter Peer FQDN (HSS) */
+str icscf_forced_hss_peer_str;				/**< fixed forced Diameter Peer FQDN (HSS) */
 
 extern str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
 extern str cscf_icid_gen_addr_str;					/**< fixed address of the generator of the icid-value */
@@ -204,7 +204,7 @@ static param_export_t icscf_params[]={
 	{"db_nds_table", 			STR_PARAM, &icscf_db_nds_table},
 	{"db_scscf_table", 			STR_PARAM, &icscf_db_scscf_table},
 	{"db_capabilities_table", 	STR_PARAM, &icscf_db_capabilities_table},
-	{"aaa_peer", 				STR_PARAM, &icscf_aaa_peer},
+	{"forced_hss_peer", 		STR_PARAM, &icscf_forced_hss_peer},
 	{"hash_size", 				INT_PARAM, &icscf_hash_size},	
 
 	{"default_realm", 			STR_PARAM, &icscf_default_realm},	
@@ -300,8 +300,8 @@ static int fix_parameters()
 	STR_APPEND(icscf_thig_rr_str,icscf_thig_name_str);
 	STR_APPEND(icscf_thig_rr_str,s_rr_e);
 				
-	aaa_peer.s = icscf_aaa_peer;
-	aaa_peer.len = strlen(icscf_aaa_peer);
+	icscf_forced_hss_peer_str.s = icscf_forced_hss_peer;
+	icscf_forced_hss_peer_str.len = strlen(icscf_forced_hss_peer);
 
 	icscf_default_realm_str.s = icscf_default_realm; 
 	icscf_default_realm_str.len = strlen(icscf_default_realm);

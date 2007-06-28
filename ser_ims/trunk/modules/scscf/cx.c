@@ -66,7 +66,7 @@
 extern struct tm_binds tmb;			/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
 
-extern str scscf_aaa_peer_str;		/**< FQDN of the Diameter Peer (HSS) */
+extern str scscf_forced_hss_peer_str;		/**< FQDN of the forced Diameter Peer (HSS) */
  
 extern int r_hash_size;				/**< records tables parameters 	*/
 extern r_hash_slot *registrar;		/**< the contacts */
@@ -212,7 +212,10 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_request(mar);
 	#endif				
-	maa = cdpb.AAASendRecvMessage(mar,&scscf_aaa_peer_str);
+	if (scscf_forced_hss_peer_str.len)
+		maa = cdpb.AAASendRecvMessageToPeer(mar,&scscf_forced_hss_peer_str);
+	else 
+		maa = cdpb.AAASendRecvMessage(mar);
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_answer(maa);
 	#endif			
@@ -283,7 +286,10 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_request(sar);
 	#endif				
-	saa = cdpb.AAASendRecvMessage(sar,&scscf_aaa_peer_str);
+	if (scscf_forced_hss_peer_str.len)
+		saa = cdpb.AAASendRecvMessageToPeer(sar,&scscf_forced_hss_peer_str);
+	else 
+		saa = cdpb.AAASendRecvMessage(sar);
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_answer(saa);
 	#endif				

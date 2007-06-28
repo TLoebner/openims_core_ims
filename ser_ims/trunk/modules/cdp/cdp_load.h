@@ -119,11 +119,18 @@ typedef AAA_AVP_LIST (*AAAUngroupAVPS_f)(str buf);
 
 typedef AAAReturnCode (*AAASendMessage_f)(	
 											AAAMessage *message,
+											AAATransactionCallback_f *callback_f,
+											void *callback_param);
+
+typedef AAAReturnCode (*AAASendMessageToPeer_f)(	
+											AAAMessage *message,
 											str *peer_id, 
 											AAATransactionCallback_f *callback_f,
 											void *callback_param);
 
-typedef AAAMessage* (*AAASendRecvMessage_f)(AAAMessage *msg, str *peer_id);
+typedef AAAMessage* (*AAASendRecvMessage_f)(AAAMessage *msg);
+
+typedef AAAMessage* (*AAASendRecvMessageToPeer_f)(AAAMessage *msg, str *peer_id);
 
 typedef AAAReturnCode (*AAAFreeMessage_f)(
 											AAAMessage **message);
@@ -135,7 +142,9 @@ typedef int (*AAAAddResponseHandler_f)(AAAResponseHandler_f *f,void *param);
 
 struct cdp_binds {
 	AAASendMessage_f AAASendMessage;
+	AAASendMessageToPeer_f AAASendMessageToPeer;
 	AAASendRecvMessage_f AAASendRecvMessage;
+	AAASendRecvMessageToPeer_f AAASendRecvMessageToPeer;
 	AAAFreeMessage_f AAAFreeMessage;
 	
 	AAACreateRequest_f AAACreateRequest;

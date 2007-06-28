@@ -74,7 +74,9 @@
 int load_cdp( struct cdp_binds *cdpb)
 {
 	FIND_EXP(AAASendMessage,"AAASendMessage",AAASendMessage_f);
+	FIND_EXP(AAASendMessageToPeer,"AAASendMessageToPeer",AAASendMessageToPeer_f);
 	FIND_EXP(AAASendRecvMessage,"AAASendRecvMessage",AAASendRecvMessage_f);
+	FIND_EXP(AAASendRecvMessageToPeer,"AAASendRecvMessageToPeer",AAASendRecvMessageToPeer_f);
 	FIND_EXP(AAAFreeMessage,"AAAFreeMessage",AAAFreeMessage_f);
 
 	FIND_EXP(AAACreateRequest,"AAACreateRequest",AAACreateRequest_f);

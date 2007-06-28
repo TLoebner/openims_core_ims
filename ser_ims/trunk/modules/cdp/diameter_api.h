@@ -90,12 +90,18 @@ int AAAAddResponseHandler(AAAResponseHandler_f *f,void *param);
 
 AAAReturnCode AAASendMessage(	
 		AAAMessage *message,
+		AAATransactionCallback_f *callback_f,
+		void *callback_param);
+
+AAAReturnCode AAASendMessageToPeer(	
+		AAAMessage *message,
 		str *peer_id, 
 		AAATransactionCallback_f *callback_f,
 		void *callback_param);
 
-AAAMessage* AAASendRecvMessage(AAAMessage *msg, str *peer_id);
+AAAMessage* AAASendRecvMessage(AAAMessage *msg);
 
+AAAMessage* AAASendRecvMessageToPeer(AAAMessage *msg, str *peer_id);
 
 				/* MESSAGE CREATION */
 				

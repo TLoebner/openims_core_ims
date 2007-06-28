@@ -60,6 +60,7 @@
 #include "receiver.h"
 #include "transaction.h"
 #include "api_process.h"
+#include "routing.h"
 
 				/* TRANSACTIONS */
 				
@@ -168,18 +169,17 @@ int AAAAddResponseHandler(AAAResponseHandler_f *f,void *param)
  */
 AAAReturnCode AAASendMessage(	
 		AAAMessage *message,
-		str *peer_id, 
 		AAATransactionCallback_f *callback_f,
 		void *callback_param)
 {
 	peer *p;
-	p = get_peer_by_fqdn(peer_id);
+	p = get_routing_peer(message);
 	if (!p) {
-		LOG(L_ERR,"ERROR:AAASendMessage(): Peer unknown %.*s\n",peer_id->len,peer_id->s);
+		LOG(L_ERR,"ERROR:AAASendMessage(): Can't find a suitable connected peer in the routing table.\n");
 		goto error;
 	}
 	if (p->state!=I_Open && p->state!=R_Open){
-		LOG(L_ERR,"ERROR:AAASendMessage(): Peer not connected to %.*s\n",peer_id->len,peer_id->s);
+		LOG(L_ERR,"ERROR:AAASendMessage(): Peer not connected to %.*s\n",p->fqdn.len,p->fqdn.s);
 		goto error;
 	}
 	/* only add transaction following when required */
@@ -188,6 +188,49 @@ AAAReturnCode AAASendMessage(
 			add_trans(message,callback_f,callback_param,DP_TRANS_TIMEOUT,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessage(): can't add transaction callback for answer.\n");
+	}
+		
+	if (!peer_send_msg(p,message))
+		goto error;
+		
+	return 1;
+error:	
+	AAAFreeMessage(&message);
+	return 0;
+}
+
+/**
+ * Send a AAAMessage asynchronously.
+ * When the response is received, the callback_f(callback_param,...) is called.
+ * @param message - the request to be sent
+ * @param peer_id - FQDN of the peer to send
+ * @param callback_f - callback to be called on transactional response or transaction timeout
+ * @param callback_param - generic parameter to call the transactional callback function with
+ * @returns 1 on success, 0 on failure 
+ * \todo remove peer_id and add Realm routing
+ */
+AAAReturnCode AAASendMessageToPeer(	
+		AAAMessage *message,
+		str *peer_id, 
+		AAATransactionCallback_f *callback_f,
+		void *callback_param)
+{
+	peer *p;
+	p = get_peer_by_fqdn(peer_id);
+	if (!p) {
+		LOG(L_ERR,"ERROR:AAASendMessageToPeer(): Peer unknown %.*s\n",peer_id->len,peer_id->s);
+		goto error;
+	}
+	if (p->state!=I_Open && p->state!=R_Open){
+		LOG(L_ERR,"ERROR:AAASendMessageToPeer(): Peer not connected to %.*s\n",peer_id->len,peer_id->s);
+		goto error;
+	}
+	/* only add transaction following when required */
+	if (callback_f){
+		if (is_req(message))
+			add_trans(message,callback_f,callback_param,DP_TRANS_TIMEOUT,1);
+		else
+			LOG(L_ERR,"ERROR:AAASendMessageToPeer(): can't add transaction callback for answer.\n");
 	}
 		
 	if (!peer_send_msg(p,message))
@@ -225,20 +268,20 @@ void sendrecv_cb(int is_timeout,void *param,AAAMessage *ans)
  * \todo remove peer_id and add Realm routing
  * \todo replace the busy-waiting lock in here with one that does not consume CPU
  */
-AAAMessage* AAASendRecvMessage(AAAMessage *message, str *peer_id)
+AAAMessage* AAASendRecvMessage(AAAMessage *message)
 {
 	peer *p;
 	gen_lock_t *lock;
 	cdp_trans_t *t;
 	AAAMessage *ans;
 	
-	p = get_peer_by_fqdn(peer_id);
+	p = get_routing_peer(message);
 	if (!p) {
-		LOG(L_ERR,"ERROR:AAASendMessage(): Peer unknown %.*s\n",peer_id->len,peer_id->s);
+		LOG(L_ERR,"ERROR:AAASendRecvMessage(): Can't find a suitable connected peer in the routing table.\n");
 		goto error;
 	}
 	if (p->state!=I_Open && p->state!=R_Open){
-		LOG(L_ERR,"ERROR:AAASendMessage(): Peer not connected to %.*s\n",peer_id->len,peer_id->s);
+		LOG(L_ERR,"ERROR:AAASendRecvMessage(): Peer not connected to %.*s\n",p->fqdn.len,p->fqdn.s);
 		goto error;
 	}
 	
@@ -275,6 +318,64 @@ error:
 	return 0;
 }
 
+/**
+ * Send a AAAMessage synchronously.
+ * This blocks until a response is received or a transactional time-out happens. 
+ * @param message - the request to be sent
+ * @param peer_id - FQDN of the peer to send
+ * @returns 1 on success, 0 on failure 
+ * \todo remove peer_id and add Realm routing
+ * \todo replace the busy-waiting lock in here with one that does not consume CPU
+ */
+AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
+{
+	peer *p;
+	gen_lock_t *lock;
+	cdp_trans_t *t;
+	AAAMessage *ans;
+	
+	p = get_peer_by_fqdn(peer_id);
+	if (!p) {
+		LOG(L_ERR,"ERROR:AAASendRecvMessageToPeer(): Peer unknown %.*s\n",peer_id->len,peer_id->s);
+		goto error;
+	}
+	if (p->state!=I_Open && p->state!=R_Open){
+		LOG(L_ERR,"ERROR:AAASendRecvMessageToPeer(): Peer not connected to %.*s\n",peer_id->len,peer_id->s);
+		goto error;
+	}
+	
+	
+	if (is_req(message)){
+		lock = lock_alloc();
+		lock = lock_init(lock);
+		lock_get(lock);
+		t = add_trans(message,sendrecv_cb,(void*)lock,DP_TRANS_TIMEOUT,0);
+
+		if (!peer_send_msg(p,message)) {
+			lock_destroy(lock);
+			lock_dealloc((void*)lock);	
+			goto error;
+		}
+
+		/* block until callback is executed */
+		lock_get(lock);		
+		lock_destroy(lock);
+		lock_dealloc((void*)lock);
+		ans = t->ans;
+		free_trans(t);
+		return ans;
+	}
+	else
+	{
+		LOG(L_ERR,"ERROR:AAASendRecvMessageToPeer(): can't add wait for answer to answer.\n");
+		goto error;
+	}
+
+		
+error:	
+	AAAFreeMessage(&message);
+	return 0;
+}
 
 
 
