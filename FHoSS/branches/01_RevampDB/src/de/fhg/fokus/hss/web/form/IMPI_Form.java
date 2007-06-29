@@ -65,6 +65,7 @@ import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.IMPI_DAO;
 import de.fhg.fokus.hss.db.op.IMPI_IMPU_DAO;
 import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.main.HSSProperties;
 import de.fhg.fokus.hss.web.util.WebConstants;
 /**
  * @author adp dot fokus dot fraunhofer dot de 
@@ -76,8 +77,8 @@ public class IMPI_Form extends ActionForm implements Serializable{
 	private static Logger logger = Logger.getLogger(IMPI_Form.class);
 	private static final long serialVersionUID=1L;
 	
-	public static final String DEFAULT_OP = "00000000000000000000000000000000";  
-	public static final String DEFAULT_AMF = "0000";
+	public static final String DEFAULT_OP = HSSProperties.OPERATOR_ID;  
+	public static final String DEFAULT_AMF = HSSProperties.AMF_ID;
 	public static final String DEFAULT_SQN = "000000000000";
 	private int id;
 	private int id_imsu;
