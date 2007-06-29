@@ -212,8 +212,9 @@ public class TP_Submit extends Action{
 				
 			}
 			else if (nextAction.equals("save_spt")){
-				saveSpts(session, form, id);
-
+				if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){	
+					saveSpts(session, form, id);
+				}
 				// reload SPTs
 				List spt_Form_List = TP_Load.getSpts(session, id);
 				form.setSpts(spt_Form_List);

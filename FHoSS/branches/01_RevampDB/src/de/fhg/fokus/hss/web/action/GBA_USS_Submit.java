@@ -131,8 +131,10 @@ public class GBA_USS_Submit extends Action{
 				
 			}
 			else if (nextAction.equals("save_uss")){
-				saveUSSList(session, form);
-				// reload the uss List				
+				if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+					saveUSSList(session, form);
+				}
+				// 	reload the uss List				
 				List uss_Form_List = GBA_USS_Load.getUSSList(session, id_impi);
 				form.setUssList(uss_Form_List);
 				

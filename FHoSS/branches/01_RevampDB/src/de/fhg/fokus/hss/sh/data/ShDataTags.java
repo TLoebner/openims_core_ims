@@ -52,8 +52,8 @@ public class ShDataTags {
 	// constants related to the xml document format; more details are provided in 3GPP TS 29.328 
 	
 	public static final String ShData = "Sh-Data";
-	public static final String ShData_s = "<ShData>";
-	public static final String ShData_e = "</ShData>";
+	public static final String ShData_s = "<Sh-Data>";
+	public static final String ShData_e = "</Sh-Data>";
 
 	public static final String PublicIdentifiers = "PublicIdentifiers";
 	public static final String PublicIdentifiers_s = "<PublicIdentifiers>";

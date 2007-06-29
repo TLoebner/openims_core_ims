@@ -38,12 +38,19 @@ function rowsPerPageChanged(){
 
 </head>
 <body>
-	<center><h1><br/><br/> Capabilities - Search Results </h1></center>
-	<table align=center valign=middle height=80%>
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Capabilities - Search Results </h1> 
+			<br/><br/>		
+		</td>
+	</tr>
+	</table> <!-- title-table -->
+
+	<table id="main-table" align="center" valign="middle">
 	<tr>
 		<td>
-	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="450">	
-
+	 		<table id="result-table" class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="400">	
 				<tr class="header">
 					<td class="header"> ID </td>
 					<td class="header"> Name </td>
@@ -84,7 +91,7 @@ function rowsPerPageChanged(){
 				}
 				%>	
 				
-			</table>			
+			</table> <!-- result-table -->			
 		</td>
 	</tr>
 
@@ -131,6 +138,6 @@ function rowsPerPageChanged(){
 			</html:form>
 		</td>
 	</tr>
-	</table>		
+	</table>	<!-- main-table-->	
 </body>
 </html>

@@ -7,16 +7,14 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-
+<%@ page import="de.fhg.fokus.hss.web.util.WebConstants " %>
 <html>
-<head>
 
+<head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title> AS </title>
 <link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
-
 <%
-	String action=request.getParameter("action");
 	int id = Integer.parseInt(request.getParameter("id"));
 %>
 
@@ -38,49 +36,52 @@ function add_action_for_form(a) {
 		case 4:
 			document.IFC_Form.nextAction.value="delete";
 			document.IFC_Form.submit();
-			break;
-			
+			break;			
 	}
 }
 </script>
 </head>
 
 <body>
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Initial Filter Criteria -iFC-</h1> 			
+			<br/><br/>			
+		</td>
+	<tr>	
+		<td align="left">
+			<!-- Print errors, if any -->
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+		</td>
+	</tr>
+	</table> <!-- title-table -->
 
 <html:form action="/IFC_Submit">
 	<html:hidden property="nextAction" value=""/>
 	<html:hidden property="associated_ID" value=""/>
 		
-	<table align=center valign=middle height=100%>
-	<!-- Print errors, if any -->
+	<table id="main-table" align="center" valign="middle" >
 	<tr>
 		<td>
-			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-		</td>
-	</tr>	
-	<tr>
-		<td align="center"><h1>  Initial Filter Criteria -iFC- </h1></td>
-	</tr>
-	<tr>
-		<td>
-	 		<table border="0" align="center" width="450" >						
+	 		<table id="top-side-table" border="0" align="center" >						
  			<tr>
  				<td>
-					<table border="0" cellspacing="1" align="center" width="70%" style="border:2px solid #FF6600;">						
+					<table id="ifc-table" border="0" cellspacing="1" align="center" width="400" style="border:2px solid #FF6600;">						
 					<tr bgcolor="#FFCC66">
 						<td> ID </td>
-						<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
+						<td><html:text property="id" readonly="true" styleClass="inputtext_readonly" style="width:100px;"/> </td>
 					</tr>
 					<tr bgcolor="#FFCC66">
-						<td>Name </td>
-						<td><html:text property="name" styleClass="inputtext" style="width:250px;"/> </td>
+						<td>Name* </td>
+						<td><html:text property="name" styleClass="inputtext" style="width:200px;"/> </td>
 					</tr>
 					<tr bgcolor="#FFCC66">
 						<td>
 							Trigger Point
 						</td>	
 						<td> 		
-							<html:select property="id_tp" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="id_tp" styleClass="inputtext" size="1" style="width:200px;">
 								<html:option value="-1">Select TP...</html:option>					
 								<html:optionsCollection property="select_tp" label="name" value="id"/>
 							</html:select>
@@ -89,10 +90,10 @@ function add_action_for_form(a) {
 
 					<tr bgcolor="#FFCC66">
 						<td>
-							Application Server
+							Application Server*
 						</td>	
 						<td> 			
-							<html:select property="id_application_server" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="id_application_server" styleClass="inputtext" size="1" style="width:200px;">
 								<html:option value="-1">Select AS...</html:option>					
 								<html:optionsCollection property="select_as" label="name" value="id"/>
 							</html:select>
@@ -104,7 +105,7 @@ function add_action_for_form(a) {
 							Profile Part Indicator 
 						</td>
 						<td>
-							<html:select property="profile_part_ind" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="profile_part_ind" styleClass="inputtext" size="1" style="width:200px;">
 								<html:optionsCollection property="select_profile_part_indicator" label="name" value="code"/>
 							</html:select>
 						</td>
@@ -114,27 +115,46 @@ function add_action_for_form(a) {
 			</tr>
  			<tr>
  				<td>
-					<table align="center">			
+					<table id="buttons-table" align="center">			
+					<tr>
+						<td align="center"> 
+							<b> Mandatory fields were marked with "*" </b>
+						</td>
+					</tr>						
 					<tr>
 						<td align=center> <br/>
+							<%
+								 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+							%>						
 							<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
+							<%
+								}
+							%>
 							<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
-							<% if (id == -1){ %>
+							<% 
+								if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id == -1){ 
+							%>
 								<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
-							<%}%>
-							<% if (id != -1){ %>
+							<%
+								}
+							%>
+							<% 
+								if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id != -1){ 
+							%>
 								<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
 									disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
-							<%}%>									
+							<%
+								}
+							%>									
 						</td>
 					</tr>
-					</table>
+					</table> <!-- buttons-table -->
 				</td>
 			</tr>							
-			</table>		
+			</table> <!-- top-side-table-->		
 		</td>
 	</tr>
-	</table>		
+	</table> <!-- main-table -->		
 </html:form>
 </body>
 </html>

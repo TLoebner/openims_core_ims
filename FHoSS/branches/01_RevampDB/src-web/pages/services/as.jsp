@@ -7,10 +7,10 @@
 	prefix="html"%>
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
-<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.* " %>
+<%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.web.util.WebConstants " %>
 <html>
-<head>
 
+<head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title> AS </title>
 <link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
@@ -21,11 +21,8 @@
 %>
 
 <script type="text/javascript" language="JavaScript">
-
 function add_action_for_form(action, associated_ID) {
-
 	switch(action){
-
 		case 1:
 			document.AS_Form.nextAction.value="save";
 			document.AS_Form.submit();
@@ -53,73 +50,76 @@ function add_action_for_form(action, associated_ID) {
 			break;
 	}
 }
-
 </script>
 </head>
 
 <body>
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Application Server -AS- </h1> 			
+			<br/><br/>			
+		</td>
+	<tr>	
+		<td align="left">
+			<!-- Print errors, if any -->
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+		</td>
+	</tr>
+	</table> <!-- title-table -->
+
 <html:form action="/AS_Submit">
 	<html:hidden property="nextAction" value=""/>
 	<html:hidden property="associated_ID" value=""/>
 		
-	<table align=center valign=middle height=100%>
-	<!-- Print errors, if any -->
+	<table id="main-table" align="center" valign="middle">
 	<tr>
 		<td>
-			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-		</td>
-	</tr>	
-	<tr>
-		<td align="center"><h1>  Application Server -AS- </h1></td>
-	</tr>
-	<tr>
-		<td>
-	 		<table border="0" align="center" width="800" >						
+	 		<table id="top-side-table" border="0" align="center">						
  			<tr>
  				<td>
-					<table border="0" cellspacing="1" align="center" width="70%" style="border:2px solid #FF6600;">						
+					<table id="as-table" class="as" border="0" cellspacing="1" align="center" width="400" style="border:2px solid #FF6600;">						
 					<tr bgcolor="#FFCC66">
 						<td> ID </td>
-						<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
+						<td><html:text property="id" readonly="true" styleClass="inputtext_readonly" style="width:200px;"/> </td>
 					</tr>
 					<tr bgcolor="#FFCC66">
-						<td>Name </td>
-						<td><html:text property="name" styleClass="inputtext" style="width:250px;"/> </td>
+						<td>Name* </td>
+						<td><html:text property="name" styleClass="inputtext" style="width:200px;"/> </td>
 					</tr>
 
 					<tr bgcolor="#FFCC66">
-						<td>Server Name </td>
-						<td><html:text property="server_name" styleClass="inputtext" style="width:250px;"/> </td>
+						<td>Server Name* </td>
+						<td><html:text property="server_name" styleClass="inputtext" style="width:200px;"/> </td>
 					</tr>
 					
 					<tr bgcolor="#FFCC66">
-						<td>Diameter FQDN</td>
-						<td><html:text property="diameter_address" styleClass="inputtext" style="width:250px;"/> </td>
+						<td>Diameter FQDN*</td>
+						<td><html:text property="diameter_address" styleClass="inputtext" style="width:200px;"/> </td>
 					</tr>
 
 					<tr bgcolor="#FFCC66">
-						<td>Default Handling</td>
+						<td>Default Handling*</td>
 						<td>
-							<html:select property="default_handling" name="AS_Form" styleClass="inputtext" size="1" style="width:250px;">
+							<html:select property="default_handling" name="AS_Form" styleClass="inputtext" size="1" style="width:200px;">
 								<html:optionsCollection name="AS_Form" property="select_default_handling" label="name" value="code"/>
 							</html:select>
 						</td>
 					</tr>
 					<tr bgcolor="#FFCC66">
 						<td>Service Info</td>
-						<td><html:text property="service_info" styleClass="inputtext" style="width:250px;"/> </td>
+						<td><html:text property="service_info" styleClass="inputtext" style="width:200px;"/> </td>
 					</tr>
 
 					<tr bgcolor="#FFCC66">
 						<td> Rep-Data Limit </td>				
 						<td><html:text property="rep_data_size_limit" styleClass="inputtext" style="width:100px;"/> </td>
-					</tr>
-					
-					</table>		
+					</tr>					
+					</table> <!-- fields-table-->		
 				</td>
 				<td>
 					<b>Sh Interface - Permissions</b>	
-					<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">								
+					<table id="sec-perm" class="as" border="0" cellspacing="1" width="200" align="center" style="border:2px solid #FF6600;">								
 					<tr class="header">
 						<td width="60%"> Permission for </td>
 						<td class="header"> UDR </td>
@@ -207,29 +207,40 @@ function add_action_for_form(action, associated_ID) {
 						<td><html:checkbox property="pur_aliases_rep_data" styleClass="inputbox" />	</td>										
 						<td><html:checkbox property="snr_aliases_rep_data" styleClass="inputbox" />	</td>										
 					</tr>
-					</table>		
+					</table> <!-- sec-perm-table -->		
 				</td>					
-			</tr>
- 			<tr>
- 				<td>
-					<table align="center">			
-					<tr>
-						<td align=center> <br/>
-							<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
-							<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
-							<% if (id == -1){ %>
-								<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
-							<%}%>
-							<% if (id != -1){ %>
-								<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
-									disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
-							<%}%>									
-						</td>
-					</tr>
-					</table>
-				</td>
 			</tr>		
-			</table>		
+			</table> <!-- top-side-table-->		
+		</td>
+	</tr>	
+	<tr>
+		<td>
+			<table id="buttons-table" align="center">			
+			<tr>
+				<td align="center"> 
+				<b> Mandatory fields were marked with "*" </b>
+				</td>
+			</tr>	
+ 			<tr>
+				<td align=center> <br/>
+					<%
+						 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+					%>				
+					<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
+					<%
+						}
+					%>
+					<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
+					<% if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id == -1){ %>
+						<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
+					<%}%>
+					<% if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id != -1){ %>
+						<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
+							disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
+					<%}%>									
+				</td>
+			</tr>
+			</table> <!-- buttons-table -->
 		</td>
 	</tr>
 	<%
@@ -237,17 +248,16 @@ function add_action_for_form(action, associated_ID) {
 	%>
 	<tr>
 		<td>
-			<table>
+			<table id="bottom-side-table" class="as" align="center">
+			<%
+				 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+			%>							
 			<tr>
 				<td>
-					<table>
-					<tr>
-						<td>	
-							<b>Attach IFC </b>
-						</td>
-					</tr>					
-					<tr>
-						
+					<br />
+					<h2>Attach IFC(s) </h2>
+					<table id="ifc-table" class="as" border="0" width="400" cellspacing="1" align="center" style="border:2px solid #FF6600;">
+					<tr class="even">
 						<td>
 							<html:select property="ifc_id" value="-1" name="AS_Form" styleClass="inputtext" size="1" style="width:250px;">
 								<html:option value="-1">Select IFC...</html:option>
@@ -260,12 +270,28 @@ function add_action_for_form(action, associated_ID) {
 							<br />
 						</td>
 					</tr>	
-					</table>
-					<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
+					</table> <!-- ifc-table -->
+					
+				</td>
+			</tr>
+			<%
+				} //endif ADMIN
+			%>
+			<tr>
+				<td>
+					<br />		
+					<h2> List of attached IFCs </h2>
+					<table id="list-ifc-table" class="as" width="400" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
 					<tr class="header">
 						<td class="header"> ID </td>			
 						<td class="header"> IFC Name </td>
+						<%
+							 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+						%>										
 						<td class="header"> Detach </td>
+						<%
+							}
+						%>
 					</tr>
 					<%
 						if (attached_ifc_list != null){
@@ -284,26 +310,32 @@ function add_action_for_form(action, associated_ID) {
 										<%= ifc.getName() %>
 									</a>	
 								</td>
-
+								
+								<%
+									 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+								%>				
 								<td> 
 									<input type="button" name="detach_ifc" 
 										"value="Detach" onclick="add_action_for_form(5, <%= ifc.getId() %>);"/>													
 								</td>
+								<%
+									}
+								%>
 							</tr>											
 					<%			
 								idx++;												
 								}
 							}
 					%>
-					</table>
+					</table> <!-- list-ifc-table -->
 				</td>
-			</tr>
+			</tr> <!-- bottom-side-table -->
 		</td>
 	</tr>
 	<%
 		}
 	%>				
-	</table>		
+	</table><!-- main-table -->		
 </html:form>
 </body>
 </html>

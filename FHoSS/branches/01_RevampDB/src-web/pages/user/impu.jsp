@@ -211,6 +211,8 @@ function add_action_for_form(action, associated_ID) {
 				</tr>	
 				<tr>
 					<td align="center">
+						<br />
+					
 						<%
 							 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
 						%>					
