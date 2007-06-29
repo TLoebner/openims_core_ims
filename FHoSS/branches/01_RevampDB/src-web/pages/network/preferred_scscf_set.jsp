@@ -10,11 +10,11 @@
 	prefix="logic"%>
 	
 <%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.db.op.*, de.fhg.fokus.hss.web.util.*,
-	de.fhg.fokus.hss.db.hibernate.*, org.hibernate.Session " %>
+	de.fhg.fokus.hss.db.hibernate.*, org.hibernate.Session, de.fhg.fokus.hss.web.util.WebConstants " %>
 
 <html>
-<head>
 
+<head>
 <jsp:useBean id="scscf_list" type="java.util.List" scope="request"></jsp:useBean>
 
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
@@ -34,12 +34,12 @@ function add_action_for_form(action, associated_ID) {
 			document.PrefS_Form.submit();
 			break;
 		case 2:
-			document.PrefS_Form.nextAction.value="refresh";
-			document.PrefS_Form.submit();			
-			break;
-		case 3:
 			document.PrefS_Form.nextAction.value="reset";
 			document.PrefS_Form.reset();
+			break;
+		case 3:
+			document.PrefS_Form.nextAction.value="refresh";
+			document.PrefS_Form.submit();			
 			break;
 		case 4:
 			document.PrefS_Form.nextAction.value="delete";
@@ -61,120 +61,161 @@ function add_action_for_form(action, associated_ID) {
 </head>
 
 <body>
+
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1>  Preferred S-CSCF Set </h1> 			
+			<br/><br/>			
+		</td>
+	<tr>	
+		<td align="left">
+			<!-- Print errors, if any -->
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+		</td>
+	</tr>
+	</table> <!-- title-table -->
+
 	<html:form action="/PrefS_Submit">
 		<html:hidden property="nextAction" value=""/>
 		<html:hidden property="associated_ID" value=""/>
 		
-		<table align=center valign=middle height=100%>
-		
-		<tr>
-			<!-- Print errors, if any -->
-			<td>
-				<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-			</td>
-		</tr>	
-		<tr>
-			<td align="center"><h1>  Preferred S-CSCF Set </h1></td>
-		</tr>
+		<table id="main-table" align="center" valign="middle">
 		<tr>
 			<td>
-	 			<table border="0" align="center" width="450" >						
+	 			<table id="pcscf-table" border="0" align="center" width="400" >						
 	 			<tr>
  					<td>
-						<table border="0" cellspacing="1" align="center" width="70%" style="border:2px solid #FF6600;">						
+						<table id="fields-table" class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">						
 						<tr bgcolor="#FFCC66">
 							<td> ID-Set </td>
-							<td><html:text property="id_set" readonly="true" styleClass="inputtext_readonly"/> </td>
+							<td><html:text property="id_set" readonly="true" styleClass="inputtext_readonly" style="width:100px;"/> </td>
 						</tr>
 						<tr bgcolor="#FFCC66">
-							<td>Name </td>
-							<td><html:text property="name" styleClass="inputtext"/> </td>
+							<td>Name* </td>
+							<td><html:text property="name" styleClass="inputtext" style="width:200px;"/> </td>
 						</tr>
-						
 						
 			<%			if (id_set == -1){
 						// we can create a preferred_scscf_set only if we have an initial S-CSCF Name
 			%>			
 						<tr bgcolor="#FFCC66">
-							<td> S-CSCF </td>							
+							<td> S-CSCF Name*</td>							
 							<td>
-								<html:text property="scscf_name" styleClass="inputtext" value="" /> </td>
+								<html:text property="scscf_name" styleClass="inputtext" value="" style="width:200px;"/> </td>
 							</td>
 						</tr>
 						
 						<tr bgcolor="#FFCC66">
 							<td>
-								Priority	
+								Priority*	
 							</td>
 							<td>	
-								<html:text property="priority" styleClass="inputtext"/>
+								<html:text property="priority" styleClass="inputtext" style="width:100px;"/>
 							</td>
 						</tr>
 			<%
 						}
 			%>			
-						</table>
+						</table> <!-- fields-table -->
 					</td>
 				</tr>
 	 			<tr>
  					<td>
-						<table align="center">			
+						<table id="buttons-table" align="center">			
 						<tr>
-							<td align=center> <br/>
-								<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
-								<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2);"/> 
-								<% if (id_set == -1){ %>
-									<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3);"/> 
-								<%}%>
-								<% if (id_set != -1){ %>
+							<td align="center"> 
+								<b> Mandatory fields were marked with "*" </b>
+							</td>
+						</tr>	
+						<tr>
+							<td align=center> 
+								<br/>
+								<%
+									 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+								%>								
+										<html:button property="save_button" value="Save" onclick="add_action_for_form(1);"/>				
+								<%
+									}
+								%>
+								
+								<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(3);"/> 
+								<% 
+									if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id_set == -1){ 
+								%>
+									<html:button property="reset_button" value="Reset" onclick="add_action_for_form(2);"/> 
+								<%
+									}
+								%>
+								<% 
+									if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id_set != -1){ 
+								%>
 									<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4);" 
 										disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
-								<%}%>									
+								<%
+									}
+								%>									
 							</td>
 						</tr>
-						</table>
+						</table> <!-- buttons-table -->
 					</td>
 				</tr>							
-				</table>		
+				</table>	<!-- pcscf-table -->	
 			</td>
 		</tr>
-		<tr>
 		
+		<%
+			if (id_set != -1){		
+		%>
 			<%
-					if (id_set != -1){		
-			%>
+				 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+			%>										
+			<tr>
 				<td>	
-					<table width="400">
-					<tr>
-						<td>	
-							<b>Add S-CSCF </b>
-						</td>
-					</tr>			
-							
-					<tr>
+					<br />
+					<h2> Add S-CSCF </h2>
+					<table id="add-scscf-table" width="600" class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;">
+					<tr class="even">
 						<td>
-							<html:text property="scscf_name" styleClass="inputtext" value=""/> </td>
+							S-CSCF Name
+						</td>	
+						<td>
+							<html:text property="scscf_name" styleClass="inputtext" value="" style="width:200px;"/> </td>
 						</td>
 
 						<td>
 							Priority	
 						</td>
 						<td>	
-							<html:text property="priority" styleClass="inputtext"/>
+							<html:text property="priority" styleClass="inputtext" style="width:100px;"/>
 						</td>
 						
 						<td>
 							<html:button property="scscf_add_button" value="Add" onclick="add_action_for_form(12, -1);"/>
-							<br />
 						</td>
 					</tr>	
-					</table>
-					
-					<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
+					</table> <!-- add-scscf-table-->
+				</td>
+			</tr>
+			<%
+				}//endif ADMIN
+			%>
+			
+			<tr>
+				<td>
+					<br />						
+					<h2> List of attached S-CSCFs </h2>
+					<table id="list-attached-scscf" class="as" border="0" cellspacing="1" align="center" width="600" style="border:2px solid #FF6600;">
 					<tr class="header">
 						<td class="header"> S-CSCF Name </td>
 						<td class="header"> Priority </td>
-						<td class="header"> Delete </td>
+						<%
+							 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+						%>														
+								<td class="header"> Delete </td>
+						<%	
+							}
+						%>
 					</tr>
 					<%
 						if (scscf_list != null){
@@ -196,15 +237,17 @@ function add_action_for_form(action, associated_ID) {
 								<td> 
 									
 									<%
-										if (((String)request.getAttribute("deleteSCSCFDeactivation")).equals("true")){
+									 	if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+											if (((String)request.getAttribute("deleteSCSCFDeactivation")).equals("true")){
 									%>
-											<input type="button" name="delete_scscf" "value="Delete" onclick="add_action_for_form(5, <%= preferred_scscf_set.getId() %>);" disabled/>	
+												<input type="button" name="delete_scscf" "value="Delete" onclick="add_action_for_form(5, <%= preferred_scscf_set.getId() %>);" disabled/>	
 									<%
-										}
-										else{
+											}
+											else{
 									%>
-											<input type="button" name="delete_scscf" "value="Delete" onclick="add_action_for_form(5, <%= preferred_scscf_set.getId() %>);" />										
+												<input type="button" name="delete_scscf" "value="Delete" onclick="add_action_for_form(5, <%= preferred_scscf_set.getId() %>);" />										
 									<%
+											}
 										}
 									%>												
 								</td>
@@ -214,14 +257,13 @@ function add_action_for_form(action, associated_ID) {
 								}
 							}
 					%>
-					</table>
-					
+					</table> <!-- list-attached-scscf -->
 				</td>	
 			<%
 				}
 			%>	
 		</tr>
-		</table>		
+		</table>	<!-- main-table -->	
 	</html:form>
 </body>
 </html>

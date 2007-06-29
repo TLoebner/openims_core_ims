@@ -32,7 +32,7 @@
 			<td align=center>
 				<table id="search-table" border="0" cellspacing="0" align="center" width="400">
 				<tr>
-					<td align="right"><b>Enter Search Parameters</b></td>
+					<td align="right"><b>Enter Search Parameters:</b></td>
 				</tr>
 	 			<tr>
 	 				<td>

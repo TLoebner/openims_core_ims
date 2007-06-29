@@ -14,16 +14,15 @@
 <jsp:useBean id="rowPerPage" type="java.lang.String" scope="request"></jsp:useBean>
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-<head>
-<link rel="stylesheet" type="text/css"
-	href="/hss.web.console/style/fokus_ngni.css">
 
+<html>
+
+<head>
+<link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title><bean:message key="result.title" /></title>
 
 <script type="text/javascript" language="JavaScript">
-
 function submitForm(pageId){
 	document.S_IFC_SearchForm.crtPage.value = pageId;
 	document.S_IFC_SearchForm.submit();
@@ -33,16 +32,23 @@ function rowsPerPageChanged(){
 	document.S_IFC_SearchForm.crtPage.value = 1;
 	document.S_IFC_SearchForm.submit();
 }
-
 </script> 
 
 </head>
 <body>
-	<center><h1><br/><br/>Shared iFC - Search Results </h1></center>
-	<table align=center valign=middle height=80%>
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Shared iFC - Search Results </h1> 
+			<br/><br/>		
+		</td>
+	</tr>
+	</table> <!-- title-table -->
+
+	<table id="main-table" align="center" valign="middle">
 	<tr>
 		<td>
-	 		<table class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="350">	
+	 		<table id="result-table" class="as" border="0" cellspacing="1" align="center" style="border:2px solid #FF6600;" width="400">	
 				<tr class="header">
 					<td class="header" width="50"> ID-Set </td>
 					<td class="header"> Name </td>

@@ -8,7 +8,6 @@
 <%@ page import="de.fhg.fokus.hss.web.util.WebConstants" %>
 
 <html>
-
 <head>
 <link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
@@ -22,7 +21,6 @@
 		<td valign="top" bgcolor="#FFFFFF">
 			<h2> Services </h2>
 			<ul>
-			
 				<!-- Service Profile -->
 				<li> 
 					<b> Service Profiles </b> 

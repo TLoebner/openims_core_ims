@@ -68,8 +68,6 @@ public class HSSContainer {
 	public TomcatServer tomcatServer;
 	
 	public HSSContainer(){
-		diamStack = new DiameterStack(this);
-		
 		try{
 			tomcatServer = new TomcatServer();
 			tomcatServer.setPath("./");
@@ -102,6 +100,7 @@ public class HSSContainer {
 		ShEventsWorker shEventsWorker = new ShEventsWorker(diamStack, 10);
 		shEventsWorker.start();
 		
+		diamStack = new DiameterStack(this);
 	}
 		
 	

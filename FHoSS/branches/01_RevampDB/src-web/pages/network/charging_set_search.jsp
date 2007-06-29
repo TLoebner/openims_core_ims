@@ -7,52 +7,56 @@
 <%@ taglib uri="http://jakarta.apache.org/struts/tags-logic"
 	prefix="logic"%>
 
-
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
 <html>
 <head>
-<link rel="stylesheet" type="text/css"
-	href="/hss.web.console/style/fokus_ngni.css">
-
+<link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title><bean:message key="result.title" /></title>
 </head>
-<body>
 
 <body>
-	<table align=center valign=middle height=100%>
-		<tr> 
-			<td align=center>
-				<br/><br/><h1>Charging Info Sets - Search </h1>
-			</td>
-		</tr>
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Charging Info Sets - Search </h1> 			
+			<br/><br/>
+		</td>
+	</tr>
+	</table> <!-- title-table -->
+
+	<html:form action="CS_Search">
+		<table id="main-table" align="center" valign="middle">
 		<tr height=99%>
 			<td align=center>
-			<html:form action="CS_Search">
-			<table border=0 cellspacing=0 align="center" width=300>
-				<tr><td align="right"><b>Enter Search Parameters:</b></td></tr>
+				<table id="search-table" border="0" cellspacing="0" align="center" width="400">
+				<tr>
+					<td align="right"><b>Enter Search Parameters:</b></td>
+				</tr>
 	 			<tr>
 	 				<td>
-					 	<table border="0" cellspacing="1" align="center" width="100%" style="border:1px solid #FF6600;">
+					 	<table id="fields-table" class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
 		    			<tr bgcolor="#FFCC66">
 							<td>ID</td>
 							<td>
-								<html:text property="id_cs" value=""/>
+								<html:text property="id_cs" value="" styleClass="inputtext" style="width:100px;"/>
 							</td>
 						</tr>
 
 						<tr bgcolor="#FFCC66">
 							<td>Name</td>
-							<td><html:text property="name" value="" size="32"/></td>
+							<td><html:text property="name" value="" styleClass="inputtext" style="width:200px;"/></td>
 						</tr>
 						</table>
 					</td>	
 				<tr>
 					<td align="center"><br/><html:submit property="search" value="Search" /></td>
 				</tr>			
-			</table>	
-			</html:form>
-		</td></tr>	
-	</table>	
+				</table>	
+			</td>
+		</tr>	
+		</table>	
+	</html:form>	
 </body>
 </html>

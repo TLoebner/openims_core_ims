@@ -316,6 +316,8 @@ function disable_other_boxes(){
 					</tr>	
 					<tr>
 						<td align=center> 
+							<br />
+						
 							<%
 								if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
 							%>

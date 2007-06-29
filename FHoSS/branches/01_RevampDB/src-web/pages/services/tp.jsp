@@ -11,17 +11,16 @@
 	prefix="nested"%>
 
 <%@ page import="java.util.*, de.fhg.fokus.hss.db.model.*, de.fhg.fokus.hss.cx.CxConstants,
-	de.fhg.fokus.hss.web.form.* " %>
+	de.fhg.fokus.hss.web.form.*, de.fhg.fokus.hss.web.util.WebConstants " %>
 <html>
-<head>
 
+<head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-<title> AS </title>
+<title> TP </title>
 <link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
 <jsp:useBean id="attached_ifc_list" type="java.util.List" scope="request"></jsp:useBean>
 
 <%
-	String action=request.getParameter("action");
 	int id = Integer.parseInt(request.getParameter("id"));
 %>
 
@@ -64,8 +63,6 @@ function add_action_for_form(action, associated_ID) {
 			document.TP_Form.nextAction.value="save_spt";
 			document.TP_Form.submit();
 			break;
-			
-					
 	}
 }
 
@@ -85,6 +82,20 @@ function addSpt(groupId, is_spt_list_empty){
 
 <body>
 
+	<table id="title-table" align="center" weight="100%" >
+	<tr>
+		<td align="center">
+			<h1> Trigger Point -TP- </h1> 			
+			<br/><br/>			
+		</td>
+	<tr>	
+		<td align="left">
+			<!-- Print errors, if any -->
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
+		</td>
+	</tr>
+	</table> <!-- title-table -->
+
 <html:form action="/TP_Submit">
 	<html:hidden property="nextAction" value=""/>
 	<html:hidden property="associated_ID" value=""/>
@@ -92,143 +103,180 @@ function addSpt(groupId, is_spt_list_empty){
 	<html:hidden property="group" />
 	<html:hidden property="type" />
 	
-	<table align=center valign=middle height=100%>
-	<!-- Print errors, if any -->
+	<table id="main-table" align="center" valign="middle">
 	<tr>
 		<td>
-			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-		</td>
-	</tr>	
-	<tr>
-		<td align="center"><h1> Trigger Point -TP- </h1></td>
-	</tr>
-	<tr>
-		<td>
-	 		<table border="0" align="center" width="350" >						
+	 		<table id="top-side-table" border="0" align="center">						
  			<tr>
  				<td>
-					<table border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">						
-					<tr bgcolor="#FFCC66">
-						<td> ID </td>
-						<td><html:text property="id" readonly="true" styleClass="inputtext_readonly"/> </td>
+ 					<table id="left-side-table">
+ 					<tr>
+ 						<td>
+							<table id="fields-table" border="0" cellspacing="1" align="center" width="400" style="border:2px solid #FF6600;">						
+							<tr bgcolor="#FFCC66">
+								<td> ID </td>
+								<td><html:text property="id" readonly="true" styleClass="inputtext_readonly" style="width:100px;"/> </td>
+							</tr>
+							<tr bgcolor="#FFCC66">
+								<td> Name* </td>
+								<td><html:text property="name" styleClass="inputtext" style="width:200px;"/> </td>
+							</tr>
+							<tr bgcolor="#FFCC66">
+								<td>Condition Type CNF* </td>
+								<td>
+									<html:select property="condition_type_cnf" name="TP_Form" styleClass="inputtext" size="1" style="width:200px;">
+										<html:optionsCollection name="TP_Form" property="select_condition_type" label="name" value="code"/>
+									</html:select>
+								</td>
+							</tr>
+							</table> <!-- fields-table -->
+						</td>
 					</tr>
-					<tr bgcolor="#FFCC66">
-						<td>Name </td>
-						<td><html:text property="name" styleClass="inputtext"/> </td>
-					</tr>
-					<tr bgcolor="#FFCC66">
-						<td>Condition Type CNF </td>
-						<td>
-							<html:select property="condition_type_cnf" name="TP_Form" styleClass="inputtext" size="1" style="width:250px;">
-								<html:optionsCollection name="TP_Form" property="select_condition_type" label="name" value="code"/>
-							</html:select>
+		 			<tr>
+ 						<td>
+							<table id="buttons-table" align="center">			
+							<tr>
+								<td align="center"> 
+									<b> Mandatory fields were marked with "*" </b>
+								</td>
+							</tr>	
+							<tr>							
+								<td align=center> 
+									<br/>
+									<%
+										 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+									%>									
+											<html:button property="save_button" value="Save" onclick="add_action_for_form(1, -1);"/>				
+									<%
+										}
+									%>		
+																	
+									<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2, -1);"/> 
+									<% 
+										if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id == -1){ 
+									%>
+										<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3, -1);"/> 
+									<%
+										}
+									%>
+									<% 
+										if (request.isUserInRole(WebConstants.Security_Permission_ADMIN) && id != -1){ 
+									%>
+										<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4, -1);" 
+											disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
+									<%
+										}
+									%>				
+								</td>
+							</tr>
+							</table> <!-- buttons-table -->	
 						</td>
 					</tr>
 					</table>
-				</td>
-			</tr>	
- 			<tr>
- 				<td>
-					<table align="center">			
-					<tr>
-						<td align=center> <br/>
-							<html:button property="save_button" value="Save" onclick="add_action_for_form(1, -1);"/>				
-							<html:button property="refresh_button" value="Refresh" onclick="add_action_for_form(2, -1);"/> 
-							<% if (id == -1){ %>
-								<html:button property="reset_button" value="Reset" onclick="add_action_for_form(3, -1);"/> 
-							<%}%>
-							<% if (id != -1){ %>
-								<html:button property="delete_button" value="Delete" onclick="add_action_for_form(4, -1);" 
-									disabled="<%=Boolean.parseBoolean((String)request.getAttribute("deleteDeactivation")) %>"/>				
-							<%}%>				
-						</td>
-					</tr>
-					</table>			
-				</td>
-			
+				</td>				
 	<%
 				if (id != -1){
 	%>
 				<td>
-					<table>
+					<table id="right-side-table">
+					<%
+						 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+					%>														
 					<tr>
-						<td>	
-							<b>Attach IFC </b>
-						</td>
-					</tr>					
-					<tr>
-						
 						<td>
-							<html:select property="ifc_id" value="-1" name="TP_Form" styleClass="inputtext" size="1" style="width:250px;">
-								<html:option value="-1">Select IFC...</html:option>
-								<html:optionsCollection name="TP_Form" property="select_ifc" label="name" value="id"/>
-							</html:select>	
+							<h2>Attach IFC </h2>
+							<table id="ifc-table" class="as" border="0" cellspacing="1" align="center" width="400" style="border:2px solid #FF6600;">
+							<tr class="even">
+								<td>
+									<html:select property="ifc_id" value="-1" name="TP_Form" styleClass="inputtext" size="1" style="width:200px;">
+										<html:option value="-1">Select IFC...</html:option>
+										<html:optionsCollection name="TP_Form" property="select_ifc" label="name" value="id"/>
+									</html:select>	
+								</td>
+								<td>
+									<html:button property="ifc_attach_button" value="Attach" onclick="add_action_for_form(12, -1);"/>
+								</td>
+							</tr>	
+							</table> <!-- ifc-table -->
 						</td>
-
-						<td>
-							<html:button property="ifc_attach_button" value="Attach" onclick="add_action_for_form(12, -1);"/>
-							<br />
-						</td>
-					</tr>	
-					</table>
-					<table class="as" border="0" cellspacing="1" align="center" width="100%" style="border:2px solid #FF6600;">
-					<tr class="header">
-						<td class="header"> ID </td>			
-						<td class="header"> IFC Name </td>
-						<td class="header"> Detach </td>
 					</tr>
 					<%
-						if (attached_ifc_list != null){
-							Iterator it = attached_ifc_list.iterator();
-							IFC ifc = null;
-							int idx = 0;
-							while (it.hasNext()){
-								ifc = (IFC) it.next();
-												
+						}//endif ADMIN
 					%>
-							<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">																			
-								<td>  <%= ifc.getId() %></td>												
-										
-								<td>  
-									<a href="/hss.web.console/IFC_Load.do?id=<%= ifc.getId() %>" > 
-										<%= ifc.getName() %>
-									</a>	
-								</td>
-
-								<td> 
-									<input type="button" name="detach_ifc" 
-										"value="Detach" onclick="add_action_for_form(5, <%= ifc.getId() %>);"/>													
-								</td>
-							</tr>											
-					<%			
-								idx++;												
-								}
-							}
-					%>
-					</table>
-				</td>
-				<td> <br/> </td>
+					<tr>
+						<td>		
+							<br />
+							<h2> List of attached IFCs </h2>
+							<table id="list-ifc-table" class="as" border="0" cellspacing="1" align="center" width="400" style="border:2px solid #FF6600;">
+							<tr class="header">
+								<td class="header"> ID </td>			
+								<td class="header"> IFC Name </td>
+								<%
+									 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+								%>																	
+										<td class="header"> Detach </td>
+								<%
+									}
+								%>
+							</tr>
+							<%
+								if (attached_ifc_list != null){
+									Iterator it = attached_ifc_list.iterator();
+									IFC ifc = null;
+									int idx = 0;
+									while (it.hasNext()){
+										ifc = (IFC) it.next();
+													
+							%>
+									<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">																			
+										<td>  <%= ifc.getId() %></td>												
+											
+										<td>  
+											<a href="/hss.web.console/IFC_Load.do?id=<%= ifc.getId() %>" > 
+												<%= ifc.getName() %>
+											</a>	
+										</td>
+		
+										<%
+											 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+										%>											
+										<td> 
+											<input type="button" name="detach_ifc" 
+												"value="Detach" onclick="add_action_for_form(5, <%= ifc.getId() %>);"/>													
+										</td>
+										<%
+											}
+										%>
+									</tr>											
+							<%			
+										idx++;												
+										}
+									}
+							%>
+							</table> <!-- list-ifc-table -->
+						</td>
+					</tr>
+					</table> <!-- right-side-table-->		
+				</td>		
 			</tr>	
-			</table>		
+			</table> <!-- top-side-table-->		
 		</td>
-		<td> <br/> </td>
 	</tr>
 	<tr>		
 		<td>
-			<table>
-			<tr>
-				<b> Add SPTs to Trigger Point </b>
-			</tr>
+			<br />
+			<h2> Add SPTs to Trigger Point </h2>
+			<table id="spt-table">
 			<tr>
 				<td>				
-					<table width="730" class="as" cellspacing="0" cellpadding="0">
+					<table class="as" cellspacing="0" cellpadding="0">
 					<tr class="header">
 						<td><br>
 			<% 
 							int lastGroupId = 0;
 							int groupCnt = 0;							
 			%>
-							<table class="as" cellpadding="0" cellspacing="0" border="0" width="700">
+							<table class="as" cellpadding="0" cellspacing="0" border="0" width="800">
 
 								<nested:iterate property="spts" name="TP_Form"
 									id="spt" type="SPT_Form" indexId="ix">
@@ -256,10 +304,16 @@ function addSpt(groupId, is_spt_list_empty){
 											</option>
 										</select> 
 					
+									<%
+										 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+									%>														
 										<a href="javascript:addSpt(<%=(lastGroupId)%>, 0);">
 											<img src="/hss.web.console/images/add_obj.gif" width="16"
 												height="16" alt="Add" />
 										</a>
+									<%
+										} //endif ADMIN
+									%>	
 									</td>
 								</tr>		
 								
@@ -408,12 +462,18 @@ function addSpt(groupId, is_spt_list_empty){
 									</nested:equal>
 								</td>
 								
+								<%
+									 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+								%>									
+								
 								<!-- Add Delete button -->
 								<td>
 									<input type="button" name="delete_button" value="Delete" 
 										onclick="add_action_for_form(6, <%= spt.getSptId() %>);" />		
 								</td>	
-
+								<%
+									}
+								%>	
 							</tr>
 							
 							<!-- Add separators between SPTs -->
@@ -457,10 +517,16 @@ function addSpt(groupId, is_spt_list_empty){
 										</option>
 									</select> 
 			
+									<%
+										 if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+									%>												
 									<a href="javascript:addSpt(<%=lastGroupId%>, 0);">
 										<img src="/hss.web.console/images/add_obj.gif" width="16"
 											height="16" alt="Add" />
 									</a>	
+									<%
+										} //endif ADMIN
+									%>
 								</td>
 							</tr>
 							<tr class="header">
@@ -495,15 +561,16 @@ function addSpt(groupId, is_spt_list_empty){
 										<%= CxConstants.SPT_Type_SessionDescription_Name %>
 									</option>
 								</select> 
+
 								
 			<%
+				 	if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
 							if (lastGroupId == 0){					
 			%>					
 								<a href="javascript:addSpt(<%=lastGroupId%>, 1);">
 									<img src="/hss.web.console/images/add_obj.gif" width="16"
 										height="16" alt="Add" />
 								</a>
-								
 			<%
 							}
 							else{
@@ -514,6 +581,7 @@ function addSpt(groupId, is_spt_list_empty){
 								</a>
 			<%				
 							}
+					}
 			%>					
 							</td>
 						</tr>

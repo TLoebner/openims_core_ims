@@ -9,12 +9,13 @@
 
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
-<head>
 
+<head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title><bean:message key="result.title" /></title>
 <link rel="stylesheet" type="text/css" href="/hss.web.console/style/fokus_ngni.css">
 </head>
+
 <body>
 	<table id="title-table" align="center" weight="100%" >
 	<tr>
@@ -31,7 +32,7 @@
 			<td align="center">
 				<table id="search-table" border=0 cellspacing=0 align="center" width="400">
 				<tr>
-					<td align="right"><b>Enter Search Parameters</b>
+					<td align="right"><b>Enter Search Parameters:</b>
 					</td>
 				</tr>
 

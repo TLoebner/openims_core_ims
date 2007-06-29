@@ -44,7 +44,7 @@ function rowsPerPageChanged(){
 			<br/><br/>		
 		</td>
 	</tr>
-	</table>
+	</table> <!-- title-table -->
 
 	<table id="main-table" align="center" valign="middle" >
 	<tr>
