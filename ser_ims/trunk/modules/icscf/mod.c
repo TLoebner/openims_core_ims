@@ -103,6 +103,10 @@ int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists	
 
 char* icscf_default_realm="open-ims.test";					/**< default realm for LIR if none available	*/
 
+static char* icscf_route_on_user_unknown=0;					/**< script route to run for Initial request after HSS replies with User Unknown to the LIR (default none)*/
+int route_on_user_unknown_n=-1;				
+
+
 /* P-Charging-Vector parameters */
 extern char* cscf_icid_value_prefix;			/**< hexadecimal prefix for the icid-value - must be unique on each node */
 extern unsigned int* cscf_icid_value_count;		/**< to keep the number of generated icid-values 	*/
@@ -218,6 +222,8 @@ static param_export_t icscf_params[]={
 	{"icid_gen_addr",			STR_PARAM, &cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM, &cscf_orig_ioi},
 	{"term_ioi",				STR_PARAM, &cscf_term_ioi},
+	
+	{"route_on_user_unknown", 	STR_PARAM, &icscf_route_on_user_unknown},
 
 #ifdef WITH_IMS_PM
 	{"ims_pm_node_type",		STR_PARAM, &ims_pm_node_type},
@@ -383,7 +389,23 @@ static int icscf_mod_init(void)
 	srand((unsigned) time(NULL));
 	thig_key_and_cipher_init(&ki,&ci);
 	LOG(L_INFO,"Twofish encryption ready\n");
-		
+	
+	int route_no;
+	/* try to fix the tel_lir_user_unknown_route route */
+	if (icscf_route_on_user_unknown){
+		route_no=route_get(&main_rt, icscf_route_on_user_unknown);
+		if (route_no==-1){
+			LOG(L_ERR, "ERR"M_NAME":mod_init: failed to fix route \"%s\": route_get() failed\n",
+					icscf_route_on_user_unknown);
+			return -1;
+		}
+		if (main_rt.rlist[route_no]==0){
+			LOG(L_ERR, "ERR"M_NAME":mod_init: tel_lir_user_unknown_route \"%s\" is empty / doesn't exist\n",
+					icscf_route_on_user_unknown);
+		}
+		route_on_user_unknown_n=route_no;
+	}	
+	
 	return 0;
 error:
 	return -1;

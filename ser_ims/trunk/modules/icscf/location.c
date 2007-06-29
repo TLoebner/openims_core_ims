@@ -66,10 +66,15 @@
 #include "cx_avp.h"
 #include "registration.h"
 
+#include "../../action.h" /* run_actions */
+#include "../../route.h" /* route_get */
+
 extern struct tm_binds tmb;				/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;           /**< Structure with pointers to cdp funcs 		*/
 
 extern str icscf_default_realm_str;		/**< fixed default realm */
+
+extern int route_on_user_unknown_n;/**< script route number for Initial request processing after HSS says User Unknown */	
 
 /**
  * Perform Location-Information-Request.
@@ -158,8 +163,16 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia)
 			switch(experimental_rc){
 				
 				case RC_IMS_DIAMETER_ERROR_USER_UNKNOWN:
-					cscf_reply_transactional(msg,604,MSG_604_USER_UNKNOWN);
-					return CSCF_RETURN_BREAK;
+					if (route_on_user_unknown_n > -1) {
+						if (run_actions(main_rt.rlist[route_on_user_unknown_n], msg)<0){
+							LOG(L_WARN,"ERR:"M_NAME":I_LIA: error while trying script\n");
+						}
+						return CSCF_RETURN_BREAK;
+					} else {
+						cscf_reply_transactional(msg,604,MSG_604_USER_UNKNOWN);
+						return CSCF_RETURN_BREAK;
+					}
+					break;
 
 				case RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED:
 					cscf_reply_transactional(msg,480,MSG_480_NOT_REGISTERED);
