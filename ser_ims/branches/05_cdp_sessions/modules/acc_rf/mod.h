@@ -135,6 +135,15 @@
 	(dst).len = (dst).len + (src).len;}
 
 
+/** Return and break the execution of routing script */
+#define CSCF_RETURN_BREAK       0
+/** Return true in the routing script */
+#define CSCF_RETURN_TRUE        1
+/** Return false in the routing script */
+#define CSCF_RETURN_FALSE -1
+/** Return error in the routing script */
+#define CSCF_RETURN_ERROR -2
+
 /* ANSI Terminal colors */
 #define ANSI_GRAY		"\033[01;30m"
 #define ANSI_BLINK_RED 	"\033[00;31m"
