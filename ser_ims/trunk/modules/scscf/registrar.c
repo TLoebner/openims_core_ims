@@ -816,7 +816,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 		case AVP_IMS_SAR_UNREGISTERED_USER:			
 			reg_state = IMS_USER_UNREGISTERED;
 			r_act_time();
-
+			if (!*s) break;
 			for(i=0;i<(*s)->service_profiles_cnt;i++)
 				for(j=0;j<(*s)->service_profiles[i].public_identities_cnt;j++){
 					pi = &((*s)->service_profiles[i].public_identities[j]);
