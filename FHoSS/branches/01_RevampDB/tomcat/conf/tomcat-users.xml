@@ -1,6 +1,0 @@
-<tomcat-users>
-	<role rolename="hss_user"/>
-	<role rolename="hss_admin"/>
-  	<user name="hss" password="hss" roles="hss_user"/>
-  	<user name="hssAdmin" password="hss" roles="hss_user,admin"/>
-</tomcat-users>
