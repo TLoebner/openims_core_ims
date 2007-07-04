@@ -71,6 +71,7 @@
 #include "cx.h"
 #include "cx_avp.h"
 #include "sip_messages.h"
+#include "dlg_state.h"
 
 
 extern struct tm_binds tmb;            	/**< Structure with pointers to tm funcs 		*/
@@ -373,9 +374,9 @@ error:
  * 
  * @param msg - the SIP REGISTER message (that is authorized)
  * @param str1 - the realm to look for in Authorization
- * @param str2 - not used
+ * @param str2 - direction - "orig" or "term"
  * @returns true if ok, false if not, break on error
- */
+ */ 
 int S_assign_server_unreg(struct sip_msg *msg,char *str1,char *str2 )
 {
 	int ret=CSCF_RETURN_FALSE;
@@ -396,11 +397,26 @@ int S_assign_server_unreg(struct sip_msg *msg,char *str1,char *str2 )
 		return CSCF_RETURN_BREAK;
 	}
 
-			
-	public_identity = cscf_get_public_identity(msg);
-	if (!public_identity.len) {
-		LOG(L_DBG,"DBG:"M_NAME":S_assign_server_unreg: public identity missing\n");		
-		return ret;
+	enum s_dialog_direction dir = get_dialog_direction(str1);
+	
+	switch (dir){
+		case DLG_MOBILE_ORIGINATING:
+			public_identity = cscf_get_asserted_identity(msg);
+			if (!public_identity.len) {
+				LOG(L_DBG,"DBG:"M_NAME":S_assign_server_unreg(orig): public identity missing\n");		
+				return ret;
+			}
+			break;
+		case DLG_MOBILE_TERMINATING:
+			public_identity = cscf_get_public_identity_from_requri(msg);
+			if (!public_identity.len) {
+				LOG(L_DBG,"DBG:"M_NAME":S_assign_server_unreg(term): public identity missing\n");		
+				return ret;
+			}
+			break;
+		default:
+			LOG(L_ERR,"ERR:"M_NAME":S_assign_server_unreg: bad dialog direction parameter\n");
+			goto error;
 	}
 	
 	assignment_type = AVP_IMS_SAR_UNREGISTERED_USER;
