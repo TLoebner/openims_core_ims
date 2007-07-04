@@ -557,7 +557,7 @@ void print_s_dialogs(int log_level)
  * @param direction - "orig" or "term"
  * @returns the s_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
  */
-static inline enum s_dialog_direction get_dialog_direction(char *direction)
+enum s_dialog_direction get_dialog_direction(char *direction)
 {
 	switch(direction[0]){
 		case 'o':

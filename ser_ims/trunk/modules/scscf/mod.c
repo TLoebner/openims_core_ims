@@ -215,7 +215,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_add_p_charging_function_addresses", S_add_p_charging_function_addresses, 0, 0, REQUEST_ROUTE},
 
 	{"S_assign_server",				S_assign_server,			1,0,REQUEST_ROUTE},
-	{"S_assign_server_unreg",		S_assign_server_unreg,		1,0,REQUEST_ROUTE},
+	{"S_assign_server_unreg",		S_assign_server_unreg,		2,0,REQUEST_ROUTE},
 	{"S_update_contacts",			S_update_contacts,			0,0,REQUEST_ROUTE},
 	{"S_lookup",					S_lookup,					0,0,REQUEST_ROUTE},
 

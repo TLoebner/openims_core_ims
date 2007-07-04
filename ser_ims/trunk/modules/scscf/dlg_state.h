@@ -145,7 +145,7 @@ int terminate_s_dialog(s_dialog *d);
 void del_s_dialog(s_dialog *d);
 void free_s_dialog(s_dialog *d);
 void print_s_dialogs(int log_level);
-		
+enum s_dialog_direction get_dialog_direction(char *direction);
 
 
 int S_is_in_dialog(struct sip_msg* msg, char* str1, char* str2);
