@@ -397,7 +397,7 @@ int S_assign_server_unreg(struct sip_msg *msg,char *str1,char *str2 )
 		return CSCF_RETURN_BREAK;
 	}
 
-	enum s_dialog_direction dir = get_dialog_direction(str1);
+	enum s_dialog_direction dir = get_dialog_direction(str2);
 	
 	switch (dir){
 		case DLG_MOBILE_ORIGINATING:
