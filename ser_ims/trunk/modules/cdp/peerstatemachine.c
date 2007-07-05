@@ -160,12 +160,12 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 			switch(event){
 				case I_Rcv_CEA:
 					result_code = Process_CEA(p,msg);
-					//if (result_code>=2000 && result_code<3000)
+					if (result_code>=2000 && result_code<3000)
 						p->state = I_Open; 												
-					//else {
-					//	Cleanup(p,p.I_comm);
-					//	p.state = Closed;
-					//}
+					else {
+						Cleanup(p,p->I_sock);
+						p->state = Closed;
+					}
 					log_peer_list(L_INFO);
 					break;
 				case R_Conn_CER:
@@ -228,13 +228,13 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					break;
 				case I_Rcv_CEA:
 					R_Disc(p);
-					//result_code = Process_CEA(p,msg);
-					//if (result_code>=2000 && result_code<3000)
+					result_code = Process_CEA(p,msg);
+					if (result_code>=2000 && result_code<3000)
 						p->state = I_Open; 
-					//else {
-					//	Cleanup(p,p.I_comm);
-					//	p.state = Closed;
-					//}
+					else {
+						Cleanup(p,p->I_sock);
+						p->state = Closed;
+					}
 					break;
 				case R_Peer_Disc:
 					R_Disc(p);
@@ -556,6 +556,82 @@ void I_Snd_CER(peer *p)
 	peer_send_msg(p,cer);
 }
 
+
+void add_peer_application(peer *p, int id, int vendor, app_type type)
+{
+	int i;
+	if (!p->applications) return;
+	for(i=0;i<p->applications_cnt;i++)
+		if (p->applications[i].id == id &&
+			p->applications[i].vendor == vendor &&
+			p->applications[i].type == type) return;
+
+	p->applications[p->applications_cnt].id = id;
+	p->applications[p->applications_cnt].vendor = vendor;
+	p->applications[p->applications_cnt].type = type;
+	p->applications_cnt++;	 
+}
+
+void save_peer_applications(peer *p,AAAMessage *msg)
+{
+	int total_cnt=0;
+	AAA_AVP *avp,*avp_vendor,*avp2;
+	AAA_AVP_LIST group;
+	int id,vendor;
+
+	if (p->applications) {
+		shm_free(p->applications);
+		p->applications = 0;
+		p->applications_cnt = 0;
+	}
+	for(avp=msg->avpList.head;avp;avp = avp->next)
+		switch (avp->code){
+			case AVP_Auth_Application_Id:
+			case AVP_Acct_Application_Id:
+			case AVP_Vendor_Specific_Application_Id:				
+				total_cnt+=2;/* wasteful, but let's skip decoding */	
+				break;				
+		}
+	p->applications_cnt = 0;
+	p->applications = shm_malloc(sizeof(app_config)*total_cnt);
+	if (!p->applications){	
+		LOG(L_ERR,"ERROR:save_peer_applications(): Error allocating %d bytes! No applications saved...\n",
+			sizeof(app_config)*total_cnt);
+		return;
+	}
+	for(avp=msg->avpList.head;avp;avp = avp->next)
+	{
+		switch (avp->code){
+			case AVP_Auth_Application_Id:
+				id = get_4bytes(avp->data.s);	
+				add_peer_application(p,id,0,DP_AUTHORIZATION);	
+				break;
+			case AVP_Acct_Application_Id:
+				id = get_4bytes(avp->data.s);	
+				add_peer_application(p,id,0,DP_ACCOUNTING);	
+				break;
+			case AVP_Vendor_Specific_Application_Id:
+				group = AAAUngroupAVPS(avp->data);
+				avp_vendor = AAAFindMatchingAVPList(group,group.head,AVP_Vendor_Id,0,0);				
+				avp2 = AAAFindMatchingAVPList(group,group.head,AVP_Auth_Application_Id,0,0);				
+				if (avp_vendor&&avp2){
+					vendor = get_4bytes(avp_vendor->data.s);
+					id = get_4bytes(avp2->data.s);
+					add_peer_application(p,id,vendor,DP_AUTHORIZATION);						
+				}
+				avp2 = AAAFindMatchingAVPList(group,group.head,AVP_Acct_Application_Id,0,0);				
+				if (avp_vendor&&avp2){
+					vendor = get_4bytes(avp_vendor->data.s);
+					id = get_4bytes(avp2->data.s);
+					add_peer_application(p,id,vendor,DP_ACCOUNTING);					
+				}
+				AAAFreeAVPList(&group);
+				break;
+				
+		}
+	}	
+}
+
 /**
  * Process a Capability Exchange Answer.
  * \note Must be called with a lock on the peer.
@@ -567,6 +643,7 @@ int Process_CEA(peer *p,AAAMessage *cea)
 {
 	AAA_AVP *avp;
 	avp = AAAFindMatchingAVP(cea,cea->avpList.head,AVP_Result_Code,0,0);
+	save_peer_applications(p,cea);
 	AAAFreeMessage(&cea);
 	if (!avp) return AAA_UNABLE_TO_COMPLY;
 	else return get_4bytes(avp->data.s);
@@ -792,9 +869,11 @@ int Process_CER(peer *p,AAAMessage *cer)
 		}
 	}
 	
-	if (common_app!=0)
+	if (common_app!=0){
+		save_peer_applications(p,cer);
 		return AAA_SUCCESS;
-	else return AAA_NO_COMMON_APPLICATION;
+	}else 
+		return AAA_NO_COMMON_APPLICATION;	
 }
 
 /**
