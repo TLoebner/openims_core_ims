@@ -59,6 +59,7 @@
 
 
 #include "utils.h"
+#include "config.h"
 #include <sys/types.h>
 
 
@@ -110,11 +111,14 @@ typedef struct _peer_t{
 	str realm;				/**< Realm of the peer */
 	int port;				/**< TCP Port of the peer */
 	
+	app_config *applications;/**< list of supported applications */
+	int applications_cnt;	/**< size of list of supporter applications*/
+	
 	gen_lock_t *lock;		/**< lock for operations with this peer */
 	
 	peer_state_t state;		/**< state of the peer */
 	int I_sock;				/**< socket used as initiator */
-	int R_sock;				/**< socjet used as receiver */
+	int R_sock;				/**< socket used as receiver */
 	
 	time_t activity;		/**< timestamp of last activity */
 	int is_dynamic;			/**< whether this peer was accepted although it was not initially configured */

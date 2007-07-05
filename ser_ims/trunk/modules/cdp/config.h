@@ -70,14 +70,16 @@ typedef struct{
 	str bind;	/**< IP address to bind to (if null, then 0.0.0.0 - all) */
 } acceptor_config;
 
+typedef enum {
+	DP_AUTHORIZATION,	/**< Authorization application */
+	DP_ACCOUNTING		/**< Accounting application */
+} app_type;
+
 /** Application configuration. */
 typedef struct {
 	int id;			/**< integer id of the appication */
 	int vendor;		/**< vendor id of the application */
-	enum { 
-		DP_AUTHORIZATION,	/**< Authorization application */
-		DP_ACCOUNTING		/**< Accounting application */
-	} type;			/**< type of the application */
+	app_type type;			/**< type of the application */
 } app_config;
 
 /** Routing Table Entry */

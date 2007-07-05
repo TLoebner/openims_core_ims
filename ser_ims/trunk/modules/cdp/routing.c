@@ -59,17 +59,33 @@
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
 /**
+ * Returns if the peer advertised support for an Application ID
+ * @param p - the peer to check
+ * @param app_id - the application id to look for
+ * @param vendor_id - the vendor id to look for, 0 if not vendor specific 
+ * @returns 0 if not found, 1 if found
+ */ 
+int peer_handles_application(peer *p,int app_id,int vendor_id)
+{
+	int i;
+	if (!p || !p->applications || !p->applications_cnt) return 0;
+	for(i=0;i<p->applications_cnt;i++)
+		if (p->applications[i].id==app_id && p->applications[i].vendor==vendor_id) return 1;		
+	return 0;
+}
+
+/**
  * Get the first peer that is connected from the list of routing entries.
  * @param r - the list of routing entries to look into
  * @returns - the peer or null if none connected
  */
-peer* get_first_connected_route(routing_entry *r)
+peer* get_first_connected_route(routing_entry *r,int app_id,int vendor_id)
 {
 	routing_entry *i;
 	peer *p;
 	for(i=r;i;i=i->next){
 		p = get_peer_by_fqdn(&(r->fqdn));
-		if (p && (p->state==I_Open || p->state==R_Open)) return p;
+		if (p && (p->state==I_Open || p->state==R_Open) && peer_handles_application(p,app_id,vendor_id)) return p;
 	}
 	return 0;
 }
@@ -86,17 +102,37 @@ peer* get_first_connected_route(routing_entry *r)
 peer* get_routing_peer(AAAMessage *m)
 {
 	str destination_realm={0,0},destination_host={0,0};
-	AAA_AVP *avp;
+	AAA_AVP *avp,*avp_vendor,*avp2;
+	AAA_AVP_LIST group;	
 	peer *p;
 	routing_realm *rr;
+	int app_id=0,vendor_id=0;
 	
+	app_id = m->applicationId;
+	avp = AAAFindMatchingAVP(m,0,AVP_Vendor_Specific_Application_Id,0,AAA_FORWARD_SEARCH);
+	if (avp){
+		group = AAAUngroupAVPS(avp->data);
+		avp_vendor = AAAFindMatchingAVPList(group,group.head,AVP_Vendor_Id,0,0);				
+		avp2 = AAAFindMatchingAVPList(group,group.head,AVP_Auth_Application_Id,0,0);				
+		if (avp_vendor&&avp2){
+			vendor_id = get_4bytes(avp_vendor->data.s);
+			app_id = get_4bytes(avp2->data.s);
+		}
+		avp2 = AAAFindMatchingAVPList(group,group.head,AVP_Acct_Application_Id,0,0);				
+		if (avp_vendor&&avp2){
+			vendor_id = get_4bytes(avp_vendor->data.s);
+			app_id = get_4bytes(avp2->data.s);
+		}
+		AAAFreeAVPList(&group);
+	}
+
 	avp = AAAFindMatchingAVP(m,0,AVP_Destination_Host,0,AAA_FORWARD_SEARCH);
 	if (avp) destination_host = avp->data;
 	
 	if (destination_host.len){
 		/* There is a destination host present in the message try and route directly there */
 		p = get_peer_by_fqdn(&destination_host);
-		if (p && (p->state==I_Open || p->state==R_Open)) return p;
+		if (p && (p->state==I_Open || p->state==R_Open) && peer_handles_application(p,app_id,vendor_id)) return p;
 		/* the destination host peer is not connected at the moment, try a normal route then */
 	}
 	
@@ -115,7 +151,7 @@ peer* get_routing_peer(AAAMessage *m)
 				strncasecmp(rr->realm.s,destination_realm.s,destination_realm.len)==0)
 					break;
 		if (rr) {
-			p = get_first_connected_route(rr->routes);
+			p = get_first_connected_route(rr->routes,app_id,vendor_id);
 			if (p) return p;
 			else LOG(L_ERR,"ERROR:get_routing_peer(): No connected Route peer found for Realm <%.*s>. Trying DefaultRoutes next...\n",
 					destination_realm.len,destination_realm.s);
@@ -123,7 +159,7 @@ peer* get_routing_peer(AAAMessage *m)
 	}
 	/* if not found in the realms or no destination_realm, 
 	 * get the first connected host in default routes */
-	p = get_first_connected_route(config->r_table->routes);
+	p = get_first_connected_route(config->r_table->routes,app_id,vendor_id);
 	if (!p){
 		LOG(L_ERR,"ERROR:get_routing_peer(): No connected DefaultRoute peer found.\n");
 	}
