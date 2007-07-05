@@ -213,7 +213,7 @@ str cscf_get_private_identity(struct sip_msg *msg, str realm)
 		
 fallback:
 	LOG(L_INFO,"INF:"M_NAME":cscf_get_private_identity: Falling back to private_id=stripped(public_id)\n"
-		"-> Message did not contain a valid Authorization Header!!! This fallback is deprecated outside Early-IMS!\n");	
+		"-> Message did not contain a valid Authorization Header!!! This fallback is deprecated outside Early-IMS or NASS-Bundled!\n");	
 	pi = cscf_get_public_identity(msg);
 	if (pi.len>4&&strncasecmp(pi.s,"sip:",4)==0) {pi.s+=4;pi.len-=4;}
 	for(i=0;i<pi.len;i++)

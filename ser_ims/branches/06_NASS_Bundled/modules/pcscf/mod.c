@@ -72,6 +72,7 @@
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
+#include "../cdp/cdp_load.h"
 #include "../dialog/dlg_mod.h"
 
 //#include "db.h"
@@ -97,6 +98,7 @@ static void mod_destroy(void);
 /* parameters storage */
 char* pcscf_name="sip:pcscf.open-ims.test:4060";	/**< SIP URI of this P-CSCF */
 
+char* pcscf_aaa_peer="hss.open-ims.test";/**< FQDN of the Diameter Peer (HSS) */
 
 /* P-Charging-Vector parameters */
 extern char* cscf_icid_value_prefix;			/**< hexadecimal prefix for the icid-value - must be unique on each node */
@@ -178,6 +180,8 @@ int* dialogs_step_version; /**< the step version within the current dialogs snap
 int* registrar_snapshot_version; /**< the version of the next registrar snapshot on the db*/
 int* registrar_step_version; /**< the step version within the current registrar snapshot version*/
 
+str pcscf_clf_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 				*/
+
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
@@ -232,6 +236,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * <p>
  * - P_assert_called_identity() - asserts the called identity by adding the P-Asserted-Identity header
  * <p>
+ * - P_access_network_info() - added P_Access_Network_Info header
+ * <p>
  * - P_trans_in_processing() - checks if the transaction is already in processing
  * <p>
  * - P_check_via_sent_by() - checks if the sent-by parameter in the first Via header equals the source IP address of the message
@@ -285,10 +291,12 @@ static cmd_export_t pcscf_cmds[]={
 
 	{"P_assert_called_identity",	P_assert_called_identity, 	0, 0, ONREPLY_ROUTE},
 	
+	{"P_access_network_info",	P_access_network_info, 			1, 0, REQUEST_ROUTE},
+	
 	{"P_trans_in_processing",		P_trans_in_processing, 		0, 0, REQUEST_ROUTE},
 
 	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
-	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
+	{"P_add_via_received",			P_add_via_received, 			0, 0, REQUEST_ROUTE},
 	
 	{"P_follows_via_list",			P_follows_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
@@ -299,6 +307,8 @@ static cmd_export_t pcscf_cmds[]={
 /** 
  * Exported parameters.
  * - name - name of the P-CSCF
+ * <p>
+ * - aaa_peer - FQDN of the Diameter Peer (HSS)
  * <p>  
  * - registrar_hash_size - size of the registrar hash table
  * - reginfo_dtd - DTD file for checking the reginfo/xml in the NOTIFY to reg event
@@ -344,6 +354,8 @@ static cmd_export_t pcscf_cmds[]={
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
+	
+	{"aaa_peer", 						STR_PARAM, &pcscf_aaa_peer},
 
 	{"registrar_hash_size",		INT_PARAM, 		&registrar_hash_size},
 	{"reginfo_dtd", 			STR_PARAM, 		&pcscf_reginfo_dtd},
@@ -414,6 +426,7 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 										/**< link to the stateless reply function in sl module */
 
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
+struct cdp_binds cdpb;							/**< Structure with pointers to cdp funcs				*/
 dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
 
 extern r_hash_slot *registrar;			/**< the contacts */
@@ -549,9 +562,15 @@ db_con_t* create_pcscf_db_connection()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
+	load_cdp_f load_cdp;
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	
+	/* fix the parameters */
+	pcscf_clf_peer_str.s = pcscf_aaa_peer;
+	pcscf_clf_peer_str.len = strlen(pcscf_aaa_peer);
+	
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
 	
@@ -655,6 +674,15 @@ static int mod_init(void)
 	if (load_tm(&tmb) == -1)
 		goto error;
 
+	/* bind to the cdp module */
+	if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module\n");
+		goto error;
+	}
+	
+	if (load_cdp(&cdpb) == -1)
+		goto error;
+	
 	/* bind to the dialog module */
 	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
 	if (!load_dlg) {
