@@ -185,7 +185,7 @@ str pcscf_clf_peer_str;					/**< fixed FQDN of the Diameter Peer (HSS) 				*/
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
-
+int pcscf_use_cdp = 0;
 
 /** 
  * Exported functions.
@@ -676,12 +676,15 @@ static int mod_init(void)
 
 	/* bind to the cdp module */
 	if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
-		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module\n");
-		goto error;
+		LOG(L_ERR, "DBG"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module\n");
+		pcscf_use_cdp = 0;
 	}
+	else
+		pcscf_use_cdp = 1;
 	
-	if (load_cdp(&cdpb) == -1)
-		goto error;
+	if (pcscf_use_cdp) 
+		if (load_cdp(&cdpb) == -1)
+			goto error;
 	
 	/* bind to the dialog module */
 	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
