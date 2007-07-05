@@ -87,6 +87,7 @@ extern int r_hash_size;								/**< records tables parameters 						*/
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
 extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
+extern int pcscf_use_cdp;
 
 /**
  * Inserts the Path header.
@@ -723,7 +724,7 @@ int P_access_network_info(struct sip_msg *req,char *str1,char *str2)
 	
 	return CSCF_RETURN_TRUE;
 error : 
-	if (uda)  cdpb.AAAFreeMessage(&uda);
+	if (uda && pcscf_use_cdp)  cdpb.AAAFreeMessage(&uda);
 	return CSCF_RETURN_FALSE;
 }
 

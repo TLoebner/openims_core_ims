@@ -64,6 +64,7 @@
 
 extern struct tm_binds tmb;			/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
+extern int pcscf_use_cdp;
 
 extern str pcscf_clf_peer_str;		/**< FQDN of the Diameter Peer (HSS) */
  
@@ -149,6 +150,10 @@ AAAMessage* e2RequestHandler(AAAMessage *request,void *param)
  */ 
 AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_identity, str server_name,  str dest_realm)
 {
+	
+	if (!pcscf_use_cdp)
+		return 0;
+	
 	AAAMessage *udr=0,*uda=0;
 	AAASessionId sessId={0,0};
 	AAATransaction *trans=0;
