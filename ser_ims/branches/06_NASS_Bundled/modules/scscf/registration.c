@@ -400,7 +400,7 @@ int S_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2 )
 
 char *zero_padded="00000000000000000000000000000000";
 static str empty_s={0,0};
-static str cell_id = {"utran-cell-id-3gpp=", 19};
+static str cell_id = {"dsl-location=", 13};
 /**
  * Checks if the message contains a valid response to a valid challenge.
  * @param msg - the SIP message
@@ -503,10 +503,11 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		str dsl_location = {0,0};
 		access_network_info = cscf_get_access_network_info(msg, 0);
 		if (access_network_info.len)
+		{
 			get_param(access_network_info, cell_id, dsl_location);
+		}
 		if (dsl_location.len){
-			int ret = CSCF_RETURN_FALSE;
-			
+			int ret = CSCF_RETURN_FALSE;			
 			LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: Possible NASS-Bundled Authentication identified\n");
 			do {
 				/* try and do MAR */

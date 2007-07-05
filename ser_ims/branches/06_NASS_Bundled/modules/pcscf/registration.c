@@ -65,6 +65,8 @@
 #include "sip.h"
 #include "registrar.h"
 #include "registrar_subscribe.h"
+#include "e2.h"
+#include "e2_avp.h"
 
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
 
@@ -84,7 +86,7 @@ extern int r_hash_size;								/**< records tables parameters 						*/
 
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
 extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
-
+extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
 
 /**
  * Inserts the Path header.
@@ -637,6 +639,94 @@ error:
 	ret=CSCF_RETURN_FALSE;
 	return ret;	
 }
+
+static str str_a_location_info = {"; dsl-location=",15}; 
+static str str_p_access_network_info={"P-Access-Network-Info",21};
+
+/**
+ * Asserts the P-Access-Network-Info
+ * @param req - the SIP request message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if asseted, #CSCF_RETURN_FALSE if not, #CSCF_RETURN_ERROR on error 
+ */
+int P_access_network_info(struct sip_msg *req,char *str1,char *str2)
+{
+	struct hdr_field *h=0;
+	
+	str private_identity = {0, 0};
+	str realm = {0, 0};
+
+	str net_info_hdr = {0,0};
+	str x = {0, 0};
+	str id = {0,0};
+	str str_ip = {0,0};
+	str received = {0, 0};
+	str terminal_type = {0,0};
+	
+	net_info_hdr = cscf_get_access_network_info(req, &h);
+	if (net_info_hdr.len){
+		cscf_del_header(req, h);
+		//return CSCF_RETURN_TRUE; //header already exists - do nothing
+	}
+	str_ip =  cscf_get_last_via_sent_by(req);
+	if (str_ip.len){
+		received = cscf_get_last_via_received(req);
+		if (received.len) str_ip = received;
+	}
+	
+	realm.s = str1;realm.len = strlen(str1);
+	if (!realm.len) {
+		LOG(L_ERR,"ERR:"M_NAME":P_access_network_info: No realm found\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	private_identity = cscf_get_private_identity(req,realm);
+	if (!private_identity.len) {
+		LOG(L_ERR,"ERR:"M_NAME":P_access_network_info: private identity missing\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	AAAMessage *uda = e2_UDR(req, str_ip, realm, private_identity, pcscf_name_str,  realm );
+	
+	if (!e2_get_location_info(uda, &id))
+	{
+		LOG(L_ERR,"ERR:"M_NAME":P_access_network_info: termimal type missing\n");
+		goto error;
+	}
+	
+	terminal_type = e2_get_terminal_type(uda);
+	if (!terminal_type.len)
+	{
+		LOG(L_ERR,"ERR:"M_NAME":P_access_network_info: location information missing\n");
+		goto error;
+	}
+		
+	LOG(L_INFO,"INF:"M_NAME":P_access_network_info: Line Identifier : <%.*s>\n", id.len, id.s);
+	
+	x.len = str_p_access_network_info.len + 2 + terminal_type.len + str_a_location_info.len + id.len+4;	
+	x.s = pkg_malloc(x.len+1);
+	
+	if (!x.s)
+	{
+		LOG(L_ERR, "ERR"M_NAME":P_access_network_info: Error allocating %d bytes\n",x.len);
+		x.len=0;
+		goto error;
+	}
+
+	x.len = snprintf(x.s, x.len, "%.*s: %.*s%.*s%.*s\r\n", str_p_access_network_info.len, str_p_access_network_info.s,
+			terminal_type.len,terminal_type.s,  
+			str_a_location_info.len, str_a_location_info.s, id.len,id.s);
+			
+	if (!cscf_add_header(req,&x,HDR_OTHER_T)) 
+		goto error;
+	
+	return CSCF_RETURN_TRUE;
+error : 
+	if (uda)  cdpb.AAAFreeMessage(&uda);
+	return CSCF_RETURN_FALSE;
+}
+
 
 
 static str reginfo={"application/reginfo+xml",23};

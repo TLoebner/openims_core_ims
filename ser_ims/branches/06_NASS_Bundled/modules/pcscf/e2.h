@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: e2.h 2 2006-11-14 22:37:20Z vingarzan $
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -46,63 +46,25 @@
 /**
  * \file
  * 
- * Proxy-CSCF - Registration Related Operations
- * 
+ * PCSCF - e2 Operations
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
-
- 
- 
-#ifndef P_CSCF_REGISTRATION_H
-#define P_CSCF_REGISTRATION_H 
+#ifndef P_CSCF_e2_H
+#define P_CSCF_e2_H
 
 #include "../../sr_module.h"
+#include "mod.h"
+#include "../cdp/cdp_load.h"
 
-/**< response to NOTIFY for reg event */
-#define MSG_200_OK_NOTIFY "OK Notification received by P-CSCF"
+int e2AnswerHandler(AAAMessage *response, AAATransaction *t);
 
-int P_add_path(struct sip_msg *msg,char *str1,char*str2);
+int e2FailureHandler(AAATransaction *t,int reason);
 
-int P_add_require(struct sip_msg *msg,char *str1,char*str2);
+AAAMessage* e2RequestHandler(AAAMessage *request,void *param);
 
-int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2);
+AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_identity, str server_name,  str dest_realm);
+int e2_message_process_callback(peer *p,AAAMessage *msg,void* ptr);				
 
-int P_add_integrity_protected(struct sip_msg *msg,char *str1,char*str2);
-
-int P_add_p_visited_network_id(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_security_client(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_security_verify(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2);
-
-int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2);
-
-int P_is_registered(struct sip_msg *msg,char *str1,char *str2);
-
-int P_assert_identity(struct sip_msg *msg,char *str1,char *str2);
-
-int P_access_network_info(struct sip_msg *req,char *str1,char *str2);
-
-int P_assert_called_identity(struct sip_msg *msg,char *str1,char *str2);
-
-int P_process_notification(struct sip_msg *msg,char *str1,char *str2);
-
-int P_mobile_terminating(struct sip_msg *msg,char *str1,char *str2);
-
-int P_remove_route(struct sip_msg *msg,char *str1,char *str2);
-
-int P_NAT_relay(struct sip_msg *msg,char *str1,char *str2);
-
-int P_IPSec_relay(struct sip_msg *msg,char *str1,char *str2);
-
-int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2);
-
-int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2);
-
-#endif /* P_CSCF_REGISTRATION_H */
+#endif /* P_CSCF_e2_H */
