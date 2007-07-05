@@ -385,9 +385,9 @@ int S_subscribe(struct sip_msg *msg,char *str1,char *str2)
 	}
 done:	
 	r_unlock(p->hash);
+	if (expires ==0 )S_SUBSCRIBE_reply(msg,200,MSG_REG_UNSUBSCRIBE_OK,&expires,&uri);
+	else S_SUBSCRIBE_reply(msg,200,MSG_REG_SUBSCRIBE_OK,&expires,&uri);
 	if (uri.s) pkg_free(uri.s);
-	if (expires ==0 )S_SUBSCRIBE_reply(msg,200,MSG_REG_UNSUBSCRIBE_OK,&expires,&scscf_name_str);
-	else S_SUBSCRIBE_reply(msg,200,MSG_REG_SUBSCRIBE_OK,&expires,&scscf_name_str);
 	return ret;
 error:
 	if (p) r_unlock(p->hash);
