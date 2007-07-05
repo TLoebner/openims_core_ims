@@ -85,7 +85,7 @@ enum {
 /** reg event notification structure */
 typedef struct _r_notification {	
 	str req_uri;						/**< Request-URI to send to			*/
-	str uri;							/**< URI fo the destination			*/
+	str uri;							/**< URI of the destination			*/
 	str subscription_state;				/**< Subscription-state header value*/
 	str event;							/**< reg event						*/
 		

@@ -882,7 +882,7 @@ void send_notification(r_notification *n)
 
 	h.len = 0;
 	STR_APPEND(h,contact_hdr1);
-	STR_APPEND(h,scscf_name_str);
+	STR_APPEND(h,n->uri);
 	STR_APPEND(h,contact_hdr2);
 
 	STR_APPEND(h,event_hdr);
