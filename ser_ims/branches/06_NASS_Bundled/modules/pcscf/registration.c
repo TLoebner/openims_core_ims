@@ -666,10 +666,7 @@ int P_access_network_info(struct sip_msg *req,char *str1,char *str2)
 	str terminal_type = {0,0};
 	
 	net_info_hdr = cscf_get_access_network_info(req, &h);
-	if (net_info_hdr.len){
-		cscf_del_header(req, h);
-		//return CSCF_RETURN_TRUE; //header already exists - do nothing
-	}
+	
 	str_ip =  cscf_get_last_via_sent_by(req);
 	if (str_ip.len){
 		received = cscf_get_last_via_received(req);
@@ -690,6 +687,11 @@ int P_access_network_info(struct sip_msg *req,char *str1,char *str2)
 	
 	AAAMessage *uda = e2_UDR(req, str_ip, realm, private_identity, pcscf_name_str,  realm );
 	
+	if (!uda)
+	{
+		LOG(L_INFO,"INF:"M_NAME":P_access_network_info: UserDataRequest AVP Failed\n");
+		goto error;
+	}
 	if (!e2_get_location_info(uda, &id))
 	{
 		LOG(L_ERR,"ERR:"M_NAME":P_access_network_info: termimal type missing\n");
@@ -718,7 +720,12 @@ int P_access_network_info(struct sip_msg *req,char *str1,char *str2)
 	x.len = snprintf(x.s, x.len, "%.*s: %.*s%.*s%.*s\r\n", str_p_access_network_info.len, str_p_access_network_info.s,
 			terminal_type.len,terminal_type.s,  
 			str_a_location_info.len, str_a_location_info.s, id.len,id.s);
-			
+	
+	if (net_info_hdr.len){
+		cscf_del_header(req, h);
+		//return CSCF_RETURN_TRUE; //header already exists - do nothing
+	}
+	
 	if (!cscf_add_header(req,&x,HDR_OTHER_T)) 
 		goto error;
 	
