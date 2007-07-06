@@ -487,11 +487,11 @@ typedef enum
 
 /*
 access-info for each access type  
-"ADSL" / "ADSL2" / "ADSL2+" / "RADSL" / "SDSL" / "HDSL" / "HDSL2" / "G.SHDSL" / "VDSL" / "IDSL"  -> dsl- location
-"3GPP-GERAN" -> cgi-3gpp 
-"3GPP-UTRAN-FDD" / "3GPP-UTRAN-TDD" -> utran­-cell­-id-­3gpp
-"3GPP2-1X" / "3GPP2-1X-HRPD" -> ci­-3gpp2
-"IEEE-802.11" / "IEEE-802.11a" / "IEEE-802.11b" / "IEEE-802.11g" -> i-wlan-node-id  = MAC
+"ADSL" / "ADSL2" / "ADSL2+" / "RADSL" / "SDSL" / "HDSL" / "HDSL2" / "G.SHDSL" / "VDSL" / "IDSL"  -> dsl-location
+"3GPP-GERAN" -> cgi-3gpp
+"3GPP-UTRAN-FDD" / "3GPP-UTRAN-TDD" -> utran-cell-id-3gpp
+"3GPP2-1X" / "3GPP2-1X-HRPD" -> ci-3gpp2
+"IEEE-802.11" / "IEEE-802.11a" / "IEEE-802.11b" / "IEEE-802.11g" -> i-wlan-node-id = MAC
 "DOCSIS" -> NULL
 */
 
