@@ -117,12 +117,16 @@ insert into hss_db.impi(
         id_imsu,
         k,
         auth_scheme,
-        default_auth_scheme)
+        default_auth_scheme,
+        amf,
+        op)
 values( '$IMPI',
         (select id from hss_db.imsu where hss_db.imsu.name='<USER>_imsu'),
         '$PASSWORD',
         127,
-        1);
+        1,
+        '\0\0',
+        '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0');
 
 --add Public Identity
 insert into hss_db.impu(identity,id_sp) values ('$IMPU', (select id from hss_db.sp order by id limit 1));
