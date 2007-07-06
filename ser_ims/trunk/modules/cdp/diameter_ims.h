@@ -64,6 +64,7 @@
 #define IMS_Cx	16777216	/**< Cx interface between I/S-CSCF and HSS 		*/
 #define IMS_Dx	16777216	/**< Cx interface between I/S-CSCF and SLF 		*/
 #define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
+#define IMS_e2	16777231	/**< e2 interface between CLF and AF	 		*/
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
 
 /* Vendor ID	*/
@@ -131,6 +132,7 @@ enum {
 	AVP_IMS_Experimental_Result_Code					= 298,
 	AVP_IMS_Experimental_Result							= 297,
 /** 300 to 399 reserved for TS29.234											*/
+	
 /** 400 to 499 reserved for TS29.109											*/
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_IMS_Abort_Cause									= 500,
@@ -210,6 +212,27 @@ enum {
 
 /** ETSI AVP Codes */ 
 enum {
+	
+	/*added from ETSI 283 034 */
+	AVP_IMS_Globally_Unique_Address					=300,
+	AVP_IMS_Address_Realm								=301,
+	AVP_IMS_Logical_Access_Id								=302,
+	AVP_IMS_Initial_Gate_Setting							=303, 
+	AVP_IMS_QoS_Profile										=304,
+	AVP_IMS_IP_Connectivity_Status						=305,
+	AVP_IMS_Access_Network_Type						=306,
+	AVP_IMS_Aggregation_Network_Type				=307,
+	AVP_IMS_Maximum_Allowed_Bandwidth_UL		=308,
+	AVP_IMS_Maximum_Allowed_Bandwidth_DL		=309, 
+	AVP_IMS_Transport_Class								=311,
+	AVP_IMS_Application_Class_ID							=312,
+	AVP_IMS_Physical_Access_ID							=313,
+	AVP_IMS_Location_Information							=350,
+	AVP_IMS_RACS_Contact_Point							=351, 
+	AVP_IMS_Terminal_Type									=352, 
+	AVP_IMS_Requested_Information						=353,
+	AVP_IMS_Event_Type										=354,
+	
 	AVP_Line_Identifier									= 500,
 	AVP_ETSI_SIP_Authenticate 							= 501, 
 	AVP_ETSI_SIP_Authorization 							= 502, 
@@ -430,6 +453,46 @@ enum{
 /** 5400 to 5419 Reserved for TS29.109	*/
 };
 
-						
+/***************************	  NAS PORT TYPE		*************************** */
+
+typedef enum
+{
+   Async									 = 0,
+   Sync 										 = 1, 
+   ISDN_Sync 								 = 2, 
+   ISDN_Async_V120 					 = 3,
+   ISDN_Async_V110					 = 4,
+   Virtual									 = 5, 
+   PIAFS									 	 = 6, 	
+   HDLC_Clear_Channel				 = 7, 
+   X_25										 = 8, 
+   X_75										 = 9, 
+   G_3_Fax									 =10,
+   Symmetric_DSL						 =11, 	
+   ADSL										 =12,
+   ADSL_DMT								 =13, 
+   IDSL										 =14, 
+   Ethernet									 =15, 
+   xDSL										 =16, 
+   Cable										 =17, 
+   Wireless_Other						 =18,
+   Wireless_IEEE_802_11				 =19,
+   Token_Ring								 =20, 
+   FDDI										 =21,
+   Wireless_CDMA2000				     =22,
+   Wireless_UMTS						 =23,
+   Wireless_1X_EV						 =24,
+   IAPP  									 =25
+}	nas_port_type;						
+
+/*
+access-info for each access type  
+"ADSL" / "ADSL2" / "ADSL2+" / "RADSL" / "SDSL" / "HDSL" / "HDSL2" / "G.SHDSL" / "VDSL" / "IDSL"  -> dsl- location
+"3GPP-GERAN" -> cgi-3gpp 
+"3GPP-UTRAN-FDD" / "3GPP-UTRAN-TDD" -> utran­-cell­-id-­3gpp
+"3GPP2-1X" / "3GPP2-1X-HRPD" -> ci­-3gpp2
+"IEEE-802.11" / "IEEE-802.11a" / "IEEE-802.11b" / "IEEE-802.11g" -> i-wlan-node-id  = MAC
+"DOCSIS" -> NULL
+*/
 
 #endif /* __DIAMETER_IMS_H */
