@@ -14,7 +14,6 @@
 #include "server.h"
 #include "cdp/worker.h"
 #include "cdp/timer.h"
-#include "db.h"
 #include "cdp/globals.h"
 #include "server.h"
 
