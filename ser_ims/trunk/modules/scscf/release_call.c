@@ -69,6 +69,8 @@ extern str scscf_record_route_mt_uri;
 
 static str bye_s={"BYE",3};
 static str default_reason_s={"Reason: SIP ;cause=503 ;text=\"Session Terminated\"\r\n",51};
+static str content_length_s={"Content-Length: 0\r\n",19};
+
 /**
  * This function sends a bye in the specified dialog 
  * the callback function and parameter are the specified arguments
@@ -80,26 +82,38 @@ static str default_reason_s={"Reason: SIP ;cause=503 ;text=\"Session Terminated\
  */
 int send_bye(dlg_t *d,transaction_cb cb,enum s_dialog_direction dir,str reason)
 {
-	str bye_header_s;
-	if (reason.len!=0){
-		bye_header_s.s=reason.s;
-		bye_header_s.len=reason.len;
-	} else {
-		bye_header_s.s=default_reason_s.s;
-		bye_header_s.len=default_reason_s.len;
+	str bye_header_s={0,0};
+	str reason_header_s={0,0};
+	
+	if (reason.len!=0)
+		reason_header_s = reason;
+	 else 
+		reason_header_s = default_reason_s;
+
+	bye_header_s.len = reason_header_s.len+content_length_s.len;
+	bye_header_s.s = pkg_malloc(bye_header_s.len);
+	if (!bye_header_s.s) {
+		LOG(L_ERR,"ERR:"M_NAME":send_bye(): error allocating %d bytes\n",bye_header_s.len);
+		goto error;
 	}
+	bye_header_s.len=0;
+	STR_APPEND(bye_header_s,reason_header_s);
+	STR_APPEND(bye_header_s,content_length_s);
 				
 	if(d!=NULL)	{
 		enum s_dialog_direction *cbp;
 		cbp = shm_malloc(sizeof(enum s_dialog_direction));
 		if (!cbp){
 			LOG(L_ERR,"ERR:"M_NAME":send_bye(): error allocating %d bytes\n",sizeof(enum s_dialog_direction));
-			return 0;
+			goto error;
 		}		
 		*cbp = dir;
 		dialogb.request_inside(&bye_s, &bye_header_s, 0, d,cb,cbp);
+		if (bye_header_s.s) pkg_free(bye_header_s.s);	
 		return 1;
 	}	
+error:
+	if (bye_header_s.s) pkg_free(bye_header_s.s);	
 	return 0;
 }
 
