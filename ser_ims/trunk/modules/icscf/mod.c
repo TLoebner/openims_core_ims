@@ -103,8 +103,8 @@ int icscf_hash_size=128;									/**< size of the hash for storing S-CSCF lists	
 
 char* icscf_default_realm="open-ims.test";					/**< default realm for LIR if none available	*/
 
-static char* icscf_route_on_user_unknown=0;					/**< script route to run for Initial request after HSS replies with User Unknown to the LIR (default none)*/
-int route_on_user_unknown_n=-1;				
+static char* icscf_route_on_term_user_unknown=0;					/**< script route to run for Initial request after HSS replies with User Unknown to the LIR for terminating user (default none)*/
+int route_on_term_user_unknown_n=-1;				
 
 
 /* P-Charging-Vector parameters */
@@ -186,6 +186,8 @@ static cmd_export_t icscf_cmds[]={
 	
 	{"I_add_p_charging_vector",		I_add_p_charging_vector, 	0, 0, REQUEST_ROUTE},
 	
+	{"I_originating",				I_originating, 				0, 0, REQUEST_ROUTE},
+	
 	{0, 0, 0, 0, 0}
 };
 
@@ -223,7 +225,7 @@ static param_export_t icscf_params[]={
 	{"orig_ioi",				STR_PARAM, &cscf_orig_ioi},
 	{"term_ioi",				STR_PARAM, &cscf_term_ioi},
 	
-	{"route_on_user_unknown", 	STR_PARAM, &icscf_route_on_user_unknown},
+	{"route_on_term_user_unknown", 	STR_PARAM, &icscf_route_on_term_user_unknown},
 
 #ifdef WITH_IMS_PM
 	{"ims_pm_node_type",		STR_PARAM, &ims_pm_node_type},
@@ -391,19 +393,19 @@ static int icscf_mod_init(void)
 	LOG(L_INFO,"Twofish encryption ready\n");
 	
 	int route_no;
-	/* try to fix the tel_lir_user_unknown_route route */
-	if (icscf_route_on_user_unknown){
-		route_no=route_get(&main_rt, icscf_route_on_user_unknown);
+	/* try to fix the icscf_route_on_term_user_unknown route */
+	if (icscf_route_on_term_user_unknown){
+		route_no=route_get(&main_rt, icscf_route_on_term_user_unknown);
 		if (route_no==-1){
 			LOG(L_ERR, "ERR"M_NAME":mod_init: failed to fix route \"%s\": route_get() failed\n",
-					icscf_route_on_user_unknown);
+					icscf_route_on_term_user_unknown);
 			return -1;
 		}
 		if (main_rt.rlist[route_no]==0){
-			LOG(L_ERR, "ERR"M_NAME":mod_init: tel_lir_user_unknown_route \"%s\" is empty / doesn't exist\n",
-					icscf_route_on_user_unknown);
+			LOG(L_ERR, "ERR"M_NAME":mod_init: icscf_route_on_term_user_unknown \"%s\" is empty / doesn't exist\n",
+					icscf_route_on_term_user_unknown);
 		}
-		route_on_user_unknown_n=route_no;
+		route_on_term_user_unknown_n=route_no;
 	}	
 	
 	return 0;

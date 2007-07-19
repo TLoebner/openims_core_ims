@@ -69,18 +69,20 @@
 #include "../../action.h" /* run_actions */
 #include "../../route.h" /* route_get */
 
+#include "../../parser/parse_uri.h"
+
 extern struct tm_binds tmb;				/**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;           /**< Structure with pointers to cdp funcs 		*/
 
 extern str icscf_default_realm_str;		/**< fixed default realm */
 
-extern int route_on_user_unknown_n;/**< script route number for Initial request processing after HSS says User Unknown */	
+extern int route_on_term_user_unknown_n;/**< script route number for Initial request processing after HSS says User Unknown */	
 
 /**
  * Perform Location-Information-Request.
  * creates and send the user location query
  * @param msg - the SIP message
- * @param str1 - the realm
+ * @param str1 - not used
  * @param str2 - not used
  * @returns true if OK, false if not
  */
@@ -90,9 +92,8 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 	str public_identity={0,0};
 	str realm={0,0};
 	AAAMessage *lia=0;	
-	
-	realm = cscf_get_realm_from_ruri(msg);
-	if(!realm.len) realm = icscf_default_realm_str;
+	int orig = 0;
+
 	
 	LOG(L_DBG,"DBG:"M_NAME":I_LIR: Starting ...\n");
 	/* check if we received what we should */
@@ -101,14 +102,27 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 		goto done;
 	}
 	
+	/* check orig uri parameter in topmost Route */
+	if (I_originating(msg, str1, str2)==CSCF_RETURN_TRUE) {
+		orig = 1;
+		LOG(L_DBG,"DBG:"M_NAME":I_LIR: orig\n");
+	}
+	
 	/* extract data from message */	
-	public_identity=cscf_get_public_identity_from_requri(msg);
+	if (orig) {
+		public_identity = cscf_get_asserted_identity(msg);
+		realm = cscf_get_realm_from_uri(public_identity);
+	} else {
+		realm = cscf_get_realm_from_ruri(msg);
+		public_identity=cscf_get_public_identity_from_requri(msg);
+	}
 	if (!public_identity.len) {
 		LOG(L_ERR,"ERR:"M_NAME":I_LIR: Public Identity not found, responding with 400\n");
 		cscf_reply_transactional(msg,400,MSG_400_NO_PUBLIC);
 		result=CSCF_RETURN_BREAK;
-		goto done;		
+		goto done;
 	}
+	if(!realm.len) realm = icscf_default_realm_str;
 
 	lia = Cx_LIR(msg,public_identity,realm);
 	
@@ -120,11 +134,11 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 	}
 
 
-    result = I_LIA(msg,lia);
+    result = I_LIA(msg, lia, orig);
 	
 	if (lia) cdpb.AAAFreeMessage(&lia);	
 done:
-	if (public_identity.s) shm_free(public_identity.s);	
+	if (public_identity.s && !orig) shm_free(public_identity.s); // shm_malloc in cscf_get_public_identity_from_requri	
 	LOG(L_DBG,"DBG:"M_NAME":I_LIR: ... Done\n");
 	return result;	
 }
@@ -136,7 +150,7 @@ done:
  * @param lia - the LIA diameter answer received from the HSS
  * @returns #CSCF_RETURN_TRUE on success or #CSCF_RETURN_FALSE on error
  */
-int I_LIA(struct sip_msg* msg, AAAMessage* lia)
+int I_LIA(struct sip_msg* msg, AAAMessage* lia, int originating)
 {
 	int rc=-1,experimental_rc=-1;
 	str server_name;
@@ -163,8 +177,8 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia)
 			switch(experimental_rc){
 				
 				case RC_IMS_DIAMETER_ERROR_USER_UNKNOWN:
-					if (route_on_user_unknown_n > -1) {
-						if (run_actions(main_rt.rlist[route_on_user_unknown_n], msg)<0){
+					if (!originating && route_on_term_user_unknown_n > -1) {
+						if (run_actions(main_rt.rlist[route_on_term_user_unknown_n], msg)<0){
 							LOG(L_WARN,"ERR:"M_NAME":I_LIA: error while trying script\n");
 						}
 						return CSCF_RETURN_BREAK;
@@ -204,10 +218,10 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia)
 success:
 	server_name = Cx_get_server_name(lia);
 	if (server_name.len){
-		list = new_scscf_entry(server_name,MAXINT);
+		list = new_scscf_entry(server_name,MAXINT, originating);
 	}else{
 		Cx_get_capabilities(lia,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt);
-		list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt);
+		list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt, originating);
 		if (m_capab) shm_free(m_capab);
 		if (o_capab) shm_free(o_capab);
 	}
@@ -225,4 +239,77 @@ success:
 		
 	return CSCF_RETURN_TRUE;
 }
+
+
+/**
+ * Finds if the message contains the orig parameter in the first Route header
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if yes, else #CSCF_RETURN_FALSE
+ */
+int I_originating(struct sip_msg *msg,char *str1,char *str2)
+{
+	//int ret=CSCF_RETURN_FALSE;
+	struct hdr_field *h;
+	str* uri;
+	rr_t *r;
+	
+	if (parse_headers(msg, HDR_ROUTE_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":I_originating: error parsing headers\n");
+		return CSCF_RETURN_FALSE;
+	}
+	h = msg->route;
+	if (!h){
+		LOG(L_DBG,"DBG:"M_NAME":I_originating: Header Route not found\n");
+		return CSCF_RETURN_FALSE;
+	}
+	if (parse_rr(h)<0){
+		LOG(L_ERR,"ERR:"M_NAME":I_originating: Error parsing as Route header\n");
+		return CSCF_RETURN_FALSE;
+	}
+	r = (rr_t*)h->parsed;
+	
+	uri = &r->nameaddr.uri;
+	struct sip_uri puri;
+	if (parse_uri(uri->s, uri->len, &puri) < 0) {
+		LOG(L_ERR, "DBG:"M_NAME":I_originating: Error while parsing the first route URI\n");
+		return -1;
+	}
+	if (puri.params.len < 4) return CSCF_RETURN_FALSE;
+	//LOG(L_DBG,"DBG:"M_NAME":I_originating: uri params <%.*s>\n", puri.params.len, puri.params.s);
+	// parse_uri does not support orig param...
+	int c = 0;
+	int state = 0; 
+	while (c < puri.params.len) {
+		switch (puri.params.s[c]) {
+			case 'o': if (state==0) state=1;
+					break;
+			case 'r': if (state==1) state=2;
+					break;
+			case 'i': if (state==2) state=3;
+					break;
+			case 'g': if (state==3) state=4;
+					break;
+			case ' ': 
+			case '\t':
+			case '\r':
+			case '\n':
+			case ',':
+			case ';':
+					  if (state==4) return CSCF_RETURN_TRUE;
+					  state=0;
+					  break;
+			case '=': if (state==4) return CSCF_RETURN_TRUE;
+					  state=-1;
+					  break;
+			default: state=-1;
+		}
+		c++;
+	}
+	
+	return state==4 ? CSCF_RETURN_TRUE : CSCF_RETURN_FALSE;
+}	
+
+
 

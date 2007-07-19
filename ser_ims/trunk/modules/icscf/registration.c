@@ -236,7 +236,7 @@ success:
 	server_name = Cx_get_server_name(uaa);
 	Cx_get_capabilities(uaa,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt);
 
-	list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt);
+	list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt,0);
 	if (m_capab) shm_free(m_capab);
 	if (o_capab) shm_free(o_capab);
 

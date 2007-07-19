@@ -150,7 +150,7 @@ int I_get_capab_match(scscf_capabilities *c,int *m,int mcnt,int *o,int ocnt)
  * Adds the name to the list starting at root, ordered by score.
  * Returns the new root
  */
-static inline scscf_entry* I_add_to_scscf_list(scscf_entry *root,str name,int score)
+static inline scscf_entry* I_add_to_scscf_list(scscf_entry *root,str name,int score, int originating)
 {
 	scscf_entry *x,*i;
 
@@ -160,7 +160,7 @@ static inline scscf_entry* I_add_to_scscf_list(scscf_entry *root,str name,int sc
 			strncasecmp(name.s,i->scscf_name.s,name.len)==0)
 				return root;
 
-	x = new_scscf_entry(name,score);
+	x = new_scscf_entry(name,score, originating);
 	if (!x) return root;
 	
 	if (!root){
@@ -187,20 +187,21 @@ static inline scscf_entry* I_add_to_scscf_list(scscf_entry *root,str name,int sc
  * @param mcnt - mandatory capabilities list size
  * @param o - optional capabilities list
  * @param ocnt - optional capabilities list size
+ * @param orig - indicates originating session case
  * @returns list of S-CSCFs, terminated with a str={0,0}
  */
-scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt)
+scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt, int orig)
 {
 	scscf_entry *list=0;
 	int i,r;
 	
-	if (scscf_name.len) list = I_add_to_scscf_list(list,scscf_name,MAXINT);
+	if (scscf_name.len) list = I_add_to_scscf_list(list,scscf_name,MAXINT, orig);
 	for(i=0;i<SCSCF_Capabilities_cnt;i++){
 		r = I_get_capab_match(SCSCF_Capabilities+i,m,mcnt,o,ocnt);
 		if (r!=-1){
-			 list = I_add_to_scscf_list(list,SCSCF_Capabilities[i].scscf_name,r);
-			 LOG(L_DBG,"DBG:"M_NAME":I_get_capab_ordered: <%.*s> Added to the list\n",
-			 	SCSCF_Capabilities[i].scscf_name.len,SCSCF_Capabilities[i].scscf_name.s);
+			 list = I_add_to_scscf_list(list,SCSCF_Capabilities[i].scscf_name,r, orig);
+			 LOG(L_DBG,"DBG:"M_NAME":I_get_capab_ordered: <%.*s> Added to the list, orig=%d\n",
+			 	SCSCF_Capabilities[i].scscf_name.len,SCSCF_Capabilities[i].scscf_name.s, orig);
 		}
 	}
 	return list;
@@ -300,7 +301,7 @@ inline void i_unlock(unsigned int hash)
 //	LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
 
-scscf_entry* new_scscf_entry(str name, int score)
+scscf_entry* new_scscf_entry(str name, int score, int orig)
 {
 	scscf_entry *x=0;
 	x = shm_malloc(sizeof(scscf_entry));
@@ -310,15 +311,22 @@ scscf_entry* new_scscf_entry(str name, int score)
 		return 0;
 	}
 	/* duplicate always the scscf_name because of possible list reloads and scscf_name coming in LIA/UAA */
-	x->scscf_name.s = shm_malloc(name.len);
+	if (orig) x->scscf_name.s = shm_malloc(name.len+5);
+	else x->scscf_name.s = shm_malloc(name.len);
 	if (!x->scscf_name.s){	
 		LOG(L_ERR,"ERR:"M_NAME":new_scscf_entry: Error allocating %d bytes\n",
-			name.len);
+			orig?name.len+5:name.len);
 		shm_free(x);
 		return 0;
 	}
 	memcpy(x->scscf_name.s,name.s,name.len);
 	x->scscf_name.len = name.len;
+	if (orig) {
+		memcpy(x->scscf_name.s+name.len, ";orig", 5);
+		x->scscf_name.len += 5;
+	}
+	
+	LOG(L_INFO,"INFO:"M_NAME":new_scscf_entry:  <%.*s>\n",x->scscf_name.len,x->scscf_name.s);
 	
 	x->score = score;
 	x->next = 0;
