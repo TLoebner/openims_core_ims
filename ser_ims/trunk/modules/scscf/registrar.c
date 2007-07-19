@@ -800,8 +800,8 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 			            c = rpublic->head;
 				        while(c){
 		                    c->expires = time_now;
-		                    S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                     	                          			
-		                    del_r_contact(p,c);	
+		                    S_event_reg(rpublic,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);                                     	                          			
+		                    del_r_contact(rpublic,c);	
 		                    c = c->next;
 			            }
 					}else{
