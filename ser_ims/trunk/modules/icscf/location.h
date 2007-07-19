@@ -80,6 +80,8 @@
 
 int I_LIR(struct sip_msg* msg, char* str1, char* str2);
 
-int I_LIA(struct sip_msg* msg, AAAMessage* lia);
+int I_LIA(struct sip_msg* msg, AAAMessage* lia, int originating);
+
+int I_originating(struct sip_msg *msg, char *str1, char *str2);
 
 #endif /* I_CSCF_LOCATION_H */

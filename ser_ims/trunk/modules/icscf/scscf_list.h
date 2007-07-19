@@ -95,7 +95,7 @@ typedef struct _scscf_capabilities {
 
 int I_get_capabilities();
 
-scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt);
+scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt, int orig);
 
 
 inline unsigned int get_call_id_hash(str callid,int hash_size);
@@ -107,7 +107,7 @@ void i_hash_table_destroy();
 inline void i_lock(unsigned int hash);
 inline void i_unlock(unsigned int hash);
 
-scscf_entry* new_scscf_entry(str name, int score);
+scscf_entry* new_scscf_entry(str name, int score, int orig);
 
 scscf_list* new_scscf_list(str callid,scscf_entry *sl);
 int add_scscf_list(str call_id,scscf_entry *sl);
