@@ -276,13 +276,34 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 		return pu;
 	}
 	if (msg->parsed_uri.user.len) {
-		pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
-		pu.s = pkg_malloc(pu.len+1);
-		sprintf(pu.s,"sip:%.*s@%.*s",
-			msg->parsed_uri.user.len,	
-			msg->parsed_uri.user.s,	
-			msg->parsed_uri.host.len,	
-			msg->parsed_uri.host.s);	
+		switch (msg->parsed_uri.type) {
+			case SIP_URI_T:
+				pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
+				pu.s = pkg_malloc(pu.len+1);
+				sprintf(pu.s,"sip:%.*s@%.*s",
+					msg->parsed_uri.user.len,	
+					msg->parsed_uri.user.s,	
+					msg->parsed_uri.host.len,	
+					msg->parsed_uri.host.s);
+				break;
+			case TEL_URI_T:
+				pu.len = 4 + msg->parsed_uri.user.len;
+				pu.s = pkg_malloc(pu.len+1);
+				sprintf(pu.s,"tel:%.*s",
+					msg->parsed_uri.user.len,	
+					msg->parsed_uri.user.s);
+				break;
+			case SIPS_URI_T:
+				LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: uri type not supported: sips\n");	
+				return pu;
+			case TELS_URI_T:
+				LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: uri type not supported: tels\n");	
+				return pu;
+			default:
+				LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: uri type not supported: unknown\n");	
+				return pu;
+		}
+			
 	}else{
 		pu.len = 4 + msg->parsed_uri.host.len;
 		pu.s = pkg_malloc(pu.len+1);

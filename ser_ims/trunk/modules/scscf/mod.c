@@ -177,6 +177,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - S_assign_server_unreg() - trigger the Server Assignment Operation for unregistered user
  * - S_update_contacts() - update the registrar with the contacts found in a REGISTER
  * - S_lookup() - performa a registrar lookup for the Request-URI and replace with contact
+ * - S_is_not_registered() - check if the user in To header is not-registered here
  * - S_term_registered() - check if the terminated user is registered here
  * - S_term_unregistered() - check if the terminated user is unregistered here
  * - S_term_not_registered() - check if the terminated user is not-registered here
@@ -220,9 +221,11 @@ static cmd_export_t scscf_cmds[]={
 	{"S_assign_server",				S_assign_server,			1,0,REQUEST_ROUTE},
 	{"S_assign_server_unreg",		S_assign_server_unreg,		2,0,REQUEST_ROUTE},
 	{"S_update_contacts",			S_update_contacts,			0,0,REQUEST_ROUTE},
-	{"S_lookup",					S_lookup,					0,0,REQUEST_ROUTE},
+	{"S_lookup",					S_lookup,					0,0,REQUEST_ROUTE|FAILURE_ROUTE},
 
-	{"S_term_registered",			S_term_registered,			0,0,REQUEST_ROUTE},
+	{"S_is_not_registered",			S_is_not_registered,		0,0,REQUEST_ROUTE},
+	
+	{"S_term_registered",			S_term_registered,			0,0,REQUEST_ROUTE|FAILURE_ROUTE},
 	{"S_term_not_registered",		S_term_not_registered,		0,0,REQUEST_ROUTE},
 	{"S_term_unregistered",			S_term_unregistered,		0,0,REQUEST_ROUTE},
 
@@ -246,7 +249,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_update_dialog",				S_update_dialog,			1,0,REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"S_record_route",				S_record_route,				1,0,REQUEST_ROUTE},	
 	{"S_is_record_routed",			S_is_record_routed,			1,0,REQUEST_ROUTE},	
-	{"S_add_p_asserted_identity",	S_add_p_asserted_identity,	0,0,REQUEST_ROUTE},	
+	{"S_add_p_asserted_identity",	S_add_p_asserted_identity,	0,0,REQUEST_ROUTE|FAILURE_ROUTE},	
 
 	{"S_check_session_expires",		S_check_session_expires, 	0, 0, REQUEST_ROUTE},
 	{"S_422_session_expires",		S_422_session_expires,	 	0, 0, REQUEST_ROUTE},

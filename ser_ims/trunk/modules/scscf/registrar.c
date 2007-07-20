@@ -1214,7 +1214,16 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 						i++;
 					dst.len = i;
 				}
-						
+	
+				if (*tmb.route_mode==MODE_ONFAILURE) {
+					LOG(L_DBG,"DEBUG:"M_NAME":S_lookup: MODE_ONFAILURE, appending branch\n");
+					/* need to append_branch for this first contact */
+					if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, 0, 0) == -1) {
+						LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
+							c->uri.len,c->uri.s);
+					}
+				}
+			
 				msg->dst_uri.s = pkg_malloc(dst.len);
 				if (!msg->dst_uri.s){
 					LOG(L_ERR, "ERR:"M_NAME":S_lookup: Error allocating %d bytes\n",
@@ -1494,7 +1503,7 @@ int S_orig_registered(struct sip_msg *msg,char *str1,char *str2)
 		goto error;
 	}		
 
-	public_identity = cscf_get_public_identity(msg);
+	public_identity = cscf_get_asserted_identity(msg);
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_orig_registered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
 	
@@ -1621,7 +1630,12 @@ int S_orig_not_registered(struct sip_msg *msg,char *str1,char *str2)
 		goto error;
 	}		
 
-	public_identity = cscf_get_public_identity(msg);
+	public_identity = cscf_get_asserted_identity(msg);
+	
+	if (public_identity.len==0 || public_identity.s==0) {
+		LOG(L_ERR,"ERR:"M_NAME":S_orig_not_registered: Asserted Identity not found!\n");
+		goto error;
+	}
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_orig_not_registered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
 	
@@ -1658,10 +1672,15 @@ int S_orig_unregistered(struct sip_msg *msg,char *str1,char *str2)
 		goto error;
 	}		
 
-	public_identity = cscf_get_public_identity(msg);
+	public_identity = cscf_get_asserted_identity(msg);
+
+	if (public_identity.len==0 || public_identity.s==0) {
+		LOG(L_ERR,"ERR:"M_NAME":S_orig_unregistered: Asserted Identity not found!\n");
+		goto error;
+	}
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_orig_unregistered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
-	
+		
 	if (r_is_unregistered_id(public_identity)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
@@ -1675,7 +1694,7 @@ error:
 }
 
 /**
- * Finds if the terminating user (in Request-URI) is not registered at this S-CSCF
+ * Finds if the user in To header is not registered at this S-CSCF
  * @param msg - the SIP message
  * @param str1 - not used
  * @param str2 - not used
@@ -1684,8 +1703,9 @@ error:
 int S_is_not_registered(struct sip_msg *msg,char *str1,char *str2)
 {
 	int ret=CSCF_RETURN_FALSE;
-	struct sip_uri puri;
-	str uri;	
+	//struct sip_uri puri;
+	//str uri;
+	str public_identity;	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered: Looking if registered\n");
 //	print_r(L_INFO);
@@ -1696,7 +1716,22 @@ int S_is_not_registered(struct sip_msg *msg,char *str1,char *str2)
 		goto error;
 	}		
 
+	public_identity = cscf_get_public_identity(msg);
 	
+	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered: Looking for <%.*s>\n",public_identity.len,public_identity.s);
+	
+	if (r_is_not_registered_id(public_identity)) 
+		ret = CSCF_RETURN_TRUE;
+	else 
+		ret = CSCF_RETURN_FALSE;
+			
+	
+	return ret;
+error:
+	ret=CSCF_RETURN_ERROR;
+	return ret;	
+
+/*	
 	if (msg->new_uri.s) uri = msg->new_uri;
 	else uri = msg->first_line.u.request.uri;
 	
@@ -1732,13 +1767,14 @@ int S_is_not_registered(struct sip_msg *msg,char *str1,char *str2)
 	return ret;
 error:
 	ret=CSCF_RETURN_ERROR;
-	return ret;	
+	return ret;
+*/	
 }	
 
 
 /**
- * Finds if the message contains as first route the specific service route for originating case.
- * This is indicated in the Service-Route at registration.
+ * Finds if the message contains as first route the specific service route for originating case (indicated in the Service-Route at registration),
+ *  or if the topmost route contains the "orig" parameter.
  * @param msg - the SIP message
  * @param str1 - not used
  * @param str2 - not used
@@ -1746,10 +1782,13 @@ error:
  */
 int S_mobile_originating(struct sip_msg *msg,char *str1,char *str2)
 {
-	int ret=CSCF_RETURN_FALSE;
+	//int ret=CSCF_RETURN_FALSE;
 	str r={0,0};
+	struct hdr_field *h;
+	rr_t *rt;
+	str* uri;
 
-	r = cscf_get_first_route(msg,0);
+	r = cscf_get_first_route(msg,&h);
 	LOG(L_DBG,"DBG:"M_NAME":S_mobile_originating: <%.*s>\n",r.len,r.s);	
 	
 	if (!r.len) return CSCF_RETURN_FALSE;
@@ -1759,7 +1798,45 @@ int S_mobile_originating(struct sip_msg *msg,char *str1,char *str2)
 			return CSCF_RETURN_TRUE;
 		}
 	
-	return ret;
+	rt = (rr_t*)h->parsed; // first route exists and has been parsed by cscf_get_first_route
+	uri = &rt->nameaddr.uri;
+	struct sip_uri puri;
+	if (parse_uri(uri->s, uri->len, &puri) < 0) {
+		LOG(L_ERR, "DBG:"M_NAME":S_mobile_originating: Error while parsing the first route URI\n");
+		return -1;
+	}
+	if (puri.params.len < 4) return CSCF_RETURN_FALSE;
+	// parse_uri does not support orig param...
+	int c = 0;
+	int state = 0; 
+	while (c < puri.params.len) {
+		switch (puri.params.s[c]) {
+			case 'o': if (state==0) state=1;
+					break;
+			case 'r': if (state==1) state=2;
+					break;
+			case 'i': if (state==2) state=3;
+					break;
+			case 'g': if (state==3) state=4;
+					break;
+			case ' ': 
+			case '\t':
+			case '\r':
+			case '\n':
+			case ',':
+			case ';': 
+						if (state==4) return CSCF_RETURN_TRUE;
+						state=0;
+						break;
+			case '=': if (state==4) return CSCF_RETURN_TRUE;
+					  state=-1;
+					  break;
+			default: state=-1;
+		}
+		c++;
+	}
+	
+	return state==4 ? CSCF_RETURN_TRUE : CSCF_RETURN_FALSE;
 }	
 
 
@@ -1814,7 +1891,12 @@ int S_originating_barred(struct sip_msg *msg,char *str1,char *str2)
 		goto error;
 	}		
 
-	public_identity = cscf_get_public_identity(msg);
+	public_identity = cscf_get_asserted_identity(msg);
+	
+	if (public_identity.len==0 || public_identity.s==0) {
+		LOG(L_ERR,"ERR:"M_NAME":S_originating_barred: Asserted Identity not found!\n");
+		goto error;
+	}
 	
 	LOG(L_DBG,"DBG:"M_NAME":S_originating_barred: Looking for <%.*s>\n",public_identity.len,public_identity.s);
 	

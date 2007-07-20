@@ -247,7 +247,7 @@ done:
 /**
  * Returns the Public Identity extracted from the To header
  * @param msg - the SIP message
- * @returns the str containing the private id, no mem dup
+ * @returns the str containing the public id, no mem dup
  */
 str cscf_get_public_identity(struct sip_msg *msg)
 {
@@ -2208,7 +2208,7 @@ str cscf_get_realm_from_uri(str uri)
 			}
 		if (!realm.len) realm = uri;
 		for(i=0;i<realm.len;i++)
-			if (realm.s[i]==';'||realm.s[i]=='&') {
+			if (realm.s[i]==';'||realm.s[i]=='&'||realm.s[i]==':') {
 				realm.len = i;
 				break;
 			}		
@@ -2248,7 +2248,7 @@ str cscf_get_realm_from_uri(str uri)
 			}
 		if (!realm.len) realm = uri;
 		for(i=0;i<realm.len;i++)
-			if (realm.s[i]==';'||realm.s[i]=='&') {
+			if (realm.s[i]==';'||realm.s[i]=='&'||realm.s[i]==':') {
 				realm.len = i;
 				break;
 			}		

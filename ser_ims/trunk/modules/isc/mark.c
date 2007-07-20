@@ -87,7 +87,7 @@ inline isc_mark* isc_mark_dup(isc_mark *m)
 	isc_mark *x;
 	x = shm_malloc(sizeof(isc_mark));
 	if (!x){
-		LOG(L_ERR, "ERR:"M_NAME":P_enforce_dialog_routes: Error allocating %d bytes\n",sizeof(isc_mark));
+		LOG(L_ERR, "ERR:"M_NAME":isc_mark_dup: Error allocating %d bytes\n",sizeof(isc_mark));
 		return 0;
 	}
 	x->skip = m->skip;
