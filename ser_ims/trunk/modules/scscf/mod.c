@@ -76,6 +76,7 @@
 #include "dlg_state.h"
 #include "s_persistency.h"
 #include "ims_pm_scscf.h"
+#include "privacy.h"
 
 MODULE_VERSION
 
@@ -199,6 +200,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - S_add_p_asserted_identity() - adds the P-Asserted-Identity aliases if the original P-Asserted-Identity was a TEL URI
  * - S_check_session_expires() - Checks if Session-Expires value is over Min_SE local policy
  * - S_422_session_expires() - Return a 422 response with Min_SE set to local policy
+ * - S_privacy_hook() - Registers callback to apply privacy to replies
+ * - S_apply_privacy() - Applies Privacy (currently only for P-Asserted-Identity)
  */
 static cmd_export_t scscf_cmds[]={
 	{"load_scscf",					(cmd_function)load_scscf, 	NO_SCRIPT, 0, 0},
@@ -247,6 +250,9 @@ static cmd_export_t scscf_cmds[]={
 
 	{"S_check_session_expires",		S_check_session_expires, 	0, 0, REQUEST_ROUTE},
 	{"S_422_session_expires",		S_422_session_expires,	 	0, 0, REQUEST_ROUTE},
+	
+	{"S_privacy_hook",              S_privacy_hook,             0, 0, REQUEST_ROUTE},
+	{"S_apply_privacy",             S_apply_privacy,            0, 0, REQUEST_ROUTE},
 	
 	{0, 0, 0, 0, 0}
 };
