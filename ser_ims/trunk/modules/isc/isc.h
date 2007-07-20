@@ -65,10 +65,6 @@
 #define IFC_AS_UNAVAILABLE_STATUS_CODE 555
 
 int isc_forward( struct sip_msg *msg, isc_match *m,isc_mark *mark);
-	
-void isc_failure(struct cell *t,int type,struct tmcb_params *ps);
-	
-int isc_bootstrap( struct sip_msg *msg, isc_mark *mark);
 
 
 #endif

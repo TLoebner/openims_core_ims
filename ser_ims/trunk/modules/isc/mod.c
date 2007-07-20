@@ -69,6 +69,7 @@
 #include "isc.h"
 #include "third_party_reg.h"
 #include "ims_pm.h"
+#include "../../dset.h"
 
 MODULE_VERSION
 
@@ -122,9 +123,9 @@ struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSCF funcs
 static cmd_export_t isc_cmds[] = {
 	{"isc_appserver_forward", 	isc_appserver_forward, 		2, 0, REQUEST_ROUTE},	
 	
-	{"ISC_match_filter", 		ISC_match_filter, 			1, 0, REQUEST_ROUTE},
+	{"ISC_match_filter", 		ISC_match_filter, 			1, 0, REQUEST_ROUTE|FAILURE_ROUTE},
 	{"ISC_match_filter_reg", 	ISC_match_filter_reg, 		0, 0, REQUEST_ROUTE},
-	{"ISC_from_AS", 			ISC_from_AS, 				1, 0, REQUEST_ROUTE},
+	{"ISC_from_AS", 			ISC_from_AS, 				1, 0, REQUEST_ROUTE|FAILURE_ROUTE},
 	{"ISC_is_session_continued",ISC_is_session_continued, 	0, 0, FAILURE_ROUTE},
 	
 	{ 0, 0, 0, 0, 0 }
@@ -385,7 +386,7 @@ static inline enum dialog_direction get_dialog_direction(char *direction)
  */
 int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 {
-	int k;
+	int k = 0;
 	isc_match *m;
 	str s={0,0};
 	int ret = ISC_RETURN_FALSE;
@@ -408,6 +409,61 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 	}
 	else {
 		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Starting triggering\n",str1);				
+	}
+	
+	if (*isc_tmb.route_mode==MODE_ONFAILURE) {
+		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): failure\n",str1);
+		
+		/* need to find the handling for the failed trigger */
+		if (dir==DLG_MOBILE_ORIGINATING){
+			k = isc_get_originating_user(msg,&s);
+			if (k){
+				k = isc_is_registered(&s);
+				if (k==NOT_REGISTERED) return ISC_MSG_NOT_FORWARDED;
+				
+				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
+					s.len,s.s,k);
+			} else return ret;
+		}
+		if (dir==DLG_MOBILE_TERMINATING){
+			k = isc_get_terminating_user(msg,&s);
+			if (k){
+				k = isc_is_registered(&s);
+				if (k==REGISTERED) {
+					new_mark.direction = IFC_TERMINATING_SESSION;
+				} else {
+					new_mark.direction = IFC_TERMINATING_UNREGISTERED;
+				}
+				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Term User <%.*s> [%d]\n",str1,
+					s.len,s.s,k);
+				if (s.s) pkg_free(s.s);	
+			} else {
+				if (s.s) pkg_free(s.s);	
+				return ret;
+			}
+		}
+		m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
+		if (m){
+			if (m->default_handling==IFC_SESSION_TERMINATED) {
+				/* Terminate the session */
+				DBG("DEBUG:"M_NAME":ISC_match_filter(%s): Terminating session.\n", str1);
+				isc_tmb.t_reply(msg,IFC_AS_UNAVAILABLE_STATUS_CODE,
+					"AS Contacting Failed - iFC terminated dialog");
+				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Responding with %d "
+					"to URI: %.*s\n",str1, IFC_AS_UNAVAILABLE_STATUS_CODE,
+					msg->first_line.u.request.uri.len,
+					msg->first_line.u.request.uri.s);
+				isc_free_match(m);
+				return ISC_RETURN_BREAK;
+			}
+			isc_free_match(m);
+		} else {
+			LOG(L_ERR,"ERR:"M_NAME":ISC_match_filter(%s): Could not determine default handling. Letting session continue...\n", str1);						
+		}
+		
+		/* skip this failed trigger (IFC_SESSION_CONTINUED) */
+		old_mark.skip++;
+		isc_mark_drop_route(msg);
 	}
 
 	/* originating leg */
@@ -442,7 +498,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			} else {
 				new_mark.direction = IFC_TERMINATING_UNREGISTERED;
 			}
-			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
+			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Term User <%.*s> [%d]\n",str1,
 				s.len,s.s,k);
 			m = isc_checker_find(s,new_mark.direction,old_mark.skip,msg);
 			if (m){

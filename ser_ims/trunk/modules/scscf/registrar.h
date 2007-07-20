@@ -89,6 +89,8 @@ int r_is_registered_id(str public_identity);
 int r_is_not_registered_id(str public_identity);
 int r_is_unregistered_id(str public_identity);
 
+int S_is_not_registered(struct sip_msg *msg,char *str1,char *str2);
+
 int S_term_registered(struct sip_msg *msg,char *str1,char *str2);
 int S_term_not_registered(struct sip_msg *msg,char *str1,char *str2);
 int S_term_unregistered(struct sip_msg *msg,char *str1,char *str2);
