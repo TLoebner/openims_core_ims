@@ -461,8 +461,9 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			LOG(L_ERR,"ERR:"M_NAME":ISC_match_filter(%s): Could not determine default handling. Letting session continue...\n", str1);						
 		}
 		
-		/* skip this failed trigger (IFC_SESSION_CONTINUED) */
-		old_mark.skip++;
+		/* skip the failed triggers (IFC_SESSION_CONTINUED) */
+		struct cell * t = isc_tmb.t_gett();
+		old_mark.skip += t->nr_of_outgoings;
 		isc_mark_drop_route(msg);
 	}
 
