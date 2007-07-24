@@ -1145,7 +1145,7 @@ static inline int r_add_p_called_party_id(struct sip_msg *msg)
 
 
 
-static str lookup_sip={"sip:",4};
+//static str lookup_sip={"sip:",4};
 /** 
  * Lookup for the Request-URI in registrar and rewrite request URI with the contact address.
  * Also adds routing to the destination's path.
