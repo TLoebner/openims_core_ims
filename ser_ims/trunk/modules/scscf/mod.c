@@ -295,6 +295,7 @@ static cmd_export_t scscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialogs hash table 
  * - dialogs_expiration_time - default dialogs expiration time
+ * - max_dialog_count - the maximum number of dialogs to keep, -1 if not limited
  * - min_se - default min_se header
  * <p>
  * - persistency_mode - how to do persistency - 0 none; 1 with files; 2 with db	

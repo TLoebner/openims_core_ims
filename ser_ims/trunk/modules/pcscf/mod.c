@@ -321,6 +321,7 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialog hash table
  * - dialogs_expiration_time - time-out for dialog expiration
+ * - max_dialog_count - the maximum number of dialogs to keep, -1 if not limited
  * - min_se - default value for Min_SE header
  * <p>
  * - use_ipsec - if to enable the use of IPSec

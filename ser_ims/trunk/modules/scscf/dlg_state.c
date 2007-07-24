@@ -249,6 +249,7 @@ inline void s_dialog_count_unlock()
  */
 inline int s_dialog_count_increment ()
 {
+    if (scscf_max_dialog_count<0) return 1;
     s_dialog_count_lock();	
 	if (*scscf_dialog_count<scscf_max_dialog_count){
     	(*scscf_dialog_count)++;
