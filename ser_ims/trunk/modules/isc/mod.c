@@ -468,7 +468,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 		}
 		
 		/* skip the failed triggers (IFC_SESSION_CONTINUED) */
-		old_mark.skip += index + 1;
+		old_mark.skip = index + 1;
 		
 		isc_free_match(m);
 		isc_mark_drop_route(msg);
