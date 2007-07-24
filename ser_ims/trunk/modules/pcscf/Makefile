@@ -14,4 +14,4 @@ include ../../Makefile.modules
 DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
 LIBS += -lxml2 -L../../lib/cds -l_ser_cds
 
-DEFS += -DWITH_IMS_PM
+#DEFS += -DWITH_IMS_PM

@@ -13,6 +13,6 @@ NAME=isc.so
 DEFS += -I/usr/include/libxml2
 LIBS += -L$(LOCALBASE)/lib -lxml2
 
-DEFS += -DWITH_IMS_PM
+#DEFS += -DWITH_IMS_PM
 
 include ../../Makefile.modules
