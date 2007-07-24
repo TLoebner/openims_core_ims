@@ -434,6 +434,9 @@ static void icscf_mod_destroy(void)
 {
 	LOG(L_INFO,"INFO:"M_NAME":mod_destroy: child exit\n");
 	i_hash_table_destroy();
+	#ifdef WITH_IMS_PM
+		ims_pm_destroy();	
+	#endif /* WITH_IMS_PM */		
 }
 
 

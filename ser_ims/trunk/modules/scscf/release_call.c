@@ -236,7 +236,7 @@ int release_call(str callid,str reason)
 	/*treat it as ORIGINATING or TERMINATING?*/				
 done:		
 	if (d) d_unlock(hash);
-	return 0;	
+	return res;	
 }
 
 
