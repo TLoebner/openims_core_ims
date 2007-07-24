@@ -387,7 +387,7 @@ static inline enum dialog_direction get_dialog_direction(char *direction)
 int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 {
 	int k = 0;
-	isc_match *m;
+	isc_match *m = NULL;
 	str s={0,0};
 	int ret = ISC_RETURN_FALSE;
 	isc_mark new_mark,old_mark;
@@ -442,28 +442,35 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 				return ret;
 			}
 		}
-		m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
-		if (m){
-			if (m->default_handling==IFC_SESSION_TERMINATED) {
-				/* Terminate the session */
-				DBG("DEBUG:"M_NAME":ISC_match_filter(%s): Terminating session.\n", str1);
-				isc_tmb.t_reply(msg,IFC_AS_UNAVAILABLE_STATUS_CODE,
-					"AS Contacting Failed - iFC terminated dialog");
-				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Responding with %d "
-					"to URI: %.*s\n",str1, IFC_AS_UNAVAILABLE_STATUS_CODE,
-					msg->first_line.u.request.uri.len,
-					msg->first_line.u.request.uri.s);
-				isc_free_match(m);
+		struct cell * t = isc_tmb.t_gett();
+		int index = old_mark.skip;
+		for (k=0;k<t->nr_of_outgoings;k++) {
+			m = isc_checker_find(s,old_mark.direction,index,msg);
+			if (m) {
+				index = m->index;
+				if (k < t->nr_of_outgoings - 1) isc_free_match(m);
+			} else {
+				LOG(L_ERR,"ERR:"M_NAME":ISC_match_filter(%s): On failure, previously matched trigger no longer matches?!\n", str1);
 				return ISC_RETURN_BREAK;
 			}
+		}
+		if (m->default_handling==IFC_SESSION_TERMINATED) {
+			/* Terminate the session */
+			DBG("DEBUG:"M_NAME":ISC_match_filter(%s): Terminating session.\n", str1);
+			isc_tmb.t_reply(msg,IFC_AS_UNAVAILABLE_STATUS_CODE,
+				"AS Contacting Failed - iFC terminated dialog");
+			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Responding with %d "
+				"to URI: %.*s\n",str1, IFC_AS_UNAVAILABLE_STATUS_CODE,
+				msg->first_line.u.request.uri.len,
+				msg->first_line.u.request.uri.s);
 			isc_free_match(m);
-		} else {
-			LOG(L_ERR,"ERR:"M_NAME":ISC_match_filter(%s): Could not determine default handling. Letting session continue...\n", str1);						
+			return ISC_RETURN_BREAK;
 		}
 		
 		/* skip the failed triggers (IFC_SESSION_CONTINUED) */
-		struct cell * t = isc_tmb.t_gett();
-		old_mark.skip += t->nr_of_outgoings;
+		old_mark.skip += index + 1;
+		
+		isc_free_match(m);
 		isc_mark_drop_route(msg);
 	}
 
