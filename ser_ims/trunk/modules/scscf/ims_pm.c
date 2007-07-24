@@ -89,8 +89,8 @@ str ims_pm_event_types[] = {
 	{"UR.MeanInitRegSetupTime",23},
 
 	{"UR.AttReReg",11},
-	{"UR.SuccReReg",13},
-	{"UR.FailReReg",13},
+	{"UR.SuccReReg",12},
+	{"UR.FailReReg",12},
 	{"UR.MeanReRegSetupTime",21},
 
 	{"UR.AttDeRegUe",13},
@@ -269,14 +269,14 @@ void ims_pm_log(enum _ims_pm_event_types event,str ps1,str ps2,int pi1,int pi2)
 		ps2.len,ps2.s,
 		pi1,
 		pi2);
-	LOG(L_CRIT,"%u%.*s%.*s,%.*s,%.*s,%d,%d\n",
-		(unsigned int)time(0),
-		log_prefix.len,log_prefix.s,
-		ims_pm_event_types[event].len,ims_pm_event_types[event].s,
-		ps1.len,ps1.s,
-		ps2.len,ps2.s,
-		pi1,
-		pi2);
+//	LOG(L_CRIT,"%u%.*s%.*s,%.*s,%.*s,%d,%d\n",
+//		(unsigned int)time(0),
+//		log_prefix.len,log_prefix.s,
+//		ims_pm_event_types[event].len,ims_pm_event_types[event].s,
+//		ps1.len,ps1.s,
+//		ps2.len,ps2.s,
+//		pi1,
+//		pi2);
 	#if IMS_PM_DEBUG
 		fflush(f_log);
 	#endif
