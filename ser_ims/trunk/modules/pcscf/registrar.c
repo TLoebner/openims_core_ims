@@ -132,8 +132,8 @@ void registrar_timer(unsigned int ticks, void* param)
 									contact_cnt++;
 									for(rp=c->head;rp;rp=rp->next)
 										impu_cnt++;
-									if (c->security && c->security.type==SEC_IPSEC) ipsec_cnt++;
-									if (c->security && c->security.type==SEC_TLS) tls_cnt++;				
+									if (c->security && c->security->type==SEC_IPSEC) ipsec_cnt++;
+									if (c->security && c->security->type==SEC_TLS) tls_cnt++;				
 									if (c->pinhole) nat_cnt++;
 							}			
 						#endif
