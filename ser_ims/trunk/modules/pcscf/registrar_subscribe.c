@@ -619,6 +619,7 @@ void print_subs(int log_level)
 {
 	r_subscription *s;
 	int i;
+	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */	
 	LOG(log_level,ANSI_GREEN"INF:"M_NAME":----------  Subscription list begin ---------\n");
 	for(i=0;i<subscriptions_hash_size;i++){
 		subs_lock(i);
