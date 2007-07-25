@@ -116,12 +116,12 @@ str ims_pm_event_types[] = {
 	{"UR.AttUAR",9},
 	{"UR.SuccUAA",10},
 	{"UR.FailUAA",10},
-	{"UR.MeanUATime",18},
+	{"UR.MeanUATime",13},
 
 	{"UR.AttSAR",9},
 	{"UR.SuccSAA",10},
 	{"UR.FailSAA",10},
-	{"UR.MeanSATime",18},
+	{"UR.MeanSATime",13},
 
 	{"SC.AttSession",13},
 	{"SC.SuccSession",14},
