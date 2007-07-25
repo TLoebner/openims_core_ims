@@ -532,6 +532,7 @@ void print_s_dialogs(int log_level)
 {
 	s_dialog *d;
 	int i;
+	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  S-CSCF Dialog List begin --------------\n");
 	for(i=0;i<s_dialogs_hash_size;i++){

@@ -80,6 +80,7 @@ extern str pcscf_name_str;					/**< fixed SIP URI of this P-CSCF 		*/
 extern struct tm_binds tmb;
 extern int pcscf_min_se;
 
+
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 int supports_extension(struct sip_msg *m, str *extension);
 int requires_extension(struct sip_msg *m, str *extension);
@@ -548,6 +549,7 @@ void print_p_dialogs(int log_level)
 {
 	p_dialog *d;
 	int i/*,j*/;
+	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List begin --------------\n");
 	for(i=0;i<p_dialogs_hash_size;i++){
