@@ -267,6 +267,7 @@ inline int s_dialog_count_increment ()
  */
 inline void s_dialog_count_decrement()
 {
+    if (scscf_max_dialog_count<0) return ;
     s_dialog_count_lock();
     (*scscf_dialog_count)--;
     s_dialog_count_unlock();
@@ -836,7 +837,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	if (is_s_dialog(call_id,aor)){
 		LOG(L_ERR,"ERR:"M_NAME":S_save_dialog: dialog already exists!\n");	
-		return CSCF_RETURN_FALSE;
+		return CSCF_RETURN_BREAK;
 	}
 	
 	d = add_s_dialog(call_id,aor,dir);
