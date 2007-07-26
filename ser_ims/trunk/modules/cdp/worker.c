@@ -92,7 +92,7 @@ static inline void cdp_lock_get(int sid)
 	if((semop(sid, &cdp_sem_lock, 1)) == -1)
 	{
 		if (shutdownx&&(*shutdownx)) return;
-    	LOG(L_ERR,"ERROR:cdp_lock_get(): Error on semop > %s\n",strerror(errno));
+    	LOG(L_INFO,"ERROR:cdp_lock_get(): Error on semop > %s\n",strerror(errno));
 	}
 }
 
@@ -106,8 +106,8 @@ static inline void cdp_lock_release(int sid)
 	semop(sid, &cdp_sem_unlock, 1) == -1)
 	{
 		if (shutdownx&&(*shutdownx)) return;
-    	LOG(L_ERR,"ERROR:cdp_lock_release(): Error on semop %s > %s Q[%2d/%2d]\n",
-    		sid==tasks->empty?"empty":"full",strerror(errno),
+    	LOG(L_INFO,"ERROR:cdp_lock_release(): Error on semop %s > %d: %s Q[%2d/%2d]\n",
+    		sid==tasks->full?"full":"empty",errno,strerror(errno),
     		tasks->start,tasks->end);
 	}
 }

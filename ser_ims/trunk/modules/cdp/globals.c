@@ -61,7 +61,7 @@
 
 #else
 	unsigned long shm_mem_size = SHM_MEM_SIZE;
-	int memlog = L_DBG;
+	int memlog = L_ERR;
 	int memdbg = L_MEM;
 	int debug = L_MEM;
 	int log_facility = 1;
