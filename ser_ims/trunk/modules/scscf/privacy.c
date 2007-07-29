@@ -103,17 +103,23 @@ int S_apply_privacy(struct sip_msg* msg, char* str1, char* str2) {
 	
 	str privacy_content = cscf_get_headers_content(msg,privacy);
 
-	if (privacy_content.len==0 || privacy_content.s==0) return CSCF_RETURN_FALSE;
+	if (!privacy_content.len){ 
+		ret = CSCF_RETURN_FALSE;
+		goto done;
+	}
 	
 	LOG(L_DBG, "DBG:"M_NAME":S_apply_privacy\n");
-	c = strtok(privacy_content.s," \t\r\n;");
+	c = strtok(privacy_content.s," \t\r\n;,");
 	while (c){
 		if (strlen(c)==2 && strncasecmp(c,"id",2)==0){
 			ret = apply_privacy_id(msg);
+			break;
 		}
-		c = strtok(0," \t\r\n;");
+		c = strtok(0," \t\r\n;,");
 	}
-	pkg_free(privacy_content.s);
+	
+done:	
+	if (privacy_content.s) pkg_free(privacy_content.s);
 	return ret;
 }
 
