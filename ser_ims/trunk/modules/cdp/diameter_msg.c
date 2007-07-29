@@ -377,7 +377,7 @@ AAAReturnCode  AAAFreeAVPList(AAA_AVP_LIST *avpList)
  */
 AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 {
-
+	LOG(L_DBG,"DBG:AAAFreeMessage: Freeing message (%p) %d\n",*msg,(*msg)->commandCode);
 	/* param check */
 	if (!msg || !(*msg))
 		goto done;
@@ -391,7 +391,7 @@ AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 
 	/* free the AAA msg */
 	shm_free(*msg);
-	msg = 0;
+	*msg = 0;
 
 done:
 	return AAA_ERR_SUCCESS;
