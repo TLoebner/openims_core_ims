@@ -1693,41 +1693,42 @@ int cscf_replace_string(struct sip_msg *msg, str orig,str repl)
  */ 
 str cscf_get_headers_content(struct sip_msg * msg , str header_name)
 {	
-	str path={0,0};
+	str content={0,0};
 	struct hdr_field *h;
-	if (!msg) return path;
+	if (!msg) return content;
 	if (parse_headers(msg, HDR_EOH_F, 0)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_path: error parsing headers\n");
-		return path;
+		return content;
 	}
 	h = msg->headers;
 	while(h){
 		if (h->name.len==header_name.len &&
 			strncasecmp(h->name.s,header_name.s,header_name.len)==0){
-				path.len+=h->body.len+1;
+				content.len+=h->body.len+1;
 			}
 		h = h->next;
 	}
-	path.s = pkg_malloc(path.len);
-	if (!path.s){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_path: error allocating %d bytes\n",
-			path.len);
-		path.len=0;
-		return path;
+	content.len++;/* trailing \0 */
+	content.s = pkg_malloc(content.len);
+	if (!content.s){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_path: error allocating %d bytes\n",content.len);
+		content.len=0;
+		return content;
 	}
 	h = msg->headers;
-	path.len=0;
+	content.len=0;
 	while(h){
 		if (h->name.len==header_name.len &&
 			strncasecmp(h->name.s,header_name.s,header_name.len)==0){
-				if (path.len) path.s[path.len++]=',';
-				memcpy(path.s+path.len,h->body.s,h->body.len);
-				path.len+=h->body.len;
+				if (content.len) content.s[content.len++]=',';
+				memcpy(content.s+content.len,h->body.s,h->body.len);
+				content.len+=h->body.len;
 			}
 		h = h->next;
 	}
+	content.s[content.len]=0;
 
-	return path;	
+	return content;	
 }
 
 /**
