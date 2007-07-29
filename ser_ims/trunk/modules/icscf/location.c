@@ -126,6 +126,10 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 
 	lia = Cx_LIR(msg,public_identity,realm);
 	
+	if (public_identity.s && !orig) 
+		shm_free(public_identity.s); // shm_malloc in cscf_get_public_identity_from_requri		
+	
+	
 	if (!lia){
 		LOG(L_ERR,"ERR:"M_NAME":I_LIR: Error creating/sending LIR\n");
 		cscf_reply_transactional(msg,480,MSG_480_DIAMETER_ERROR);
@@ -133,12 +137,10 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 		goto done;		
 	}
 
+    result = I_LIA(msg, &lia, orig);
 
-    result = I_LIA(msg, lia, orig);
-	
-	if (lia) cdpb.AAAFreeMessage(&lia);	
 done:
-	if (public_identity.s && !orig) shm_free(public_identity.s); // shm_malloc in cscf_get_public_identity_from_requri	
+	if (lia) cdpb.AAAFreeMessage(&lia);	
 	LOG(L_DBG,"DBG:"M_NAME":I_LIR: ... Done\n");
 	return result;	
 }
@@ -150,26 +152,29 @@ done:
  * @param lia - the LIA diameter answer received from the HSS
  * @returns #CSCF_RETURN_TRUE on success or #CSCF_RETURN_FALSE on error
  */
-int I_LIA(struct sip_msg* msg, AAAMessage* lia, int originating)
+int I_LIA(struct sip_msg* msg, AAAMessage** lia, int originating)
 {
 	int rc=-1,experimental_rc=-1;
 	str server_name;
 	int *m_capab=0,m_capab_cnt=0;
 	int *o_capab=0,o_capab_cnt=0;
 	scscf_entry *list=0;
-	str call_id;	
+	str call_id;
+	int status_code=999;
+	char *reason_phrase=0;	
 	
-	if (!lia){
+	if (!*lia){
 		//TODO - add the warning code 99 in the reply	
 		cscf_reply_transactional(msg,480,MSG_480_DIAMETER_TIMEOUT_LIA);		
 		return CSCF_RETURN_BREAK;
 	}
 	
-	if (!Cx_get_result_code(lia,&rc)&&
-		!Cx_get_experimental_result_code(lia,&experimental_rc))
-	{
-		cscf_reply_transactional(msg,480,MSG_480_DIAMETER_MISSING_AVP_LIA);		
-		return CSCF_RETURN_BREAK;			
+	if (!Cx_get_result_code(*lia,&rc)&&
+		!Cx_get_experimental_result_code(*lia,&experimental_rc))
+	{		
+		status_code = 480;
+		reason_phrase = MSG_480_DIAMETER_MISSING_AVP_LIA;		
+		goto reply_final_response;			
 	}
 	
 	switch(rc){
@@ -178,66 +183,77 @@ int I_LIA(struct sip_msg* msg, AAAMessage* lia, int originating)
 				
 				case RC_IMS_DIAMETER_ERROR_USER_UNKNOWN:
 					if (!originating && route_on_term_user_unknown_n > -1) {
+						if (*lia) cdpb.AAAFreeMessage(lia);
 						if (run_actions(main_rt.rlist[route_on_term_user_unknown_n], msg)<0){
 							LOG(L_WARN,"ERR:"M_NAME":I_LIA: error while trying script\n");
 						}
 						return CSCF_RETURN_BREAK;
 					} else {
-						cscf_reply_transactional(msg,604,MSG_604_USER_UNKNOWN);
-						return CSCF_RETURN_BREAK;
+						status_code = 604;
+						reason_phrase = MSG_604_USER_UNKNOWN;		
+						goto reply_final_response;								
 					}
 					break;
 
 				case RC_IMS_DIAMETER_ERROR_IDENTITY_NOT_REGISTERED:
-					cscf_reply_transactional(msg,480,MSG_480_NOT_REGISTERED);
-					return CSCF_RETURN_BREAK;
+					status_code = 480;
+					reason_phrase = MSG_480_NOT_REGISTERED;		
+					goto reply_final_response;								
 					
 				case RC_IMS_DIAMETER_UNREGISTERED_SERVICE:
 					goto success;	
 				
 				default:
-					cscf_reply_transactional(msg,403,MSG_403_UNKOWN_EXPERIMENTAL_RC);		
-					return CSCF_RETURN_BREAK;
+					status_code = 403;
+					reason_phrase = MSG_403_UNKOWN_EXPERIMENTAL_RC;		
+					goto reply_final_response;								
 			}
 			break;
 		
 		case AAA_UNABLE_TO_COMPLY:
-			cscf_reply_transactional(msg,403,MSG_403_UNABLE_TO_COMPLY);		
-			return CSCF_RETURN_BREAK;
-			break;
+			status_code = 403;
+			reason_phrase = MSG_403_UNABLE_TO_COMPLY;		
+			goto reply_final_response;								
 				
 		case AAA_SUCCESS:
 			goto success;			
-			break;
 						
 		default:
-			cscf_reply_transactional(msg,403,MSG_403_UNKOWN_RC);		
-			return CSCF_RETURN_BREAK;
+			status_code = 403;
+			reason_phrase = MSG_403_UNKOWN_RC;		
+			goto reply_final_response;								
 	}
 	
 success:
-	server_name = Cx_get_server_name(lia);
+	server_name = Cx_get_server_name(*lia);
 	if (server_name.len){
 		list = new_scscf_entry(server_name,MAXINT, originating);
 	}else{
-		Cx_get_capabilities(lia,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt);
+		Cx_get_capabilities(*lia,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt);
 		list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt, originating);
 		if (m_capab) shm_free(m_capab);
 		if (o_capab) shm_free(o_capab);
 	}
 
 	if (!list) {
-		cscf_reply_transactional(msg,600,MSG_600_EMPTY_LIST);	
-		return CSCF_RETURN_BREAK;
+		status_code = 600;
+		reason_phrase = MSG_600_EMPTY_LIST;		
+		goto reply_final_response;				
 	}
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len||!add_scscf_list(call_id,list)){
-		cscf_reply_transactional(msg,500,MSG_500_ERROR_SAVING_LIST);	
-		return CSCF_RETURN_BREAK;
+		status_code = 500;
+		reason_phrase = MSG_500_ERROR_SAVING_LIST;		
+		goto reply_final_response;				
 	}
 	//print_s_list(L_ERR);	
 		
 	return CSCF_RETURN_TRUE;
+
+reply_final_response:	
+	if (*lia) cdpb.AAAFreeMessage(lia);
+	cscf_reply_transactional(msg,status_code,reason_phrase);		
+	return CSCF_RETURN_BREAK;	
 }
 
 
