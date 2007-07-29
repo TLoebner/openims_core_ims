@@ -190,6 +190,10 @@ inline static int accept_connection(int server_sock,int *new_sock)
 	}
 	if (pid==0){		
 		/* child */
+		if (listening_socks) {
+			pkg_free(listening_socks);
+			listening_socks=0;
+		}
 		dp_add_pid(pid);
 		receiver_process(*new_sock);
 		LOG(L_CRIT,"ERROR:accept_connection(): receiver_process finished without exit!\n");
