@@ -258,7 +258,7 @@ int release_call_s(s_dialog *d,str reason)
 					
 	/* As for now, i'm only releasing confirmed dialogs */
 	if (d->state < DLG_STATE_CONFIRMED){
-		LOG(L_ERR,"ERR:"M_NAME":release_call_s(): Unable to release a non-confirmed dialog\n");		
+		LOG(L_INFO,"ERR:"M_NAME":release_call_s(): Unable to release a non-confirmed dialog\n");		
 		return -1;
 	}
 		

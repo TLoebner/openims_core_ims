@@ -579,7 +579,7 @@ int forward_reply(struct sip_msg* msg)
 		|| (msg->via2==0) || (msg->via2->error!=PARSE_OK))
 	{
 		/* no second via => error */
-		LOG(L_ERR, "ERROR: forward_reply: no 2nd via found in reply\n");
+		LOG(L_INFO, "ERROR: forward_reply: no 2nd via found in reply\n");
 		goto error;
 	}
 
