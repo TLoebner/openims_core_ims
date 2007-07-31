@@ -70,6 +70,7 @@ extern struct tm_binds tmb;
 int s_dialogs_hash_size;						/**< size of the dialog hash table 					*/
 s_dialog_hash_slot *s_dialogs=0;				/**< the hash table									*/
 extern int scscf_dialogs_expiration_time;		/**< default expiration time for dialogs			*/
+extern int scscf_dialogs_enable_release;	/**< if to enable dialog release		*/
 
 extern str scscf_name_str;
 extern str scscf_record_route_mo;				/**< the record route header for Mobile Originating */
@@ -475,6 +476,7 @@ static str Reason={"Reason: SIP ;cause=503 ;text=\"Session Time-out on S-CSCF\"\
  */
 int terminate_s_dialog(s_dialog *d)
 {
+	if (!scscf_dialogs_enable_release) return 0;	
 	switch (d->method){
 		case DLG_METHOD_INVITE:
 			if (release_call_s(d,Reason)==-1){

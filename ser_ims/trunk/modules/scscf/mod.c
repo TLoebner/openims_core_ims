@@ -118,6 +118,7 @@ int append_branches=1;					/**< if to append branches						*/
 
 int scscf_dialogs_hash_size=256;		/**< size of the dialog hash table 				*/
 int scscf_dialogs_expiration_time=3600;	/**< default expiration time for dialogs		*/
+int scscf_dialogs_enable_release=1;		/**< if to enable dialog release					*/
 int scscf_min_se=90;					/**< Minimum session-expires accepted value		*/
 int* scscf_dialog_count = 0;			/**< Counter for saved dialogs					*/
 int scscf_max_dialog_count=20000;		/**< Maximum number of dialogs					*/ 
@@ -295,6 +296,7 @@ static cmd_export_t scscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialogs hash table 
  * - dialogs_expiration_time - default dialogs expiration time
+ * - dialogs_enable_release - whether to enable S-CSCF initiated dialog release
  * - max_dialog_count - the maximum number of dialogs to keep, -1 if not limited
  * - min_se - default min_se header
  * <p>
@@ -335,6 +337,7 @@ static param_export_t scscf_params[]={
 
 	{"dialogs_hash_size", 				INT_PARAM, &scscf_dialogs_hash_size},
 	{"dialogs_expiration_time", 		INT_PARAM, &scscf_dialogs_expiration_time},
+	{"dialogs_enable_release",			INT_PARAM, &scscf_dialogs_enable_release},
 	{"max_dialog_count",				INT_PARAM, &scscf_max_dialog_count},
 	{"min_se", 							INT_PARAM, &scscf_min_se},
 	

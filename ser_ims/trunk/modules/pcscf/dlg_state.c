@@ -67,7 +67,7 @@ int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
 
 extern int pcscf_dialogs_expiration_time;	/**< expiration time for a dialog		*/
-
+extern int pcscf_dialogs_enable_release;	/**< if to enable dialog release		*/
 time_t d_time_now;							/**< current time for dialog updates 	*/
 
 extern str pcscf_record_route_mo;			/**< Record-route for originating case 	*/
@@ -488,6 +488,7 @@ str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
  */
 int terminate_p_dialog(p_dialog *d)
 {
+	if (!pcscf_dialogs_enable_release) return 0;
 	switch (d->method){
 		case DLG_METHOD_INVITE:
 			if (release_call_p(d,503,reason_terminate_p_dialog_s)==-1){				
