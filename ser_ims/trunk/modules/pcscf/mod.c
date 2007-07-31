@@ -131,6 +131,7 @@ int subscriptions_hash_size=1024;			/**< the size of the hash table for subscrip
 
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
 int pcscf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
+int pcscf_dialogs_enable_release=1;			/**< if to enable dialog release					*/
 int pcscf_min_se=90;						/**< Minimum session-expires accepted value			*/
 int* pcscf_dialog_count = 0;				/**< Counter for saved dialogs						*/
 int pcscf_max_dialog_count=20000;			/**< Maximum number of dialogs						*/ 
@@ -321,6 +322,7 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialog hash table
  * - dialogs_expiration_time - time-out for dialog expiration
+ * - dialogs_enable_release - whether to enable P-CSCF initiated dialog release
  * - max_dialog_count - the maximum number of dialogs to keep, -1 if not limited
  * - min_se - default value for Min_SE header
  * <p>
@@ -370,6 +372,7 @@ static param_export_t pcscf_params[]={
 
 	{"dialogs_hash_size",		INT_PARAM,		&pcscf_dialogs_hash_size},
 	{"dialogs_expiration_time",	INT_PARAM,		&pcscf_dialogs_expiration_time},
+	{"dialogs_enable_release",	INT_PARAM,		&pcscf_dialogs_enable_release},
 	{"max_dialog_count",		INT_PARAM,		&pcscf_max_dialog_count},
 	{"min_se",		 			INT_PARAM, 		&pcscf_min_se},
 	
