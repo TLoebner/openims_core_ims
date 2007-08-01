@@ -102,8 +102,8 @@ static inline void cdp_lock_get(int sid)
  */
 static inline void cdp_lock_release(int sid)
 {
-	if(/*(semctl(sid, 0, SETVAL, 1)*/
-	semop(sid, &cdp_sem_unlock, 1) == -1)
+	if( semctl(sid, 0, SETVAL, 1) == -1
+	/*semop(sid, &cdp_sem_unlock, 1) == -1*/)
 	{
 		if (shutdownx&&(*shutdownx)) return;
     	LOG(L_INFO,"ERROR:cdp_lock_release(): Error on semop %s > %d: %s Q[%2d/%2d]\n",
