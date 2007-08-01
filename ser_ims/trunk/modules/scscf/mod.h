@@ -143,22 +143,36 @@ int S_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 
 #define STR_SHM_DUP(dest,src,txt)\
 {\
-	(dest).s = shm_malloc((src).len);\
-	if (!(dest).s){\
-		LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+	if ((src).len==0) {\
+		(dest).s=0;\
+		(dest).len=0;\
+	}else {\
+		(dest).s = shm_malloc((src).len);\
+		if (!(dest).s){\
+			LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+			(dest).len = 0;\
+		}else{\
+			(dest).len = (src).len;\
+			memcpy((dest).s,(src).s,(src).len);\
+		}\
 	}\
-	(dest).len = (src).len;\
-	memcpy((dest).s,(src).s,(src).len);\
 }
 
 #define STR_PKG_DUP(dest,src,txt)\
 {\
-	(dest).s = pkg_malloc((src).len);\
-	if (!(dest).s){\
-		LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+	if ((src).len==0) {\
+		(dest).s=0;\
+		(dest).len=0;\
+	}else {\
+		(dest).s = pkg_malloc((src).len);\
+		if (!(dest).s){\
+			LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
+			(dest).len = 0;\
+		}else{\
+			(dest).len = (src).len;\
+			memcpy((dest).s,(src).s,(src).len);\
+		}\
 	}\
-	(dest).len = (src).len;\
-	memcpy((dest).s,(src).s,(src).len);\
 }
 
 #define STR_APPEND(dst,src)\

@@ -65,6 +65,7 @@ static inline int str_shm_dup(str *dest,str *src)
 	dest->s = shm_malloc(src->len);
 	if (!dest->s){
 		LOG(L_ERR,"ERR:"M_NAME":str_shm_dup: Error allocating %d bytes\n",src->len);
+		dest->len=0;
 		return 0;
 	}
 	dest->len = src->len;
