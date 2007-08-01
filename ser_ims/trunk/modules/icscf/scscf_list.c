@@ -351,6 +351,7 @@ scscf_list* new_scscf_list(str call_id,scscf_entry *sl)
 				
 	return l;
 error:
+out_of_memory:
 	if (l){
 		shm_free(l);		
 	}
@@ -572,8 +573,12 @@ int I_scscf_select(struct sip_msg* msg, char* str1, char* str2)
 		if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);	
 		STR_PKG_DUP(msg->dst_uri,scscf_name,"pkg");
 	}
+
 	if (scscf_name.s) shm_free(scscf_name.s);
 	return result;
+out_of_memory:	
+	if (scscf_name.s) shm_free(scscf_name.s);
+	return CSCF_RETURN_ERROR;
 }
 
 int I_scscf_drop(struct sip_msg* msg, char* str1, char* str2)

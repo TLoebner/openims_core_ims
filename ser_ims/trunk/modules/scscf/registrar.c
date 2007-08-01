@@ -857,6 +857,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	//print_r(L_CRIT);
 	return CSCF_RETURN_TRUE;
 error:
+out_of_memory:
 	if (!s_used&&*s) free_user_data(*s);
 	return CSCF_RETURN_FALSE;	
 }

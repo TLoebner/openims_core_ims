@@ -107,6 +107,8 @@ int P_add_path(struct sip_msg *msg,char *str1,char*str2)
 		pkg_free(x.s);
 		return CSCF_RETURN_ERROR;
 	}
+out_of_memory:
+	return CSCF_RETURN_ERROR;	
 }
 
 
@@ -130,6 +132,8 @@ int P_add_require(struct sip_msg *msg,char *str1,char*str2)
 		pkg_free(x.s);
 		return CSCF_RETURN_ERROR;
 	}
+out_of_memory:
+	return CSCF_RETURN_ERROR;	
 }
 
 

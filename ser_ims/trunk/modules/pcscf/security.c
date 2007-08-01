@@ -1220,6 +1220,7 @@ next:
 
 	return changed?CSCF_RETURN_TRUE:CSCF_RETURN_FALSE;
 error:
+out_of_memory:
 	return CSCF_RETURN_ERROR;
 }
 

@@ -194,6 +194,7 @@ r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from,
 
         return r;
 error:
+out_of_memory:
         free_r_registration(r);
         return 0;
 }

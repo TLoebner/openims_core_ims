@@ -210,6 +210,7 @@ failure_route[ISC_Orig_failure]
 		if (!(dest).s){\
 			LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
 			(dest).len = 0;\
+			goto out_of_memory;\
 		}else{\
 			(dest).len = (src).len;\
 			memcpy((dest).s,(src).s,(src).len);\
@@ -227,6 +228,7 @@ failure_route[ISC_Orig_failure]
 		if (!(dest).s){\
 			LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
 			(dest).len = 0;\
+			goto out_of_memory;\
 		}else{\
 			(dest).len = (src).len;\
 			memcpy((dest).s,(src).s,(src).len);\

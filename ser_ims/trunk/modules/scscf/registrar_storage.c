@@ -237,6 +237,7 @@ r_subscriber* new_r_subscriber(str subscriber,int event,int expires,dlg_t *dialo
 					
 	return s;
 error:
+out_of_memory:
 	if (s){
 		if (s->subscriber.s) shm_free(s->subscriber.s);
 		shm_free(s);		
@@ -744,7 +745,7 @@ r_public* add_r_public_previous_lock(str aor,int locked_hash,enum Reg_States reg
 r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **s,
 	str *ccf1, str *ccf2, str *ecf1, str *ecf2)
 {
-	r_public *p;
+	r_public *p=0;
 
 	p = get_r_public(aor);
 	if (!p){
@@ -805,6 +806,8 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 		}
 		return p;
 	}
+out_of_memory:
+	return p;	
 }
 
 /**
@@ -821,7 +824,7 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 r_public* update_r_public_previous_lock(str aor,int locked_hash,enum Reg_States *reg_state,ims_subscription **s,
 	str *ccf1, str *ccf2, str *ecf1, str *ecf2)
 {
-	r_public *p;
+	r_public *p=0;
 	p = get_r_public_previous_lock(aor,locked_hash);
 	if (!p){
 		if (reg_state && *reg_state && *reg_state!=NOT_REGISTERED && s){
@@ -881,6 +884,8 @@ r_public* update_r_public_previous_lock(str aor,int locked_hash,enum Reg_States 
 		}
 		return p;
 	}
+out_of_memory:
+	return p;	
 }
 
 
