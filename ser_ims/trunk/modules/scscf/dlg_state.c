@@ -304,6 +304,7 @@ s_dialog* new_s_dialog(str call_id,str aor, enum s_dialog_direction dir)
 	d->is_releasing = 0;
 	return d;
 error:
+out_of_memory:
 	if (d){
 		shm_free(d);		
 	}
@@ -823,6 +824,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str ses_exp = {0,0};
 	str refresher = {0,0};
 	struct hdr_field *h;
+	unsigned int hash;
 	
 	enum s_dialog_direction dir = get_dialog_direction(str1);
 	
@@ -886,6 +888,13 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 //	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
+out_of_memory:
+	if (d){
+		hash = d->hash;
+		del_s_dialog(d);
+		d_unlock(hash);
+	}
+	return CSCF_RETURN_ERROR;	
 }
 
 /**
@@ -1142,6 +1151,9 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 //	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
+out_of_memory:
+	if (d) d_unlock(d->hash);
+	return CSCF_RETURN_ERROR;	
 }
 
 
@@ -1243,7 +1255,7 @@ static str s_record_route_e={";lr>\r\n",6};
  */ 
 int S_record_route(struct sip_msg *msg,char *str1,char *str2)
 {
-	str rr;
+	str rr={0,0};
 	str u = {0,0},scheme={0,0},scscf={0,0};
 	
 	enum s_dialog_direction dir = get_dialog_direction(str1);
@@ -1290,6 +1302,9 @@ int S_record_route(struct sip_msg *msg,char *str1,char *str2)
 		if (rr.s) pkg_free(rr.s);
 		return CSCF_RETURN_BREAK;
 	}
+	
+out_of_memory:
+	return CSCF_RETURN_BREAK;	
 }
 
 /**
@@ -1354,6 +1369,8 @@ int S_is_record_routed(struct sip_msg *msg,char *str1,char *str2)
 
 	pkg_free(rr.s);
 	return CSCF_RETURN_FALSE;
+out_of_memory:
+	return CSCF_RETURN_ERROR;
 }
 
 

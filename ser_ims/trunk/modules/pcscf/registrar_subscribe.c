@@ -483,6 +483,7 @@ r_subscription* new_r_subscription(str req_uri,int duration)
 	
 	return s;
 error:
+out_of_memory:
 	if (s->req_uri.s) shm_free(s->req_uri.s);
 	if (s) shm_free(s);	
 	return 0;

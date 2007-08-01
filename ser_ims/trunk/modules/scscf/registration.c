@@ -417,6 +417,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	HASHHEX expected,ha1,hbody;
 	int expected_len=32;
 	auth_vector *av=0;
+	r_public *p=0;
 	
 
 	LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: Checking if REGISTER is authorized...\n");
@@ -453,8 +454,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		
 		sent_by = cscf_get_last_via_sent_by(msg);
 		if (sent_by.len){
-			r_public *p;
-			int ret = CSCF_RETURN_FALSE;
+			ret = CSCF_RETURN_FALSE;
 
 			LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: Possible Early-IMS identified\n");
 			received = cscf_get_last_via_received(msg);
@@ -556,6 +556,11 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	auth_data_unlock(aud_hash);
 	return ret;	
 error:
+out_of_memory:
+	if (p) r_unlock(p->hash);
+	if (av) {
+		auth_data_unlock(aud_hash);
+	}
 	ret = CSCF_RETURN_ERROR;		
 	return ret;
 }

@@ -111,6 +111,8 @@ int I_THIG_add_Path(struct sip_msg* msg, char* str1, char* str2)
 		return CSCF_RETURN_FALSE;
 	}		
 	return CSCF_RETURN_TRUE;
+out_of_memory:	
+	return CSCF_RETURN_ERROR;
 }
 
 /**
@@ -137,6 +139,8 @@ int I_THIG_add_RR(struct sip_msg* msg, char* str1, char* str2)
 		return CSCF_RETURN_FALSE;
 	}		
 	return CSCF_RETURN_TRUE;
+out_of_memory:	
+	return CSCF_RETURN_ERROR;
 }
 
 

@@ -396,6 +396,9 @@ r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int
 	STR_SHM_DUP(ipsec->ik,ik_esp,"new_r_ipsec");
 			
 	return ipsec;
+out_of_memory:
+	if (ipsec) free_r_ipsec(ipsec);
+	return 0;	
 }
 		
 /**
@@ -468,6 +471,7 @@ r_security *new_r_security(str sec_header,r_security_type type,float q)
 	if (!s->sec_header.s) goto error;	
 	return s;
 error:
+out_of_memory:
 	if (s) shm_free(s);
 	return 0;
 }
@@ -566,6 +570,7 @@ r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States
 		
 	return c;
 error:
+out_of_memory:
 	if (c){
 		free_r_contact(c);			
 	}
@@ -623,7 +628,7 @@ r_contact* add_r_contact(str host,int port,int transport,str uri,
 r_contact* update_r_contact(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,str **service_route,int *service_route_cnt, r_nat_dest **pinhole)
 {
-	r_contact *c;
+	r_contact *c=0;
 	int i;
 	
 	
@@ -670,6 +675,9 @@ r_contact* update_r_contact(str host,int port,int transport,
 		if (pinhole) c->pinhole = *pinhole;
 		return c;
 	}
+	
+out_of_memory:
+	return c;	
 }
 
 /**

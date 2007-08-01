@@ -305,7 +305,10 @@ p_dialog* new_p_dialog(str call_id,str host,int port, int transport)
 				
 	return d;
 error:
+out_of_memory:
 	if (d){
+		if (d->call_id.s) shm_free(d->call_id.s);
+		if (d->host.s) shm_free(d->host.s);
 		shm_free(d);		
 	}
 	p_dialog_count_decrement();
@@ -804,6 +807,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	char buf1[256],buf2[256];
 	str tag,ruri,uri,x;
 	struct hdr_field *h;
+	unsigned int hash;
 	
 	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
@@ -877,9 +881,16 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	tmb.new_dlg_uas(msg,99,&d->dialog_s);
 		
 	d_unlock(d->hash);
-	print_p_dialogs(L_INFO);
+	//print_p_dialogs(L_INFO);
 	
-	return CSCF_RETURN_TRUE;	
+	return CSCF_RETURN_TRUE;
+out_of_memory:
+	if (d){
+		hash = d->hash;
+		del_p_dialog(d);
+		d_unlock(hash);
+	}
+	return CSCF_RETURN_FALSE;
 }
 
 /**
@@ -934,6 +945,8 @@ void save_dialog_routes(struct sip_msg* msg, char* str1,p_dialog *d)
 			}
 		}
 	}		
+out_of_memory:
+	return;	
 }
 /**
  * Updates dialog on reply message
@@ -1185,6 +1198,9 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	print_p_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
+out_of_memory:
+	d_unlock(d->hash);
+	return CSCF_RETURN_ERROR;	
 }
 
 
@@ -1538,6 +1554,8 @@ int P_record_route(struct sip_msg *msg,char *str1,char *str2)
 		if (rr.s) pkg_free(rr.s);
 		return CSCF_RETURN_BREAK;
 	}
+out_of_memory:
+	return CSCF_RETURN_ERROR;	
 }
 
 #ifdef WITH_IMS_PM
