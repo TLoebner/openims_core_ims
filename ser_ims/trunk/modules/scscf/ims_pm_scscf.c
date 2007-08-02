@@ -143,8 +143,8 @@ int ims_pm_pre_script(struct sip_msg *msg,void *param)
 						IMS_PM_LOG11(UR_AttDeRegUe,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
 						break;
 				}
-				cscf_get_transaction(msg,&x,&y);
-				tmb.register_tmcb(msg,0,TMCB_RESPONSE_OUT,ims_pm_register_cb,(void*)k);
+				//cscf_get_transaction(msg,&x,&y);
+				//tmb.register_tmcb(msg,0,TMCB_RESPONSE_OUT,ims_pm_register_cb,(void*)k);
 		}
 		/* INVITE */
 		else if (method.len==s_invite.len && strncasecmp(method.s,s_invite.s,s_invite.len)==0){
