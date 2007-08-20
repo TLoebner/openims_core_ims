@@ -852,7 +852,7 @@ void uac_request_cb(struct cell *t,int type,struct tmcb_params *ps)
 {
 	LOG(L_DBG,"DBG:"M_NAME":uac_request_cb: Type %d\n",type);
 	#ifdef WITH_IMS_PM			
-		if ((int) *ps->param){
+		if (((int) *ps->param) && (ps->rpl != (void*)-1) ){
 			if (ps->code>=200 && ps->code<300) IMS_PM_LOG12(UR_SuccDeRegCscf,cscf_get_call_id(ps->rpl,0),cscf_get_cseq(ps->rpl,0),ps->code);
 			else if (ps->code>=300) IMS_PM_LOG12(UR_FailDeRegCscf,cscf_get_call_id(ps->rpl,0),cscf_get_cseq(ps->rpl,0),ps->code);			
 		}		

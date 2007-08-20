@@ -329,13 +329,13 @@ int r_send_subscribe(r_subscription *s,int duration)
 			LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error creating a dialog for SUBSCRIBE\n");
 			goto error;
 		}
-		if (dialogb.request_outside(&method, &h, 0, s->dialog, r_subscribe_response,  &(s->req_uri)) < 0){
+		if (dialogb.request_outside(&method, &h, 0, s->dialog, r_subscribe_response,  0) < 0){
 			LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error sending initial request in a SUBSCRIBE dialog\n");
 			goto error;
 		}		
 	}else{
 		/* this is a subsequent subscribe */
-		if (dialogb.request_inside(&method, &h, 0, s->dialog, r_subscribe_response,  &(s->req_uri)) < 0){
+		if (dialogb.request_inside(&method, &h, 0, s->dialog, r_subscribe_response,  0) < 0){
 			LOG(L_ERR,"ERR:"M_NAME":r_send_subscribe: Error sending subsequent request in a SUBSCRIBE dialog\n");
 			goto error;
 		}				
@@ -358,11 +358,14 @@ void r_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 	int expires;
 	r_subscription *s=0;
 	LOG(L_DBG,"DBG:"M_NAME":r_subscribe_response: code %d\n",ps->code);
-	if (!ps->rpl) {
+	if (!ps->rpl || ps->rpl==(void*) -1) {
 		LOG(L_ERR,"INF:"M_NAME":r_subscribe_response: No reply\n");
 		return;	
 	}
-	req_uri = *((str*) *(ps->param));		
+	if (!cscf_get_to_uri(ps->rpl,&req_uri)){
+		LOG(L_ERR,"INF:"M_NAME":r_subscribe_response: Error extracting the original Req-URI from To header\n");
+		return;
+	} 		
 	s = get_r_subscription(req_uri);
 	if (!s){
 		LOG(L_ERR,"INF:"M_NAME":r_subscribe_response: received a SUBSCRIBE response but no subscription for <%.*s>\n",
