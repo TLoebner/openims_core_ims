@@ -71,36 +71,14 @@ enum release_call_situation{
 	  * by a  BYE to the callee and a reply >400 to the caller
 	  * a CANCEL wouldn't be understood by the callee!*/
 };
-#define MAX_TIMES_TO_TRY_TO_RELEASE 3
+#define MAX_TIMES_TO_TRY_TO_RELEASE 5
 
 
-/**
- * Releases the dialog from the script when recieved some reply to INVITE
- * and dialog is in EARLY or WEIRD situation
- */
 int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2);
 
-/**
- * Releases a dialog either confirmed or early
- * @param callid - 
- * @param reason - reason header to include in messages generated
- * @returns 0 on error , 1 on success, -1 if dialog should be deleted from outside
- */
-int release_call(str callid,str reason);
+int release_call(str callid,int reason_code,str reason_text);
 
-
-
-/**
- * Releases a dialog either confirmed or early
- * the dialog is given with a lock on the hash!
- * @param d - p_dialog to release
- * @param reason - reason header to include in messages generated
- * @returns 0 on error , 1 on success, -1 if dialog should be deleted from outside
- */
- 
-int release_call_p(p_dialog *d,str reason);
-
-
+int release_call_p(p_dialog *d,int reason_code,str reason_text);
 
 
 #endif /*RELEASE_CALL_H_*/

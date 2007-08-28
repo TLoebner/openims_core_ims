@@ -918,7 +918,7 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2)
 	str body, body1, oldport, oldip, newport, newip;
 	str callid, from_tag, to_tag, tmp;
 	int create, port, len, asymmetric, flookup, argc, proxied, real;
-	int oidx, pf, pf1, force, node_idx;
+	int oidx, pf=0, pf1, force, node_idx;
 	char opts[16];
 	char *cp, *cp1;
 	char  *cpend, *next;

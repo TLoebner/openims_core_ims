@@ -75,6 +75,32 @@
 #include "mod.h"
 #include "auth_api.h"
 
+#define strtotime(src,dest) \
+{\
+	int i;\
+	(dest)=0;\
+	for(i=0;i<(src).len;i++)\
+		if ((src).s[i]>='0' && (src).s[i]<='9')\
+			(dest) = (dest)*10 + (src).s[i] -'0';\
+}
+
+#define get_param(src,name,dst) \
+{\
+	int i,j;\
+	(dst).s=0;(dst).len=0;\
+	for(i=0;i<(src).len-(name).len;i++)\
+		if (strncasecmp((src).s+i,(name).s,(name).len)==0 &&\
+			((src).s[i-1]==' ' ||(src).s[i-1]==';'||(src).s[i-1]=='\t')){\
+			j=i+(name).len;\
+			(dst).s = (src).s+j;\
+			(dst).len = 0;\
+			while(j<(src).len && (src).s[j]!=','&& (src).s[j]!=' '&& (src).s[j]!='\t'&& (src).s[j]!=';') \
+				j++;			\
+			(dst).len = j-i-(name).len;\
+			break;\
+		}		\
+}
+
 extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 		*/
 
 /**
@@ -320,13 +346,21 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 		return pu;
 	}
 	
-	pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
-	pu.s = shm_malloc(pu.len+1);
-	sprintf(pu.s,"sip:%.*s@%.*s",
-		msg->parsed_uri.user.len,	
-		msg->parsed_uri.user.s,	
-		msg->parsed_uri.host.len,	
-		msg->parsed_uri.host.s);	
+	if(msg->parsed_uri.type==TEL_URI_T){
+		pu.len = 4 + msg->parsed_uri.user.len ;
+		pu.s = shm_malloc(pu.len+1);
+		sprintf(pu.s,"tel:%.*s",
+			msg->parsed_uri.user.len,
+			msg->parsed_uri.user.s);
+	}else{
+		pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
+		pu.s = shm_malloc(pu.len+1);
+		sprintf(pu.s,"sip:%.*s@%.*s",
+			msg->parsed_uri.user.len,	
+			msg->parsed_uri.user.s,	
+			msg->parsed_uri.host.len,	
+			msg->parsed_uri.host.s);
+	}	
 	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity_from_requri: <%.*s> \n",
 		pu.len,pu.s);	
@@ -1866,6 +1900,115 @@ str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h)
 	return sec_vrf;	
 }
 
+
+
+/**
+ * Looks for the Session-Expires header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the security-expire body
+ */
+str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h)
+{
+	str ses_expr={0,0};
+	struct hdr_field *hdr;
+	*h = 0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_session_expires_body: Error parsing until header Session-Expires: \n");
+		return ses_expr;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len ==15  &&
+			strncasecmp(hdr->name.s,"Session-Expires",15)==0)
+		{
+			*h = hdr;
+			ses_expr = hdr->body;
+			break;
+		}
+		hdr = hdr->next;
+	}
+	if (!hdr){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_get_session_expires_body: Message does not contain Session-Expires header.\n");
+		return ses_expr;
+	}
+
+	return ses_expr;	
+}
+
+
+static str s_refresher = {"refresher=", 10};
+/**
+ * get Session Expires Value .
+ * @param expHdr - parsed Session-Expires Header
+ * @param refresher - param for returning session refresher
+ * @returns Session-Expires value on success or 0
+ */
+time_t cscf_get_session_expires(str expHdr, str *refresher)
+{
+	int i;
+	time_t exptime;
+	int afterExp = 0;
+	str exp;
+	exp.len = 0;
+	exp.s = expHdr.s;
+	for (i=0; i < expHdr.len; i++){
+		if (expHdr.s[i] != ' ' && expHdr.s[i] != '\t'){
+			if (expHdr.s[i] == ';')
+				break;
+			afterExp = 1;
+			exp.len++;
+		}
+		else {
+			if (!afterExp)
+				exp.s++;
+		}
+	}
+	if (exp.len == 0)	
+		return 0;
+
+	strtotime(exp, exptime);
+	get_param(expHdr, s_refresher, *refresher);
+	return exptime;
+}
+
+
+/**
+ * Looks for the Min-SE header and returns its body.
+ * @param msg - the SIP message
+ * @param h - the hdr_field to fill with the result
+ * @returns the min-se body
+ */
+str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h)
+{
+	str min_se={0,0};
+	struct hdr_field *hdr;
+	*h = 0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_min_se: Error parsing until header Min-SE: \n");
+		return min_se;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len ==6  &&
+			strncasecmp(hdr->name.s,"Min-SE",6)==0)
+		{
+			*h = hdr;
+			min_se = hdr->body;
+			break;
+		}
+		hdr = hdr->next;
+	}
+	if (!hdr){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_get_min_se: Message does not contain Min-Se header.\n");
+		return min_se;
+	}
+
+	return min_se;	
+}
+
+
+
 /**
  * Deletes the given header.
  * @param msg - the SIP message
@@ -2573,7 +2716,6 @@ error:
 }
 
 
-static str s_sent_by={"sent-by",7};
 /**
  * Get the sent-by parameter of the last Via header in the message.
  * @param msg - the SIP message to loog into
@@ -2582,21 +2724,14 @@ static str s_sent_by={"sent-by",7};
 str cscf_get_last_via_sent_by(struct sip_msg *msg)
 {
 	struct via_body *via;
-	struct via_param *vp;
-	str sent_by={0,0};
-
+	
 	via = cscf_get_last_via(msg);
 	if (!via){
-		LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via_sent_by(): Message has no via header!\n");
-		return sent_by;
+		str zero={0,0};
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_last_via_sent_by(): Message has no via header!\n");		
+		return zero;
 	}			
-	for(vp = via->param_lst; vp; vp = vp->next)
-		if (vp->name.len == s_sent_by.len &&
-			strncasecmp(vp->name.s,s_sent_by.s,s_sent_by.len)==0){							
-				sent_by = vp->value;
-				return sent_by;
-			}
-	return sent_by;			
+	return via->host;
 }
 
 
@@ -2679,6 +2814,8 @@ int cscf_get_from_uri(struct sip_msg* msg,str *local_uri)
 	return 1;
 	
 }
+
+
 
 /**
  * Get the local uri from the To header.

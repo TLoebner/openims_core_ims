@@ -62,50 +62,65 @@ extern dlg_func_t dialogb;
 extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
 
-static str bye_s={"BYE",3};
-
 
 
 /*only two reasons are possible*/
 /*503 service unavailable and 488 not acceptable here*/
 /*default is 503 because it fits both the timer and QoS related releases*/
-static str default_reason_s={"Reason: 503 Service Unavailable\r\n",33};
-static char *default_excuse="Service Unavailable";
-static int  default_code=503;
-static char *_488_c="Not Acceptable Here";
+static str reason_hdr_s={"Reason: SIP ;cause=",19};
+static str reason_hdr_1={" ;text=\"",8};
+static str reason_hdr_e={"\"\r\n",3};
+
+//static int default_code=503;
+//static str _503_text_s={"Service Unavailable",28};
+static str _488_text_s={"Not Acceptable Here",19};
+
+static str method_CANCEL_s={"CANCEL",6};
+static str method_ACK_s={"ACK",3};
+static str method_BYE_s={"BYE",3};
+
 
 void alter_dialog_route_set(dlg_t *,enum p_dialog_direction);
 int send_request(str ,str ,dlg_t *,transaction_cb , enum p_dialog_direction);
-void previous_response(struct cell *,int ,struct tmcb_params *);
 void confirmed_response(struct cell *,int ,struct tmcb_params *);
 
 
-
+static str content_length_s={"Content-Length: 0\r\n",19};
 /**
  * This functions sends BYE for a confirmed dialog
  * @param d - the p_dialog to end
  * @param reason - the Reason: header to include in the messages
  * @returns 0 on error 1 on success
  */
-
-int release_call_confirmed(p_dialog *d, str reason)
+int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 {
 	enum p_dialog_direction odir;
 	p_dialog *o;
-	str bye_header_s;
+	str r;
+	str hdrs={0,0};	
+	char buf[256];
 	
 	LOG(L_INFO,"DBG:"M_NAME":release_call_confirmed(): Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
-		
-	if (reason.len<0)
-	{
-		bye_header_s.s=reason.s;
-		bye_header_s.len=reason.len;
-	} else {
-		bye_header_s.s=default_reason_s.s;
-		bye_header_s.len=default_reason_s.len;
-	}
 	
+	r.len = snprintf(buf,256,"%.*s%d%.*s%.*s%.*s",
+		reason_hdr_s.len,reason_hdr_s.s,
+		reason_code,
+		reason_hdr_1.len,reason_hdr_1.s,
+		reason_text.len,reason_text.s,
+		reason_hdr_e.len,reason_hdr_e.s);
+	r.s = buf;
+
+	hdrs.len = r.len+content_length_s.len;	
+	hdrs.s = pkg_malloc(hdrs.len);
+	if (!hdrs.s){
+		LOG(L_INFO,"DBG:"M_NAME":release_call_confirmed(): Error allocating %d bytes.\n",hdrs.len);
+		hdrs.len=0;
+		goto error;
+	}
+	hdrs.len=0;	
+	STR_APPEND(hdrs,r);
+	STR_APPEND(hdrs,content_length_s);	
 		
 	/* get the dialog in the other direction to see if something going on there and mark as in releasing */
 	switch (d->direction){
@@ -127,7 +142,7 @@ int release_call_confirmed(p_dialog *d, str reason)
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
 		LOG(L_ERR,"ERR:"M_NAME":release_call_confirmed(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
 		del_p_dialog(d);
-		return 0;
+		goto error;
 	}
 	if (d->is_releasing==1) {	
 		/*Before generating a request, we have to generate
@@ -138,12 +153,17 @@ int release_call_confirmed(p_dialog *d, str reason)
 		
 		/*first generate the bye for called user*/
 		/*then generate the bye for the calling user*/
-		send_request(bye_s,bye_header_s,d->dialog_c,confirmed_response,d->direction);
-		send_request(bye_s,bye_header_s,d->dialog_s,confirmed_response,d->direction);
+		send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
+		send_request(method_BYE_s,hdrs,d->dialog_s,confirmed_response,d->direction);
 		
-		/*the dialog is droped by the callback-function when recieves the two replies */
+		/*the dialog is droped by the callback-function when receives the two replies */
 	}	 
-	return 1;	
+
+	if (hdrs.s) pkg_free(hdrs.s);
+	return 1;
+error:
+	if (hdrs.s) pkg_free(hdrs.s);
+	return 0;	
 }
 
 
@@ -181,10 +201,8 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
 		return;
 	}
 	
-	if (ps->code>=200 && ps->code<=300)
-	{
-		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE)
-		{
+	if (ps->code>=200){
+		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
 			del_p_dialog(d);
 			d_unlock(hash);			 
@@ -192,16 +210,8 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
 			hash=d->hash;
 			d->state=DLG_STATE_TERMINATED_ONE_SIDE;
 			d_unlock(hash);
-		}
-		
+		}		
 	} 
-	else if(ps->code>300)
-	{
-		LOG(L_INFO,"INFO:"M_NAME":confirmed_response(): Received a %d response to BYE for a call release. Dialog is dropped.\n",ps->code);
-		hash=d->hash;
-		del_p_dialog(d);
-		d_unlock(hash);
-	}	
 }
 
 
@@ -213,70 +223,49 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
  * @param d - p_dialog of the call
  * @situation - flag to distinguish between two situations
  * @return 0 on error 1 on success
- * This function shouldn't be called directly!
+ * 
+ * \note This function shouldn't be called directly!
  * use release_call_early or release_call_early200 instead 
-*/
-/*
- * This function is full of tricks to fake states and
+ * 
+ * \note This function is full of tricks to fake states and
  * to decieve the transaction module so that it lets us
  * end a call in weird state
  * 
- * any move in the order of functions to clarify the structure
+ * \note any move in the order of functions to clarify the structure
  * can lead to a crash in P-CSCF so watch out!
- * */
-int release_call_previous(p_dialog *d,enum release_call_situation situation,str reason)
+ */
+int release_call_previous(p_dialog *d,enum release_call_situation situation,int reason_code,str reason_text)
 {
 	struct cell* t;
 	p_dialog *o;
 	enum p_dialog_direction odir;
-	str previous_header_s;
 	int i;
-	int code=0;
-	char *excuse;
-	
-	if (reason.len>0)
-	{
-		previous_header_s.s=reason.s;
-		previous_header_s.len=reason.len;
-		
-		/*a bit too complicated only to find out if there is
-		 * a 488 instead of a 503 .. others i don't accept
-		 * as possible reasons*/
-		for (i=0;i< (reason.len-2); i++)
-		{
-			if (reason.s[i]=='4' && reason.s[i+1]=='8' && reason.s[i+2]=='8')
-			{
-			code=488;
-			excuse=_488_c;
-			break;
-			}
-		}
-		if (!code)
-		{
-			code=default_code;
-			excuse=default_excuse;
-		}
-	} else 
-	{
-		previous_header_s.s=default_reason_s.s;
-		previous_header_s.len=default_reason_s.len;
-		code=default_code;
-		excuse=default_excuse;
-	}
-		
-	odir= (d->direction==(DLG_MOBILE_ORIGINATING? DLG_MOBILE_TERMINATING: DLG_MOBILE_ORIGINATING));
-	
-	str method;
-	
-	method.s=pkg_malloc(sizeof(char)*8);
-	method.len=6;
-	memcpy(method.s,"CANCEL",7);
+	str r;
+	str hdrs={0,0};	
+	char buf[256];
 	
 	LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
-					
 	
-	
+	r.len = snprintf(buf,256,"%.*s%d%.*s%.*s%.*s",
+		reason_hdr_s.len,reason_hdr_s.s,
+		reason_code,
+		reason_hdr_1.len,reason_hdr_1.s,
+		reason_text.len,reason_text.s,
+		reason_hdr_e.len,reason_hdr_e.s);
+	r.s = buf;
+
+	hdrs.len = r.len+content_length_s.len;	
+	hdrs.s = pkg_malloc(hdrs.len);
+	if (!hdrs.s){
+		LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Error allocating %d bytes.\n",hdrs.len);
+		hdrs.len=0;
+		goto error;
+	}
+	hdrs.len=0;
+	STR_APPEND(hdrs,r);
+	STR_APPEND(hdrs,content_length_s);	
+													
 	/* get the dialog in the other direction to see if something going on there and mark as in releasing */
 	switch (d->direction){
 		case DLG_MOBILE_ORIGINATING:
@@ -297,30 +286,23 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,str 
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
 		LOG(L_ERR,"ERR:"M_NAME":release_call_previous(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
 		del_p_dialog(d);
-		return 0;
+		goto error;
 	}
 	
 	alter_dialog_route_set(d->dialog_c,d->direction);
 	
 	d->state=DLG_STATE_TERMINATED_ONE_SIDE;
-	/*this is just a trick to use the same callback function*/
-	
+	/*this is just a trick to use the same callback function*/	
 	
 	/*trick or treat!*/
 	d->dialog_c->state=DLG_CONFIRMED;
 	
-	if (situation == RELEASE_CALL_WEIRD)
-	{
-		memcpy(method.s,"ACK",3);
-		method.len=3;
-		send_request(method,previous_header_s,d->dialog_c,previous_response,0);
-		memcpy(method.s,"BYE",3);
-		method.len=3;		
-		send_request(method,previous_header_s,d->dialog_c,confirmed_response,d->direction);
+	if (situation == RELEASE_CALL_WEIRD){
+		send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
+		send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
 		//d->dialog_c->state=DLG_EARLY;
-	} else /*(situation == RELEASE_CALL_EARLY)*/
-	{
-		send_request(method,previous_header_s,d->dialog_c,confirmed_response,d->direction);
+	} else {/*(situation == RELEASE_CALL_EARLY)*/		
+		send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
 		//d->dialog_c->state=DLG_EARLY;
 	}
 
@@ -329,8 +311,7 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,str 
 	 * and very tricky too*/
 	t=tmb.t_gett();
 	
-	if (t && t->uas.request)
-	{
+	if (t && t->uas.request) {
 		/*first trick: i really want to get this reply sent even though we are onreply*/
 		*tmb.route_mode=MODE_ONFAILURE;
 		
@@ -339,13 +320,11 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,str 
 		 /*if i cared about sip forking then probably i would not do that and let the 
 		  * CANCEL go to the S-CSCF (reread specifications needed)*/
 		for (i=0; i< t->nr_of_outgoings; i++)
-		{
 			t->uac[i].last_received=99;
-		}
 		/*t->uas.status=100;*/ /*no one cares about this*/
 		/*now its safe to do this*/
 		
-		tmb.t_reply(t->uas.request,code,excuse);
+		tmb.t_reply(t->uas.request,reason_code,reason_text.s);
 		*tmb.route_mode=MODE_ONREPLY;
 		tmb.t_release(t->uas.request);
 
@@ -353,31 +332,26 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,str 
 		 * probably there is a more logical way to do this.. but since i really
 		 * want this transaction to end .. whats the point?*/
 	}
-	pkg_free(method.s);
 	
 	return 1;
-	
-}
-/**
- * Callback function that doesn't do anything (for ACK or CANCEL)
- */
-void previous_response(struct cell *t,int type,struct tmcb_params *cbp)
-{
+error:
+	if (hdrs.s) pkg_free(hdrs.s);
+	return 0;	
 }
 
 /*Send cancel and 503 or 488 */
-int release_call_early(p_dialog *d,str reason)
+int release_call_early(p_dialog *d,int reason_code,str reason_text)
 {
 	/*CANCEL will be badly routed because the response hasn't being processed
 	 * it will be sent to I-CSCF who will relay to S-CSCF and from there to term@P-CSCF*/
-	return release_call_previous(d,RELEASE_CALL_EARLY,reason);
-
+	return release_call_previous(d,RELEASE_CALL_EARLY,reason_code,reason_text);
 }
 /*send ACK,BYE and 503 or 488*/
-int release_call_early200(p_dialog *d,str reason)
+int release_call_early200(p_dialog *d,int reason_code,str reason_text)
 {
-	return release_call_previous(d,RELEASE_CALL_WEIRD,reason);
+	return release_call_previous(d,RELEASE_CALL_WEIRD,reason_code,reason_text);
 }
+
 /**
  * Releases a dialog either confirmed or early
  * the dialog is given with a lock on the hash!
@@ -393,16 +367,12 @@ int release_call_early200(p_dialog *d,str reason)
   * and they are already in state DLG_STATE_TERMINATED_ONE_SIDE.. it doesn't really
   * matter because both do the same at that point!
   */
-int release_call_p(p_dialog *d,str reason)
-{
-		
+int release_call_p(p_dialog *d,int reason_code,str reason_text)
+{		
 	if (d->state>=DLG_STATE_CONFIRMED)
-	{			
-			return(release_call_confirmed(d,reason));
-	} else  {
-			return(release_call_early(d,reason));
-	}
- 
+			return(release_call_confirmed(d,reason_code,reason_text));
+	 else  
+			return(release_call_early(d,reason_code,reason_text)); 
 }
 
 
@@ -413,7 +383,7 @@ int release_call_p(p_dialog *d,str reason)
  * @param reason - the Reason header to include in messages
  * @returns 0 on error, 1 on success  
  */ 
-int release_call(str callid,str reason)
+int release_call(str callid,int reason_code,str reason_text)
 {
 	p_dialog *d=0;
 	unsigned int hash;
@@ -422,13 +392,13 @@ int release_call(str callid,str reason)
 	d = get_p_dialog_dir(callid,DLG_MOBILE_ORIGINATING);
 	if (d) {				
 		hash = d->hash;
-		if (release_call_p(d,reason)>0) res = 1;		
+		if (release_call_p(d,reason_code,reason_text)>0) res = 1;		
 		goto done;		
 	}
 	d = get_p_dialog_dir(callid,DLG_MOBILE_TERMINATING);
 	if (d) {				
 		hash = d->hash;
-		if (release_call_p(d,reason)>0) res = 1;		
+		if (release_call_p(d,reason_code,reason_text)>0) res = 1;		
 		goto done;
 	} 
 	
@@ -461,11 +431,12 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	struct hdr_field *h1;
 	str reason={NULL,0};
 	
-	if (str2)
-	{
+	if (str2) {
 		reason.s=str2;
 		reason.len=strlen(str2);
-	} 
+	} else
+		reason = _488_text_s;
+		
 	
 	dir= (str1[0]=='o' || str1[0]=='O' || str1[0]=='0')? DLG_MOBILE_ORIGINATING : DLG_MOBILE_TERMINATING;
 	
@@ -479,12 +450,12 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	if (is_p_dialog_dir(callid,dir)) {
 		d=get_p_dialog_dir(callid,dir);
 		if (msg->first_line.u.reply.statuscode > 199)
-		{	
-			release_call_previous(d,RELEASE_CALL_WEIRD,reason);
+		{
+			release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
 			d_unlock(d->hash);
 			return CSCF_RETURN_TRUE;
 		} else {
-			release_call_previous(d,RELEASE_CALL_EARLY,reason);
+			release_call_previous(d,RELEASE_CALL_EARLY,488,reason);
 			d_unlock(d->hash);
 			return CSCF_RETURN_TRUE;
 		}
@@ -571,5 +542,4 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir)
 					
 	}	
 }		
-
 
