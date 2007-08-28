@@ -86,6 +86,7 @@
 #include "p_persistency.h"
 #include "release_call.h"
 
+
 #include "offline_charging.h"                       
 #include "policy_control.h"
 
@@ -124,11 +125,14 @@ int registrar_hash_size=1024;				/**< the size of the hash table for registrar		
 
 char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/pcscf/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
 int pcscf_subscribe_retries = 1;			/**< times to retry subscribe to reg on failure 	*/
+int pcscf_release7 = 0; 					/**< weather to use Gq or Rx >**/
 
 int subscriptions_hash_size=1024;			/**< the size of the hash table for subscriptions	*/
 
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
 int pcscf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
+
+int pcscf_min_se=90;						/**< Minimum session-expires accepted value		*/
 
 int pcscf_nat_enable = 1; 					/**< whether to enable NAT							*/
 int pcscf_nat_ping = 1; 					/**< whether to ping anything 						*/
@@ -238,6 +242,8 @@ str pdf_peer;
  * - P_follows_dialog_routes() - checks if a subsequent request follows the saved dialog routes
  * - P_enforce_dialog_routes() - enforces the dialog routes
  * - P_record_route() - records route
+ * - P_check_session_expires() - Checks if Session-Expires value is over Min_SE local policy
+ * - P_422_session_expires() - Return a 422 response with Min_SE set to local policy 
  * <p>
  * - P_assert_called_identity() - asserts the called identity by adding the P-Asserted-Identity header
  * <p>
@@ -288,8 +294,10 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_drop_dialog",				P_drop_dialog, 				1, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_follows_dialog_routes",		P_follows_dialog_routes, 	1, 0, REQUEST_ROUTE},
 	{"P_enforce_dialog_routes",		P_enforce_dialog_routes, 	1, 0, REQUEST_ROUTE},
-	{"P_record_route",				P_record_route,				1, 0, REQUEST_ROUTE},	
-	
+	{"P_record_route",				P_record_route,				1, 0, REQUEST_ROUTE},		
+	{"P_check_session_expires",		P_check_session_expires, 	0, 0, REQUEST_ROUTE},
+	{"P_422_session_expires",		P_422_session_expires,	 	0, 0, REQUEST_ROUTE},
+
 	{"P_assert_called_identity",	P_assert_called_identity, 	0, 0, ONREPLY_ROUTE},
 	
 	{"P_trans_in_processing",		P_trans_in_processing, 		0, 0, REQUEST_ROUTE},
@@ -308,10 +316,12 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_follows_via_list",			P_follows_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 	0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 
-	/* For Gq */
+	/* For Gq or Rx*/
 	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
 	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE},
 	
+	{"P_release_call_onreply",		P_release_call_onreply,		1,0,  ONREPLY_ROUTE},
+
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -325,6 +335,7 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - dialogs_hash_size - size of the dialog hash table
  * - dialogs_expiration_time - time-out for dialog expiration
+ * - min_se - default value for Min_SE header
  * <p>
  * - use_ipsec - if to enable the use of IPSec
  * - ipsec_host - IP of the IPSec host
@@ -363,17 +374,18 @@ static cmd_export_t pcscf_cmds[]={
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
 
-	{"registrar_hash_size",		INT_PARAM, &registrar_hash_size},
-	{"reginfo_dtd", 			STR_PARAM, &pcscf_reginfo_dtd},
-	{"subscriptions_hash_size",	INT_PARAM, &subscriptions_hash_size},
+	{"registrar_hash_size",		INT_PARAM, 		&registrar_hash_size},
+	{"reginfo_dtd", 			STR_PARAM, 		&pcscf_reginfo_dtd},
+	{"subscriptions_hash_size",	INT_PARAM,		&subscriptions_hash_size},
 
-	{"dialogs_hash_size",		INT_PARAM, &pcscf_dialogs_hash_size},
-	{"dialogs_expiration_time",	INT_PARAM, &pcscf_dialogs_expiration_time},
+	{"dialogs_hash_size",		INT_PARAM,		&pcscf_dialogs_hash_size},
+	{"dialogs_expiration_time",	INT_PARAM,		&pcscf_dialogs_expiration_time},
+	{"min_se",		 			INT_PARAM, 		&pcscf_min_se},
 	
-	{"use_ipsec", 				INT_PARAM, &pcscf_use_ipsec},
-	{"ipsec_host", 				STR_PARAM, &pcscf_ipsec_host},	
-	{"ipsec_port_c",			INT_PARAM, &pcscf_ipsec_port_c},
-	{"ipsec_port_s", 			INT_PARAM, &pcscf_ipsec_port_s},
+	{"use_ipsec", 				INT_PARAM,		&pcscf_use_ipsec},
+	{"ipsec_host", 				STR_PARAM,		&pcscf_ipsec_host},	
+	{"ipsec_port_c",			INT_PARAM,		&pcscf_ipsec_port_c},
+	{"ipsec_port_s", 			INT_PARAM,		&pcscf_ipsec_port_s},
 	
 	
 	{"ipsec_P_Inc_Req", 		STR_PARAM,		&pcscf_ipsec_P_Inc_Req},
@@ -394,7 +406,7 @@ static param_export_t pcscf_params[]={
 	{"rtpproxy_tout",         	PARAM_INT,		&rtpproxy_tout         },
 	
 	{"subscribe_retries",		INT_PARAM,		&pcscf_subscribe_retries},
-	
+	{"release7",				INT_PARAM,		&pcscf_release7},
 	{"icid_value_prefix",		STR_PARAM,		&cscf_icid_value_prefix},
 	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM,		&cscf_orig_ioi},
@@ -413,7 +425,7 @@ static param_export_t pcscf_params[]={
     {"cflag_ietf",				INT_PARAM,      &cf_ietf},
     {"cflag_3gpp",				INT_PARAM,		&cf_3gpp},
     
-    /* address of pdf */
+    /* address of pdf or pcrf if  "release7" is set to 1 */
     {"pdf_peer",				STR_PARAM,		&pcscf_pdf_peer},
 	
 	{0,0,0} 
@@ -762,6 +774,7 @@ static int mod_init(void)
 	if (pcscf_nat_enable && rtpproxy_enable) 
 		if (!rtpproxy_init()) goto error;
 
+	
 
 	return 0;
 error:
@@ -793,6 +806,8 @@ static int mod_child_init(int rank)
 	/* rtpproxy child init */
 	if (pcscf_nat_enable && rtpproxy_enable) 
 		if (!rtpproxy_child_init(rank)) return -1;
+		
+	/*here register callback function for the Rx interface*/
 
 	return 0;
 }

@@ -64,8 +64,11 @@
 #define IMS_Cx	16777216	/**< Cx interface between I/S-CSCF and HSS 		*/
 #define IMS_Dx	16777216	/**< Cx interface between I/S-CSCF and SLF 		*/
 #define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
+#define IMS_e2	16777231	/**< e2 interface between CLF and AF	 		*/
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
-#define IMS_Rf  	   3    /**< Rf interface between P/I/S-CSCF and CDF, 
+#define IMS_Rx  16777236	/**< Rx interface between P-CSCF and PCRF 		*/
+#define IMS_Gx	16777224	/**< Gx interface between PCRF and PCEF 		*/
+#define IMS_Rf  16777223    /**< Rf interface between P/I/S-CSCF and CDF, 
 								according to TS32.299 R7    */ 
 
 /* Vendor ID	*/
@@ -92,6 +95,9 @@
 #define IMS_STA		275		/**< Session Termination 		Answer	*/
 #define IMS_ASR		274		/**< Abort-Session-Request		Request */
 #define IMS_ASA		274		/**< Abort-Session-Request		Answer	*/
+/* The Gx Interface */
+#define IMS_CCR		272
+#define IMS_CCA		272
 /*		The Cx/Dx Interface 			*/
 #define IMS_UAR		300		/**< User-Authorization			Request	*/
 #define IMS_UAA		300		/**< User-Authorization			Answer	*/
@@ -181,7 +187,7 @@ enum {
 	AVP_IMS_Reason_Info									= 617,
 	AVP_IMS_Charging_Information						= 618,
 	AVP_IMS_Primary_Event_Charging_Function_Name		= 619,
-	AVP_IMS_Secodary_Event_Charging_Function_Name		= 620,
+	AVP_IMS_Secondary_Event_Charging_Function_Name		= 620,
 	AVP_IMS_Primary_Charging_Collection_Function_Name	= 621,
 	AVP_IMS_Secondary_Charging_Collection_Function_Name	= 622,
 	AVP_IMS_User_Authorization_Type						= 623,
@@ -258,11 +264,23 @@ enum {
 	AVP_IMS_Message_Body								= 889,
 	AVP_IMS_Service_Specific_Info						= 1249,
 	AVP_IMS_Requested_Party_Address						= 1251,
-	AVP_IMS_Access_Network_Information					= 1263
+	AVP_IMS_Access_Network_Information					= 1263,
+/** 1000   from TS29.212 */
+ 	AVP_IMS_Bearer_Identifier							= 1020,
+ 	AVP_IMS_Charging_Rule_Install						= 1001,
+ 	AVP_IMS_Charging_Rule_Remove						= 1002,
+ 	AVP_IMS_Charging_Rule_Definition					= 1003,
+ 	AVP_IMS_Charging_Rule_Base_Name						= 1004,
+ 	AVP_IMS_Charging_Rule_Name							= 1005,
+ 	AVP_IMS_Charging_Rule_Report						= 1018
 };
 
 /** ETSI AVP Codes */ 
 enum {
+	
+	/*added from ETSI 283 034 */
+
+	
 	AVP_Line_Identifier									= 500,
 	AVP_ETSI_SIP_Authenticate 							= 501, 
 	AVP_ETSI_SIP_Authorization 							= 502, 
@@ -501,5 +519,47 @@ enum {
 	AVP_IMS_PROXY_ROLE									= 2,
 	AVP_IMS_B2BUA_ROLE									= 3
 };						
+
+
+
+typedef enum
+{
+   Async									 = 0,
+   Sync 										 = 1, 
+   ISDN_Sync 								 = 2, 
+   ISDN_Async_V120 					 = 3,
+   ISDN_Async_V110					 = 4,
+   Virtual									 = 5, 
+   PIAFS									 	 = 6, 	
+   HDLC_Clear_Channel				 = 7, 
+   X_25										 = 8, 
+   X_75										 = 9, 
+   G_3_Fax									 =10,
+   Symmetric_DSL						 =11, 	
+   ADSL										 =12,
+   ADSL_DMT								 =13, 
+   IDSL										 =14, 
+   Ethernet									 =15, 
+   xDSL										 =16, 
+   Cable										 =17, 
+   Wireless_Other						 =18,
+   Wireless_IEEE_802_11				 =19,
+   Token_Ring								 =20, 
+   FDDI										 =21,
+   Wireless_CDMA2000				     =22,
+   Wireless_UMTS						 =23,
+   Wireless_1X_EV						 =24,
+   IAPP  									 =25
+}	nas_port_type;						
+
+/*
+access-info for each access type  
+"ADSL" / "ADSL2" / "ADSL2+" / "RADSL" / "SDSL" / "HDSL" / "HDSL2" / "G.SHDSL" / "VDSL" / "IDSL"  -> dsl-location
+"3GPP-GERAN" -> cgi-3gpp
+"3GPP-UTRAN-FDD" / "3GPP-UTRAN-TDD" -> utran-cell-id-3gpp
+"3GPP2-1X" / "3GPP2-1X-HRPD" -> ci-3gpp2
+"IEEE-802.11" / "IEEE-802.11a" / "IEEE-802.11b" / "IEEE-802.11g" -> i-wlan-node-id = MAC
+"DOCSIS" -> NULL
+*/
 
 #endif /* __DIAMETER_IMS_H */

@@ -1,5 +1,5 @@
 /**
- * $Id: gq.c,v 1.10 2007/03/14 16:18:28 chens Exp $
+ * $Id: gq.c,v 1.10 2007/03/14 16:18:28 Alberto Exp $
  *   
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -44,9 +44,10 @@
  */
 #include "gq.h"
 
-#include "../tm/tm_load.h"
 #include "gq_avp.h"
 #include "sip.h"
+#include "../tm/tm_load.h"
+
 
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
@@ -55,10 +56,9 @@ extern struct tm_binds tmb;
 extern struct cdp_binds cdpb;
 
 /**< FQDN of PDF, defined in mod.c */
-extern str pdf_peer;	
+extern str pdf_peer; /*its the PCRF in this case*/
 
-/** get destination realm from pdf_peer */
-inline str get_destination_realm(str s)
+inline str rx_get_destination_realm(str s)
 {
 	str p;
 	p.s = index(s.s, '.')+1;
@@ -66,11 +66,11 @@ inline str get_destination_realm(str s)
 	return p;
 }
 
-
-
-str gq_modify_call_id(str call_id, int tag)
+/*Generate a uniq session id*/
+/*Has to be freed !!!!!*/
+str rx_modify_call_id(str call_id, int tag)
 {
-	str* t;
+	str *t;
 	t = shm_malloc(sizeof(str));
 	t->len = call_id.len + 5;
 	t->s = shm_malloc(sizeof(char) * t->len);
@@ -81,7 +81,14 @@ str gq_modify_call_id(str call_id, int tag)
 	else 
 		strcat(t->s, ";term");
 	return *t;
+	
 }
+
+
+
+
+
+
 
 /**
  * @param req - SIP request  
@@ -90,7 +97,7 @@ str gq_modify_call_id(str call_id, int tag)
  * 
  * @returns AAA message or NULL on error  
  */
-AAAMessage *Gq_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
+AAAMessage *Rx_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 {
 	AAAMessage* dia_aar = NULL;
 	AAAMessage* dia_aaa = shm_malloc(sizeof(AAAMessage));
@@ -100,20 +107,33 @@ AAAMessage *Gq_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	int i=0;
 	
 	if (tag) 
-		LOG(L_INFO, "INF:"M_NAME": Gq_AAR: terminating side\n");
+		LOG(L_INFO, "INF:"M_NAME": Rx_AAR: terminating side\n");
 	else 
-		LOG(L_INFO, "INF:"M_NAME": Gq_AAR: originating side\n");
+		LOG(L_INFO, "INF:"M_NAME": Rx_AAR: originating side\n");
+	
+	
+	
 	
 	/* Create an authorization session */
+	
+	
+	
+	/*Is this the function to be called when there is a reINVITE? then shouldnt we first
+	 * try to see if there is an auth session already created for this?
+	 * 
+	 * open questions!!!*/
+	
 	str call_id = cscf_get_call_id(req, 0);
-	str session_id=gq_modify_call_id(call_id, tag);
+	str session_id=rx_modify_call_id(call_id, tag);
+	/*LOG(L_INFO,"INF:"M_NAME": %.*s\n",session_id.len,session_id.s);*/
 	AAAAuthSession* auth = cdpb.AAACreateAuthSession(pdf_peer, 
 						session_id, SESSION_STATE_MAINTAINED);
-	shm_free(session_id.s); 
+	
+	shm_free(session_id.s);
 	if (!auth) goto error;												 
 
 	/* Create an AAR prototype */
-	dia_aar = cdpb.AAACreateRequest(IMS_Gq, IMS_AAR, Flag_Proxyable, auth->sid);
+	dia_aar = cdpb.AAACreateRequest(IMS_Rx, IMS_AAR, Flag_Proxyable, auth->sid);
 	if (!dia_aar) goto error;
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
@@ -121,16 +141,16 @@ AAAMessage *Gq_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	/* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
 	
 	/* Add Destination-Realm AVP */
-	str realm = get_destination_realm(pdf_peer);
+	str realm = rx_get_destination_realm(pdf_peer);
 	if (!Gq_add_destination_realm(dia_aar, realm)) goto error;
 	
 	/* Add Auth-Application-Id AVP */
-	if (!Gq_add_auth_application_id(dia_aar, IMS_Gq)) goto error;
+	if (!Gq_add_auth_application_id(dia_aar, IMS_Rx)) goto error;
 	
 	/*---------- 2. Create and add Media-Component-Description AVP ----------*/
 	
 	/*	
-	 *  See 3GPP TS32.209 V6.6.0:
+	 *  See 3GPP TS29214 V7.1.0:
 	 * 
 	 *  <Media-Component-Description> = {Media-Component-Number}
 	 * 								 	[Media-Sub-Component]
@@ -138,18 +158,21 @@ AAAMessage *Gq_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	 * 								 	[Media-Type]
 	 * 								 	[Max-Requested-Bandwidth-UL]
 	 * 									[Max-Requested-Bandwidth-DL]
+	 * 									[Flow-Status]
+	 * 									[Reservation-Priority] (Not used yet)
 	 * 								 	[RS-Bandwidth]
 	 * 									[RR-Bandwidth]
+	 * 									*[Codec-Data]
 	 */
 
 	if(!extract_body(req,&sdpbodyinvite)) 
 	{
-		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","gq_aar");
+		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
 		goto error;
 	}
 	if(!extract_body(res,&sdpbody200)) 
 	{
-		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","gq_aar");
+		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
 		goto error;
 	}
 	/*Create and add 1 media-component-description AVP for each
@@ -172,31 +195,37 @@ AAAMessage *Gq_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 		mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 	}
 	
-
+	/*
+	to be added here
+		
+		Rx_add_specific_action(dia_aar,ACTION);
+		Rx_add_subscription_ID(dia_aar,IMSI);
+		Rx_add_reservation_priority(dia_aar,TISPANthing);
+		Rx_add_Framed_IP_Address(dia_aar,Mariusthing);
+		Rx_add_Framed_IPv6_Prefix(dia_aar,Mariusthing);
+		Rx_add_Service_URN(dia_aar,emergencysession);
 	
-	/*---------- 3. Send AAR to PDF ----------*/
+	*/
+	
+	/*---------- 3. Send AAR to PCRF ----------*/
 	auth->sm_process(auth, AUTH_EV_SEND_REQ, dia_aar, dia_aaa);
 
 	//cdpb.AAAPrintMessage(dia_aaa);
 
+	
 	return dia_aaa;
 
 error:
+	
 	return NULL;
 
 
 }
 
-
-
-/**
- * @param res - SIP response
- * 
- */
-int Gq_AAA(AAAMessage *dia_msg)
+int Rx_AAA(AAAMessage *dia_msg)
 {
 	int rc;
-	LOG(L_INFO, "Ga_AAA\n");
+	
 	Gq_get_result_code(dia_msg,&rc);
 	cdpb.AAAFreeMessage(&dia_msg);
 	return rc;
@@ -210,32 +239,33 @@ int Gq_AAA(AAAMessage *dia_msg)
  * 
  * @returns AAA message or NULL on error
  */
-AAAMessage* Gq_STR(struct sip_msg* msg, int tag)
+AAAMessage* Rx_STR(struct sip_msg* msg, int tag)
 {
 	AAAMessage* dia_str = NULL;
 	AAAMessage* dia_sta = NULL;
 	
 	/** get Diameter session based on sip call_id */
 	str call_id = cscf_get_call_id(msg, 0);
-	str sessionid=gq_modify_call_id(call_id, tag);
-	AAAAuthSession* auth = cdpb.AAAGetAuthSession(sessionid);
-	shm_free(sessionid.s);
+	str session_id = rx_modify_call_id(call_id, tag);
+	AAAAuthSession* auth = cdpb.AAAGetAuthSession(session_id);
+	shm_free(session_id.s);
 	if (!auth) goto error;
 	
 	/* Create a STR prototype */
-	//LOG(L_INFO, "%.*s\n", auth.sid->len, auth.sid->s);
-	dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, auth->sid);
+	//LOG(L_INFO,"%.*s\n", auth.sid->len, auth.sid->s);
+	dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, auth->sid);
 	
 	/* Add Destination-Realm AVP */
-	str realm = get_destination_realm(pdf_peer);
+	str realm = rx_get_destination_realm(pdf_peer);
 	if (!Gq_add_destination_realm(dia_str, realm)) goto error;
 	
 	/* Add Auth-Application-Id AVP */
-	if (!Gq_add_auth_application_id(dia_str, IMS_Gq)) goto error;
+	if (!Gq_add_auth_application_id(dia_str, IMS_Rx)) goto error;
 
 	auth->sm_process(auth, AUTH_EV_STR, dia_str, dia_sta);
 	
 	return dia_sta;
 error:
+	
 	return NULL;
 }
