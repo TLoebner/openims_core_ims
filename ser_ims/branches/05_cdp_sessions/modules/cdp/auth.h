@@ -112,6 +112,6 @@ int auth_session_init();
 /** exported modul methods */
 AAAAuthSession* AAACreateAuthSession(str peer, str call_id, int session_state);
 AAAAuthSession* AAAGetAuthSession(str call_id); 
-//void AAADropAuthSession(AAAAuthSession* auth);
+void AAADropAuthSession(AAAAuthSession* auth);
 
 #endif /*__DIAMTER_AUTH_SESSION_H*/
