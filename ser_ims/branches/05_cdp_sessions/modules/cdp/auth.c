@@ -46,6 +46,7 @@
  
 #include "diameter_api.h"
 
+
 // TODO AAAAuthSession should be saved in a hash table
 auth_session_list_t* auth_list;
 
@@ -53,15 +54,6 @@ auth_session_list_t* auth_list;
 gen_lock_t* auth_list_lock;		/**< lock for the auth_list */
 
 
-// auxiliary function to print str 
-void print(str *s)
-{
-	char* t = malloc(sizeof(char)*(s->len+1));
-	memset(t, '\0', s->len+1);
-	strncpy(t, s->s, s->len);
-	LOG(L_INFO, "string value: %s\n", t);
-	free(t);
-} 
 
 
 int auth_session_init()
@@ -138,6 +130,10 @@ void remove_auth_session(AAAAuthSession* p)
 
 void AAADropAuthSession(AAAAuthSession* auth)
 {
+	/*Maybe there is no authlist yet.. so lets create one*/
+	if (auth_list==NULL)
+			return;
+		
 	remove_auth_session(auth);
 	shm_free(auth->st);
 	AAADropSession(auth->sid);
@@ -290,24 +286,36 @@ void auth_sm_process_stateful(AAAAuthSession* auth, int ev,
 AAAAuthSession* AAACreateAuthSession(str peer, str call_id, int state)
 {
 	AAAAuthSession* auth = NULL;
-	 
-	LOG(L_INFO, "INF: AAACreateAuthSession\n");
+	/*Maybe there is no authlist yet.. so lets create one*/
+	if (auth_list==NULL)
+		auth_session_init();
+	 LOG(L_INFO,"INF: AAACreateAuthSession\n");
+	// first check if the session already exists
 	auth = get_auth_session(call_id);
-	if(auth) goto error;
-	
-	auth = shm_malloc(sizeof(AAAAuthSession) - 2); // if I don't plus 1, there is a memory error
-	
+	 
+	if(auth!=NULL) return auth;
+	// P-CSCF breaks randomly on this line 
+	auth = shm_malloc(sizeof(AAAAuthSession));
+	 
 	auth->st = shm_malloc(sizeof(auth_state));
-	*auth->st = AUTH_ST_IDLE;
-
+	*(auth->st) = AUTH_ST_IDLE;
+	 
 	auth->fqdn = shm_malloc(sizeof(str));
 	auth->fqdn->len = peer.len;
 	auth->fqdn->s = peer.s;
 
 	auth->call_id = shm_malloc(sizeof(str));
 	auth->call_id->len = call_id.len;
-	auth->call_id->s = call_id.s;
-	print(auth->call_id);
+	if (call_id.len)
+	{
+		auth->call_id->s=shm_malloc(call_id.len);
+		if (!auth->call_id->s)
+		{
+			LOG(L_ERR,"ERR: unable to allocate memory\n");
+		}	
+	}
+	strncpy(auth->call_id->s,call_id.s,call_id.len);
+	//print(auth->call_id);
 	
 	auth->sid = shm_malloc(sizeof(str));
 	auth->sid->len = 0;
@@ -330,7 +338,7 @@ AAAAuthSession* AAACreateAuthSession(str peer, str call_id, int state)
 	return auth;
 
 error:
-	if (auth) 
+	if (auth!=NULL) 
 		LOG(L_ERR, "ERR: AAACreateAuthSession: AAAAuthSession exists\n");
 	else 	
 		LOG(L_ERR, "ERR: AAACreateAuthSession: Error on new AAAAuthSession \
@@ -349,8 +357,10 @@ error:
 AAAAuthSession* AAAGetAuthSession(str call_id) 
 {
 	AAAAuthSession* auth;
-	
-	LOG(L_INFO, "INF: AAAGetAuthSession\n");
+	/*Maybe there is no authlist yet.. so lets create one*/
+	if (auth_list==NULL)
+		auth_session_init();
+			LOG(L_INFO, "INF: AAAGetAuthSession\n");
 	auth = get_auth_session(call_id);
 	if (!auth) LOG(L_ERR, "ERR: AAAGetAuthSession: AAAAuthSession does not exist\n");
 	
