@@ -74,8 +74,7 @@ enum p_dialog_state {
 	DLG_STATE_EARLY=2,
 	DLG_STATE_CONFIRMED=3,
 	DLG_STATE_TERMINATED_ONE_SIDE=4,
-	DLG_STATE_TERMINATED=5,
-	
+	DLG_STATE_TERMINATED=5	
 };
 
 enum p_dialog_direction {
@@ -83,13 +82,6 @@ enum p_dialog_direction {
 	DLG_MOBILE_TERMINATING=1,
 	DLG_MOBILE_UNKNOWN=2
 };
-
-enum p_dialog_release {
-	DLG_RELEASE_CLEAR=0,
-	DLG_RELEASE_PROCESSING=1,
-	DLG_RELEASE_PROCESSING_PEER=2
-};
-
 
 typedef struct _p_dialog {
 	unsigned int hash;
@@ -109,14 +101,16 @@ typedef struct _p_dialog {
 	int last_cseq;
 	enum p_dialog_state state;
 	time_t expires;
+	time_t lr_session_expires;  		/**< last remember request - session-expires header			*/
+	str refresher;						/**< session refresher				*/
+	unsigned char uac_supp_timer; 		/** < requester uac supports timer */
 	
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 	  										released or not, or its peer, with count on 
 											tries 										*/	
 	dlg_t *dialog_s;  /* dialog as UAS*/
 	dlg_t *dialog_c;  /* dialog as UAC*/
-	
-		
+			
 	struct _p_dialog *next,*prev;	
 } p_dialog;
 
@@ -165,6 +159,10 @@ int P_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2);
 int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2);
 
 int P_record_route(struct sip_msg *msg,char *str1,char *str2);
+
+int P_check_session_expires(struct sip_msg* msg, char* str1, char* str2);
+
+int P_422_session_expires(struct sip_msg* msg, char* str1, char* str2);
 
 void dialog_timer(unsigned int ticks, void* param);
 		

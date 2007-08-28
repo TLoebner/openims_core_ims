@@ -137,6 +137,9 @@ str cscf_get_authenticate(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_security_client(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_security_verify(struct sip_msg *msg,struct hdr_field **h);
 
+str cscf_get_session_expires_body(struct sip_msg *msg,struct hdr_field **h);
+time_t cscf_get_session_expires(str expHdr, str *refresher);
+str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h);
 
 int cscf_del_header(struct sip_msg *msg,struct hdr_field *h);
 int cscf_del_all_headers(struct sip_msg *msg,int hdr_type);
@@ -177,7 +180,7 @@ str cscf_get_last_via_received(struct sip_msg *msg);
 int cscf_get_from_tag(struct sip_msg* msg, str* tag);
 int cscf_get_to_tag(struct sip_msg* msg, str* tag);
 int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
-
+int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
 /*
  *******************************************************************************
  * Following functions used for for offline charging

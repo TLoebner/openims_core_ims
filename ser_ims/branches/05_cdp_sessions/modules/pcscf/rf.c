@@ -187,7 +187,7 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 	AAAMessage *aca = 0;
 
 	sessId = cdpb.AAACreateSession();
-	acr = cdpb.AAACreateRequest(IMS_Rf,ACR,Flag_Proxyable,&sessId);
+	acr = cdpb.AAACreateRequest(IMS_Rf,Code_AC,Flag_Proxyable,&sessId);
 	
 	if (!acr) goto error;
 	
@@ -363,9 +363,9 @@ AAAMessage* Rf_ACR_event(struct sip_msg* req, struct sip_msg* res)
 	
 	/* IP from Contact -> Served-Party-IP-Address */
 	if (cflag.cf_3gpp & CF_3GPP_SERVED_PARTY_IP_ADDRESS) {
-		str ip_contact = cscf_get_ip_contact(req);
-		if (ip_contact.len)
-			if (!Rf_add_served_party_ip_address(&ls_ims, ip_contact)) goto error;
+	//	str ip_contact = cscf_get_ip_contact(req);
+	//	if (ip_contact.len)
+	//		if (!Rf_add_served_party_ip_address(&ls_ims, ip_contact)) goto error;
 	}
 	
 	/* Cause-Code AVP */
