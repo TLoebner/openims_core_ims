@@ -47,10 +47,14 @@
 
 #include "../tm/tm_load.h"
 #include "mod.h"
+
 #include "gq.h"
+#include "rx.h"
 
 extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;          /**< Structure with pointers to cdp funcs 		*/
+
+extern int pcscf_release7;
 
 int P_local_policy(struct sip_msg* msg, char* str1, char* str2) 
 {
@@ -78,7 +82,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	AAAMessage* aaa;
 	int result = AAA_SUCCESS;
 	
-	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR:\n");
+	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR: and release %i\n",pcscf_release7);
 	if (msg->first_line.type == SIP_REQUEST) {
 		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: must be called on SIP reply\n");
 		return 0;
@@ -90,16 +94,30 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_ARR: cannot get the transaction\n"); 
 		return 0;
 	}
-
-	/* Create an AAR based on request and reply and send it to PDF */
-	aaa = Gq_AAR(t->uas.request, msg, atoi(str1));
+	//LOG(L_INFO,"INF:"M_NAME"\n%.*s\n\n",t->method.len,t->method.s);
+	if (strncmp(t->method.s,"INVITE",6)!=0)
+	{
+		/*we dont apply QoS if its not a reply to an INVITE!*/
+		return 1;
+	}
 	
+	/* Create an AAR based on request and reply and send it to PDF */
+	if (!pcscf_release7)
+	{
+		aaa = Gq_AAR(t->uas.request, msg, atoi(str1));
+	} else {
+		aaa = Rx_AAR(t->uas.request,msg,atoi(str1));
+	}
 	//cdpb.AAAPrintMessage(aaa);
 	
 	if (!aaa) goto error;
-	result = Gq_AAA(aaa);
-	
-	LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
+	if (!pcscf_release7)
+	{
+		result = Gq_AAA(aaa);
+	} else {
+		result = Rx_AAA(aaa);
+	}
+	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
 	if (result == AAA_SUCCESS) return 1;
 
 error:
@@ -119,7 +137,13 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	// Gq_STR(session_id) terminate the session
 	AAAMessage* sta;
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
+	if (!pcscf_release7)
+	{
+		sta = Gq_STR(msg, atoi(str1));
+	} else {
+		sta = Rx_STR(msg,atoi(str1));
+	}
+	/*of course here comes some processing and probably freeing the message*/
 	
-	sta = Gq_STR(msg, atoi(str1));
 	return 1;
 }
