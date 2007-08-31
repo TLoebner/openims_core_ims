@@ -1,7 +1,8 @@
 /**
  * $Id$
  *  
- * Copyright (C) 2004-2006 FhG Fokus
+ * Copyright (C) 2004-2007 FhG Fokus
+ * Copyright (C) 2007 PT Inovacao
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -48,7 +49,9 @@
  * 
  * CDiameterPeer Session Handling 
  * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
+ * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  * 
  */
 #ifndef __DIAMETER_SESSION_H
@@ -58,18 +61,139 @@
 //#include "diameter_api.h"
 #include "utils.h"
 
-/** Keep the session state */
-#define SESSION_STATE_MAINTAINED      0
-/** Don't keep the session state */
-#define SESSION_NO_STATE_MAINTAINED   1
+
+/** Types of sessions */
+typedef enum {
+	UNKNOWN_SESSION			= 0x0000,
+	
+	AUTH_CLIENT_STATELESS	= 0x0100,
+	AUTH_SERVER_STATELESS	= 0x0101,
+	AUTH_CLIENT_STATEFULL	= 0x0110,
+	AUTH_SERVER_STATEFULL	= 0x0111,
+	
+	ACCT_CLIENT				= 0x1000,
+	ACCT_SERVER_STATELESS	= 0x1001,
+	ACCT_SERVER_STATEFULL	= 0x1011
+		
+} cdp_session_type_t;
+
+
+
+
+
+
+
+/** auth session states */
+typedef enum {
+	AUTH_ST_IDLE,
+	AUTH_ST_PENDING,
+	AUTH_ST_OPEN,
+	AUTH_ST_DISCON
+} cdp_auth_state;
+
+/** auth session event */
+typedef enum {
+	AUTH_EV_START,
+	AUTH_EV_SEND_REQ,
+	AUTH_EV_RECV_ANS,
+	AUTH_EV_RECV_ANS_SUCCESS,
+	AUTH_EV_RECV_ANS_UNSUCCESS,
+	AUTH_EV_STR,
+	AUTH_EV_STA_SUCCESS,
+	AUTH_EV_STA_UNSUCCESS,
+	AUTH_EV_SESSION_TIMEOUT,
+	AUTH_EV_SERVICE_TERMINATED,
+} cdp_auth_event;
+	
+/** structure for auth session */
+typedef struct _cdp_auth_session_t {
+	cdp_auth_state state;	/** current state */
+	str data;       	/** Call-ID combines sip dialog with diameter session */
+	
+	time_t timeout;
+	time_t lifetime;
+	time_t grace_period;
+	
+	void* generic_data;			
+	
+} cdp_auth_session_t;
+
+
+
+/** Accounting states definition */
+typedef enum {
+	ACC_ST_IDLE			= 0,	/**< Idle */
+	ACC_ST_PENDING_S	= 1,	/**< Pending Session */
+	ACC_ST_PENDING_E	= 2,	/**< Pending Event */
+	ACC_ST_PENDING_B	= 3,	/**< Pending Buffered */
+	ACC_ST_OPEN	  		= 4,	/**< Open */
+	ACC_ST_PENDING_I	= 5,	/**< Pending Interim */
+	ACC_ST_PENDING_L	= 6		/**< PendingL - sent accounting stop */
+} cdp_acc_state_t;
+
+
+/** Accounting events definition */
+typedef enum {
+	ACC_EV_START					= 101,	/**< Client or device "requests access" (SIP session establishment) */
+	ACC_EV_EVENT					= 102,	/**< Client or device requests a one-time service (e.g. SIP MESSAGE) */
+	ACC_EV_BUFFEREDSTART			= 103,	/**< Records in storage */
+	ACC_EV_RCV_SUC_ACA_START		= 104,	/**< Successful accounting start answer received */
+	ACC_EV_SNDFAIL					= 105,	/**< Failure to send */
+	ACC_EV_RCV_FAILED_ACA_START		= 106,	/**< Failed accounting start answer received */
+	ACC_EV_STOP						= 107,	/**< User service terminated */
+	ACC_EV_INTERIM					= 108,	/**< Interim interval elapses */
+	ACC_EV_RCV_SUC_ACA_INTERIM		= 109,	/**< Successful accounting interim answer received */
+	ACC_EV_RCV_FAILED_ACA_INTERIM	=110,	/**< Failed accounting interim answer received */
+	ACC_EV_RCV_SUC_ACA_EVENT		= 111,	/**< Successful accounting event answer received */
+	ACC_EV_RCV_FAILED_ACA_EVENT		= 112,	/**< Failed accounting event answer received */
+	ACC_EV_RCV_SUC_ACA_STOP			= 113,	/**< Successful accounting stop answer received */
+	ACC_EV_RCV_FAILED_ACA_STOP		= 114,	/**< Failed accounting stop answer received */
+} cdp_acc_event_t;
+
+
+/** Structure for accounting sessions */
+typedef struct _acc_session {
+
+	cdp_acc_state_t state;						/**< current state */
+	
+	str dlgid;       						/**< application-level identifier, combines application session (e.g. SIP dialog) or event with diameter accounting session */
+	
+	unsigned int acct_record_number; 		/**< number of last accounting record within this session */
+	time_t aii;	 							/**< expiration of Acct-Interim-Interval (seconds) */
+	time_t timeout;							/**< session timeout (seconds) */
+	
+	
+	void* generic_data;			
+	
+} cdp_acc_session_t;
+
+
+
 
 /** Structure for session identification */
-struct session {
-	str sID;                             /**< session-ID as string */
-};
+typedef struct _cdp_session_t {
+	unsigned int hash;
+	str id;                             /**< session-ID as string */
+	
+	cdp_session_type_t type;
+	
+	union {
+		cdp_auth_session_t auth;
+		cdp_acc_session_t acc;
+		void *generic_data;
+	} u;
+	 
+	struct _cdp_session_t *next,*prev; 	
+} cdp_session_t;
 
-int session_init();
+/** Session list structure */
+typedef struct {		
+	gen_lock_t *lock;				/**< lock for list operations */
+	cdp_session_t *head,*tail;		/**< first, last sessions in the list */ 
+} cdp_session_list_t;
 
-int session_destroy();
+int sessions_init();
+
+int sessions_destroy();
 
 #endif

@@ -76,9 +76,17 @@
 AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_code);
 int AAADropTransaction(AAATransaction *trans);
 
-AAASessionId AAACreateSession();
-int AAADropSession(AAASessionId *s);
 
+				/* SESSIONS */
+				
+AAASession* AAACreateSession(void *generic_data);
+int AAADropSession(AAASession *s);
+
+AAASession* AAACreateAuthSession(void *generic_data);
+int AAADropAuthSession(AAASession *s);
+
+AAASession* AAACreateAccSession(void *generic_data);
+int AAADropAccSession(AAASession *s);
 
 				/* CALLBACKS */
 

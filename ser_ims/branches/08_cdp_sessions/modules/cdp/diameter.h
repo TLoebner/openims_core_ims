@@ -288,12 +288,9 @@ typedef enum {
 
 
 typedef enum {
-        Permanent_Termination   = 0,
-        New_Server_Assigned             = 1,
-        Server_Change                   = 2,
-        Remove_S_CSCF                   = 3,
-}AAA_AVPReasonCode;
-
+	STATE_MAINTAINED			= 0,
+	NO_STATE_MAINTAINED			= 1
+} AAA_AVP_Auth_Session_State;
 
 
 /**   The following type allows the client to specify which direction to
@@ -366,15 +363,13 @@ typedef struct _message_t {
 
 /**************************** AAA MESSAGE FUNCTIONS **************************/
 
-/* MESSAGES */
-
 /** if the message is a request */
 #define is_req(_msg_) \
 	(((_msg_)->flags)&0x80)
 
 
 
-
+/*************************** AAA Transactions ********************************/
 /**
  * This structure defines a Diameter Transaction.
  * This is used to link a response to a request
@@ -392,6 +387,13 @@ typedef void (AAATransactionCallback_f)(int is_timeout,void *param,AAAMessage *a
 typedef AAAMessage* (AAARequestHandler_f)(AAAMessage *req, void *param);
 /** Function for callback on response received */
 typedef void (AAAResponseHandler_f)(AAAMessage *res, void *param);
+
+
+/*************************** AAA Sessions ***********************************/
+
+#include "session.h"
+typedef cdp_session_t AAASession;
+
 
 
 #endif /*DIAMETER_H_*/
