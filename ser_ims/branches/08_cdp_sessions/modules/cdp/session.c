@@ -98,7 +98,7 @@ cdp_session_t* new_session(str id,cdp_session_type_t type)
 	cdp_session_t *x=0;
 	
 	x = shm_malloc(sizeof(cdp_session_t));
-	if (x){
+	if (!x){
 		LOG_NO_MEM("shm",sizeof(cdp_session_t));
 		goto error;
 	}
@@ -120,6 +120,10 @@ void free_session(cdp_session_t *x)
 		if (x->id.s) shm_free(x->id.s);
 		switch(x->type){
 			case UNKNOWN_SESSION:
+				if (x->u.generic_data){
+					LOG(L_ERR,"ERROR:free_session(): The session->u.generic_data should be freed and reset before dropping the session!"
+						"Possible memory leak!\n");
+				}
 				break;
 			
 			default:
@@ -135,6 +139,7 @@ void free_session(cdp_session_t *x)
  */
 int sessions_init(int hash_size)
 {
+	int i;
 	session_lock = lock_alloc();
 	if (!session_lock){
 		LOG_NO_MEM("lock",sizeof(gen_lock_t));
@@ -148,6 +153,16 @@ int sessions_init(int hash_size)
 	if (!sessions){
 		LOG_NO_MEM("shm",sizeof(cdp_session_list_t)*hash_size);
 		goto error;
+	}
+	memset(sessions,0,sizeof(cdp_session_list_t)*hash_size);
+	
+	for(i=0;i<hash_size;i++){
+		sessions[i].lock = lock_alloc();
+		if (!sessions[i].lock){
+			LOG_NO_MEM("lock",sizeof(gen_lock_t));
+			goto error;
+		}
+		sessions[i].lock = lock_init(sessions[i].lock);
 	}
 	
 	session_id1 = shm_malloc(sizeof(unsigned int));
@@ -180,10 +195,12 @@ int sessions_destroy()
 	int i;
 	cdp_session_t *n,*x;
 	
-	lock_get(session_lock);
-	lock_destroy(session_lock);
-	lock_dealloc((void*)session_lock);		
-	
+	if (session_lock){
+		lock_get(session_lock);
+		lock_destroy(session_lock);
+		lock_dealloc((void*)session_lock);		
+		session_lock=0;
+	}	
 	for(i=0;i<sessions_hash_size;i++){
 		sessions_lock(i);
 		for(x = sessions[i].head; x; x = n){
@@ -268,6 +285,7 @@ cdp_session_t* get_session(str id)
 				strncasecmp(x->id.s,id.s,id.len)==0)
 					return x;
 	sessions_unlock(hash);		
+	return 0;
 }
 
 /**
@@ -291,7 +309,7 @@ void del_session(cdp_session_t *x)
  * This function is thread safe.
  * @returns an 1 if success or -1 if error.
  */
-static int generate_session_id( str *id, unsigned int end_pad_len)
+static int generate_session_id(str *id, unsigned int end_pad_len)
 {
 	unsigned int s2;
 
@@ -339,15 +357,21 @@ error:
  */
 AAASession* AAACreateSession(void *generic_data)
 {
-
+	AAASession *s;
+	str id;
+	
+	generate_session_id(&id,0);
+	s = new_session(id,UNKNOWN_SESSION);
+	
+	return s;
 }
 
 /**
  * Deallocates the memory taken by a Generic Session
  */
-int AAADropSession(AAASession *s)
+void AAADropSession(AAASession *s)
 {
-
+	free_session(s);
 }
 
 /**
@@ -361,7 +385,7 @@ AAASession* AAACreateAuthSession(void *generic_data)
 /**
  * Deallocates the memory taken by a Authorization Session
  */
-int AAADropAuthSession(AAASession *s)
+void AAADropAuthSession(AAASession *s)
 {
 
 }
@@ -377,7 +401,7 @@ AAASession* AAACreateAccSession(void *generic_data)
 /**
  * Deallocates the memory taken by a Accounting Session
  */
-int AAADropAccSession(AAASession *s)
+void AAADropAccSession(AAASession *s)
 {
 
 }

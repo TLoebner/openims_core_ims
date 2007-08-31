@@ -67,11 +67,11 @@
 typedef AAAMessage* (*AAACreateRequest_f)(AAAApplicationId app_id,
 							AAACommandCode command_code,
 							AAAMsgFlag flags,
-							AAASessionId *sessId);
+							AAASession *session);
 typedef AAAMessage* (*AAACreateResponse_f)(AAAMessage *request);
 
-typedef AAASessionId (*AAACreateSession_f)();
-typedef int (*AAADropSession_f)(AAASessionId *s);
+typedef AAASession* (*AAACreateSession_f)(void *generic_data);
+typedef void (*AAADropSession_f)(AAASession *s);
 
 typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
 typedef int (*AAADropTransaction_f)(AAATransaction *trans);

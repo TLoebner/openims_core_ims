@@ -150,12 +150,12 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 			int authorization_type,str realm)
 {
 	AAAMessage *uar=0;
-	AAASessionId sessId={0,0};
+	AAASession *session=0;
 	AAAMessage *uaa=0;
 	
-	sessId = cdpb.AAACreateSession();
+	session = cdpb.AAACreateSession(0);
 
-	uar = cdpb.AAACreateRequest(IMS_Cx,IMS_UAR,Flag_Proxyable,&sessId);
+	uar = cdpb.AAACreateRequest(IMS_Cx,IMS_UAR,Flag_Proxyable,session);
 	if (!uar) goto error;
 
 	if (!Cx_add_destination_realm(uar,realm)) goto error;
@@ -180,13 +180,13 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 		ims_pm_diameter_answer(uaa);
 	#endif				
 
-	cdpb.AAADropSession(&sessId);
+	cdpb.AAADropSession(session);
 	
 	return uaa;
 	
 error:
 	//free stuff
-	if (sessId.s) cdpb.AAADropSession(&sessId);
+	if (session) cdpb.AAADropSession(session);
 	if (uar) cdpb.AAAFreeMessage(&uar);
 	return 0;
 }	
@@ -203,11 +203,11 @@ error:
 AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 {
 	AAAMessage *lir=0,*lia=0;
-	AAASessionId sessId={0,0};
+	AAASession *session=0;
 	
-	sessId = cdpb.AAACreateSession();
+	session = cdpb.AAACreateSession(0);
 
-	lir = cdpb.AAACreateRequest(IMS_Cx,IMS_LIR,Flag_Proxyable,&sessId);
+	lir = cdpb.AAACreateRequest(IMS_Cx,IMS_LIR,Flag_Proxyable,session);
 	if (!lir) goto error;
 
 	if (!Cx_add_destination_realm(lir,realm)) goto error;
@@ -229,13 +229,13 @@ AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 	#endif				
 
 
-	cdpb.AAADropSession(&sessId);
+	cdpb.AAADropSession(session);
 	
 	return lia;
 	
 error:
 	//free stuff
-	if (sessId.s) cdpb.AAADropSession(&sessId);
+	if (session) cdpb.AAADropSession(session);
 	if (lir) cdpb.AAAFreeMessage(&lir);
 	return 0;
 }	

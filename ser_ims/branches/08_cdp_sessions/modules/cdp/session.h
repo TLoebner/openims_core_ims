@@ -192,7 +192,7 @@ typedef struct {
 	cdp_session_t *head,*tail;		/**< first, last sessions in the list */ 
 } cdp_session_list_t;
 
-int sessions_init();
+int sessions_init(int hash_size);
 
 int sessions_destroy();
 
