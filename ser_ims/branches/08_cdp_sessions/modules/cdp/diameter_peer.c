@@ -216,7 +216,7 @@ int diameter_peer_init(char *cfg_filename)
 	peer_manager_init(config);
 	
 	/* init the session */
-	if (!session_init()) goto error;
+	if (!sessions_init()) goto error;
 	
 #ifdef CDP_FOR_SER
 	/* init diameter transactions */
@@ -388,7 +388,7 @@ void diameter_peer_destroy()
 	peer_manager_destroy();
 	
 	/* cleaning up sessions */
-	session_destroy();
+	sessions_destroy();
 
 	/* cleaning up global vars */
 /*	lock_get(pid_list_lock);*/
