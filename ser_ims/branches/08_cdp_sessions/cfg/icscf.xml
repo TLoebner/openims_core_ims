@@ -9,6 +9,8 @@
 	Tc="30"
 	Workers="4"
 	QueueLength="8"
+	TransactionTimeout="5"
+	SessionsHashSize="128"	
 >
 	<Peer FQDN="hss.open-ims.test" Realm="open-ims.test" port="3868"/> 
 

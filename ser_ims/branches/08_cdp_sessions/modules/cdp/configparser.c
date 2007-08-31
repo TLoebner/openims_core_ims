@@ -174,26 +174,40 @@ dp_config* parse_dp_config(char* filename)
 	quote_trim_dup(&(x->realm),(char*)xc);
 	
 	xc = xmlGetProp(root,(xmlChar*)"Vendor_Id");
-	x->vendor_id = atoi((char*)xc);
+	if (xc) x->vendor_id = atoi((char*)xc);
+	else x->vendor_id = 0;
 
 	xc = xmlGetProp(root,(xmlChar*)"Product_Name");
 	quote_trim_dup(&(x->product_name),(char*)xc);
 
 	xc = xmlGetProp(root,(xmlChar*)"AcceptUnknownPeers");
-	x->accept_unknown_peers = atoi((char*)xc);
+	if (xc) x->accept_unknown_peers = atoi((char*)xc);
+	else x->accept_unknown_peers = 1;
 	
 	xc = xmlGetProp(root,(xmlChar*)"DropUnknownOnDisconnect");
-	x->drop_unknown_peers = atoi((char*)xc);
+	if (xc) x->drop_unknown_peers = atoi((char*)xc);
+	else x->drop_unknown_peers = 1;
 	
 	xc = xmlGetProp(root,(xmlChar*)"Tc");
-	x->tc = atoi((char*)xc);
+	if (xc) x->tc = atoi((char*)xc);
+	else x->tc = 30;
 
 	xc = xmlGetProp(root,(xmlChar*)"Workers");
-	x->workers = atoi((char*)xc);
+	if (xc) x->workers = atoi((char*)xc);
+	else x->workers = 4;
 
 	xc = xmlGetProp(root,(xmlChar*)"QueueLength");
-	x->queue_length = atoi((char*)xc);
+	if (xc) x->queue_length = atoi((char*)xc);
+	else x->queue_length = 32;
 
+	xc = xmlGetProp(root,(xmlChar*)"TransactionTimeout");
+	if (xc) x->transaction_timeout = atoi((char*)xc);
+	else x->transaction_timeout = 5;
+	
+	xc = xmlGetProp(root,(xmlChar*)"SessionsHashSize");
+	if (xc) x->sessions_hash_size = atoi((char*)xc);
+	else x->sessions_hash_size = 128;
+	
 	for(child = root->children; child; child = child->next)
 		if (child->type == XML_ELEMENT_NODE)
 	{

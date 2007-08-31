@@ -68,7 +68,6 @@
 				
 /** Timeout for Diameter transactions (this is quite big, 
  * but increase in case that you have a slow peer) */ 				
-#define DP_TRANS_TIMEOUT 5
 
 
 
