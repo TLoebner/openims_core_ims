@@ -169,12 +169,13 @@ error:
 AAAMessage *AAANewMessage(
 	AAACommandCode commandCode,
 	AAAApplicationId applicationId,
-	AAASessionId *sessionId,
+	AAASession *session,
 	AAAMessage *request)
 {
 	AAAMessage   *msg;
 	AAA_AVP      *avp;
 	AAA_AVP      *avp_t;
+	str *sessionId=0;
 #if 0
 	unsigned int code;
 #endif
@@ -183,18 +184,19 @@ AAAMessage *AAANewMessage(
 
 	msg = 0;
 
-	if (!sessionId||!sessionId->s) {
+	if (!session||!session->id.s) {
 		if (request && request->sessionId){
 			/* copy old session id */
 			avp = request->sessionId;
-			if (avp) {
-				sessionId = &(avp->data);
-			}
+			if (avp) sessionId = &(avp->data);			
 		}else{
+			
 //because of diameter base messages etc
 //			LOG(L_ERR,"ERROR:AAANewMessage: param session-ID received null and it's a request!!\n");
 //			goto error;
 		}
+	}else{
+		sessionId = &(session->id);
 	}
 
 	/* allocated a new AAAMessage structure and set it to 0 */
@@ -323,10 +325,10 @@ error:
 AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 							AAACommandCode command_code,
 							AAAMsgFlag flags,
-							AAASessionId *sessId)
+							AAASession *session)
 {
 	AAAMessage *msg;
-	msg = AAANewMessage(command_code,app_id,sessId,0);
+	msg = AAANewMessage(command_code,app_id,session,0);
 	if (!msg) return 0;
 	msg->hopbyhopId = next_hopbyhop();
 	msg->endtoendId = next_endtoend();
@@ -342,7 +344,7 @@ AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 AAAMessage *AAACreateResponse(AAAMessage *request)
 {
 	AAAMessage *msg;
-	msg = AAANewMessage(request->commandCode,request->applicationId,request->sId,request);
+	msg = AAANewMessage(request->commandCode,request->applicationId,0,request);
 		
 	return msg;
 }

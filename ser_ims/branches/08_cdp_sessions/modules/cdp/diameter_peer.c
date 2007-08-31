@@ -216,7 +216,7 @@ int diameter_peer_init(char *cfg_filename)
 	peer_manager_init(config);
 	
 	/* init the session */
-	if (!sessions_init()) goto error;
+	if (!sessions_init(64)) goto error;
 	
 #ifdef CDP_FOR_SER
 	/* init diameter transactions */

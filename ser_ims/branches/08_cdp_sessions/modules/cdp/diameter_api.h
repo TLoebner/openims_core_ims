@@ -80,13 +80,13 @@ int AAADropTransaction(AAATransaction *trans);
 				/* SESSIONS */
 				
 AAASession* AAACreateSession(void *generic_data);
-int AAADropSession(AAASession *s);
+void AAADropSession(AAASession *s);
 
 AAASession* AAACreateAuthSession(void *generic_data);
-int AAADropAuthSession(AAASession *s);
+void AAADropAuthSession(AAASession *s);
 
 AAASession* AAACreateAccSession(void *generic_data);
-int AAADropAccSession(AAASession *s);
+void AAADropAccSession(AAASession *s);
 
 				/* CALLBACKS */
 
@@ -116,14 +116,14 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *msg, str *peer_id);
 AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 							AAACommandCode command_code,
 							AAAMsgFlag flags,
-							AAASessionId *sessId);
+							AAASession *session);
 
 AAAMessage *AAACreateResponse(AAAMessage *request);
 
 AAAMessage *AAANewMessage(
 		AAACommandCode commandCode,
 		AAAApplicationId appId,
-		AAASessionId *sessionId,
+		AAASession *session,
 		AAAMessage *request);
 
 AAAReturnCode AAAFreeAVPList(
@@ -223,40 +223,6 @@ AAA_AVP  *AAAFindMatchingAVPList(
 void AAAAddAVPToAVPList(
 	AAA_AVP_LIST *list,
 	AAA_AVP *avp);	
-
-
-//typedef struct {
-//	str endtoendid;
-//	str hopbyhopid;
-//	void **udata;
-//} AAATransaction;
-//
-//enum {
-//	AAATransaction_Error	=-1,
-//	AAATransaction_Timeout	= 0,
-//	AAATransaction_Success	= 1	
-//} AAATransactionResponse;
-//
-//int AAAPeerConnect();
-//
-//int AAAPeerDisconnect();
-//
-//AAATransaction *AAACreateTransaction(AAAApplicationId app_id,void *udata);
-//
-//int AAADropTransaction(AAATransaction *trans);
-//
-
-						
-
-//AAAMessage *AAAExchangeMessage(AAAMessage *request);
-
-//int AAASendMessage(AAAMessage *msg);
-
-//int AAAAnswerHandler(AAAMessage *response,void **udata);
-
-//int AAAFailureHandler(int reason,void **udata);
-
-//int AAASIRequestHandler(AAAMessage *request);
 
 
 
