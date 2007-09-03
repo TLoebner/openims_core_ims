@@ -96,11 +96,15 @@ error:
 inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
 	cdp_auth_session_t *x;
+	int rc;	
 	if (!s) return;
 	x = &(s->u.auth);
 	switch(x->state){
 		case AUTH_ST_IDLE:
 			switch (event) {
+				case AUTH_EV_SEND_REQ:
+					s->u.auth.state = AUTH_ST_PENDING;
+					break;					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -108,9 +112,24 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			break;
 		
 		case AUTH_ST_PENDING:
-			switch (event) {
+			if (!is_req(msg)){
+				rc = get_result_code(msg);
+				if (rc>=2000 && rc<3000 && get_auth_session_state(msg)==STATE_MAINTAINED) 
+					event = AUTH_EV_RECV_ANS_SUCCESS;
+				else
+					event = AUTH_EV_RECV_ANS_UNSUCCESS;
+			}
+			
+			switch(event){
+				case AUTH_EV_RECV_ANS_SUCCESS:
+					x->state = AUTH_ST_OPEN;
+					break;
+				case AUTH_EV_RECV_ANS_UNSUCCESS:
+					x->state = AUTH_ST_DISCON;
+					Send_STR(s,msg);
+					break;					
 				default:
-					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
+					LOG(L_ERR,"ERR:auth_client_stateless_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
 			}
 			break;
@@ -143,6 +162,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
 	cdp_auth_session_t *x;
+	
 	if (!s) return;
 	x = &(s->u.auth);
 	switch(x->state){
@@ -264,4 +284,8 @@ inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAA
 */
 }
 
+void Send_STR(cdp_session_t* s, AAAMessage* msg)
+{
+	//todo
+}
 

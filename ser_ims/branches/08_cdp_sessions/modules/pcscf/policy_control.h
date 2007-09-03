@@ -45,31 +45,21 @@
 
 /**
  * \file
- * 
- * CDiameterPeer Session Handling - Authorization State Machine
- * 
- * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
- * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
- * 
+ *
+ * P-CSCF Policy Control Ops
+ *
+ *
  */
+ 
+#ifndef POLICY_CONTROL_H
+#define POLICY_CONTROL_H
 
+#include "../../sr_module.h"
+#include "../cdp/cdp_load.h"
 
-#ifndef __AUTHSTATEMACHINE_H
-#define __AUTHSTATEMACHINE_H
+int P_local_policy(struct sip_msg* msg, char* str1, char* str2); 
+int P_AAR(struct sip_msg* msg, char* str1, char* str2); 
+int P_STR(struct sip_msg* msg, char* str1, char* str2);
 
-#include "diameter_api.h"
-#include "session.h"
-
-
-inline void auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
-inline void auth_server_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
-
-void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg);
-void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
-
-
-void Send_STR(cdp_session_t* s, AAAMessage* msg);
-
-#endif
+#endif /*POLICY_CONTROL_H*/
 

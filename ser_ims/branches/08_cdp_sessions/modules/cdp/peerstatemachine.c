@@ -62,6 +62,7 @@
 #include "peermanager.h"
 #include "config.h"
 #include "worker.h"
+#include "authstatemachine.h"
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
@@ -965,6 +966,15 @@ int Elect(peer *p,AAAMessage *cer)
 void Snd_Message(peer *p, AAAMessage *msg)
 {
 	touch_peer(p);
+	if (msg->session){
+		switch (msg->session->type){
+			case AUTH_CLIENT_STATEFULL:
+				auth_client_statefull_sm_process(msg->session,AUTH_EV_SEND_REQ,msg);
+				break;				 
+			default:
+				break;
+		}
+	}
 	peer_send_msg(p,msg);
 }
 
@@ -979,6 +989,15 @@ void Snd_Message(peer *p, AAAMessage *msg)
 void Rcv_Process(peer *p, AAAMessage *msg)
 {
 	LOG(L_DBG,"DBG:Rcv_Process(): Received a message\n");
+	if (msg->session){
+		switch (msg->session->type){
+			case AUTH_CLIENT_STATEFULL:
+				auth_client_statefull_sm_process(msg->session,AUTH_EV_RECV_ANS,msg);
+				break;
+			default:
+				break;			 
+		}
+	}	
 	if (!put_task(p,msg)){
 		LOG(L_ERR,"ERROR:Rcv_Process(): Queue refused task\n");
 		AAAFreeMessage(&msg);

@@ -59,6 +59,7 @@
 
 #include "utils.h"
 #include <ctype.h>
+#include "session.h"
 
 #define get_2bytes(_b) \
 	((((unsigned char)(_b)[0])<<8)|\
@@ -345,7 +346,7 @@ typedef struct _message_t {
 	AAAApplicationId    applicationId;	/**< application identifier */
 	AAAMsgIdentifier    endtoendId;		/**< End-to-end identifier */
 	AAAMsgIdentifier    hopbyhopId;		/**< Hop-by-hop identitfier */
-	AAASessionId        *sId;			/**< Session identifier */
+	AAASession        	*session;		/**< Session				 */
 	AAA_AVP             *sessionId;		/**< shortcut to SessionId AVP */
 	AAA_AVP             *orig_host;		/**< shortcut to Origin Host AVP */
 	AAA_AVP             *orig_realm;	/**< shortcut to Origin Realm AVP */
@@ -388,11 +389,6 @@ typedef AAAMessage* (AAARequestHandler_f)(AAAMessage *req, void *param);
 /** Function for callback on response received */
 typedef void (AAAResponseHandler_f)(AAAMessage *res, void *param);
 
-
-/*************************** AAA Sessions ***********************************/
-
-#include "session.h"
-typedef cdp_session_t AAASession;
 
 
 

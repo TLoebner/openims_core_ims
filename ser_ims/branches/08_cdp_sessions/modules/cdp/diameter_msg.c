@@ -185,15 +185,15 @@ AAAMessage *AAANewMessage(
 	msg = 0;
 
 	if (!session||!session->id.s) {
-		if (request && request->sessionId){
-			/* copy old session id */
-			avp = request->sessionId;
-			if (avp) sessionId = &(avp->data);			
+		if (request){
+			if (request->session) sessionId = &(request->session->id);
+			else{
+				/* copy old session id from AVP */
+				avp = request->sessionId;
+				if (avp) sessionId = &(avp->data);
+			}			
 		}else{
-			
-//because of diameter base messages etc
-//			LOG(L_ERR,"ERROR:AAANewMessage: param session-ID received null and it's a request!!\n");
-//			goto error;
+			LOG(L_ERR,"ERROR:AAANewMessage: param session received null and it's a request!!\n");
 		}
 	}else{
 		sessionId = &(session->id);
@@ -253,10 +253,10 @@ AAAMessage *AAANewMessage(
 		/* it's a new request -> set the flag */
 		msg->flags = 0x80;
 		/* keep track of the session -> SendMessage will need it! */
-		msg->sId = sessionId;
+		msg->session = session;
 	} else {
 		/* it'a an answer -> it will have the same session Id */
-		msg->sId = request->sId;
+		msg->session = request->session;
 		/* link the incoming peer to the answer */
 		msg->in_peer = request->in_peer;
 		/* set the P flag as in request */

@@ -108,14 +108,12 @@ typedef enum {
 /** structure for auth session */
 typedef struct _cdp_auth_session_t {
 	cdp_auth_state state;	/** current state */
-	str data;       	/** Call-ID combines sip dialog with diameter session */
 	
 	time_t timeout;
 	time_t lifetime;
 	time_t grace_period;
 	
 	void* generic_data;			
-	
 } cdp_auth_session_t;
 
 
@@ -191,6 +189,8 @@ typedef struct {
 	gen_lock_t *lock;				/**< lock for list operations */
 	cdp_session_t *head,*tail;		/**< first, last sessions in the list */ 
 } cdp_session_list_t;
+
+typedef cdp_session_t AAASession;
 
 int sessions_init(int hash_size);
 

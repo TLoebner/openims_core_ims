@@ -362,6 +362,9 @@ AAASession* AAACreateSession(void *generic_data)
 	
 	generate_session_id(&id,0);
 	s = new_session(id,UNKNOWN_SESSION);
+	if (s) {
+		s->u.generic_data = generic_data;
+	}
 	
 	return s;
 }
@@ -377,9 +380,27 @@ void AAADropSession(AAASession *s)
 /**
  * Creates a Authorization Session.
  */
-AAASession* AAACreateAuthSession(void *generic_data)
+AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull)
 {
-
+	AAASession *s;
+	str id;
+	cdp_session_type_t type;
+	
+	generate_session_id(&id,0);
+	
+	if (is_client){
+		if (is_statefull) type = AUTH_CLIENT_STATEFULL;
+		else type = AUTH_CLIENT_STATELESS;
+	}else{
+		if (is_statefull) type = AUTH_SERVER_STATEFULL;
+		else type = AUTH_SERVER_STATELESS;		
+	}
+	s = new_session(id,type);
+	if (s) {
+		s->u.auth.generic_data = generic_data;
+	}
+	
+	return s;
 }
 
 /**
@@ -387,7 +408,7 @@ AAASession* AAACreateAuthSession(void *generic_data)
  */
 void AAADropAuthSession(AAASession *s)
 {
-
+	free_session(s);
 }
 
 /**
@@ -395,7 +416,7 @@ void AAADropAuthSession(AAASession *s)
  */
 AAASession* AAACreateAccSession(void *generic_data)
 {
-
+	
 }
 
 /**
@@ -403,5 +424,5 @@ AAASession* AAACreateAccSession(void *generic_data)
  */
 void AAADropAccSession(AAASession *s)
 {
-
+	free_session(s);
 }

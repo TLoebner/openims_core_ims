@@ -61,6 +61,7 @@
 #include "../../locking.h"
 #include "../tm/dlg.h"
 #include "../tm/tm_load.h"
+#include "../cdp/cdp_load.h"
 
 enum p_dialog_method {
 	DLG_METHOD_OTHER=0,
@@ -110,7 +111,10 @@ typedef struct _p_dialog {
 	
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 	  										released or not, or its peer, with count on 
-											tries 										*/	
+											tries 										*/
+											
+	AAASession *pcc_session;
+													
 	dlg_t *dialog_s;  /* dialog as UAS*/
 	dlg_t *dialog_c;  /* dialog as UAC*/
 			

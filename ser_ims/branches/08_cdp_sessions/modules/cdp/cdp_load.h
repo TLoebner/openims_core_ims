@@ -73,6 +73,9 @@ typedef AAAMessage* (*AAACreateResponse_f)(AAAMessage *request);
 typedef AAASession* (*AAACreateSession_f)(void *generic_data);
 typedef void (*AAADropSession_f)(AAASession *s);
 
+typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull);
+typedef void (*AAADropAuthSession_f)(AAASession *s);
+
 typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
 typedef int (*AAADropTransaction_f)(AAATransaction *trans);
 
@@ -89,6 +92,8 @@ typedef AAAReturnCode (*AAAAddAVPToMessage_f)(
 												AAAMessage *msg,
 												AAA_AVP *avp,
 												AAA_AVP *position);
+
+typedef void (*AAAAddAVPtoList_f)(AAA_AVP_LIST *list,AAA_AVP *avp);											
 
 typedef AAA_AVP* (*AAAFindMatchingAVP_f)(
 										AAAMessage *msg,
@@ -153,11 +158,15 @@ struct cdp_binds {
 	AAACreateSession_f AAACreateSession;
 	AAADropSession_f AAADropSession;
 
+	AAACreateAuthSession_f AAACreateAuthSession;
+	AAADropAuthSession_f AAADropAuthSession;
+
 	AAACreateTransaction_f AAACreateTransaction;
 	AAADropTransaction_f AAADropTransaction;
 	
 	AAACreateAVP_f AAACreateAVP;
 	AAAAddAVPToMessage_f AAAAddAVPToMessage;
+	AAAAddAVPtoList_f AAAAddAVPtoList;
 	AAAFindMatchingAVP_f AAAFindMatchingAVP;
 	AAAFindMatchingAVPList_f AAAFindMatchingAVPList;
 	AAAGetNextAVP_f AAAGetNextAVP;
