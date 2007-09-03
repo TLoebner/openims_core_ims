@@ -42,34 +42,64 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-
+ 
 /**
  * \file
- * 
- * CDiameterPeer Session Handling - Authorization State Machine
- * 
- * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
- * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
- * 
- */
+ *
+ * P-CSCF Policy and Charging Control interfaces AVPs
+ *
+ *
+ */ 
+ 
+#ifndef __PCC_AVP_H
+#define __PCC_AVP_H
+
+#include "../../sr_module.h"
+#include "mod.h"
+#include "../cdp/cdp_load.h"
+#include "sdp_util.h"
 
 
-#ifndef __AUTHSTATEMACHINE_H
-#define __AUTHSTATEMACHINE_H
 
-#include "diameter_api.h"
-#include "session.h"
+#define PCC_MAX_Char 64
+#define PCC_MAX_Char4 256
+/* Maximum Number of characters to represent some AVP datas*/
+/*and ipv6 addresses in character*/
+#define PCC_Media_Sub_Components 10
+
+#include <string.h>
+#include <stdio.h>
+
+/** NO DATA WILL BE DUPLICATED OR FREED - DO THAT AFTER SENDING THE MESSAGE!!! */
+
+typedef struct _bandwidth {
+		int bAS;
+		int bRS;
+		int bRR;		
+} bandwidth;
 
 
-inline void auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
-inline void auth_server_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
-
-void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg);
-void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 
 
-void Send_STR(cdp_session_t* s, AAAMessage* msg);
+/*just headers*/
 
-#endif
+int PCC_add_destination_realm(AAAMessage *msg, str data);
+int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+AAA_AVP *PCC_create_media_subcomponent(int number,
+									char *proto, char *ipA,
+									char *portA, char *ipB,
+									char *portB ,char *options,int atributes);
+inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
+											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
+											
+inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
+AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 
+int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number);
+int extract_token(char *line,char *token,int max,int number);
+int extract_bandwidth(bandwidth *bw,str sdp,char *start);
+int check_atributes(str sdpbody,char *mline);
+int is_a_port(char *port);
+/*int is_an_address(char *ad);*/
+inline int PCC_get_result_code(AAAMessage *msg, int *data);
+#endif /*__PCC_AVP_H*/

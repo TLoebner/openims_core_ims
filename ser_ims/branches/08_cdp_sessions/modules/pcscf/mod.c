@@ -88,6 +88,8 @@
 #include "ims_pm_pcscf.h"
 
 
+#include "policy_control.h"
+
 MODULE_VERSION
 
 static int mod_init(void);
@@ -192,6 +194,13 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
 	char* ims_pm_node_type="P-CSCF";
 	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
 #endif /* WITH_IMS_PM */
+
+
+
+char* pcscf_forced_qos_peer = "pdf.open-ims.test"; /**< FQDN of Policy Dicision Function (PDF) for policy control */
+str forced_qos_peer; 
+int pcscf_qos_release7 = 0; 					/**< weather to use Gq or Rx >**/
+                        
 
 
 /** 
@@ -306,9 +315,15 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
 	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
 	
+	
 	{"P_follows_via_list",			P_follows_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
-	{"P_release_call_onreply",		P_release_call_onreply,		1,0,  ONREPLY_ROUTE},
+
+	/* For Gq or Rx*/
+	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
+	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
+	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE},
+	
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -403,7 +418,6 @@ static param_export_t pcscf_params[]={
 	{"rtpproxy_tout",         	PARAM_INT,		&rtpproxy_tout         },
 	
 	{"subscribe_retries",		INT_PARAM,		&pcscf_subscribe_retries},
-	
 	{"icid_value_prefix",		STR_PARAM,		&cscf_icid_value_prefix},
 	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM,		&cscf_orig_ioi},
@@ -414,12 +428,17 @@ static param_export_t pcscf_params[]={
 	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
 	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
 	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
-	{"pcscf_db_url",					STR_PARAM, &pcscf_db_url},
 	
+	{"pcscf_db_url",					STR_PARAM, &pcscf_db_url},
+
 #ifdef WITH_IMS_PM
 	{"ims_pm_node_type",				STR_PARAM, &ims_pm_node_type},
 	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
 #endif /* WITH_IMS_PM */	
+    
+    /* address of pdf or pcrf if  "release7" is set to 1 */
+    {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
+	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
 	
 	{0,0,0} 
 };
@@ -445,6 +464,8 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
 dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
+
+struct cdp_binds cdpb;            		/**< Structure with pointers to cdp funcs 		*/
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -561,7 +582,11 @@ int fix_parameters()
 	STR_APPEND(pcscf_record_route_mt,s_record_route_e);
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
-
+	
+	/* Address initialization of PDF for policy control */
+	forced_qos_peer.s = pcscf_forced_qos_peer;
+	forced_qos_peer.len = strlen(pcscf_forced_qos_peer);
+	
 	return 1;
 }
 
@@ -579,6 +604,8 @@ db_con_t* create_pcscf_db_connection()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
+	load_cdp_f load_cdp;
+	
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
@@ -588,7 +615,7 @@ static int mod_init(void)
 	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
-
+	
 	#ifdef WITH_IMS_PM
 		ims_pm_init(pcscf_name_str,ims_pm_node_type, ims_pm_logfile);
 		ims_pm_init_pcscf();
@@ -699,6 +726,14 @@ static int mod_init(void)
 	if (load_dlg(&dialogb) != 0) {
 		return -1;
 	}
+	
+	/* bind to the cdp module */
+	if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module\n");
+		goto error;
+	}
+	if (load_cdp(&cdpb) == -1)
+		goto error;
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;

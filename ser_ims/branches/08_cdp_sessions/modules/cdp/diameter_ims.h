@@ -66,7 +66,10 @@
 #define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
 #define IMS_e2	16777231	/**< e2 interface between CLF and AF	 		*/
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
-
+#define IMS_Rx  16777236	/**< Rx interface between P-CSCF and PCRF 		*/
+#define IMS_Gx	16777224	/**< Gx interface between PCRF and PCEF 		*/
+#define IMS_Rf  16777223    /**< Rf interface between P/I/S-CSCF and CDF, 
+								according to TS32.299 R7    */ 
 /* Vendor ID	*/
 
 #define IMS_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
@@ -91,6 +94,9 @@
 #define IMS_STA		275		/**< Session Termination 		Answer	*/
 #define IMS_ASR		274		/**< Abort-Session-Request		Request */
 #define IMS_ASA		274		/**< Abort-Session-Request		Answer	*/
+/* The Gx Interface */
+#define IMS_CCR		272
+#define IMS_CCA		272
 /*		The Cx/Dx Interface 			*/
 #define IMS_UAR		300		/**< User-Authorization			Request	*/
 #define IMS_UAA		300		/**< User-Authorization			Answer	*/
@@ -158,6 +164,8 @@ enum {
 	AVP_IMS_RR_Bandwidth								= 521,
 	AVP_IMS_RS_Bandwidth								= 522,
 	AVP_IMS_SIP_Forking_Indication						= 523,
+/** Codec-Data is from TS 29.214*/
+	AVP_IMS_Codec_Data									= 524,
 /** 600 to 699 reserved for TS29.229											*/
 	AVP_IMS_Visited_Network_Identifier					= 600,
 	AVP_IMS_Public_Identity								= 601,
@@ -205,33 +213,90 @@ enum {
 	AVP_IMS_Identity_Set								= 708,
 	AVP_IMS_Expiry_Time									= 709,
 	AVP_IMS_Send_Data_Indication						= 710,
-	AVP_IMS_DSAI_Tag									= 711
+	AVP_IMS_DSAI_Tag									= 711,
 	
 /** 800 to 899 reserved for TS29.299											*/
+	AVP_IMS_Event_Type 									= 823,
+	AVP_IMS_SIP_Method									= 824,
+	AVP_IMS_Event										= 825,
+	AVP_IMS_Content_Type								= 826,
+	AVP_IMS_Content_Length								= 827,
+	AVP_IMS_Content_Disposition							= 828,
+	AVP_IMS_Role_Of_Node 								= 829,
+	AVP_IMS_User_Session_Id								= 830,
+	AVP_IMS_Calling_Party_Address						= 831,
+	AVP_IMS_Called_Party_Address						= 832,
+	AVP_IMS_Time_Stamps									= 833,
+	AVP_IMS_SIP_Request_Timestamp						= 834,
+	AVP_IMS_SIP_Response_Timestamp						= 835,
+	AVP_IMS_Application_Server							= 836,
+	AVP_IMS_Application_Provided_Called_Party_Address	= 837,
+	AVP_IMS_Inter_Operator_Identifier					= 838,
+	AVP_IMS_Originating_IOI								= 839,
+	AVP_IMS_Terminating_IOI								= 840,
+	AVP_IMS_IMS_Charging_identifier						= 841,
+	AVP_IMS_SDP_Session_Description						= 842,
+	AVP_IMS_SDP_Media_Component							= 843,
+	AVP_IMS_SDP_Media_Name								= 844,
+	AVP_IMS_SDP_Media_Description						= 845,
+	AVP_IMS_CG_Address									= 846,
+	AVP_IMS_GGSN_Address								= 847,
+	AVP_IMS_Served_Party_IP_Address						= 848,
+	AVP_IMS_Authorized_QoS								= 849,
+	AVP_IMS_Application_Service_Information				= 850,
+	AVP_IMS_Trunk_Group_Id								= 851,
+	AVP_IMS_Incoming_Trunk_Group_Id						= 852,
+	AVP_IMS_Outgoing_Trunk_Group_Id						= 853,
+	AVP_IMS_Bear_Service								= 854,
+	AVP_IMS_Service_Id									= 855,
+	AVP_IMS_Associated_URI								= 856,
+	AVP_IMS_Charged_Party								= 857,
+	AVP_IMS_PoC_Controlling_Address						= 858,
+	AVP_IMS_PoC_Group_Name								= 859,
+	AVP_IMS_Cause										= 860,
+	AVP_IMS_Cause_Code									= 861,
+	
+	/* TODO finish the list... */
+	AVP_IMS_Node_Functionality							= 862,
+	AVP_IMS_Service_Information							= 873,
+	AVP_IMS_IMS_Information								= 876,
+	AVP_IMS_Expires										= 888,
+	AVP_IMS_Message_Body								= 889,
+	AVP_IMS_Service_Specific_Info						= 1249,
+	AVP_IMS_Requested_Party_Address						= 1251,
+	AVP_IMS_Access_Network_Information					= 1263,
+/** 1000   from TS29.212 */
+ 	AVP_IMS_Bearer_Identifier							= 1020,
+ 	AVP_IMS_Charging_Rule_Install						= 1001,
+ 	AVP_IMS_Charging_Rule_Remove						= 1002,
+ 	AVP_IMS_Charging_Rule_Definition					= 1003,
+ 	AVP_IMS_Charging_Rule_Base_Name						= 1004,
+ 	AVP_IMS_Charging_Rule_Name							= 1005,
+ 	AVP_IMS_Charging_Rule_Report						= 1018
 };
 
 /** ETSI AVP Codes */ 
 enum {
 	
 	/*added from ETSI 283 034 */
-	AVP_IMS_Globally_Unique_Address					=300,
-	AVP_IMS_Address_Realm								=301,
-	AVP_IMS_Logical_Access_Id								=302,
-	AVP_IMS_Initial_Gate_Setting							=303, 
-	AVP_IMS_QoS_Profile										=304,
-	AVP_IMS_IP_Connectivity_Status						=305,
-	AVP_IMS_Access_Network_Type						=306,
-	AVP_IMS_Aggregation_Network_Type				=307,
-	AVP_IMS_Maximum_Allowed_Bandwidth_UL		=308,
-	AVP_IMS_Maximum_Allowed_Bandwidth_DL		=309, 
-	AVP_IMS_Transport_Class								=311,
-	AVP_IMS_Application_Class_ID							=312,
-	AVP_IMS_Physical_Access_ID							=313,
-	AVP_IMS_Location_Information							=350,
-	AVP_IMS_RACS_Contact_Point							=351, 
-	AVP_IMS_Terminal_Type									=352, 
-	AVP_IMS_Requested_Information						=353,
-	AVP_IMS_Event_Type										=354,
+	AVP_ETSI_Globally_Unique_Address					=300,
+	AVP_ETSI_Address_Realm								=301,
+	AVP_ETSI_Logical_Access_Id							=302,
+	AVP_ETSI_Initial_Gate_Setting						=303, 
+	AVP_ETSI_QoS_Profile								=304,
+	AVP_ETSI_IP_Connectivity_Status						=305,
+	AVP_ETSI_Access_Network_Type						=306,
+	AVP_ETSI_Aggregation_Network_Type					=307,
+	AVP_ETSI_Maximum_Allowed_Bandwidth_UL				=308,
+	AVP_ETSI_Maximum_Allowed_Bandwidth_DL				=309, 
+	AVP_ETSI_Transport_Class							=311,
+	AVP_ETSI_Application_Class_ID						=312,
+	AVP_ETSI_Physical_Access_ID							=313,
+	AVP_ETSI_Location_Information						=350,
+	AVP_ETSI_RACS_Contact_Point							=351, 
+	AVP_ETSI_Terminal_Type								=352, 
+	AVP_ETSI_Requested_Information						=353,
+	AVP_ETSI_Event_Type									=354,
 	
 	AVP_Line_Identifier									= 500,
 	AVP_ETSI_SIP_Authenticate 							= 501, 
@@ -457,32 +522,32 @@ enum{
 
 typedef enum
 {
-   Async									 = 0,
-   Sync 										 = 1, 
-   ISDN_Sync 								 = 2, 
-   ISDN_Async_V120 					 = 3,
-   ISDN_Async_V110					 = 4,
-   Virtual									 = 5, 
-   PIAFS									 	 = 6, 	
-   HDLC_Clear_Channel				 = 7, 
-   X_25										 = 8, 
-   X_75										 = 9, 
-   G_3_Fax									 =10,
-   Symmetric_DSL						 =11, 	
-   ADSL										 =12,
-   ADSL_DMT								 =13, 
-   IDSL										 =14, 
-   Ethernet									 =15, 
-   xDSL										 =16, 
-   Cable										 =17, 
-   Wireless_Other						 =18,
-   Wireless_IEEE_802_11				 =19,
-   Token_Ring								 =20, 
-   FDDI										 =21,
-   Wireless_CDMA2000				     =22,
-   Wireless_UMTS						 =23,
-   Wireless_1X_EV						 =24,
-   IAPP  									 =25
+   Async				= 0,
+   Sync					= 1, 
+   ISDN_Sync			= 2, 
+   ISDN_Async_V120		= 3,
+   ISDN_Async_V110		= 4,
+   Virtual				= 5, 
+   PIAFS				= 6, 	
+   HDLC_Clear_Channel	= 7, 
+   X_25					= 8, 
+   X_75					= 9, 
+   G_3_Fax				=10,
+   Symmetric_DSL		=11, 	
+   ADSL					=12,
+   ADSL_DMT				=13, 
+   IDSL					=14, 
+   Ethernet				=15, 
+   xDSL					=16, 
+   Cable				=17, 
+   Wireless_Other		=18,
+   Wireless_IEEE_802_11	=19,
+   Token_Ring			=20, 
+   FDDI					=21,
+   Wireless_CDMA2000	=22,
+   Wireless_UMTS		=23,
+   Wireless_1X_EV		=24,
+   IAPP					=25
 }	nas_port_type;						
 
 /*

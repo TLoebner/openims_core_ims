@@ -81,7 +81,7 @@ int AAADropTransaction(AAATransaction *trans);
 AAASession* AAACreateSession(void *generic_data);
 void AAADropSession(AAASession *s);
 
-AAASession* AAACreateAuthSession(void *generic_data);
+AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull);
 void AAADropAuthSession(AAASession *s);
 
 AAASession* AAACreateAccSession(void *generic_data);
