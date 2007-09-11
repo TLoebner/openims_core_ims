@@ -48,7 +48,7 @@
  *
  * P-CSCF Policy and Charging Control interface ops
  *
- *
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */
 
 #include "pcc.h"
@@ -136,7 +136,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	if (tag) 
 		LOG(L_INFO, "INF:"M_NAME":PCC_AAR: terminating side\n");
 	else 
-		LOG(L_INFO, "INF:"M_NAME":pCC_AAR: originating side\n");
+		LOG(L_INFO, "INF:"M_NAME":PCC_AAR: originating side\n");
 	
 	
 	
