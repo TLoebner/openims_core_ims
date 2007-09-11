@@ -48,7 +48,7 @@
  *
  * P-CSCF Policy and Charging Control interface ops
  *
- *
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */
  
 #ifndef __PCC_H_

@@ -48,7 +48,7 @@
  *
  * P-CSCF Policy and Charging Control interfaces AVPs
  *
- *
+ *\author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */ 
  
 #include "pcc_avp.h"
@@ -498,7 +498,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
   	PCC_add_avp(msg,data.s,data.len,AVP_IMS_Media_Component_Description,
  				AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  				IMS_vendor_id_3GPP,
- 				AVP_DUPLICATE_DATA,
+ 				AVP_FREE_DATA,
  				__FUNCTION__);
  	
  			
@@ -800,7 +800,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  		return (cdpb.AAACreateAVP(AVP_IMS_Media_Sub_Component,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,data.s,data.len,
- 											AVP_DUPLICATE_DATA));
+ 											AVP_FREE_DATA));
 }
 
 /*
