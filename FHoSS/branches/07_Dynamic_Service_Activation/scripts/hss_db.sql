@@ -117,6 +117,46 @@ CREATE TABLE `charging_info` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Charging Information Templates';
 
 --
+-- Table structure for table `dsai`
+--
+
+DROP TABLE IF EXISTS `dsai`;
+CREATE TABLE `dsai` (
+  `id` int(11) NOT NULL auto_increment,
+  `dsai_tag` varchar(255) NOT NULL,
+  PRIMARY KEY  (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='DSAI table';
+
+--
+-- Table structure for table `dsai_ifc`
+--
+
+DROP TABLE IF EXISTS `dsai_ifc`;
+CREATE TABLE `dsai_ifc` (
+  `id` int(11) NOT NULL auto_increment,
+  `id_dsai` int(11) NOT NULL default '0',
+  `id_ifc` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`id`),
+  KEY `idx_id_dsai` (`id_dsai`),
+  KEY `idx_id_ifc` (`id_ifc`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='DSAI - iFC Mappings';
+
+--
+-- Table structure for table `dsai_impu`
+--
+
+DROP TABLE IF EXISTS `dsai_impu`;
+CREATE TABLE `dsai_impu` (
+  `id` int(11) NOT NULL auto_increment,
+  `id_dsai` int(11) NOT NULL default '0',
+  `id_impu` int(11) NOT NULL default '0',
+  `dsai_value` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`id`),
+  KEY `idx_id_dsai` (`id_dsai`),
+  KEY `idx_id_impu` (`id_impu`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='DSAI - IMPU/PSI Mappings';
+
+--
 -- Table structure for table `ifc`
 --
 
@@ -149,7 +189,7 @@ CREATE TABLE `impi` (
   `ip` varchar(64) NOT NULL default '',
   `line_identifier` varchar(64) NOT NULL default '',
   `zh_uicc_type` int(11) default '0',
-  `zh_key_life_time` int(11) default '3600',  
+  `zh_key_life_time` int(11) default '3600',
   `zh_default_auth_scheme` int(11) NOT NULL default '1',
   PRIMARY KEY  (`id`),
   KEY `idx_identity` (`identity`),
@@ -296,7 +336,7 @@ CREATE TABLE `cx_events` (
   `grp` int(11) default '0',
   `reason_info` varchar(255) default '',
   `trials_cnt` int(11) default '0',
-  `diameter_name` varchar(255) default '',  
+  `diameter_name` varchar(255) default '',
   PRIMARY KEY  (`id`),
   KEY `idx_hopbyhop` USING BTREE (`hopbyhop`),
   KEY `idx_endtoend` (`endtoend`),
@@ -316,7 +356,7 @@ CREATE TABLE `sh_notification` (
   `data_ref` int(11) NOT NULL default '0',
   `rep_data` blob default NULL,
   `sqn` int(11) default '0',
-  `service_indication` varchar(255) default NULL,  
+  `service_indication` varchar(255) default NULL,
   `id_ifc` int(11) default '0',
   `server_name` varchar(255) default NULL,
   `scscf_name` varchar(255) default NULL,
