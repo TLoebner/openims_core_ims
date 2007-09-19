@@ -41,49 +41,63 @@
   *
   */
 
-package de.fhg.fokus.hss.db.model;
+package de.fhg.fokus.hss.web.form;
 
 import java.io.Serializable;
 
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionMapping;
+
 /**
- * @authors inycom.es
+ * @author inycom.es
  */
-public class DSAI implements Serializable {
+
+public class DSAI_SearchForm extends ActionForm implements Serializable{
 	private static final long serialVersionUID=1L;
 
-	// Fields
-
-	private int id;
-
+	private String id_dsai;
 	private String dsai_tag;
 
-	// Constructors
+	private String crtPage;
+	private String rowsPerPage;
 
-	/** default constructor */
-	public DSAI() {
+	public void reset(ActionMapping arg0, HttpServletRequest arg1) {
+  		this.dsai_tag = null;
+  		this.id_dsai = null;
+  		crtPage = "1";
+  		rowsPerPage = "20";
+  	}
+
+	public String getCrtPage() {
+		return crtPage;
 	}
 
-	/** full constructor */
-	public DSAI(int id, String dsai_tag) {
-		this.id = id;
-		this.dsai_tag = dsai_tag;
+	public void setCrtPage(String crtPage) {
+		this.crtPage = crtPage;
 	}
 
-	// Property accessors
-	public int getId() {
-		return this.id;
+	public String getRowsPerPage() {
+		return rowsPerPage;
 	}
-
-	public void setId(int id) {
-		this.id = id;
+	public void setRowsPerPage(String rowsPerPage) {
+		this.rowsPerPage = rowsPerPage;
 	}
 
 	public String getDsai_tag() {
-		return this.dsai_tag;
+		return dsai_tag;
 	}
 
 	public void setDsai_tag(String dsai_tag) {
 		this.dsai_tag = dsai_tag;
 	}
 
+	public String getId_dsai() {
+		return id_dsai;
+	}
+
+	public void setId_dsai(String id_dsai) {
+		this.id_dsai = id_dsai;
+	}
 }

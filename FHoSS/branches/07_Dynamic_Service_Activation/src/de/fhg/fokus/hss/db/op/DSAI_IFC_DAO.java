@@ -52,8 +52,7 @@ import org.hibernate.Session;
 import de.fhg.fokus.hss.db.model.DSAI_IFC;
 
 /**
- * @authors beatriz dot calvo at inycom dot es and santiago dot vicen at inycom dot es
- * Beatriz Calvo, Santiago Vicen / INYCOM
+ * @authors inycom.es
  */
 public class DSAI_IFC_DAO {
 	private static Logger logger = Logger.getLogger(DSAI_IFC_DAO.class);
@@ -85,4 +84,11 @@ public class DSAI_IFC_DAO {
 		return result;
 	}
 
+	public static List get_all_IFC_by_DSAI_ID(Session session, int id_dsai){
+		List result = null;
+
+		//#### TO DO ####
+
+		return result;
+	}
 }

@@ -46,8 +46,7 @@ package de.fhg.fokus.hss.db.model;
 import java.io.Serializable;
 
 /**
- * @authors beatriz dot calvo at inycom dot es and santiago dot vicen at inycom dot es
- * Beatriz Calvo, Santiago Vicen / INYCOM
+ * @authors inycom.es
  */
 public class DSAI_IMPU implements Serializable {
 	private static final long serialVersionUID=1L;
@@ -89,7 +88,7 @@ public class DSAI_IMPU implements Serializable {
 		return this.id_dsai;
 	}
 
-	public void setIdDsai(int id_dsai) {
+	public void setId_dsai(int id_dsai) {
 		this.id_dsai = id_dsai;
 	}
 

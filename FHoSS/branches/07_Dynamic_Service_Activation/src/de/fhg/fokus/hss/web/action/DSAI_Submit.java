@@ -41,54 +41,78 @@
   *
   */
 
-package de.fhg.fokus.hss.db.op;
+package de.fhg.fokus.hss.web.action;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.log4j.Logger;
-import org.hibernate.Query;
+import org.apache.struts.action.Action;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionForward;
+import org.apache.struts.action.ActionMapping;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
+
+import de.fhg.fokus.hss.db.model.DSAI;
+import de.fhg.fokus.hss.db.model.DSAI_IFC;
 import de.fhg.fokus.hss.db.model.DSAI_IMPU;
+import de.fhg.fokus.hss.db.op.IFC_DAO;
+import de.fhg.fokus.hss.db.op.DSAI_DAO;
+import de.fhg.fokus.hss.db.op.DSAI_IFC_DAO;
+import de.fhg.fokus.hss.db.op.DSAI_IMPU_DAO;
+import de.fhg.fokus.hss.db.op.IMPU_DAO;
+import de.fhg.fokus.hss.db.hibernate.*;
+import de.fhg.fokus.hss.web.form.DSAI_Form;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
- * @authors inycom.es
+ * @author inycom.es
  */
-public class DSAI_IMPU_DAO {
-	private static Logger logger = Logger.getLogger(DSAI_IMPU_DAO.class);
 
-	public static void insert(Session session, DSAI_IMPU dsai_impu){
-		session.save(dsai_impu);
-	}
 
-	public static void update(Session session, DSAI_IMPU dsai_impu){
-		session.saveOrUpdate(dsai_impu);
-	}
+public class DSAI_Submit extends Action{
+	private static Logger logger = Logger.getLogger(SP_Submit.class);
 
-	public static DSAI_IMPU get_by_DSAI_and_IMPU_ID(Session session, int id_dsai, int id_impu){
-		Query query;
-		query = session.createSQLQuery("select * from dsai_impu where id_dsai=? and id_impu=?")
-			.addEntity(DSAI_IMPU.class);
-		query.setInteger(0, id_dsai);
-		query.setInteger(1, id_impu);
+	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
+			HttpServletRequest request, HttpServletResponse reponse) {
 
-		DSAI_IMPU result = null;
+		DSAI_Form form = (DSAI_Form) actionForm;
+		String nextAction = form.getNextAction();
+		int id = form.getId();
+		ActionForward forward = null;
+
+		boolean dbException = false;
 		try{
-			result = (DSAI_IMPU) query.uniqueResult();
+
+			//#### TO DO ####
+			//#### To be inspired in de.fhg.fokus.hss.web.action.SP_Submit ####
+
 		}
-		catch(org.hibernate.NonUniqueResultException e){
-			logger.error("Query did not returned an unique result! You have a duplicate in the database!");
+		catch(DatabaseException e){
+			logger.error("Database Exception occured!\nReason:" + e.getMessage());
 			e.printStackTrace();
+			dbException = true;
+
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
 		}
+		catch (HibernateException e){
+			logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+			e.printStackTrace();
+			dbException = true;
 
-		return result;
-	}
-
-	public static List get_all_IMPU_by_DSAI_ID(Session session, int id_dsai){
-		List result = null;
-
-		//#### TO DO ####
-
-		return result;
+			forward = actionMapping.findForward(WebConstants.FORWARD_FAILURE);
+		}
+		finally{
+			if (!dbException){
+				HibernateUtil.commitTransaction();
+			}
+			HibernateUtil.closeSession();
+		}
+		return forward;
 	}
 }
