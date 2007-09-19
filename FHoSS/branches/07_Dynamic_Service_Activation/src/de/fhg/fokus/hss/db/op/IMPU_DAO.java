@@ -33,12 +33,12 @@
   * fact and have to agree to check out carefully before installing,
   * using and extending the Open Source IMS Core System, if related
   * patents and licenses may become applicable to the intended usage
-  * context. 
+  * context.
   *
   * You should have received a copy of the GNU General Public License
   * along with this program; if not, write to the Free Software
-  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
-  * 
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  *
   */
 
 package de.fhg.fokus.hss.db.op;
@@ -60,7 +60,7 @@ import de.fhg.fokus.hss.db.model.VisitedNetwork;
 import de.fhg.fokus.hss.main.HSSProperties;
 
 /**
- * @author adp dot fokus dot fraunhofer dot de 
+ * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 public class IMPU_DAO {
@@ -68,7 +68,7 @@ public class IMPU_DAO {
 	public static void insert(Session session, IMPU impu){
 		session.save(impu);
 	}
-	
+
 	public static void update(Session session, IMPU impu){
 		if (impu.isPsi_dirtyFlag()){
 			ShNotification_DAO.insert_notif_for_PSI_Activation(session, impu);
@@ -79,8 +79,8 @@ public class IMPU_DAO {
 			impu.setSp_dirtyFlag(false);
 		}
 		session.saveOrUpdate(impu);
-	}	
-	
+	}
+
 	public static void update_others_from_implicit_set_ID(Session session, int id_impu, int old_implicit_set_id){
 		List l = IMPU_DAO.get_others_from_set(session, id_impu, old_implicit_set_id);
 		if (l != null && l.size() > 0){
@@ -99,7 +99,7 @@ public class IMPU_DAO {
 			}
 		}
 	}
-	
+
 	public static IMPU get_by_ID(Session session, int id){
 		Query query;
 		query = session.createSQLQuery("select * from impu where id=?")
@@ -109,7 +109,7 @@ public class IMPU_DAO {
 		return (IMPU) query.uniqueResult();
 	}
 
-	
+
 	public static List get_all_VisitedNetworks_by_IMPU_ID(Session session, int id_impu){
 		Query query;
 		query = session.createSQLQuery("select * from visited_network" +
@@ -119,7 +119,7 @@ public class IMPU_DAO {
 		query.setInteger(0, id_impu);
 		return query.list();
 	}
-	
+
 	public static List get_all_IMPU_for_VN_ID(Session session, int id_vn){
 		Query query;
 		query = session.createSQLQuery("select * from impu" +
@@ -139,8 +139,8 @@ public class IMPU_DAO {
 		query.setInteger(0, id_impi);
 		return query.list();
 	}
-	
-		
+
+
 	public static int get_a_registered_IMPI_ID(Session session, int id_impu){
 		Query query;
 		query = session.createSQLQuery("select id_impi from impi_impu" +
@@ -153,7 +153,7 @@ public class IMPU_DAO {
 			return -1;
 		return result;
 	}
-		
+
 
 	public static IMPU get_one_from_set(Session session, int id_implicit_set){
 		Query query;
@@ -163,7 +163,7 @@ public class IMPU_DAO {
 
 		return (IMPU) query.uniqueResult();
 	}
-	
+
 	public static List get_aliases_IMPUs(Session session, int id_implicit_set, int id_sp){
 		Query query;
 		query = session.createSQLQuery("select * from impu where id_implicit_set=? and id_sp=?")
@@ -173,22 +173,22 @@ public class IMPU_DAO {
 
 		return query.list();
 	}
-	
+
 	public static List get_all_within_same_IMPI_Associations(Session session, int id_impu){
 		List resultList = new ArrayList();
-		
+
 		List referenceIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, id_impu);
 		if (referenceIMPIList.size() == 0){
 			return resultList;
 		}
-		
+
 		IMPI refIMPI = (IMPI) referenceIMPIList.get(0);
 		List allIMPU_ID_List = IMPU_DAO.get_all_IMPU_ID_for_IMSU(session, refIMPI.getId_imsu());
 		if (allIMPU_ID_List == null || allIMPU_ID_List.size() == 0){
 			return resultList;
 		}
-		
-		
+
+
 		for (int i = 0; i < allIMPU_ID_List.size(); i++){
 			int crtIMPU_ID = (Integer) allIMPU_ID_List.get(i);
 			List crtIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, crtIMPU_ID);
@@ -208,25 +208,25 @@ public class IMPU_DAO {
 				}
 			}
 		}
-		
+
 		return resultList;
 	}
 
 	public static List get_all_Registered_within_same_IMPI_Associations(Session session, int id_impu){
 		List resultList = new ArrayList();
-		
+
 		List referenceIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, id_impu);
 		if (referenceIMPIList.size() == 0){
 			return resultList;
 		}
 		IMPI refIMPI = (IMPI) referenceIMPIList.get(0);
 		List allIMPU_ID_List = IMPU_DAO.get_all_Registered_IMPU_ID_for_IMSU(session, refIMPI.getId_imsu());
-		
+
 		if (allIMPU_ID_List == null || allIMPU_ID_List.size() == 0){
 			return resultList;
 		}
-		
-		
+
+
 		for (int i = 0; i < allIMPU_ID_List.size(); i++){
 			int crtIMPU_ID = (Integer) allIMPU_ID_List.get(i);
 			List crtIMPIList = IMPI_DAO.get_all_IMPI_for_IMPU_ID(session, crtIMPU_ID);
@@ -246,17 +246,17 @@ public class IMPU_DAO {
 				}
 			}
 		}
-		
+
 		return resultList;
-	}	
-	
-	
+	}
+
+
 	public static IMPU get_by_Identity(Session session, String identity){
 		Query query;
 		query = session.createSQLQuery("select * from impu where identity=?")
 			.addEntity(IMPU.class);
 		query.setString(0, identity);
-		
+
 		IMPU result = null;
 		try{
 			result = (IMPU) query.uniqueResult();
@@ -268,7 +268,7 @@ public class IMPU_DAO {
 
 		return result;
 	}
-	
+
 	public static Object[] get_by_Wildcarded_Identity(Session session, String identity, int firstResult, int maxResults){
 		Query query;
 		query = session.createSQLQuery("select * from impu where identity like ?")
@@ -282,12 +282,12 @@ public class IMPU_DAO {
 		result[1] = query.list();
 		return result;
 	}
-	
+
 	public static Object[] get_all(Session session, int firstResult, int maxResults){
 		Query query;
 		query = session.createSQLQuery("select * from impu")
 			.addEntity(IMPU.class);
-		
+
 		Object[] result = new Object[2];
 		result[0] = new Integer(query.list().size());
 		query.setFirstResult(firstResult);
@@ -295,8 +295,8 @@ public class IMPU_DAO {
 		result[1] = query.list();
 		return result;
 	}
-	
-	
+
+
 	public static List get_all_from_set(Session session, int id_set){
 		Query query;
 		query = session.createSQLQuery("select * from impu where id_implicit_set=?")
@@ -304,7 +304,7 @@ public class IMPU_DAO {
 		query.setInteger(0, id_set);
 		return query.list();
 	}
-	
+
 	public static Object[] get_all_from_set(Session session, int id_set, int firstResult, int maxResults){
 		Query query;
 		query = session.createSQLQuery("select * from impu where id_implicit_set=?")
@@ -318,7 +318,7 @@ public class IMPU_DAO {
 		result[1] = query.list();
 		return result;
 	}
-	
+
 	public static List get_others_from_set(Session session, int id, int id_set){
 		Query query;
 		query = session.createSQLQuery("select * from impu where id != ? and id_implicit_set=?")
@@ -327,7 +327,7 @@ public class IMPU_DAO {
 		query.setInteger(1, id_set);
 		return query.list();
 	}
-	
+
 	public static List get_all_sp_for_set(Session session, int id_implicit_set){
 		Query query;
 		query = session.createSQLQuery(
@@ -339,8 +339,8 @@ public class IMPU_DAO {
 		query.setInteger(0, id_implicit_set);
 		return query.list();
 	}
-	
-	
+
+
 	public static List get_by_Charging_Info_ID(Session session, int id_charging_info){
 		Query query;
 		query = session.createSQLQuery("select * from impu where id_charging_info = ?")
@@ -359,7 +359,7 @@ public class IMPU_DAO {
 		query.setInteger(0, id_imsu);
 		return query.list();
 	}
-	
+
 	public static List get_all_Registered_IMPU_ID_for_IMSU(Session session, int id_imsu){
 		Query query;
 		query = session.createSQLQuery("select distinct impu.id from impu" +
@@ -385,4 +385,11 @@ public class IMPU_DAO {
 		return query.executeUpdate();
 	}
 
+	public static List get_all_IMPU_for_IFC_list(Session session, List ifc_list){
+		Query query = null;
+
+		//#### TO DO ####
+
+		return query.list();
+	}
 }

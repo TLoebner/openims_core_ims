@@ -50,10 +50,10 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.DSAI;
+import de.fhg.fokus.hss.db.model.SP;
 
 /**
- * @authors beatriz dot calvo at inycom dot es and santiago dot vicen at inycom dot es
- * Beatriz Calvo, Santiago Vicen / INYCOM
+ * @authors inycom.es
  */
 public class DSAI_DAO {
 	private static Logger logger = Logger.getLogger(DSAI_DAO.class);
@@ -119,5 +119,15 @@ public class DSAI_DAO {
 		Query query = session.createSQLQuery("delete from dsai where id=?");
 		query.setInteger(0, id);
 		return query.executeUpdate();
+	}
+
+	public static Object[] get_by_Wildcarded_Tag(Session session, String identity,
+			int firstResult, int maxResults){
+
+		//#### TO DO ####
+		//#### To be inspired in de.fhg.fokus.hss.db.op.SP_DAO.get_by_Wildcarded_Identity
+
+		Object[] result = new Object[2];
+		return result;
 	}
 }

@@ -46,8 +46,7 @@ package de.fhg.fokus.hss.db.model;
 import java.io.Serializable;
 
 /**
- * @authors beatriz dot calvo at inycom dot es and santiago dot vicen at inycom dot es
- * Beatriz Calvo, Santiago Vicen / INYCOM
+ * @authors inycom.es
  */
 public class DSAI_IFC implements Serializable {
 	private static final long serialVersionUID=1L;
