@@ -329,7 +329,7 @@ AAAMessage* Cx_RTA(AAAMessage * rtr)
 	}else{
 		public_id=avp->data;
 		r_public_expire(public_id);
-		while((avp=Cx_get_next_public_identity(rtr,cdpb.AAAGetNextAVP(avp),AVP_IMS_Public_Identity,IMS_vendor_id_3GPP,__FUNCTION__))!=0){
+		while(cdpb.AAAGetNextAVP(avp) && (avp=Cx_get_next_public_identity(rtr,cdpb.AAAGetNextAVP(avp),AVP_IMS_Public_Identity,IMS_vendor_id_3GPP,__FUNCTION__))!=0){
 			public_id=avp->data;
 			r_public_expire(public_id);
 		}		
