@@ -371,7 +371,7 @@ AAAMessage* Cx_PPA(AAAMessage * ppr)
 		
 		for(i=0;i<imss->service_profiles_cnt;i++)
 			for(j=0;j<imss->service_profiles[i].public_identities_cnt;j++){				
-				pu = update_r_public(imss->service_profiles[i].public_identities[i].public_identity,
+				pu = update_r_public(imss->service_profiles[i].public_identities[j].public_identity,
 					0,&imss,0,0,0,0);
 				if (!pu) continue;
 				r_unlock(pu->hash);
