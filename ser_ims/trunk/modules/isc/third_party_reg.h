@@ -68,7 +68,7 @@ typedef struct _r_third_party_reg {
 	str req_uri;            /* AS sip uri:  	*/
 	str from;               /* SCSCF uri            */
 	str to;                 /* Public user id       */
-	str pani;		/* Access network info 	*/
+	str pvni;		/* Visited network id 	*/
 	str cv;			/* Charging vector 	*/
 } r_third_party_registration;
 
@@ -76,7 +76,7 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark);
 
 int r_third_party_reg(str req_uri, str to, int duration);
 
-r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from, str pani, str cv);
+r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from, str pvni, str cv);
 
 int r_send_third_party_reg(r_third_party_registration *r,int duration);
 

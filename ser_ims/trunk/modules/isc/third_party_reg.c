@@ -85,11 +85,10 @@ extern struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSC
 int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 {
 	r_third_party_registration *r;
-//	int expires_hdr=0;
 	int expires=0;
 	str req_uri ={0,0};
 	str to ={0,0};
-	str pani ={0,0};
+	str pvni ={0,0};
 	str cv ={0,0};
 
 	struct hdr_field *hdr;
@@ -129,8 +128,8 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	 */
 	expires = cscf_get_max_expires(msg);
 	
-	/* Get P-Access-Network-Info header */
-	pani = cscf_get_access_network_info(msg, &hdr);
+	/* Get P-Visited-Network-Id header */
+	pvni = cscf_get_visited_network_id(msg, &hdr);
 	
 	/* Get P-Charging-Vector header */
 	/* Just forward the charging header received from P-CSCF */
@@ -138,7 +137,7 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	cv =   cscf_get_charging_vector(msg, &hdr);
 
 	if (req_uri.s){
-		r = new_r_third_party_reg(req_uri, to, isc_my_uri_sip, pani, cv);
+		r = new_r_third_party_reg(req_uri, to, isc_my_uri_sip, pvni, cv);
 		if (!r){
 			LOG(L_ERR,"ERR:"M_NAME":isc_third_party_reg: Error creating new third party registration\n");
 			return ISC_RETURN_FALSE;
@@ -158,12 +157,12 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
  * @param req_uri - the AS to send third party register to
  * @param to - the To header
  * @param from - the From header
- * @param pani - P-Access-Network-Info header
+ * @param pvni - P-Visited-Network-ID header
  * @param cv - P-Charging-Vector header to use
  * @returns the r_third_party_registration or NULL on error
  */
 
-r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from, str pani, str cv)
+r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from, str pvni, str cv)
 {
         r_third_party_registration *r=0;
 
@@ -186,12 +185,15 @@ r_third_party_registration* new_r_third_party_reg(str req_uri, str to, str from,
         STR_SHM_DUP(r->from,from,"new_r_third_party_reg");
         if (!r->from.s) goto error;
 
-        STR_SHM_DUP(r->pani,pani,"new_r_third_party_reg");
-        if (!r->pani.s) goto error;
+        STR_SHM_DUP(r->pvni,pvni,"new_r_third_party_reg");
+        if (!r->pvni.s) goto error;
 
         STR_SHM_DUP(r->cv,cv,"new_r_third_party_reg");
         if (!r->cv.s) goto error;
 
+	if(!r){
+		LOG(L_INFO,"INF:"M_NAME":new_r_third_party_reg: r is null");
+	}
         return r;
 error:
 out_of_memory:
@@ -209,8 +211,13 @@ static str expires_e={"\r\n",2};
 static str contact_s={"Contact: <",10};
 static str contact_e={">\r\n",3};
 
+/*
 static str p_access_network_info_s={"P-Access-Network-Info: ",23};
 static str p_access_network_info_e={"\r\n",2};
+*/
+
+static str p_visited_network_id_s={"P-Visited-Network-ID: ",22};
+static str p_visited_network_id_e={"\r\n",2};
 
 static str p_charging_vector_s={"P-Charging-Vector: ",19};
 static str p_charging_vector_e={"\r\n",2};
@@ -237,8 +244,8 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
 
         h.len += contact_s.len + isc_my_uri_sip.len + contact_e.len;
 
-        if (r->pani.len) h.len += p_access_network_info_s.len +
-                p_access_network_info_e.len + r->pani.len;
+        if (r->pvni.len) h.len += p_visited_network_id_s.len +
+                p_visited_network_id_e.len + r->pvni.len;
 
         if (r->cv.len) h.len += p_charging_vector_s.len +
                 p_charging_vector_e.len + r->cv.len;
@@ -265,10 +272,10 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
         STR_APPEND(h,isc_my_uri_sip);
         STR_APPEND(h,contact_e);
 
-        if (r->pani.len) {
-                STR_APPEND(h,p_access_network_info_s);
-                STR_APPEND(h,r->pani);
-                STR_APPEND(h,p_access_network_info_e);
+        if (r->pvni.len) {
+                STR_APPEND(h,p_visited_network_id_s);
+                STR_APPEND(h,r->pvni);
+                STR_APPEND(h,p_visited_network_id_e);
         }
 
         if (r->cv.len) {
@@ -338,7 +345,7 @@ void free_r_registration(r_third_party_registration *r)
                 if (r->req_uri.s) shm_free(r->req_uri.s);
 		if (r->to.s) shm_free(r->to.s);
         	if (r->from.s) shm_free(r->from.s);
-		if (r->pani.s) shm_free(r->pani.s);
+		if (r->pvni.s) shm_free(r->pvni.s);
 		if (r->cv.s) shm_free(r->cv.s);
                 shm_free(r);
         }
