@@ -822,7 +822,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	if (is_p_dialog(call_id,host,port,transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_save_dialog: dialog already exists!\n");	
-		return CSCF_RETURN_BREAK;
+		return CSCF_RETURN_TRUE;
 	}
 	
 	d = add_p_dialog(call_id,host,port,transport);
