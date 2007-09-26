@@ -841,7 +841,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	if (is_s_dialog(call_id,aor)){
 		LOG(L_ERR,"ERR:"M_NAME":S_save_dialog: dialog already exists!\n");	
-		return CSCF_RETURN_BREAK;
+		return CSCF_RETURN_TRUE;
 	}
 	
 	d = add_s_dialog(call_id,aor,dir);
