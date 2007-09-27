@@ -37,11 +37,17 @@ function rowsPerPageChanged(){
 </head>
 
 <body>
+
 	<table id="title-table" align="center" weight="100%" >
 	<tr>
 		<td align="center">
-			<h1> DSAI - Search Results </h1>
+			<h1> DSAI Search </h1>
 			<br/><br/>
+		</td>
+	<tr>
+		<td align="left">
+			<!-- Print errors, if any -->
+			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
 		</td>
 	</tr>
 	</table> <!-- title-table -->

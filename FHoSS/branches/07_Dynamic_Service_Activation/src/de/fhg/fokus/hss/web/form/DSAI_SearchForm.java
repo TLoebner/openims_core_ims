@@ -47,8 +47,22 @@ import java.io.Serializable;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.log4j.Logger;
+import org.apache.struts.action.ActionErrors;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessage;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+
+import de.fhg.fokus.hss.db.hibernate.DatabaseException;
+import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
+import de.fhg.fokus.hss.db.model.SP;
+import de.fhg.fokus.hss.db.model.SP_IFC;
+import de.fhg.fokus.hss.db.model.SP_Shared_IFC_Set;
+import de.fhg.fokus.hss.db.op.SP_DAO;
+import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
+import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
 
 /**
  * @author inycom.es
@@ -57,12 +71,60 @@ import org.apache.struts.action.ActionMapping;
 public class DSAI_SearchForm extends ActionForm implements Serializable{
 	private static final long serialVersionUID=1L;
 
+	private static Logger logger = Logger.getLogger(DSAI_SearchForm.class);
+
 	private String id_dsai;
 	private String dsai_tag;
 
 	private String crtPage;
 	private String rowsPerPage;
 
+	public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
+        ActionErrors actionErrors = new ActionErrors();
+
+        //Repasar este método antes de ejecutar porque no tengo nada claro que funcione
+
+    	boolean dbException = false;
+    	try{
+    		Session session = HibernateUtil.getCurrentSession();
+    		HibernateUtil.beginTransaction();
+
+
+    		if (!isInteger(id_dsai)& id_dsai!="" ){ //"isInteger" is an auxiliar method that checks if the value introduced in ID field is an integer.
+    			actionErrors.add("dsai.error.id_not_integer", new ActionMessage("dsai.error.id_not_integer"));
+    		}
+
+    		if(isNegative(id_dsai)){ //"isNegative" is an auxiliar method that checks if the value introduced in ID field is a negative integer.
+
+    			actionErrors.add("dsai.error.id_negative", new ActionMessage("dsai.error.id_negative"));
+    		}
+
+
+
+    	}
+
+    	//I think that these catch are not necessary because no access to database is needed. Check!!!
+    	catch(DatabaseException e){
+    		logger.error("Database Exception occured!\nReason:" + e.getMessage());
+    		e.printStackTrace();
+    		dbException = true;
+    	}
+    	catch (HibernateException e){
+    		logger.error("Hibernate Exception occured!\nReason:" + e.getMessage());
+    		e.printStackTrace();
+    		dbException = true;
+    	}
+    	finally{
+    		if (!dbException){
+    			HibernateUtil.commitTransaction();
+    		}
+    		HibernateUtil.closeSession();
+    	}
+
+        return actionErrors;
+    }
+
+	// Reset
 	public void reset(ActionMapping arg0, HttpServletRequest arg1) {
   		this.dsai_tag = null;
   		this.id_dsai = null;
@@ -70,6 +132,7 @@ public class DSAI_SearchForm extends ActionForm implements Serializable{
   		rowsPerPage = "20";
   	}
 
+	//Getters and setters
 	public String getCrtPage() {
 		return crtPage;
 	}
@@ -99,5 +162,38 @@ public class DSAI_SearchForm extends ActionForm implements Serializable{
 
 	public void setId_dsai(String id_dsai) {
 		this.id_dsai = id_dsai;
+	}
+
+	//Auxiliar methods for Validate
+
+	private boolean isInteger (String id){
+
+		try {
+			Integer.parseInt(id);
+			return true;
+		}
+		catch (java.lang.Exception e){
+			return false;
+		}
+
+	}
+
+	private boolean isNegative (String dsai_id){
+
+		boolean isNeg=false;
+		int id=0;
+		try {
+			id=Integer.parseInt(dsai_id);
+			if (id<0){isNeg=true;}
+			else {
+				isNeg=false;
+			}
+			return isNeg;
+		}
+		catch (java.lang.Exception e){
+			isNeg=false;
+			return isNeg;
+		}
+
 	}
 }

@@ -121,13 +121,21 @@ public class DSAI_DAO {
 		return query.executeUpdate();
 	}
 
-	public static Object[] get_by_Wildcarded_Tag(Session session, String identity,
+	public static Object[] get_by_Wildcarded_Tag(Session session, String dsai_tag,
 			int firstResult, int maxResults){
 
-		//#### TO DO ####
-		//#### To be inspired in de.fhg.fokus.hss.db.op.SP_DAO.get_by_Wildcarded_Identity
+		Query query;
+		query = session.createSQLQuery("select * from dsai where dsai_tag like ?")
+			.addEntity(DSAI.class);
+		query.setString(0, "%" + dsai_tag + "%");
 
 		Object[] result = new Object[2];
+		result[0] = new Integer(query.list().size());
+		query.setFirstResult(firstResult);
+		query.setMaxResults(maxResults);
+		result[1] = query.list();
 		return result;
+
+
 	}
 }
