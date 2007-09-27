@@ -68,7 +68,7 @@ import de.fhg.fokus.hss.web.util.WebConstants;
  */
 
 public class DSAI_Search extends Action{
-	private static Logger logger = Logger.getLogger(SP_Search.class);
+	private static Logger logger = Logger.getLogger(DSAI_Search.class);
 
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
