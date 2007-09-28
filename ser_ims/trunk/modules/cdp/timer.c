@@ -100,13 +100,13 @@ void timer_loop()
 			while(i && i->expires>now) i = i->next;
 			if (i){
 				cb = i->cb;
-				ptr = *(i->cb);
+				ptr = *(i->ptr);
 				if (i->one_time){
 					if (i->prev) i->prev->next = i->next;
 					else timers->head = i->next;
 					if (i->next) i->next->prev = i->prev;
 					else timers->tail = i->next;
-					if (i->ptr)	shm_free(i);
+					shm_free(i);
 				}else{
 					i->expires = now + i->interval;
 				}
