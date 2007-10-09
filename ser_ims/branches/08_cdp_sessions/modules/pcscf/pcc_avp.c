@@ -250,7 +250,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 
  	if (media_component_number!=NULL) 
  	{
- 		cdpb.AAAAddAVPtoList(&list,media_component_number);
+ 		cdpb.AAAAddAVPToList(&list,media_component_number);
  	} else {
  		LOG(L_INFO, ANSI_RED"INF:"M_NAME"Unable to create media_component_number AVP");
  		return 0;
@@ -320,7 +320,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  	 								AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  	 								IMS_vendor_id_3GPP,x,4,
  	 								AVP_DUPLICATE_DATA);
- 	 cdpb.AAAAddAVPtoList(&list,media_type);								
+ 	 cdpb.AAAAddAVPToList(&list,media_type);								
 
  		 								
  	
@@ -364,7 +364,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
 											AVP_DUPLICATE_DATA);
-			cdpb.AAAAddAVPtoList(&list,Max_UL);
+			cdpb.AAAAddAVPToList(&list,Max_UL);
 		
 	 }
 	if (bwUL.bAS!=0)
@@ -374,7 +374,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
 											AVP_DUPLICATE_DATA);
-			cdpb.AAAAddAVPtoList(&list,Max_DL);
+			cdpb.AAAAddAVPToList(&list,Max_DL);
 			
 	}
 	
@@ -419,7 +419,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,x,4,
  											AVP_DUPLICATE_DATA);
-		cdpb.AAAAddAVPtoList(&list,flow_status);
+		cdpb.AAAAddAVPToList(&list,flow_status);
  	
  	
  	/*RR and RS*/
@@ -440,7 +440,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
 											AVP_DUPLICATE_DATA);
-			cdpb.AAAAddAVPtoList(&list,RR);
+			cdpb.AAAAddAVPToList(&list,RR);
 			 	 		
 	}	
 	
@@ -462,7 +462,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 								AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 								IMS_vendor_id_3GPP,x,4,
 								AVP_DUPLICATE_DATA);
-		cdpb.AAAAddAVPtoList(&list,RS);
+		cdpb.AAAAddAVPToList(&list,RS);
 		
 	}		
  	
@@ -478,17 +478,17 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  	{
  		/*0 means uplink offer*/
  		codec_data1=PCC_create_codec_data(sdpinvite,number,0);
- 		cdpb.AAAAddAVPtoList(&list,codec_data1);
+ 		cdpb.AAAAddAVPToList(&list,codec_data1);
  		/*3 means downlink answer*/
  		codec_data2=PCC_create_codec_data(sdp200,number,3);
- 		cdpb.AAAAddAVPtoList(&list,codec_data2);
+ 		cdpb.AAAAddAVPToList(&list,codec_data2);
  	} else { 
  		/*2 means downlink offer*/
  		codec_data1=PCC_create_codec_data(sdpinvite,number,2);
- 		cdpb.AAAAddAVPtoList(&list,codec_data1);
+ 		cdpb.AAAAddAVPToList(&list,codec_data1);
  		/*1 means uplink answer*/
  		codec_data2=PCC_create_codec_data(sdp200,number,1);
- 		cdpb.AAAAddAVPtoList(&list,codec_data2);
+ 		cdpb.AAAAddAVPToList(&list,codec_data2);
  	
  	}
  	/*now group them in one big AVP and free them*/
@@ -643,11 +643,11 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  				if (tag!=1)
  				{
  					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressA,portA,addressB,portB,"",atributes);
- 					cdpb.AAAAddAVPtoList(list,media_sub_component[i-1]);		
+ 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
  				} else {
  		
  					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressB,portB,addressA,portA,"",atributes);
- 					cdpb.AAAAddAVPtoList(list,media_sub_component[i-1]);		
+ 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
  				}
  				flows++;
  			
@@ -669,10 +669,10 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 		 				if (tag!=1)
 		 				{
 		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressA,portA,addressB,portB,"",3);
-		 					cdpb.AAAAddAVPtoList(list,media_sub_component[i-1]);	
+		 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
 		 				} else {
 		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressB,portB,addressA,portA,"",3);
-		 					cdpb.AAAAddAVPtoList(list,media_sub_component[i-1]);	
+		 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
 		 				}		 		
 		 			}
 	 				sscanf(portA,"%i",&intportA);
@@ -728,7 +728,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,x,4,
  											AVP_DUPLICATE_DATA);
-		cdpb.AAAAddAVPtoList(&list,flow_number);
+		cdpb.AAAAddAVPToList(&list,flow_number);
 		/*first flow is the recieve flow*/
 		
 		if (atributes==0 || atributes==2 || atributes==3) 
@@ -739,7 +739,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,whatchar,len,
  											AVP_DUPLICATE_DATA);
- 			cdpb.AAAAddAVPtoList(&list,flow_description1);
+ 			cdpb.AAAAddAVPToList(&list,flow_description1);
  			
 		} 
 		if (atributes==0 || atributes==1 || atributes==3)
@@ -750,7 +750,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,whatchar2,len2,
  											AVP_DUPLICATE_DATA);
-			cdpb.AAAAddAVPtoList(&list,flow_description2);
+			cdpb.AAAAddAVPToList(&list,flow_description2);
 		}
 		
  		
@@ -763,7 +763,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
 											AVP_DUPLICATE_DATA);
-			cdpb.AAAAddAVPtoList(&list,flow_usage);
+			cdpb.AAAAddAVPToList(&list,flow_usage);
 		} 											
  		
  		

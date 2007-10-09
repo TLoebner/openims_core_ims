@@ -203,7 +203,7 @@ AAAReturnCode  AAAAddAVPToMessage(
 	AAA_AVP *avp_t;
 
 	if ( !msg || !avp ) {
-		LOG(L_ERR,"ERROR:AAAAddAVPToList: param msg or avp passed null"
+		LOG(L_ERR,"ERROR:AAAAddAVPToMessage: param msg or avp passed null"
 			" or *avpList=NULL and position!=NULL !!\n");
 		return AAA_ERR_PARAMETER;
 	}
@@ -221,7 +221,7 @@ AAAReturnCode  AAAAddAVPToMessage(
 		/* look after avp from position */
 		for(avp_t=msg->avpList.head;avp_t&&avp_t!=position;avp_t=avp_t->next);
 		if (!avp_t) {
-			LOG(L_ERR,"ERROR: AAACreateAVP: the \"position\" avp is not in"
+			LOG(L_ERR,"ERROR: AAAAddAVPToMessage: the \"position\" avp is not in"
 				"\"msg\" message!!\n");
 			return AAA_ERR_PARAMETER;
 		}
@@ -321,7 +321,7 @@ AAAReturnCode  AAARemoveAVPFromMessage(
 
 	/* param check */
 	if ( !msg || !avp ) {
-		LOG(L_ERR,"ERROR:AAAAddAVPToList: param AVP_LIST \"avpList\" or AVP "
+		LOG(L_ERR,"ERROR:AAARemoveAVPFromMessage: param AVP_LIST \"avpList\" or AVP "
 			"\"avp\" passed null !!\n");
 		return AAA_ERR_PARAMETER;
 	}
@@ -329,7 +329,7 @@ AAAReturnCode  AAARemoveAVPFromMessage(
 	/* search the "avp" avp */
 	for(avp_t=msg->avpList.head;avp_t&&avp_t!=avp;avp_t=avp_t->next);
 	if (!avp_t) {
-		LOG(L_ERR,"ERROR: AAACreateAVP: the \"avp\" avp is not in "
+		LOG(L_ERR,"ERROR:AAARemoveAVPFromMessage: the \"avp\" avp is not in "
 			"\"avpList\" avp list!!\n");
 		return AAA_ERR_PARAMETER;
 	}
@@ -563,7 +563,7 @@ error:
  * @param list - the list to add to
  * @param avp - the avp to add 
  */ 
-void AAAAddAVPtoList(AAA_AVP_LIST *list,AAA_AVP *avp)
+void AAAAddAVPToList(AAA_AVP_LIST *list,AAA_AVP *avp)
 {
 	if (list->tail) {
 		avp->prev=list->tail;
@@ -578,6 +578,7 @@ void AAAAddAVPtoList(AAA_AVP_LIST *list,AAA_AVP *avp)
 	}	
 }
  
+
 /** 
  * Groups a list of avps into a data buffer
  * @param avps 
@@ -766,22 +767,3 @@ error:
 	return 0;
 }
  
-/**
- * Add an AVP to a list of AVPs.
- * @param list - the list to add to
- * @param avp - the avp to add
- */
-void AAAAddAVPToAVPList(AAA_AVP_LIST *list,AAA_AVP *avp)
-{
-	if (list->tail) {
-		avp->prev=list->tail;
-		avp->next=0;	
-		list->tail->next = avp;
-		list->tail=avp;
-	} else {
-		list->head = avp;
-		list->tail = avp;
-		avp->next=0;
-		avp->prev=0;
-	}
-}

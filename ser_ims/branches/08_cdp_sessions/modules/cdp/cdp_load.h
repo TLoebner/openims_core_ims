@@ -93,7 +93,7 @@ typedef AAAReturnCode (*AAAAddAVPToMessage_f)(
 												AAA_AVP *avp,
 												AAA_AVP *position);
 
-typedef void (*AAAAddAVPtoList_f)(AAA_AVP_LIST *list,AAA_AVP *avp);											
+typedef void (*AAAAddAVPToList_f)(AAA_AVP_LIST *list,AAA_AVP *avp);											
 
 typedef AAA_AVP* (*AAAFindMatchingAVP_f)(
 										AAAMessage *msg,
@@ -166,7 +166,7 @@ struct cdp_binds {
 	
 	AAACreateAVP_f AAACreateAVP;
 	AAAAddAVPToMessage_f AAAAddAVPToMessage;
-	AAAAddAVPtoList_f AAAAddAVPtoList;
+	AAAAddAVPToList_f AAAAddAVPToList;
 	AAAFindMatchingAVP_f AAAFindMatchingAVP;
 	AAAFindMatchingAVPList_f AAAFindMatchingAVPList;
 	AAAGetNextAVP_f AAAGetNextAVP;

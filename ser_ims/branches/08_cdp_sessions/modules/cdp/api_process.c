@@ -64,7 +64,7 @@ gen_lock_t *handlers_lock;	/**< lock for list of handlers */
  * This callback is added as an internal message listener and used to process
  * transaction requests. 
  * - first it calls all the registered handlers for requests and responses
- * - then it calls the transactio handler
+ * - then it calls the transaction handler
  * @param p - peer that this message came from
  * @param msg - the diameter message
  * @param ptr - not used anymore
