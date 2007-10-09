@@ -220,7 +220,7 @@ AAA_AVP  *AAAFindMatchingAVPList(
 	AAAVendorId vendorId,
 	AAASearchType searchType);
 
-void AAAAddAVPToAVPList(
+void AAAAddAVPToList(
 	AAA_AVP_LIST *list,
 	AAA_AVP *avp);	
 

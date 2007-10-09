@@ -93,7 +93,7 @@ int load_cdp( struct cdp_binds *cdpb)
 	
 	FIND_EXP(AAACreateAVP,"AAACreateAVP",AAACreateAVP_f);
 	FIND_EXP(AAAAddAVPToMessage,"AAAAddAVPToMessage",AAAAddAVPToMessage_f);
-	FIND_EXP(AAAAddAVPtoList,"AAAAddAVPtoList",AAAAddAVPtoList_f);
+	FIND_EXP(AAAAddAVPToList,"AAAAddAVPToList",AAAAddAVPToList_f);
 	FIND_EXP(AAAFindMatchingAVP,"AAAFindMatchingAVP",AAAFindMatchingAVP_f);
 	FIND_EXP(AAAFindMatchingAVPList,"AAAFindMatchingAVPList",AAAFindMatchingAVPList_f);
 	FIND_EXP(AAAGetNextAVP,"AAAGetNextAVP",AAAGetNextAVP_f);

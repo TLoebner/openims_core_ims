@@ -501,12 +501,12 @@ static inline void Snd_CE_add_applications(AAAMessage *msg,peer *p)
 		}else{
 			set_4bytes(x,app->vendor);
 			avp1 = AAACreateAVP(AVP_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,x,4, AVP_DUPLICATE_DATA);			
-			AAAAddAVPToAVPList(&list,avp1);
+			AAAAddAVPToList(&list,avp1);
 			
 			set_4bytes(x,app->id);
 			avp2 = AAACreateAVP((app->type==DP_AUTHORIZATION?AVP_Auth_Application_Id:AVP_Acct_Application_Id),
 				AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);			
-			AAAAddAVPToAVPList(&list,avp2);
+			AAAAddAVPToList(&list,avp2);
 		
 			group = AAAGroupAVPS(list);	
 			AAAFreeAVPList(&list);
