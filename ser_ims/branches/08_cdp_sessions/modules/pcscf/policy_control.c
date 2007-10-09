@@ -137,7 +137,8 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
 	sta = PCC_STR(msg, atoi(str1));
 
-	/*of course here comes some processing and probably freeing the message*/
-	
+	/*of course here comes some processing*/
+	//int rc = PCC_AAA(sta);
+	// but for now i dont care .. i am going to drop the dialog anyway
 	return 1;
 }

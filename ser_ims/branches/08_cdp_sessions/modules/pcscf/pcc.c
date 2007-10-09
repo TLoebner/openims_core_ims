@@ -47,7 +47,7 @@
  * \file
  *
  * P-CSCF Policy and Charging Control interface ops
- *
+ *  
  * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */
 
@@ -151,6 +151,8 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	 * open questions!!!*/
 	
 	str call_id = cscf_get_call_id(req, 0);
+	
+	
 	
 	/*LOG(L_INFO,"INF:"M_NAME": %.*s\n",session_id.len,session_id.s);*/
 	AAASession* auth = cdpb.AAACreateAuthSession(0,1,1);
@@ -275,41 +277,66 @@ int PCC_AAA(AAAMessage *dia_msg)
 
 
 
-///**
-// * @param msg - SIP request  
-// * @param tag - 0 for originating side, 1 for terminating side
-// * 
-// * @returns AAA message or NULL on error
-// */
-//AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
-//{
-//	AAAMessage* dia_str = NULL;
-//	AAAMessage* dia_sta = NULL;
-//	
-//	/** get Diameter session based on sip call_id */
-//	str call_id = cscf_get_call_id(msg, 0);
-//	str session_id = rx_modify_call_id(call_id, tag);
-//	AAAAuthSession* auth = cdpb.AAAGetAuthSession(session_id);
-//	shm_free(session_id.s);
-//	if (!auth) goto error;
-//	
-//	/* Create a STR prototype */
-//	//LOG(L_INFO,"%.*s\n", auth.sid->len, auth.sid->s);
-//	dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, auth->sid);
-//	
-//	/* Add Destination-Realm AVP */
-//	str realm = rx_get_destination_realm(forced_qos_peer);
-//	if (!PCC_add_destination_realm(dia_str, realm)) goto error;
-//	
-//	/* Add Auth-Application-Id AVP */
-//	if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
-//
-//	auth->sm_process(auth, AUTH_EV_STR, dia_str, dia_sta);
-//	
-//	return dia_sta;
-//error:
-//	
-//	return NULL;
-//}
+/**
+ * @param msg - SIP request  
+ * @param tag - 0 for originating side, 1 for terminating side
+ * 
+ * @returns AAA message or NULL on error
+ */
+AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
+{
+	AAAMessage* dia_str = NULL;
+	AAAMessage* dia_sta = NULL;
+	
+	p_dialog *dlg;
+	
+/** get Diameter session based on sip call_id */
+	str call_id = cscf_get_call_id(msg, 0);
+	
+	
+	
+	if (tag)
+		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
+	else 
+		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
+		
+	if (!dlg)	return NULL;
+	if (!dlg->pcc_session) return NULL;
+		
+
+	if (pcscf_qos_release7)
+		dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, dlg->pcc_session);
+	else
+		dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, dlg->pcc_session);
+	
+	if (!dia_str) goto error;
+	
+
+
+	str realm = pcc_get_destination_realm(forced_qos_peer);
+	if (!PCC_add_destination_realm(dia_str, realm)) goto error;
+
+
+	if (pcscf_qos_release7){
+		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
+	}else{
+		if (!PCC_add_auth_application_id(dia_str, IMS_Gq)) goto error;
+	} 
+	
+	/*Termination-Cause*/
+	
+	
+	
+	if (forced_qos_peer.len)
+		dia_sta = cdpb.AAASendRecvMessageToPeer(dia_str,&forced_qos_peer);
+	else 
+		dia_sta = cdpb.AAASendRecvMessage(dia_str);	
+	
+	
+	return dia_sta;
+error:
+	 cdpb.AAADropAuthSession(dlg->pcc_session);
+	return NULL;
+}
 
 
