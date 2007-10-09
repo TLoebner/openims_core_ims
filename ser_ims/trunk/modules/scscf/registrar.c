@@ -1576,8 +1576,8 @@ int S_add_p_asserted_identity(struct sip_msg *msg,char *str1,char *str2)
 			STR_APPEND(asserted_id_h,p_asserted_identity_e);
 			if (!cscf_add_header_first(msg,&asserted_id_h,HDR_OTHER_T))
 				pkg_free(asserted_id_h.s);
-				return CSCF_RETURN_TRUE;
-			}
+			return CSCF_RETURN_TRUE;
+		}
 	}else{
 	//check if it is a tel uri
 		p = get_r_public(public_identity);
