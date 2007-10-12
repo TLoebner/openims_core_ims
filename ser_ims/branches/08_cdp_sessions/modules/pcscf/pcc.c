@@ -128,6 +128,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
 	p_dialog *dlg;
+	AAASession* auth=0;
 	
 	str sdpbodyinvite,sdpbody200;
 	char *mline;
@@ -140,22 +141,29 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 	
 	
-	
-	/* Create an authorization session */
-	
-	
-	
-	/*Is this the function to be called when there is a reINVITE? then shouldnt we first
-	 * try to see if there is an auth session already created for this?
-	 * 
-	 * open questions!!!*/
+	/* Check for the existence of an auth session for this dialog */							
+	/* if not, create an authorization session */
+
 	
 	str call_id = cscf_get_call_id(req, 0);
+		
+	if (tag)
+		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
+	else 
+		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
 	
 	
+	if (!dlg) goto error;
 	
-	/*LOG(L_INFO,"INF:"M_NAME": %.*s\n",session_id.len,session_id.s);*/
-	AAASession* auth = cdpb.AAACreateAuthSession(0,1,1);
+		
+	if (!dlg->pcc_session) {
+		 auth = cdpb.AAACreateAuthSession(0,1,1);
+		 dlg->pcc_session = auth;
+	}else{ 
+		auth = dlg->pcc_session;
+	}
+	
+	d_unlock(dlg->hash);
 	
 	if (!auth) goto error;												 
 
@@ -224,6 +232,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 		
 		if (!PCC_add_media_component_description(aar,sdpbodyinvite,sdpbody200,mline,i,tag))
 		{
+			LOG(L_ERR,"ERROR: PCC_AAR() : unable to add media component description AVP for line %i\n",i);
 			goto error; /* Think about this*/
 		}
 		
@@ -241,12 +250,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 		Rx_add_Service_URN(dia_aar,emergencysession);
 	
 	*/
-	if (tag)
-		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
-	else 
-		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
 	
-	if (dlg) dlg->pcc_session = auth;
 	
 	/*---------- 3. Send AAR to PCRF ----------*/
 	if (forced_qos_peer.len)
