@@ -10,27 +10,10 @@
 	Workers="4"
 	QueueLength="8"
 >
-	<Peer FQDN="pcrf.open-ims.test" Realm="open-ims.test" port="3868"/> 
+	<Peer FQDN="pcrf.open-ims.test" Realm="open-ims.test" port="4868"/> 
 
-	<Acceptor port="3871" bind="127.0.0.1"/>
+	<Acceptor port="3879" bind="127.0.0.1"/>
 	
-	<Auth id="16777222" vendor="10415"/>
-
-	<DefaultRoute FQDN="pcrf.open-ims.test" metric="10"/>
-	
-<!-- Realm Routing configuration - Uncomment and Edit!
-
-	<Realm name="open-ims.test">
-		<Route FQDN="hss1.open-ims.test" metric="10"/>
-		<Route FQDN="hss2.open-ims.test" metric="20"/>
-	</Realm>
-	<Realm name="another.open-ims.test">
-		<Route FQDN="hss3.open-ims.test" metric="10"/>
-		<Route FQDN="hss2.open-ims.test" metric="20"/>		
-	</Realm>
-	<DefaultRoute FQDN="hss.open-ims.test" metric="10"/>
-	<DefaultRoute FQDN="hss4.open-ims.test" metric="20"/>
-
--->
+	<Auth id="16777236" vendor="10415"/>
 
 </DiameterPeer>
