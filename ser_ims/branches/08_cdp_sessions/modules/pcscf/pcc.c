@@ -304,8 +304,8 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	else 
 		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
 		
-	if (!dlg)	return NULL;
-	if (!dlg->pcc_session) return NULL;
+	if (!dlg)	goto end;
+	if (!(dlg->pcc_session)) goto error_dlg;
 		
 
 	if (pcscf_qos_release7)
@@ -336,10 +336,13 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	else 
 		dia_sta = cdpb.AAASendRecvMessage(dia_str);	
 	
-	
+	LOG(L_DBG,"PCC_STR successful STR-STA exchange\n");
 	return dia_sta;
 error:
 	 cdpb.AAADropAuthSession(dlg->pcc_session);
+error_dlg:
+	d_unlock(dlg->hash);
+end:
 	return NULL;
 }
 
