@@ -431,6 +431,8 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	struct hdr_field *h1;
 	str reason={NULL,0};
 	
+	struct cell* t; /*needed to distinguish between UPDATE and INVITE*/
+	
 	if (str2) {
 		reason.s=str2;
 		reason.len=strlen(str2);
@@ -449,15 +451,28 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	callid=cscf_get_call_id(msg,&h1);
 	if (is_p_dialog_dir(callid,dir)) {
 		d=get_p_dialog_dir(callid,dir);
-		if (msg->first_line.u.reply.statuscode > 199)
+		t=tmb.t_gett();
+		if (t->method.len==6 && memcomp(t->method.s,"INVITE",6)==0)
 		{
-			release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
-			d_unlock(d->hash);
-			return CSCF_RETURN_TRUE;
+			// If its an INVTE, the state depends on which reply we are processing
+									
+			if (msg->first_line.u.reply.statuscode > 199)
+			{
+				release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
+				d_unlock(d->hash);
+				return CSCF_RETURN_TRUE;
+			} else {
+				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);
+				d_unlock(d->hash);
+				return CSCF_RETURN_TRUE;
+			}
 		} else {
-			release_call_previous(d,RELEASE_CALL_EARLY,488,reason);
-			d_unlock(d->hash);
-			return CSCF_RETURN_TRUE;
+			
+				//UPDATE so early
+				release_call_early(d,488,reason);
+				d_unlock(d->hash);
+				return CSCF_RETURN_TRUE;
+			 			
 		}
 	} else {
 		LOG(L_ERR,"ERR:"M_NAME "P_release_call_onreply :  unable to find dialog\n");
