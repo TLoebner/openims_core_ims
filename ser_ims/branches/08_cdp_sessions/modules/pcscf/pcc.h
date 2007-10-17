@@ -57,8 +57,19 @@
 #include "mod.h"
 #include "../cdp/cdp_load.h"
 
+typedef struct authdata {
+	str callid;
+	unsigned int direction; // 0 ORIGINATING  1 TERMINATING
+} t_authdata;
+
 AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag);
 AAAMessage* PCC_STR(struct sip_msg *msg, int tag);
+AAAMessage* PCC_ASA(AAAMessage *request);
 int PCC_AAA(AAAMessage *msg);
+
+
+
+AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);
+
 
 #endif /*__PCC_H_*/

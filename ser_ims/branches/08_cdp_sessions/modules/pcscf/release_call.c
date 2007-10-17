@@ -145,6 +145,13 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 		goto error;
 	}
 	if (d->is_releasing==1) {	
+		/*The first time i decrease the expire time for the dialog expire , so that i guarantee that
+		 * its going to be deleted from the table sometime*/
+		time_t time_now=time(0);
+		if (d->expires>time_now+TIME_TO_EXPIRE)
+		{
+			d->expires=time_now+TIME_TO_EXPIRE;
+		}
 		/*Before generating a request, we have to generate
 		 * the route_set in the dlg , because the route set
 		 * in the dialog is for the UAC everything which was in the 
@@ -282,6 +289,15 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	if (o && !o->is_releasing) o->is_releasing = 1;
 		
 	d->is_releasing++;
+	
+	/*The first time i decrease the expire time for the dialog expire , so that i guarantee that
+		 * its going to be deleted from the table sometime*/
+	time_t time_now=time(0);
+	if (d->expires>time_now+TIME_TO_EXPIRE)
+	{
+		d->expires=time_now+TIME_TO_EXPIRE;
+	}
+		
 		
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
 		LOG(L_ERR,"ERR:"M_NAME":release_call_previous(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
@@ -452,7 +468,7 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	if (is_p_dialog_dir(callid,dir)) {
 		d=get_p_dialog_dir(callid,dir);
 		t=tmb.t_gett();
-		if (t->method.len==6 && memcomp(t->method.s,"INVITE",6)==0)
+		if (t->method.len==6 && memcmp(t->method.s,"INVITE",6)==0)
 		{
 			// If its an INVTE, the state depends on which reply we are processing
 									

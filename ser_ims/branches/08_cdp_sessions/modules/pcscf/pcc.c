@@ -56,6 +56,7 @@
 #include "pcc_avp.h"
 #include "sip.h"
 #include "dlg_state.h"
+#include "release_call.h" // for the ASR-ASA
 #include "../tm/tm_load.h"
 
 
@@ -129,6 +130,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	AAAMessage* aaa = 0;
 	p_dialog *dlg;
 	AAASession* auth=0;
+	t_authdata *generic=0;
 	
 	str sdpbodyinvite,sdpbody200;
 	char *mline;
@@ -147,7 +149,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 	str call_id = cscf_get_call_id(req, 0);
 		
-	if (tag)
+	if (!tag)
 		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
 	else 
 		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
@@ -157,7 +159,12 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 		
 	if (!dlg->pcc_session) {
-		 auth = cdpb.AAACreateAuthSession(0,1,1);
+		 /*For the first time*/
+		 generic=shm_malloc(sizeof(t_authdata));
+		 generic->callid.s=0; generic->callid.len=0;
+		 STR_SHM_DUP(generic->callid,call_id,"shm");
+		 generic->direction=tag;
+		 auth = cdpb.AAACreateAuthSession((void *)generic,1,1);		 
 		 dlg->pcc_session = auth;
 	}else{ 
 		auth = dlg->pcc_session;
@@ -264,9 +271,15 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 
 	
 	return aaa;
-
+out_of_memory:
+	LOG(L_CRIT,"PCC_AAR():out of memory\n");
 error:
 	if (auth) cdpb.AAADropAuthSession(auth);
+	if (generic)
+	{
+		if (generic->callid.s) shm_free(generic->callid.s);
+		shm_free(generic);
+	}
 	return NULL;
 }
 
@@ -282,6 +295,7 @@ int PCC_AAA(AAAMessage *dia_msg)
 
 
 /**
+ * Sends and Session Termination Request
  * @param msg - SIP request  
  * @param tag - 0 for originating side, 1 for terminating side
  * 
@@ -293,6 +307,8 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	AAAMessage* dia_sta = NULL;
 	
 	p_dialog *dlg;
+	t_authdata *g;
+	
 	
 /** get Diameter session based on sip call_id */
 	str call_id = cscf_get_call_id(msg, 0);
@@ -337,6 +353,17 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 		dia_sta = cdpb.AAASendRecvMessage(dia_str);	
 	
 	LOG(L_DBG,"PCC_STR successful STR-STA exchange\n");
+	
+	/*Before dropping the session remember the authdata!!*/
+	g=(t_authdata *)dlg->pcc_session->u.auth.generic_data;
+	if (g)
+	{
+		if (g->callid.s) shm_free(g->callid.s);
+		shm_free(g);
+		dlg->pcc_session->u.auth.generic_data=0;
+	}
+	
+	cdpb.AAADropAuthSession(dlg->pcc_session);
 	return dia_sta;
 error:
 	 cdpb.AAADropAuthSession(dlg->pcc_session);
@@ -345,5 +372,85 @@ error_dlg:
 end:
 	return NULL;
 }
+
+str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
+/*
+ * Called upon reciept of an ASR terminates the user session and returns the ASA
+ * Terminates the corresponding dialog
+ * @param request - the received request
+ * @returns the ASA with the result code
+ * 
+*/
+AAAMessage* PCC_ASA(AAAMessage *request)
+{
+	AAAMessage *asa;
+	t_authdata *data;
+	p_dialog *p;
+	char x[4];
+	AAA_AVP *rc=0;
+	
+	data = (t_authdata *) request->session->u.auth.generic_data; //casting
+		
+	if (data->callid.s)
+	{
+		p=get_p_dialog_dir(data->callid,data->direction);
+		release_call_p(p,503,reason_terminate_dialog_s);
+		/*of course it would be nice to first have a look on the Abort-Cause AVP*/
+		d_unlock(p->hash);
+	}
+	asa=cdpb.AAACreateResponse(request);
+	if (!asa) return 0;
+	set_4bytes(x,AAA_SUCCESS);
+	
+	
+	rc=cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+	if (rc) cdpb.AAAAddAVPToMessage(asa,rc,NULL);
+	
+	// Should i drop the auth session here??	
+
+	return asa;
+}
+
+
+/**
+ * Handler for incoming Diameter requests.
+ * @param request - the received request
+ * @param param - generic pointer
+ * @returns the answer to this request
+ */
+AAAMessage* PCCRequestHandler(AAAMessage *request,void *param)
+{
+	if (is_req(request)){		
+		LOG(L_INFO,"INFO:"M_NAME":PCCRequestHandler(): We have received a request\n");
+		#ifdef WITH_IMS_PM
+			ims_pm_diameter_request(request);
+		#endif		
+		switch(request->applicationId){
+        	case IMS_Rx:
+        	case IMS_Gq: // Its almost the same!
+				switch(request->commandCode){				
+					case IMS_RAR:
+						LOG(L_INFO,"INFO:"M_NAME":PCCRequestHandler():- Received an IMS_RAR \n");
+						return 0; //return PCC_RAR(request);
+						break;
+					case IMS_ASR:
+						LOG(L_INFO,"INFO:"M_NAME":PCCRequestHandler(): - Received an IMS_ASR \n");
+						return PCC_ASA(request);
+						break;
+					default :
+						LOG(L_ERR,"ERR:"M_NAME":PCCRequestHandler(): - Received unknown request for Rx  or Gq command %d\n",request->commandCode);
+						break;	
+				}
+				break;
+			default:
+				LOG(L_ERR,"ERR:"M_NAME":PCCRequestHandler(): - Received unknown request for app %d command %d\n",
+					request->applicationId,
+					request->commandCode);
+				break;				
+		}					
+	}
+	return 0;		
+}
+
 
 

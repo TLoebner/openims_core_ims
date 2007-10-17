@@ -89,6 +89,7 @@
 
 
 #include "policy_control.h"
+#include "pcc.h"
 
 MODULE_VERSION
 
@@ -188,6 +189,7 @@ int* registrar_step_version; /**< the step version within the current registrar 
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
+int * callback_singleton;				/**< Callback singleton 								*/
 
 #ifdef WITH_IMS_PM
 	/** IMS PM parameters storage */
@@ -611,7 +613,8 @@ static int mod_init(void)
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
-	
+	callback_singleton=shm_malloc(sizeof(int));
+	*callback_singleton=0;
 	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
@@ -814,7 +817,12 @@ static int mod_child_init(int rank)
 	/* Init the user data parser */
 	if (!parser_init(pcscf_reginfo_dtd)) return -1;
 		
-
+	lock_get(process_lock);
+		if((*callback_singleton)==0){
+			*callback_singleton=1;
+			cdpb.AAAAddRequestHandler(PCCRequestHandler,NULL);
+		}
+	lock_release(process_lock);
 	/* rtpproxy child init */
 	if (pcscf_nat_enable && rtpproxy_enable) 
 		if (!rtpproxy_child_init(rank)) return -1;
