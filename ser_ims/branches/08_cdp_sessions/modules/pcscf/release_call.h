@@ -71,7 +71,16 @@ enum release_call_situation{
 	  * by a  BYE to the callee and a reply >400 to the caller
 	  * a CANCEL wouldn't be understood by the callee!*/
 };
-#define MAX_TIMES_TO_TRY_TO_RELEASE 5
+#define MAX_TIMES_TO_TRY_TO_RELEASE 3
+#define TIME_TO_EXPIRE 60
+/*
+ * When a release_call process it started , if it goes good, the dialog is deleted when the answers
+ * are recieved.
+ * If no answers, then what happens?
+ * 	---> Every dialog wich is called is set to expire in TIME_TO_EXPIRE secs if its expire time is bigger
+ * Then when it expires , the functions are called again, when that happens 3 times, the dialogs are 
+ * deleted silently from the table...  (but the UA had enough time to reply!!!)
+ * */
 
 
 int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2);

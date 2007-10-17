@@ -102,7 +102,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 		return 0;
 	}
 	//LOG(L_INFO,"INF:"M_NAME"\n%.*s\n\n",t->method.len,t->method.s);
-	if (strncmp(t->method.s,"INVITE",6)!=0)
+	if (!(strncmp(t->method.s,"INVITE",6)==0)&&!(strncmp(t->method.s,"UPDATE",6)==0))
 	{
 		/*we dont apply QoS if its not a reply to an INVITE!*/
 		return 1;
@@ -114,7 +114,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	
 	if (!aaa) goto error;
 	result = PCC_AAA(aaa);
-
+	cdpb.AAAFreeMessage(&aaa);
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
 	if (result == AAA_SUCCESS) return 1;
 
@@ -140,6 +140,6 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	/*of course here comes some processing*/
 	//int rc = PCC_AAA(sta);
 	// but for now i dont care .. i am going to drop the dialog anyway
-	
+	cdpb.AAAFreeMessage(&sta);
 	return 1;
 }
