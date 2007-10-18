@@ -325,7 +325,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
 	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
 	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE},
-	
+	{"P_generates_aar",				P_generates_aar,			0, 0, ONREPLY_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 

@@ -57,7 +57,8 @@
 #include "../../sr_module.h"
 #include "../cdp/cdp_load.h"
 
-int P_local_policy(struct sip_msg* msg, char* str1, char* str2); 
+int P_local_policy(struct sip_msg* msg, char* str1, char* str2);
+int P_generates_aar(struct sip_msg *msg,char *str1,char *str2); 
 int P_AAR(struct sip_msg* msg, char* str1, char* str2); 
 int P_STR(struct sip_msg* msg, char* str1, char* str2);
 
