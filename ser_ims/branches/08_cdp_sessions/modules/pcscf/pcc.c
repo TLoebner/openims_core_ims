@@ -110,12 +110,6 @@ str pcc_modify_call_id(str call_id, int tag)
 	return t;
 }
 
-
-
-
-
-
-
 /**
  * Sends the Authorization Authentication Request.
  * @param req - SIP request  
@@ -215,12 +209,12 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	 * 									*[Codec-Data]
 	 */
 
-	if(!extract_body(req,&sdpbodyinvite)) 
+	if(extract_body(req,&sdpbodyinvite)==-1) 
 	{
 		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
 		goto error;
 	}
-	if(!extract_body(res,&sdpbody200)) 
+	if(extract_body(res,&sdpbody200)==-1) 
 	{
 		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
 		goto error;

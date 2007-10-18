@@ -57,6 +57,7 @@
 #include "mod.h"
 
 #include "pcc.h"
+#include "sip.h"
 
 extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 		*/
 extern struct cdp_binds cdpb;          /**< Structure with pointers to cdp funcs 		*/
@@ -69,6 +70,50 @@ int P_local_policy(struct sip_msg* msg, char* str1, char* str2)
 	
 	return 1;	
 }
+
+
+
+
+/**
+ * Checks if this reply is one that is suitable of generating an AAR message...
+ * @param msg - SIP response to check
+ * @param str1 - not used
+ * @param str2 - not used
+ * 
+ * @returns 0 if this reply is not AAR suitable, or 1 if yes
+*/
+
+
+int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
+{
+	struct cell *t;
+	t=tmb.t_gett();
+	if (!t) {
+		LOG(L_ERR,"P_generates_aar(): unable to get transaction\n");
+		return 0;
+	}
+	LOG(L_INFO,"P_generates_aar() : method %.*s\n",t->method.len,t->method.s);
+	if ((t->method.len==5 && memcmp(t->method.s,"PRACK",5)==0)||(t->method.len==6 && (memcmp(t->method.s,"INVITE",6)==0||memcmp(t->method.s,"UPDATE",6)==0)))
+	{
+		
+		/*here we should check if both have some SDP content the request and the response....*/
+		LOG(L_INFO,"P_generates_aar() : content length %i\n",cscf_get_content_len(msg));
+		/* I have a lazy day so i am only going to check the answer, if the answer has SDP is because
+		 * the request has ... if not , the problem is in the client..*/
+		if (cscf_get_content_len(msg)!=0)
+		{
+			str c=cscf_get_content_type(msg);
+			LOG(L_ERR,"content tpye is %.*s\n",c.len,c.s);
+				return 1;
+		} 
+	} 
+		return 0;
+	
+}
+
+
+
+
 
 
 
@@ -101,13 +146,14 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: cannot get the transaction\n"); 
 		return 0;
 	}
-	//LOG(L_INFO,"INF:"M_NAME"\n%.*s\n\n",t->method.len,t->method.s);
-	if (!(strncmp(t->method.s,"INVITE",6)==0)&&!(strncmp(t->method.s,"UPDATE",6)==0))
+	
+	if (!(strncmp(t->method.s,"INVITE",6)==0)&&!(strncmp(t->method.s,"UPDATE",6)==0)&&!(strncmp(t->method.s,"PRACK",5)==0))
 	{
-		/*we dont apply QoS if its not a reply to an INVITE!*/
+		
+		//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
 		return 1;
 	}
-	
+
 	/* Create an AAR based on request and reply and send it to PDF */
 	aaa = PCC_AAR(t->uas.request, msg, atoi(str1));
 	//cdpb.AAAPrintMessage(aaa);
@@ -117,9 +163,9 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	cdpb.AAAFreeMessage(&aaa);
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
 	if (result == AAA_SUCCESS) return 1;
-
+	else return 0; // if its not a success then that means i want to reject this call! 
 error:
-	return -1;
+	return 1; // default policy is if PDF/PCRF not working or errors , then leave everything flow
 }
 
 

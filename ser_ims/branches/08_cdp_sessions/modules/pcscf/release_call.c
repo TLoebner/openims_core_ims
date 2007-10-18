@@ -468,6 +468,10 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	if (is_p_dialog_dir(callid,dir)) {
 		d=get_p_dialog_dir(callid,dir);
 		t=tmb.t_gett();
+		if (!t) {
+			LOG(L_ERR,"P_release_call_onreply(): unable to get transaction\n");
+			return 0;
+		}
 		if (t->method.len==6 && memcmp(t->method.s,"INVITE",6)==0)
 		{
 			// If its an INVTE, the state depends on which reply we are processing
