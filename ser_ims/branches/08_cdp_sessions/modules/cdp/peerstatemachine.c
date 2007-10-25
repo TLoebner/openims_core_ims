@@ -57,6 +57,7 @@
 
 #include "peerstatemachine.h"
 #include "diameter_api.h"
+#include "diameter_ims.h"
 
 #include "receiver.h"
 #include "peermanager.h"
@@ -965,17 +966,43 @@ int Elect(peer *p,AAAMessage *cer)
  */
 void Snd_Message(peer *p, AAAMessage *msg)
 {
+	AAASession *session=0;
+	int rcode;
+	int send_message_before_session_sm=0;
 	touch_peer(p);
-	if (msg->session){
-		switch (msg->session->type){
+	if (msg->sessionId) session = get_session(msg->sessionId->data);
+	
+	if (session){
+		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
-				auth_client_statefull_sm_process(msg->session,AUTH_EV_SEND_REQ,msg);
+				if (is_req(msg))
+					auth_client_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
+				else {
+					if (msg->commandCode == IMS_ASA){
+						if (!msg->res_code){
+							msg->res_code = AAAFindMatchingAVP(msg,0,AVP_Result_Code,0,0);
+						}
+						if (!msg->res_code) auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+						else {
+							rcode = get_4bytes(msg->res_code->data.s);
+							if (rcode>=2000 && rcode<3000) {
+								peer_send_msg(p,msg);
+								send_message_before_session_sm=1;
+								auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_SUCCESS,msg);
+							}
+							else auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+						}
+						
+					}else
+						auth_client_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+				}
 				break;				 
 			default:
 				break;
 		}
+		sessions_unlock(session->hash);
 	}
-	peer_send_msg(p,msg);
+	if (!send_message_before_session_sm) peer_send_msg(p,msg);
 }
 
 /**
@@ -988,16 +1015,33 @@ void Snd_Message(peer *p, AAAMessage *msg)
  */ 
 void Rcv_Process(peer *p, AAAMessage *msg)
 {
+	AAASession *session=0;
 	LOG(L_DBG,"DBG:Rcv_Process(): Received a message\n");
-	if (msg->session){
-		switch (msg->session->type){
+	if (msg->sessionId) session = get_session(msg->sessionId->data);
+	
+	if (session){
+		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
-				auth_client_statefull_sm_process(msg->session,AUTH_EV_RECV_ANS,msg);
+				if (is_req(msg))
+					auth_client_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+				else {
+					if (msg->commandCode==IMS_STA)
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_STA,msg);
+					else
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
+				}
 				break;
 			default:
 				break;			 
 		}
-	}	
+		sessions_unlock(session->hash);
+	}else{
+		if (msg->sessionId){
+			if (msg->commandCode == IMS_ASR) 
+				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg); 
+		} 
+	}
+
 	if (!put_task(p,msg)){
 		LOG(L_ERR,"ERROR:Rcv_Process(): Queue refused task\n");
 		AAAFreeMessage(&msg);

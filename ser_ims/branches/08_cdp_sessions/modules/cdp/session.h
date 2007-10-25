@@ -62,6 +62,9 @@
 #include "utils.h"
 
 
+/** Function for callback on session events: timeout, etc. */
+typedef void (AAASessionCallback_f)(int event,void *param,void *session);
+
 /** Types of sessions */
 typedef enum {
 	UNKNOWN_SESSION			= 0x0000,
@@ -95,24 +98,32 @@ typedef enum {
 typedef enum {
 	AUTH_EV_START,
 	AUTH_EV_SEND_REQ,
+	AUTH_EV_SEND_ANS,
+	AUTH_EV_RECV_ASR,
+	AUTH_EV_RECV_REQ,
 	AUTH_EV_RECV_ANS,
 	AUTH_EV_RECV_ANS_SUCCESS,
 	AUTH_EV_RECV_ANS_UNSUCCESS,
 	AUTH_EV_STR,
-	AUTH_EV_STA_SUCCESS,
-	AUTH_EV_STA_UNSUCCESS,
+	AUTH_EV_SEND_ASA_SUCCESS,
+	AUTH_EV_SEND_ASA_UNSUCCESS,
+	AUTH_EV_RECV_STA,
 	AUTH_EV_SESSION_TIMEOUT,
 	AUTH_EV_SERVICE_TERMINATED,
+	AUTH_EV_SESSION_GRACE_TIMEOUT,
 } cdp_auth_event;
+
+
+
 	
 /** structure for auth session */
 typedef struct _cdp_auth_session_t {
-	cdp_auth_state state;	/** current state */
+	cdp_auth_state state;	/**< current state */
 	
-	time_t timeout;
-	time_t lifetime;
-	time_t grace_period;
-	
+	time_t timeout;			/**< absolute time for timeout  */
+	time_t lifetime;		/**< absolute time for lifetime */
+	time_t grace_period;	/**< grace_period in seconds 	*/ 
+		
 	void* generic_data;			
 } cdp_auth_session_t;
 
@@ -172,7 +183,7 @@ typedef struct _acc_session {
 typedef struct _cdp_session_t {
 	unsigned int hash;
 	str id;                             /**< session-ID as string */
-	
+	unsigned int application_id;		/**< specific application id associated with this session */	
 	cdp_session_type_t type;
 	
 	union {
@@ -181,19 +192,29 @@ typedef struct _cdp_session_t {
 		void *generic_data;
 	} u;
 	 
+	AAASessionCallback_f *cb;			/**< session callback function */
+	void *cb_param;						/**< session callback generic parameter */
+	 
 	struct _cdp_session_t *next,*prev; 	
 } cdp_session_t;
 
 /** Session list structure */
-typedef struct {		
+typedef struct _cdp_session_list_t {		
 	gen_lock_t *lock;				/**< lock for list operations */
 	cdp_session_t *head,*tail;		/**< first, last sessions in the list */ 
 } cdp_session_list_t;
 
 typedef cdp_session_t AAASession;
 
-int sessions_init(int hash_size);
 
+int sessions_init(int hash_size);
 int sessions_destroy();
+void session_timer(time_t now, void* ptr);
+
+cdp_session_t* get_session(str id);
+
+void sessions_lock(unsigned int hash);
+void sessions_unlock(unsigned int hash);
+
 
 #endif

@@ -59,6 +59,7 @@
 #include "utils.h"
 #include "diameter.h"
 #include "diameter_ims.h"
+#include "session.h"
 #include "peer.h"
 
 #define NO_SCRIPT	-1
