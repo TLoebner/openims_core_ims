@@ -57,6 +57,7 @@
 #include <time.h>
  
 #include "authstatemachine.h"
+#include "diameter_ims.h"
 
 char *auth_states[]={"Idle","Pending","Open","Discon"};
 char *auth_events[]={};
@@ -97,14 +98,25 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 {
 	cdp_auth_session_t *x;
 	int rc;	
-	if (!s) return;
+	if (!s) {
+		switch (event) {
+			case AUTH_EV_RECV_ASR:
+				Send_ASA(0,msg);
+				break;				
+			default:
+				LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d with no session!\n",
+				event);				
+		}
+		return;
+	}
 	x = &(s->u.auth);
 	switch(x->state){
 		case AUTH_ST_IDLE:
 			switch (event) {
 				case AUTH_EV_SEND_REQ:
+					s->application_id = msg->applicationId;
 					s->u.auth.state = AUTH_ST_PENDING;
-					break;					
+					break;				
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -112,7 +124,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			break;
 		
 		case AUTH_ST_PENDING:
-			if (!is_req(msg)){
+			if (event == AUTH_EV_RECV_ANS && msg && !is_req(msg)){
 				rc = get_result_code(msg);
 				if (rc>=2000 && rc<3000 && get_auth_session_state(msg)==STATE_MAINTAINED) 
 					event = AUTH_EV_RECV_ANS_SUCCESS;
@@ -127,7 +139,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
 					Send_STR(s,msg);
-					break;					
+					break;										
 				default:
 					LOG(L_ERR,"ERR:auth_client_stateless_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -135,7 +147,37 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			break;
 		
 		case AUTH_ST_OPEN:
+			if (event == AUTH_EV_RECV_ANS && msg && !is_req(msg)){
+				rc = get_result_code(msg);
+				if (rc>=2000 && rc<3000 && get_auth_session_state(msg)==STATE_MAINTAINED) 
+					event = AUTH_EV_RECV_ANS_SUCCESS;
+				else
+					event = AUTH_EV_RECV_ANS_UNSUCCESS;
+			}
+
 			switch (event) {
+				case AUTH_EV_SEND_REQ:
+					s->u.auth.state = AUTH_ST_OPEN;
+					break;				
+				case AUTH_EV_RECV_ANS_SUCCESS:
+					x->state = AUTH_ST_OPEN;
+					break;
+				case AUTH_EV_RECV_ANS_UNSUCCESS:
+					x->state = AUTH_ST_DISCON;
+					break;										
+				case AUTH_EV_SESSION_TIMEOUT:
+				case AUTH_EV_SERVICE_TERMINATED:
+				case AUTH_EV_SESSION_GRACE_TIMEOUT:
+					x->state = AUTH_ST_DISCON;
+					Send_STR(s,msg);
+					break;		
+				case AUTH_EV_SEND_ASA_SUCCESS:
+					x->state = AUTH_ST_DISCON;
+					Send_STR(s,msg);
+					break;
+				case AUTH_EV_SEND_ASA_UNSUCCESS:
+					x->state = AUTH_ST_OPEN;
+					break;					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -144,6 +186,14 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 		
 		case AUTH_ST_DISCON:
 			switch (event) {
+				case AUTH_EV_RECV_ASR:
+					x->state = AUTH_ST_DISCON;
+					Send_ASA(s,msg);
+					break;
+				case AUTH_EV_RECV_STA:
+					x->state = AUTH_ST_IDLE;
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -284,8 +334,42 @@ inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAA
 */
 }
 
-void Send_STR(cdp_session_t* s, AAAMessage* msg)
+void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 {
-	//todo
+	if (!s) {
+	//send an ASA for UNKNOWN_SESSION_ID - use AAASendMessage()
+	}else{
+	// send... many cases... maybe not needed.
+	}	
 }
 
+
+
+void Send_STR(cdp_session_t* s, AAAMessage* msg)
+{
+	AAAMessage *str=0;
+	AAA_AVP *avp=0;
+	char x[4];
+	
+	str = AAACreateRequest(s->application_id,IMS_STR,Flag_Proxyable,s);
+	
+	if (!str) {
+		LOG(L_ERR,"ERR:Send_STR(): error creating STR!\n");
+		return;
+	}
+	
+	
+	set_4bytes(x,s->application_id);
+	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+	AAAAddAVPToMessage(str,avp,0);
+	
+	//todo - add all the other avps
+	
+	if (!AAASendMessage(str,0,0))
+		LOG(L_ERR,"ERR:Send_STR(): error sending STR!\n");
+}
+
+void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)
+{
+	
+}

@@ -63,12 +63,14 @@
 
 #include "diameter.h"
 #include "utils.h"
+#include "session.h"
+
+
 
 				/* TRANSACTIONS */
 				
 /** Timeout for Diameter transactions (this is quite big, 
  * but increase in case that you have a slow peer) */ 				
-
 
 
 
@@ -82,8 +84,10 @@ AAASession* AAACreateSession(void *generic_data);
 void AAADropSession(AAASession *s);
 
 
-AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull);
+AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
 void AAADropAuthSession(AAASession *s);
+
+
 
 AAASession* AAACreateAccSession(void *generic_data);
 void AAADropAccSession(AAASession *s);

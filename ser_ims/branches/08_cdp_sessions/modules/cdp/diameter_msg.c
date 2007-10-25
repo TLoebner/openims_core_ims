@@ -186,14 +186,12 @@ AAAMessage *AAANewMessage(
 
 	if (!session||!session->id.s) {
 		if (request){
-			if (request->session) sessionId = &(request->session->id);
-			else{
-				/* copy old session id from AVP */
-				avp = request->sessionId;
-				if (avp) sessionId = &(avp->data);
-			}			
+			/* copy old session id from AVP */
+			if (request->sessionId) 
+				sessionId = &(request->sessionId->data);
 		}else{
-			LOG(L_ERR,"ERROR:AAANewMessage: param session received null and it's a request!!\n");
+			if (msg->commandCode!=Code_DW)
+				LOG(L_ERR,"ERROR:AAANewMessage: param session received null and it's a request!!\n");
 		}
 	}else{
 		sessionId = &(session->id);
@@ -252,11 +250,7 @@ AAAMessage *AAANewMessage(
 	if (!request) {
 		/* it's a new request -> set the flag */
 		msg->flags = 0x80;
-		/* keep track of the session -> SendMessage will need it! */
-		msg->session = session;
 	} else {
-		/* it'a an answer -> it will have the same session Id */
-		msg->session = request->session;
 		/* link the incoming peer to the answer */
 		msg->in_peer = request->in_peer;
 		/* set the P flag as in request */
@@ -265,35 +259,35 @@ AAAMessage *AAANewMessage(
 		msg->endtoendId = request->endtoendId;
 		msg->hopbyhopId = request->hopbyhopId;
 
-	/* Mirror the old originhost/realm to destinationhost/realm*/
-	avp = AAAFindMatchingAVP(request,0,AVP_Origin_Host,0,0);
-	if (avp) dest_host = avp->data;
-	/* add destination host and destination realm */
-	avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
-		dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
-	if (!avp) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
-		return 0;
-	}
-	if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
-		AAAFreeAVP(&avp);
-		return 0;
-	}
-	avp = AAAFindMatchingAVP(request,0,AVP_Origin_Realm,0,0);
-	if (avp) dest_realm = avp->data;
-
-	avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
-		dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
-	if (!avp) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
-		return 0;
-	}
-	if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
-		AAAFreeAVP(&avp);
-		return 0;
-	}		
+		/* Mirror the old originhost/realm to destinationhost/realm*/
+		avp = AAAFindMatchingAVP(request,0,AVP_Origin_Host,0,0);
+		if (avp) dest_host = avp->data;
+		/* add destination host and destination realm */
+		avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
+			dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
+			return 0;
+		}
+		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
+			AAAFreeAVP(&avp);
+			return 0;
+		}
+		avp = AAAFindMatchingAVP(request,0,AVP_Origin_Realm,0,0);
+		if (avp) dest_realm = avp->data;
+	
+		avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
+			dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
+			return 0;
+		}
+		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
+			AAAFreeAVP(&avp);
+			return 0;
+		}		
 
 
 		msg->res_code=0;
@@ -551,6 +545,8 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 		msg->buf.s = (char*) source;
 		msg->buf.len = msg_len;
 	}
+
+	msg->sessionId = AAAFindMatchingAVP(msg,0,AVP_Session_Id,0,0);
 
 	//AAAPrintMessage( msg );
 	return  msg;

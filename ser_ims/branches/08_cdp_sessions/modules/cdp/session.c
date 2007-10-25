@@ -59,6 +59,8 @@
 #include "session.h"
 #include "diameter.h"
 #include "config.h"
+#include "authstatemachine.h"
+#include "timer.h"
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
@@ -182,6 +184,8 @@ int sessions_init(int hash_size)
 	*session_id1 <<= 16;
 	*session_id1 += time(0)&0xFFFF;
 	*session_id2 = 0;
+	
+	add_timer(1,0,session_timer,0);
 	return 1;
 error:
 	return 0;
@@ -346,7 +350,41 @@ error:
 }
 
 
-
+void session_timer(time_t now, void* ptr)
+{
+	int hash;
+	cdp_session_t *x;
+	AAASessionCallback_f *cb;
+	
+	for(hash=0;hash<sessions_hash_size;hash++){		
+		sessions_lock(hash);
+		for(x = sessions[hash].head;x;x=x->next)
+			switch (x->type){
+				case AUTH_CLIENT_STATEFULL:
+					if (x->u.auth.timeout<=now){
+						//Session timeout
+						if (x->cb) {
+							cb = x->cb;
+							(cb)(AUTH_EV_SESSION_TIMEOUT,x->cb_param,x);
+						}
+						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
+					}
+					if (x->u.auth.lifetime+x->u.auth.grace_period<=now){
+						//lifetime + grace timeout
+						if (x->cb){
+							cb = x->cb;	
+							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x->cb_param,x);
+						}
+						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
+					}
+					break;
+				default:
+					break;
+					
+			}
+		sessions_unlock(hash);
+	}
+}
 
 
 
@@ -380,7 +418,7 @@ void AAADropSession(AAASession *s)
 /**
  * Creates a Authorization Session.
  */
-AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull)
+AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param)
 {
 	AAASession *s;
 	str id;
@@ -398,10 +436,14 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 	s = new_session(id,type);
 	if (s) {
 		s->u.auth.generic_data = generic_data;
+		s->cb = cb;
+		s->cb_param = param;
 	}
 	
 	return s;
 }
+
+
 
 /**
  * Deallocates the memory taken by a Authorization Session
