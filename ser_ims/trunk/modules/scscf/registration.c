@@ -85,7 +85,7 @@ extern int av_request_at_sync;					/**< how many auth vectors to request in a sy
 
 
 str algorithm_types[] = {
-	{"Unknown",7},
+	{"unknown",7},
 	{"AKAv1-MD5",9},
 	{"AKAv2-MD5",9},
 	{"Early-IMS",9},
@@ -97,7 +97,7 @@ str algorithm_types[] = {
 };
 
 str auth_scheme_types[] = {
-	{"Unknown",7},
+	{"unknown",7},
 	{"Digest-AKAv1-MD5",16},
 	{"Digest-AKAv2-MD5",16},
 	{"Early-IMS-Security",18},
@@ -1087,7 +1087,9 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 				x->authorization.len=0;
 				goto done;
 			}		
-			x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);								
+			memcpy(x->authorization.s,authorization.s,authorization.len);
+			x->authorization.len = authorization.len;
+
 			break;	
 		case AUTH_HTTP_DIGEST_MD5:
 
