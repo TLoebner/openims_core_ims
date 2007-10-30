@@ -61,6 +61,7 @@
 #include "transaction.h"
 #include "api_process.h"
 #include "routing.h"
+#include "peerstatemachine.h"
 
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
@@ -193,8 +194,9 @@ AAAReturnCode AAASendMessage(
 		else
 			LOG(L_ERR,"ERROR:AAASendMessage(): can't add transaction callback for answer.\n");
 	}
-		
-	if (!peer_send_msg(p,message))
+	
+//	if (!peer_send_msg(p,message))
+	if (!sm_process(p,Send_Message,message,0,0))	
 		goto error;
 		
 	return 1;
@@ -237,7 +239,8 @@ AAAReturnCode AAASendMessageToPeer(
 			LOG(L_ERR,"ERROR:AAASendMessageToPeer(): can't add transaction callback for answer.\n");
 	}
 		
-	if (!peer_send_msg(p,message))
+//	if (!peer_send_msg(p,message))
+	if (!sm_process(p,Send_Message,message,0,0))	
 		goto error;
 		
 	return 1;
@@ -296,7 +299,8 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 		lock_get(lock);
 		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
 
-		if (!peer_send_msg(p,message)) {
+//		if (!peer_send_msg(p,message)) {
+		if (!sm_process(p,Send_Message,message,0,0)){	
 			lock_destroy(lock);
 			lock_dealloc((void*)lock);	
 			goto error;
@@ -355,7 +359,8 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 		lock_get(lock);
 		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
 
-		if (!peer_send_msg(p,message)) {
+//		if (!peer_send_msg(p,message)) {
+		if (!sm_process(p,Send_Message,message,0,0)){	
 			lock_destroy(lock);
 			lock_dealloc((void*)lock);	
 			goto error;
