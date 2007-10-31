@@ -74,7 +74,7 @@ typedef AAAMessage* (*AAACreateResponse_f)(AAAMessage *request);
 typedef AAASession* (*AAACreateSession_f)(void *generic_data);
 typedef void (*AAADropSession_f)(AAASession *s);
 
-typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull);
+typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
 typedef void (*AAADropAuthSession_f)(AAASession *s);
 
 typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
@@ -144,7 +144,9 @@ typedef AAAReturnCode (*AAAFreeMessage_f)(
 
 typedef int (*AAAAddRequestHandler_f)(AAARequestHandler_f *f,void *param);
 typedef int (*AAAAddResponseHandler_f)(AAAResponseHandler_f *f,void *param);
-
+typedef cdp_session_t* (*get_session_f)(str id);
+typedef void (*sessions_unlock_f) (unsigned int hash);
+typedef void (*sessions_lock_f) (unsigned int hash);
 
 struct cdp_binds {
 	AAASendMessage_f AAASendMessage;
@@ -178,6 +180,9 @@ struct cdp_binds {
 	
 	AAAAddRequestHandler_f AAAAddRequestHandler;
 	AAAAddResponseHandler_f AAAAddResponseHandler;
+	get_session_f			get_session;
+	sessions_unlock_f		sessions_unlock;
+	sessions_unlock_f 		sessions_lock;
 };
 
 

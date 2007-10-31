@@ -78,6 +78,7 @@ unsigned int *session_id2;		/**< counter for second part of the session id */
  */
 inline void sessions_lock(unsigned int hash)
 {
+	LOG(L_DBG,"about to lock the session with hash %u\n",hash);
 	lock_get(sessions[hash].lock);
 }
 
@@ -127,7 +128,8 @@ void free_session(cdp_session_t *x)
 						"Possible memory leak!\n");
 				}
 				break;
-			
+			case AUTH_CLIENT_STATEFULL:
+				break;
 			default:
 				LOG(L_ERR,"ERR:free_session(): Unknown session type %d!\n",x->type);
 		}
@@ -260,7 +262,7 @@ inline unsigned int get_str_hash(str x,int hash_size)
 void add_session(cdp_session_t *x)
 {
 	unsigned int hash;
-	if (x) return;
+	if (!x) return;
 	hash = get_str_hash(x->id,sessions_hash_size);
 	x->hash = hash;
 	sessions_lock(hash);
@@ -298,7 +300,7 @@ cdp_session_t* get_session(str id)
  */
 void del_session(cdp_session_t *x)
 {
-	if (x) return;
+	if (!x) return;
 	if (sessions[x->hash].head == x) sessions[x->hash].head = x->next;
 	else x->prev->next = x->next;
 	if (sessions[x->hash].tail == x) sessions[x->hash].tail = x->prev;
@@ -355,13 +357,25 @@ void session_timer(time_t now, void* ptr)
 	int hash;
 	cdp_session_t *x;
 	AAASessionCallback_f *cb;
-	
+	LOG(L_INFO,"-------session timer --------\n");
 	for(hash=0;hash<sessions_hash_size;hash++){		
 		sessions_lock(hash);
-		for(x = sessions[hash].head;x;x=x->next)
+		for(x = sessions[hash].head;x;x=x->next) {
+			
+			
+			LOG(L_INFO,"session of type [%i] with id %.*s",x->type,x->id.len,x->id.s);
+			if (x->type==AUTH_CLIENT_STATEFULL) {
+				LOG(L_INFO,"auth state %i\n",x->u.auth.state);
+			} else LOG(L_INFO,"\n");
+			
+			/*
+			 * Alberto Diez @ 30 October 2007
+			 * This is very nice and all .. but it makes the P-CSCF die so i put it
+			 * on quarenteen until i have the time to take a closer look at it
+			 */
 			switch (x->type){
 				case AUTH_CLIENT_STATEFULL:
-					if (x->u.auth.timeout<=now){
+					if (x->u.auth.timeout!=0 && x->u.auth.timeout<=now){
 						//Session timeout
 						if (x->cb) {
 							cb = x->cb;
@@ -369,7 +383,7 @@ void session_timer(time_t now, void* ptr)
 						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
 					}
-					if (x->u.auth.lifetime+x->u.auth.grace_period<=now){
+					if (x->u.auth.timeout!=0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
 						//lifetime + grace timeout
 						if (x->cb){
 							cb = x->cb;	
@@ -382,8 +396,11 @@ void session_timer(time_t now, void* ptr)
 					break;
 					
 			}
+		}
 		sessions_unlock(hash);
 	}
+	LOG(L_INFO,"-----------------------------\n");
+					
 }
 
 
@@ -438,8 +455,9 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 		s->u.auth.generic_data = generic_data;
 		s->cb = cb;
 		s->cb_param = param;
+		s->u.auth.timeout=0; // for now we dont have timeouts!
 	}
-	
+	add_session(s);
 	return s;
 }
 
@@ -450,7 +468,7 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
  */
 void AAADropAuthSession(AAASession *s)
 {
-	free_session(s);
+	del_session(s);
 }
 
 /**

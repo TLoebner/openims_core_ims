@@ -1016,10 +1016,12 @@ void Snd_Message(peer *p, AAAMessage *msg)
 void Rcv_Process(peer *p, AAAMessage *msg)
 {
 	AAASession *session=0;
-	LOG(L_DBG,"DBG:Rcv_Process(): Received a message\n");
+	unsigned int hash; // we need this here because after the sm_processing , we might end up
+					   // with no session any more
 	if (msg->sessionId) session = get_session(msg->sessionId->data);
 	
 	if (session){
+		hash=session->hash;
 		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
 				if (is_req(msg))
@@ -1034,7 +1036,7 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 			default:
 				break;			 
 		}
-		sessions_unlock(session->hash);
+		sessions_unlock(hash);
 	}else{
 		if (msg->sessionId){
 			if (msg->commandCode == IMS_ASR) 

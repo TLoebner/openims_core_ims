@@ -75,6 +75,15 @@ error:
         return -1;
 }
 
+/*
+ * Alberto Diez changes the default behaviour on error is going to be to return the default state
+ * that is  STATE_MAINTAINED
+ * this is because in the Rx specification 3GPP TS 29214 v7.1.0 (2007-06)
+ * the AVP Auth Session State is not included in any message exchange, 
+ * therefor we could as well not even check for it, but diameter rfc says to look at this
+ * 
+*/
+
 int get_auth_session_state(AAAMessage* msg)
 {
         if (!msg) goto error;
@@ -84,7 +93,7 @@ int get_auth_session_state(AAAMessage* msg)
 
 error:
         LOG(L_ERR, "ERR:get_auth_session_state(): no AAAMessage or Auth Session State not found\n");
-        return -1;
+        return STATE_MAINTAINED;
 }
 
 
@@ -92,12 +101,14 @@ error:
  * stateful client state machine
  * @param auth - AAAAuthSession which uses this state machine
  * @param ev   - Event
- * @param req  - AAAMessage
+ * @param msg  - AAAMessage
  */
 inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
 	cdp_auth_session_t *x;
 	int rc;	
+	
+	
 	if (!s) {
 		switch (event) {
 			case AUTH_EV_RECV_ASR:
@@ -116,6 +127,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SEND_REQ:
 					s->application_id = msg->applicationId;
 					s->u.auth.state = AUTH_ST_PENDING;
+					LOG(L_INFO,"state machine: i was in idle and i am going to pending\n");
 					break;				
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -135,9 +147,11 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			switch(event){
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
+					LOG(L_INFO,"state machine: i was in pending and i am going to open\n");
 					break;
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
+					LOG(L_INFO,"state machine: i was in pending and i am going to discon\n");
 					Send_STR(s,msg);
 					break;										
 				default:
@@ -157,27 +171,46 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 
 			switch (event) {
 				case AUTH_EV_SEND_REQ:
-					s->u.auth.state = AUTH_ST_OPEN;
+					// if the request is STR i should move to Discon .. 
+					// this is not in the state machine but I (Alberto Diez) need it
+					if (msg->commandCode==IMS_STR) 
+						s->u.auth.state = AUTH_ST_DISCON;
+					else
+						s->u.auth.state = AUTH_ST_OPEN;
 					break;				
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
+					LOG(L_INFO,"state machine: i was in open and i am going to open\n");
 					break;
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
+					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					break;										
 				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SERVICE_TERMINATED:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state = AUTH_ST_DISCON;
+					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					Send_STR(s,msg);
 					break;		
 				case AUTH_EV_SEND_ASA_SUCCESS:
 					x->state = AUTH_ST_DISCON;
+					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					Send_STR(s,msg);
 					break;
 				case AUTH_EV_SEND_ASA_UNSUCCESS:
 					x->state = AUTH_ST_OPEN;
-					break;					
+					LOG(L_INFO,"state machine: i was in open and i am going to open\n");
+					break;	
+				case AUTH_EV_RECV_ASR: 
+					// two cases , client will comply or will not
+					// our client is very nice and always complys.. because
+					// our brain is in the PCRF... if he says to do this , we do it
+					// Alberto Diez , (again this is not Diameter RFC)
+					x->state = AUTH_ST_DISCON;
+					Send_ASA(s,msg);
+					Send_STR(s,msg);
+					break;			
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -188,10 +221,13 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			switch (event) {
 				case AUTH_EV_RECV_ASR:
 					x->state = AUTH_ST_DISCON;
+					LOG(L_INFO,"state machine: i was in discon and i am going to discon\n");
 					Send_ASA(s,msg);
 					break;
 				case AUTH_EV_RECV_STA:
 					x->state = AUTH_ST_IDLE;
+					LOG(L_INFO,"state machine: about to clean up\n");
+					Session_Cleanup(s,msg);
 					break;
 					
 				default:
@@ -336,10 +372,37 @@ inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAA
 
 void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 {
+	
+	
+	AAAMessage *asa;
+	char x[4];	
+
 	if (!s) {
 	//send an ASA for UNKNOWN_SESSION_ID - use AAASendMessage()
+	// msg is the ASR recieved
+	asa = AAANewMessage(IMS_ASA,0,0,msg);
+	if (!asa) return;	
+
+	
+	set_4bytes(x,AAA_SUCCESS);
+	AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
+	
+	AAASendMessage(asa,0,0);
+
 	}else{
 	// send... many cases... maybe not needed.
+	// for now we do the same
+	asa = AAANewMessage(IMS_ASA,0,0,msg);
+	if (!asa) return;	
+
+	
+	set_4bytes(x,AAA_SUCCESS);
+	AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
+	
+	AAASendMessage(asa,0,0);
+		
+	
+	
 	}	
 }
 
@@ -363,6 +426,9 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(str,avp,0);
 	
+	set_4bytes(x,4); // Diameter_administrative
+	avp = AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+	AAAAddAVPToMessage(str,avp,0);
 	//todo - add all the other avps
 	
 	if (!AAASendMessage(str,0,0))
@@ -371,5 +437,14 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 
 void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)
 {
-	
+	// Here we should drop the session ! and free everything related to it
+	// but the generic_data thing should be freed by the callback function registered
+	// when the auth session was created
+	AAASessionCallback_f *cb;
+	LOG(L_INFO,"cleaning up session %.*s\n",s->id.len,s->id.s);
+	if (s->cb) {
+		cb = s->cb;
+		(cb) (AUTH_EV_SERVICE_TERMINATED,s->cb_param,s);
+	}
+	AAADropAuthSession(s);
 }

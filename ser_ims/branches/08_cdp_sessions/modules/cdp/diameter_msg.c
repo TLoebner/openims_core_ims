@@ -190,7 +190,7 @@ AAAMessage *AAANewMessage(
 			if (request->sessionId) 
 				sessionId = &(request->sessionId->data);
 		}else{
-			if (msg->commandCode!=Code_DW)
+			if (commandCode!=Code_DW)
 				LOG(L_ERR,"ERROR:AAANewMessage: param session received null and it's a request!!\n");
 		}
 	}else{

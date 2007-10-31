@@ -110,6 +110,36 @@ str pcc_modify_call_id(str call_id, int tag)
 	return t;
 }
 
+
+
+void callback_for_pccsession(int event,void *param,void *session)
+{
+	t_authdata *g;
+	cdp_session_t *x=session;
+	LOG(L_CRIT,"callback called!\n");
+	switch (event)
+	{
+		case AUTH_EV_SERVICE_TERMINATED:
+			//
+			g=(t_authdata *)x->u.auth.generic_data;
+			if (g)
+			{
+				if (g->callid.s) shm_free(g->callid.s);
+				shm_free(g);
+				x->u.auth.generic_data=0;
+			}
+			LOG(L_DBG,"callback_for_pccsession(): done with the work\n");
+			break;
+		default:
+			break;
+	}
+}
+
+
+
+
+
+
 /**
  * Sends the Authorization Authentication Request.
  * @param req - SIP request  
@@ -151,16 +181,25 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 	if (!dlg) goto error;
 	
-		
+	
 	if (!dlg->pcc_session) {
 		 /*For the first time*/
+		 LOG(L_INFO,"doing this for the first time\n");
 		 generic=shm_malloc(sizeof(t_authdata));
 		 generic->callid.s=0; generic->callid.len=0;
 		 STR_SHM_DUP(generic->callid,call_id,"shm");
 		 generic->direction=tag;
-		 auth = cdpb.AAACreateAuthSession((void *)generic,1,1);		 
+		 // i should set a callback for the expiration of the session
+		 auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
+		 //cdpb.sessions_lock(auth->hash);
+		 if (!auth)
+		 {
+		 	LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
+		 }		 
+		 LOG(L_ERR,"PCC_AAR(): creating PCC Session\n");
 		 dlg->pcc_session = auth;
 	}else{ 
+		LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
 		auth = dlg->pcc_session;
 	}
 	
@@ -252,7 +291,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 	*/
 	
-	
+	LOG(L_INFO,ANSI_WHITE"sending AAR\n");
 	/*---------- 3. Send AAR to PCRF ----------*/
 	if (forced_qos_peer.len)
 		aaa = cdpb.AAASendRecvMessageToPeer(aar,&forced_qos_peer);
@@ -263,12 +302,16 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 
 	//cdpb.AAAPrintMessage(dia_aaa);
 
-	
+	//cdpb.sessions_unlock(auth->hash);
 	return aaa;
 out_of_memory:
 	LOG(L_CRIT,"PCC_AAR():out of memory\n");
 error:
-	if (auth) cdpb.AAADropAuthSession(auth);
+	LOG(L_ERR,"PCC_AAR(): big ERROR!!\n");
+	if (auth) {
+		cdpb.sessions_unlock(auth->hash);
+	 	cdpb.AAADropAuthSession(auth);
+	 	}
 	if (generic)
 	{
 		if (generic->callid.s) shm_free(generic->callid.s);
@@ -299,9 +342,9 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 {
 	AAAMessage* dia_str = NULL;
 	AAAMessage* dia_sta = NULL;
-	
+	AAASession *auth=0;
 	p_dialog *dlg;
-	t_authdata *g;
+	
 	
 	
 /** get Diameter session based on sip call_id */
@@ -309,27 +352,38 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	
 	
 	
-	if (tag)
+	if (!tag)
 		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
 	else 
 		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
 		
-	if (!dlg)	goto end;
-	if (!(dlg->pcc_session)) goto error_dlg;
 		
-
+	if (!dlg)	{
+		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callidd %.*s and tag %i\n",call_id.len,call_id.s,tag);
+		goto end;
+		}
+	if (!dlg->pcc_session) {
+		LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,tag);
+		goto error_dlg;
+	} else {
+	
+		auth=dlg->pcc_session;
+	}
+	
+	//cdpb.sessions_lock(auth->hash);	
+	
 	if (pcscf_qos_release7)
-		dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, dlg->pcc_session);
+		dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, auth);
 	else
-		dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, dlg->pcc_session);
+		dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, auth);
 	
 	if (!dia_str) goto error;
 	
 
-
+	
 	str realm = pcc_get_destination_realm(forced_qos_peer);
 	if (!PCC_add_destination_realm(dia_str, realm)) goto error;
-
+	
 
 	if (pcscf_qos_release7){
 		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
@@ -346,21 +400,30 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	else 
 		dia_sta = cdpb.AAASendRecvMessage(dia_str);	
 	
-	LOG(L_DBG,"PCC_STR successful STR-STA exchange\n");
+	LOG(L_INFO,"PCC_STR successful STR-STA exchange\n");
+	/*
+	 * After a succesfull STA is recieved the auth session should be dropped
+	 * and the dialog tooo.. 
+	 * but when? 
+	 * 
+	 * case A) STR after 6xx Decline
+	 * 				-> dialog is dropped in config file
+	 * case B) STR after BYE recieved
+	 * 				-> dialog is dropped by the SIP part of P-CSCF
+	 * case C) STR after ASR-ASA 
+	 * 				-> for now its done when upon reciept of ASR
+	 * 				-> this is an automaticly generated  STR by the State Machine
+	 * 					so when i recieve an ashyncronous STA for this session, it should be
+	 * 					this case, i can then drop the dialog
+	 * 
+	*/
+	dlg->pcc_session=0;	
+	d_unlock(dlg->hash);
 	
-	/*Before dropping the session remember the authdata!!*/
-	g=(t_authdata *)dlg->pcc_session->u.auth.generic_data;
-	if (g)
-	{
-		if (g->callid.s) shm_free(g->callid.s);
-		shm_free(g);
-		dlg->pcc_session->u.auth.generic_data=0;
-	}
-	
-	cdpb.AAADropAuthSession(dlg->pcc_session);
 	return dia_sta;
 error:
-	 cdpb.AAADropAuthSession(dlg->pcc_session);
+	//cdpb.sessions_unlock(auth->hash);
+	//cdpb.AAADropAuthSession(auth);
 error_dlg:
 	d_unlock(dlg->hash);
 end:
@@ -372,37 +435,49 @@ str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
  * Called upon reciept of an ASR terminates the user session and returns the ASA
  * Terminates the corresponding dialog
  * @param request - the received request
- * @returns the ASA with the result code
+ * @returns 0 always because ASA will be generated by the State Machine
  * 
 */
 AAAMessage* PCC_ASA(AAAMessage *request)
 {
-	AAAMessage *asa;
+	//AAAMessage *asa;
 	t_authdata *data;
 	p_dialog *p;
-	char x[4];
-	AAA_AVP *rc=0;
+	//char x[4];
+	//AAA_AVP *rc=0;
+	cdp_session_t* session;
 	
-	data = (t_authdata *) request->session->u.auth.generic_data; //casting
+	session=cdpb.get_session(request->sessionId->data);
+	
+	if (!session) return 0;
+	data = (t_authdata *) session->u.auth.generic_data; //casting
 		
 	if (data->callid.s)
 	{
 		p=get_p_dialog_dir(data->callid,data->direction);
 		release_call_p(p,503,reason_terminate_dialog_s);
-		/*of course it would be nice to first have a look on the Abort-Cause AVP*/
+		//of course it would be nice to first have a look on the Abort-Cause AVP
 		d_unlock(p->hash);
 	}
-	asa=cdpb.AAACreateResponse(request);
-	if (!asa) return 0;
+	
+	
+	
+	/*asa=cdpb.AAACreateResponse(request);
+	if (!asa) goto error;
 	set_4bytes(x,AAA_SUCCESS);
+	*/
 	
-	
-	rc=cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+	/*rc=cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	if (rc) cdpb.AAAAddAVPToMessage(asa,rc,NULL);
-	
+	*/
 	// Should i drop the auth session here??	
+	// STR has to be generated for the session!!!
+	
 
-	return asa;
+	
+
+	cdpb.sessions_unlock(session->hash);
+	return 0;
 }
 
 

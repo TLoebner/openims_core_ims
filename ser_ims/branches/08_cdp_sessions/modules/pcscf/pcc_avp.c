@@ -359,7 +359,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 	if (bwDL.bAS!=0)
 	 {
 	 	
- 			set_4bytes(x,bwDL.bAS);
+ 			set_4bytes(x,bwDL.bAS*1024);
  			Max_UL=cdpb.AAACreateAVP(AVP_IMS_Max_Requested_Bandwidth_UL,
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
@@ -369,7 +369,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 	 }
 	if (bwUL.bAS!=0)
 	{
- 			set_4bytes(x,bwUL.bAS);
+ 			set_4bytes(x,bwUL.bAS*1024);
  			Max_DL=cdpb.AAACreateAVP(AVP_IMS_Max_Requested_Bandwidth_DL,
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,

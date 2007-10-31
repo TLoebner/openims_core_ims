@@ -451,6 +451,7 @@ int peer_send_msg(peer *p,AAAMessage *msg)
 		return 0;
 	}
 	close(fd);
+	
 	return 1;
 }
 

@@ -135,7 +135,9 @@ static cmd_export_t cdp_cmds[] = {
 
 	{"AAAAddRequestHandler",		(cmd_function)AAAAddRequestHandler, 	NO_SCRIPT, 0, 0},
 	{"AAAAddResponseHandler",		(cmd_function)AAAAddResponseHandler,	NO_SCRIPT, 0, 0},
-		
+	{"get_session",					(cmd_function)get_session,				NO_SCRIPT, 0, 0},
+	{"sessions_unlock",				(cmd_function)sessions_unlock,			NO_SCRIPT, 0, 0},
+	{"sessions_lock",				(cmd_function)sessions_lock,			NO_SCRIPT, 0, 0},
 	{ 0, 0, 0, 0, 0 }
 };
 

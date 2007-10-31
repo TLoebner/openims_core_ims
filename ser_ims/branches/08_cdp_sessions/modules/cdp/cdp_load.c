@@ -105,5 +105,9 @@ int load_cdp( struct cdp_binds *cdpb)
 	FIND_EXP(AAAAddRequestHandler,"AAAAddRequestHandler",AAAAddRequestHandler_f);
 	FIND_EXP(AAAAddResponseHandler,"AAAAddResponseHandler",AAAAddResponseHandler_f);
 	
+	
+	FIND_EXP(get_session,"get_session",get_session_f);
+	FIND_EXP(sessions_unlock,"sessions_unlock",sessions_unlock_f);
+	FIND_EXP(sessions_unlock,"sessions_lock",sessions_lock_f);
 	return 1;
 }
