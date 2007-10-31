@@ -78,7 +78,7 @@ unsigned int *session_id2;		/**< counter for second part of the session id */
  */
 inline void sessions_lock(unsigned int hash)
 {
-	LOG(L_DBG,"about to lock the session with hash %u\n",hash);
+	
 	lock_get(sessions[hash].lock);
 }
 
@@ -87,6 +87,7 @@ inline void sessions_lock(unsigned int hash)
  */
 inline void sessions_unlock(unsigned int hash)
 {
+	
 	lock_release(sessions[hash].lock);
 }
 
@@ -368,11 +369,11 @@ void session_timer(time_t now, void* ptr)
 				LOG(L_INFO,"auth state %i\n",x->u.auth.state);
 			} else LOG(L_INFO,"\n");
 			
-			/*
-			 * Alberto Diez @ 30 October 2007
-			 * This is very nice and all .. but it makes the P-CSCF die so i put it
-			 * on quarenteen until i have the time to take a closer look at it
-			 */
+			
+			 // Alberto Diez @ 30 October 2007
+			 // This is very nice and all .. but it makes the P-CSCF die so i put it
+			 // on quarenteen until i have the time to take a closer look at it
+			
 			switch (x->type){
 				case AUTH_CLIENT_STATEFULL:
 					if (x->u.auth.timeout!=0 && x->u.auth.timeout<=now){

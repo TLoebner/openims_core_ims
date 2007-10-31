@@ -59,6 +59,12 @@
 #include "authstatemachine.h"
 #include "diameter_ims.h"
 
+// all this 4 includes are here because of what i do in Send_ASA
+#include "peer.h"
+#include "peermanager.h"
+#include "routing.h"
+#include "receiver.h"
+
 char *auth_states[]={"Idle","Pending","Open","Discon"};
 char *auth_events[]={};
 
@@ -192,11 +198,13 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					x->state = AUTH_ST_DISCON;
 					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					Send_STR(s,msg);
+					
 					break;		
 				case AUTH_EV_SEND_ASA_SUCCESS:
 					x->state = AUTH_ST_DISCON;
 					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					Send_STR(s,msg);
+					
 					break;
 				case AUTH_EV_SEND_ASA_UNSUCCESS:
 					x->state = AUTH_ST_OPEN;
@@ -228,8 +236,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					x->state = AUTH_ST_IDLE;
 					LOG(L_INFO,"state machine: about to clean up\n");
 					Session_Cleanup(s,msg);
-					break;
-					
+					break; 	
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -375,19 +382,20 @@ void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 	
 	
 	AAAMessage *asa;
-	char x[4];	
-
+	char x[4];
+	AAA_AVP *avp;	
+	LOG(L_INFO,"Send_ASA():  sending ASA\n");
 	if (!s) {
 	//send an ASA for UNKNOWN_SESSION_ID - use AAASendMessage()
 	// msg is the ASR recieved
-	asa = AAANewMessage(IMS_ASA,0,0,msg);
-	if (!asa) return;	
+		asa = AAANewMessage(IMS_ASA,0,0,msg);
+		if (!asa) return;	
 
 	
-	set_4bytes(x,AAA_SUCCESS);
-	AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
+		set_4bytes(x,AAA_SUCCESS);
+		AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
 	
-	AAASendMessage(asa,0,0);
+		AAASendMessage(asa,0,0);
 
 	}else{
 	// send... many cases... maybe not needed.
@@ -396,12 +404,33 @@ void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 	if (!asa) return;	
 
 	
+	
+	
 	set_4bytes(x,AAA_SUCCESS);
 	AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
 	
-	AAASendMessage(asa,0,0);
-		
 	
+	avp = AAAFindMatchingAVP(msg,0,AVP_Origin_Host,0,0);
+	
+		
+	if (avp) 
+	{
+			// This is because AAASendMessage is not going to find a route to the 
+			// the PCRF because TS 29.214 says no Destination-Host and no Auth-Application-Id
+			// in the ASA
+		LOG(L_INFO,"sending ASA to peer %.*s\n",avp->data.len,avp->data.s); 
+		
+			peer *p;
+			p = get_peer_by_fqdn(&avp->data);
+			if (!peer_send_msg(p,asa))
+			{
+				AAAFreeMessage(&asa);	
+			} else { 
+				LOG(L_INFO,"success sending ASA\n");
+			}
+	}else if (!AAASendMessage(asa,0,0)) {
+		LOG(L_ERR,"Send_ASA() : error sending ASA\n");
+	}
 	
 	}	
 }
@@ -413,7 +442,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	AAAMessage *str=0;
 	AAA_AVP *avp=0;
 	char x[4];
-	
+	LOG(L_INFO,"Send_STR() : sending STR\n");
 	str = AAACreateRequest(s->application_id,IMS_STR,Flag_Proxyable,s);
 	
 	if (!str) {
@@ -430,9 +459,20 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	avp = AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(str,avp,0);
 	//todo - add all the other avps
-	
-	if (!AAASendMessage(str,0,0))
-		LOG(L_ERR,"ERR:Send_STR(): error sending STR!\n");
+	peer *p;
+			p = get_routing_peer(str);
+			if (!p) {
+				LOG(L_ERR,"unable to get routing peer in Send_STR \n");
+				AAAFreeMessage(&str);
+			}
+			
+			if (!peer_send_msg(p,str))
+			{
+				AAAFreeMessage(&str);	
+			} else { 
+				LOG(L_INFO,"success sending STR\n");
+			}
+	 
 }
 
 void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)

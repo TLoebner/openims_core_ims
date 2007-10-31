@@ -971,7 +971,7 @@ void Snd_Message(peer *p, AAAMessage *msg)
 	int send_message_before_session_sm=0;
 	touch_peer(p);
 	if (msg->sessionId) session = get_session(msg->sessionId->data);
-	
+	LOG(L_INFO,"Snd_Message starts\n");
 	if (session){
 		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
@@ -1003,6 +1003,7 @@ void Snd_Message(peer *p, AAAMessage *msg)
 		sessions_unlock(session->hash);
 	}
 	if (!send_message_before_session_sm) peer_send_msg(p,msg);
+	LOG(L_INFO,"Send_Message ends\n");
 }
 
 /**
@@ -1019,14 +1020,17 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 	unsigned int hash; // we need this here because after the sm_processing , we might end up
 					   // with no session any more
 	if (msg->sessionId) session = get_session(msg->sessionId->data);
-	
+	LOG(L_INFO,"Rcv_Process starts\n");
 	if (session){
 		hash=session->hash;
 		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
-				if (is_req(msg))
-					auth_client_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
-				else {
+				if (is_req(msg)){
+					if (msg->commandCode==IMS_ASR)
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ASR,msg);
+					else 
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+				}else {
 					if (msg->commandCode==IMS_STA)
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_STA,msg);
 					else
@@ -1049,7 +1053,7 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 		AAAFreeMessage(&msg);
 	}
 	LOG(L_DBG,"DBG:Rcv_Process(): task added to queue\n");
-
+	LOG(L_INFO,"Rcv_Process ends\n");
 //	AAAPrintMessage(msg);
 	
 }

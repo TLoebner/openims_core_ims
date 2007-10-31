@@ -182,7 +182,7 @@ struct cdp_binds {
 	AAAAddResponseHandler_f AAAAddResponseHandler;
 	get_session_f			get_session;
 	sessions_unlock_f		sessions_unlock;
-	sessions_unlock_f 		sessions_lock;
+	sessions_lock_f 		sessions_lock;
 };
 
 

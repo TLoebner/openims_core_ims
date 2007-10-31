@@ -198,12 +198,12 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
   	call_id.s+=9;
   	call_id.len-=11;
 	
-	LOG(L_INFO,"DBG:"M_NAME":confirmed_response(): Received a BYE for a call release for <%.*s> DIR[%d].\n",
+	LOG(L_INFO,"DBG:"M_NAME":confirmed_response(): Received a response for a BYE for a call release for <%.*s> DIR[%d].\n",
 		call_id.len,call_id.s,dir);
 	
 	d = get_p_dialog_dir(call_id,dir);
 	if (!d)	{
-		LOG(L_ERR,"ERR:"M_NAME":confirmed_response(): Received a BYE for a call release but there is no dialog for <%.*s> DIR[%d].\n",
+		LOG(L_ERR,"ERR:"M_NAME":confirmed_response(): Received a response for BYE for a call release but there is no dialog for <%.*s> DIR[%d].\n",
 			call_id.len,call_id.s,dir);
 		return;
 	}

@@ -1587,8 +1587,8 @@ void dialog_timer(unsigned int ticks, void* param)
 			d = p_dialogs[i].head;
 			while(d){
 				dn = d->next;
-				/*Why are we only terminating dialogs on  MOBILE_TERMINATING side???*/
-				if (d->direction==DLG_MOBILE_TERMINATING&&d->expires<=d_time_now) {						
+				/*Why are we only terminating dialogs on  MOBILE_ORIGINATING side???*/
+				if (d->direction==DLG_MOBILE_ORIGINATING && d->expires<=d_time_now) {						
 						if (!terminate_p_dialog(d)) 
 							del_p_dialog(d);					
 				}
