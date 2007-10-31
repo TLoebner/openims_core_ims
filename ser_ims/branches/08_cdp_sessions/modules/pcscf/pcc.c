@@ -155,7 +155,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	p_dialog *dlg;
 	AAASession* auth=0;
 	t_authdata *generic=0;
-	
+	unsigned int hash;
 	str sdpbodyinvite,sdpbody200;
 	char *mline;
 	int i=0;
@@ -309,8 +309,10 @@ out_of_memory:
 error:
 	LOG(L_ERR,"PCC_AAR(): big ERROR!!\n");
 	if (auth) {
-		cdpb.sessions_unlock(auth->hash);
+		hash=auth->hash;
+		cdpb.sessions_lock(hash);
 	 	cdpb.AAADropAuthSession(auth);
+	 	cdpb.sessions_unlock(hash);
 	 	}
 	if (generic)
 	{
@@ -446,11 +448,18 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 	//char x[4];
 	//AAA_AVP *rc=0;
 	cdp_session_t* session;
+	unsigned int hash;
 	
 	session=cdpb.get_session(request->sessionId->data);
 	
-	if (!session) return 0;
+	if (!session) {
+		LOG(L_ERR,"recovered an ASA but the session is already deleted\n");
+		return 0;
+		}
+		
+	hash=session->hash;
 	data = (t_authdata *) session->u.auth.generic_data; //casting
+	
 		
 	if (data->callid.s)
 	{
@@ -459,24 +468,9 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 		//of course it would be nice to first have a look on the Abort-Cause AVP
 		d_unlock(p->hash);
 	}
-	
-	
-	
-	/*asa=cdpb.AAACreateResponse(request);
-	if (!asa) goto error;
-	set_4bytes(x,AAA_SUCCESS);
-	*/
-	
-	/*rc=cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
-	if (rc) cdpb.AAAAddAVPToMessage(asa,rc,NULL);
-	*/
-	// Should i drop the auth session here??	
-	// STR has to be generated for the session!!!
-	
-
-	
-
-	cdpb.sessions_unlock(session->hash);
+	LOG(L_INFO,"before unlocking in PCC_ASA\n");
+	cdpb.sessions_unlock(hash);
+	LOG(L_INFO,"ending PCC_ASA\n");
 	return 0;
 }
 
