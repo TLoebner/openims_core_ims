@@ -785,8 +785,8 @@ int S_MAR(struct sip_msg *msg, str public_identity, str private_identity,
 	int item_number;
 	int is_sync=0;
 	str authenticate={0,0},authorization={0,0},ck={0,0},ik={0,0},ip={0,0},ha1={0,0};
-	str response_auth = {0, 0};
-	HASHHEX auth32;
+	str response_auth = {0, 0}, etsi_nonce={0,0},digest_realm={0,0};
+	HASHHEX ha1_hex;
 	HASHHEX result;
 		
 	if (auts.len){
@@ -868,27 +868,45 @@ success:
 	auth_data = 0;
 	
 	while((Cx_get_auth_data_item_answer(maa,&auth_data,&item_number,
-			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip,&ha1,&response_auth)))
+			&auth_scheme,&authenticate,&authorization,&ck,&ik,&ip,&ha1,&response_auth,&digest_realm)))
 	{
 		if (ip.len)	av = new_auth_vector(item_number,auth_scheme,empty_s,ip,empty_s,empty_s);
 		else 
 		if (ha1.len)
 		{ 
-			av = new_auth_vector(item_number,auth_scheme,authenticate,ha1,empty_s,empty_s);
 			if (response_auth.len) //HSS check 
 			{
-				bin_to_base16(ha1.s,ha1.len,auth32);
-				//memset(auth32,0,HASHHEXLEN+1);
-				//memcpy(auth32,ha1.s,ha1.len>HASHHEXLEN?32:ha1.len);
-							
-				calc_response(auth32, &authenticate, &empty_s,&empty_s,&empty_s,0, &(msg->first_line.u.request.method) ,&server_name , 0,result);
-				LOG(L_INFO,"DBG:"M_NAME":S_MAR: HSS said: %.*s and we  expect %.*s ha1 %.*s\n",
-					response_auth.len,response_auth.s,/*av->authorization.len,av->authorization.s,*/32,result,32,auth32);
-				if (!response_auth.len==32 || strncasecmp(response_auth.s,result,32)){	
-					S_REGISTER_reply(msg,514,MSG_514_HSS_AUTH_FAILURE);
+				memset(ha1_hex,0,HASHHEXLEN+1);
+				memcpy(ha1_hex,ha1.s,ha1.len>HASHHEXLEN?32:ha1.len);
+				
+				etsi_nonce.len = authenticate.len/2;
+				etsi_nonce.s = pkg_malloc(etsi_nonce.len);
+				if (!etsi_nonce.s){
+					LOG(L_ERR,"ERR:"M_NAME":S_MAR: error allocating %d bytes\n",etsi_nonce.len);
 					goto done;
+				}		
+				etsi_nonce.len = base16_to_bin(authenticate.s,authenticate.len,etsi_nonce.s);
+									
+				calc_response(ha1_hex, &etsi_nonce, &empty_s,&empty_s,&empty_s,0, 
+					&(msg->first_line.u.request.method) ,
+					&server_name , 0,result);
+				pkg_free(etsi_nonce.s);
+					
+				if (!response_auth.len==32 || strncasecmp(response_auth.s,result,32)){	
+					LOG(L_ERR,"ERR:"M_NAME":S_MAR: The HSS' Response-Auth is different from what we compute locally!\n"
+						" BUT! If you sent an MAR with auth scheme unknown (HSS-Selected Authentication), this is normal.\n"
+						"HA1=\t|%s|\nNonce=\t|%.*s|\nMethod=\t|%.*s|\nuri=\t|%.*s|\nxresHSS=\t|%.*s|\nxresSCSCF=\t|%s|\n",
+						ha1_hex,
+						authenticate.len,authenticate.s,
+						msg->first_line.u.request.method.len,msg->first_line.u.request.method.s,
+						server_name.len,server_name.s,
+						response_auth.len,response_auth.s,
+						result);					
+					//S_REGISTER_reply(msg,514,MSG_514_HSS_AUTH_FAILURE);
+					//goto done;
 				}
 			}
+			av = new_auth_vector(item_number,auth_scheme,authenticate,ha1,empty_s,empty_s);
 		}
 		else av = new_auth_vector(item_number,auth_scheme,authenticate,authorization,ck,ik);
 		
@@ -1083,7 +1101,7 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 				x->authenticate.len = bin_to_base16(y,NONCE_LEN,x->authenticate.s); 																
 			}
 			
-			x->authorization.len = authorization.len*2;
+			x->authorization.len = authorization.len;
 			x->authorization.s = shm_malloc(x->authorization.len);
 			if (!x->authorization.s){
 				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
@@ -1096,23 +1114,24 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 			break;	
 		case AUTH_HTTP_DIGEST_MD5:
 
-			x->authenticate.len = authenticate.len*2;
+			x->authenticate.len = authenticate.len;
 			x->authenticate.s = shm_malloc(x->authenticate.len);
 			if (!x->authenticate.s){
 				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
+				x->authenticate.len = 0;
 				goto done;
 			}		
-			x->authenticate.len = bin_to_base16(authenticate.s,authenticate.len,x->authenticate.s);		
+			memcpy(x->authenticate.s,authenticate.s,authenticate.len);
 			
-			x->authorization.len = authorization.len*2;
+			x->authorization.len = authorization.len;
 			x->authorization.s = shm_malloc(x->authorization.len);
 			if (!x->authorization.s){
 				LOG(L_ERR,"ERR:"M_NAME":new_auth_vector: error allocating mem\n");
 				x->authorization.len=0;
 				goto done;
 			}		
-			x->authorization.len = bin_to_base16(authorization.s,authorization.len,x->authorization.s);								
-			break;	
+			memcpy(x->authorization.s,authorization.s,authorization.len);
+			break;			
 		case AUTH_EARLY_IMS:
 			/* early IMS */
 			x->authenticate.len=0;

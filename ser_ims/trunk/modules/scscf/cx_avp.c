@@ -938,7 +938,7 @@ inline int Cx_get_auth_data_item_request(AAAMessage *msg,
  */
 int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	int *item_number,str *auth_scheme,str *authenticate,str *authorization,
-	str *ck,str *ik,str *ip, str *ha1, str *response_auth)
+	str *ck,str *ik,str *ip, str *ha1, str *response_auth, str *digest_realm)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP_LIST list2;
@@ -1021,6 +1021,14 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	{
 		list2 = cdpb.AAAUngroupAVPS(avp->data);
 		
+		avp2 = cdpb.AAAFindMatchingAVPList(list2,0,AVP_ETSI_Digest_Realm, IMS_vendor_id_ETSI,0);
+		if (!avp2||!avp2->data.s) {
+			digest_realm->s=0;digest_realm->len=0;
+			cdpb.AAAFreeAVPList(&list2);
+			return 0;
+		}
+		*digest_realm = avp2->data;
+
 		avp2 = cdpb.AAAFindMatchingAVPList(list2,0,AVP_ETSI_Digest_Nonce, IMS_vendor_id_ETSI,0);
 		if (!avp2||!avp2->data.s) {
 			authenticate->s=0;authenticate->len=0;

@@ -73,7 +73,7 @@ int bin_to_base16(char *from,int len, char *to)
 
 /** from base16 char to int */
 #define HEX_DIGIT(x) \
-	(x>='0'&&x<='9')?x-'0':((x>='a'&&x<='f')?x-'a'+10:((x>='A'&&x<='F')?x-'A'+10:0))
+	((x>='0'&&x<='9')?x-'0':((x>='a'&&x<='f')?x-'a'+10:((x>='A'&&x<='F')?x-'A'+10:0)))
 /**
  * Converts a hex encoded value to its binary value
  * @param from - buffer containing the input data
@@ -87,7 +87,7 @@ int base16_to_bin(char *from,int len, char *to)
 	for(i=0,j=0;j<len;i++,j+=2){
 		to[i] = (unsigned char) ( HEX_DIGIT(from[j])<<4 | HEX_DIGIT(from[j+1]));
 	}	
-	return i/2;
+	return i;
 }
 
 /**
