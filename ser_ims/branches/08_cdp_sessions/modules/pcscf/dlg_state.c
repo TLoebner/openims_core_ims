@@ -197,9 +197,9 @@ void p_dialogs_destroy()
  */
 inline void d_lock(unsigned int hash)
 {
-//	LOG(L_CRIT,"GET %d\n",hash);
+	//LOG(L_CRIT,"GET %d\n",hash);
 	lock_get(p_dialogs[(hash)].lock);
-//	LOG(L_CRIT,"GOT %d\n",hash);	
+	//LOG(L_CRIT,"GOT %d\n",hash);	
 }
 
 /**
@@ -209,7 +209,7 @@ inline void d_lock(unsigned int hash)
  inline void d_unlock(unsigned int hash)
 {
 	lock_release(p_dialogs[(hash)].lock);
-//	LOG(L_CRIT,"RELEASED %d\n",hash);	
+	//LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
 
 /**
@@ -481,6 +481,30 @@ p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir)
 	}
 	return 0;
 }
+
+
+/**
+ * Returns the p_dialog_direction from the direction string.
+ * @param direction - "orig" or "term"
+ * @returns the p_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
+ */
+static inline enum p_dialog_direction get_dialog_direction(char *direction)
+{
+	switch(direction[0]){
+		case 'o':
+		case 'O':
+		case '0':
+			return DLG_MOBILE_ORIGINATING;
+		case 't':
+		case 'T':
+		case '1':
+			return DLG_MOBILE_TERMINATING;
+		default:
+			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
+			return DLG_MOBILE_UNKNOWN;
+	}
+}
+
 
 str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
 /** 
@@ -970,7 +994,8 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 	{
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
-			d->expires = d_act_time()+pcscf_dialogs_expiration_time;	
+			if (!d->is_releasing)
+				d->expires = d_act_time()+pcscf_dialogs_expiration_time;	
 		}
 		else// uac supports timer, but no session-expires header found in response
 		{
@@ -1412,7 +1437,10 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 		str1,call_id.len,call_id.s,
 		transport,host.len,host.s,port);
 
-	d = get_p_dialog(call_id,host,port,transport);
+	//d = get_p_dialog(call_id,host,port,transport);
+	// Gives an error in a very special case
+	// thats why i always use get_p_dialog_dir   -- Alberto Diez  2nd November 2007
+	d = get_p_dialog_dir(call_id,get_dialog_direction(str1));
 	if (!d){
 		LOG(L_ERR,"ERR:"M_NAME":P_enforce_dialog_routes: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
@@ -1472,29 +1500,6 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 }
 
 
-
-
-/**
- * Returns the p_dialog_direction from the direction string.
- * @param direction - "orig" or "term"
- * @returns the p_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
- */
-static inline enum p_dialog_direction get_dialog_direction(char *direction)
-{
-	switch(direction[0]){
-		case 'o':
-		case 'O':
-		case '0':
-			return DLG_MOBILE_ORIGINATING;
-		case 't':
-		case 'T':
-		case '1':
-			return DLG_MOBILE_TERMINATING;
-		default:
-			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
-			return DLG_MOBILE_UNKNOWN;
-	}
-}
 
 static str s_record_route_s={"Record-Route: <",15};
 static str s_record_route_e={";lr>\r\n",6};

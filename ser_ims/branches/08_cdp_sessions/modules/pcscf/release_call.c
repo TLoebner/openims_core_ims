@@ -80,7 +80,7 @@ static str method_ACK_s={"ACK",3};
 static str method_BYE_s={"BYE",3};
 
 
-void alter_dialog_route_set(dlg_t *,enum p_dialog_direction);
+void alter_dialog_route_set(dlg_t *,enum p_dialog_direction,enum release_call_situation situation);
 int send_request(str ,str ,dlg_t *,transaction_cb , enum p_dialog_direction);
 void confirmed_response(struct cell *,int ,struct tmcb_params *);
 
@@ -156,7 +156,7 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 		 * the route_set in the dlg , because the route set
 		 * in the dialog is for the UAC everything which was in the 
 		 * Record-Routes (including local address)*/
-		alter_dialog_route_set(d->dialog_c,d->direction);		
+		alter_dialog_route_set(d->dialog_c,d->direction,RELEASE_CALL_CONFIRMED);		
 		
 		/*first generate the bye for called user*/
 		/*then generate the bye for the calling user*/
@@ -176,7 +176,7 @@ error:
 
 /**
  * Callback function for BYE requests!
- * Identify the s_dialog, then see if one BYE has already been recieved
+ * Identify the s_dialog, then see if one BYE response has already been recieved
  * if yes drop it , if no, wait for the second
  */
 void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
@@ -207,18 +207,15 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
 			call_id.len,call_id.s,dir);
 		return;
 	}
-	
-	if (ps->code>=200){
+	hash=d->hash;
+	if (ps->code>=200 && ps->code<400){
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
-			hash=d->hash;
 			del_p_dialog(d);
-			d_unlock(hash);			 
 		} else {
-			hash=d->hash;
 			d->state=DLG_STATE_TERMINATED_ONE_SIDE;
-			d_unlock(hash);
 		}		
 	} 
+	d_unlock(hash);
 }
 
 
@@ -285,41 +282,52 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 			odir = d->direction;
 	}	
 	
+	time_t time_now=time(0);
+	
 	o = get_p_dialog_dir_nolock(d->call_id,odir);
-	if (o && !o->is_releasing) o->is_releasing = 1;
+	if (o && !o->is_releasing)  {
+		o->is_releasing = 1;
+		// Addition from Alberto Diez the 2nd November 2007
+		// I am going to have this dialog deleted yes or yes
+		// the idea is to put the other one to expire in TIME_TO_EXPIRE 
+		// just in case no reply is received
+		if (o->expires>time_now+TIME_TO_EXPIRE)
+				o->expires=time_now+TIME_TO_EXPIRE;
 		
+	}
 	d->is_releasing++;
 	
 	/*The first time i decrease the expire time for the dialog expire , so that i guarantee that
 		 * its going to be deleted from the table sometime*/
-	time_t time_now=time(0);
+	
+	
 	if (d->expires>time_now+TIME_TO_EXPIRE)
 	{
 		d->expires=time_now+TIME_TO_EXPIRE;
 	}
-		
-		
+			
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
 		LOG(L_ERR,"ERR:"M_NAME":release_call_previous(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
 		del_p_dialog(d);
 		goto error;
 	}
 	
-	alter_dialog_route_set(d->dialog_c,d->direction);
+	alter_dialog_route_set(d->dialog_c,d->direction,situation);
 	
 	d->state=DLG_STATE_TERMINATED_ONE_SIDE;
 	/*this is just a trick to use the same callback function*/	
 	
+	
 	/*trick or treat!*/
-	d->dialog_c->state=DLG_CONFIRMED;
+		d->dialog_c->state=DLG_CONFIRMED;
 	
 	if (situation == RELEASE_CALL_WEIRD){
 		send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
 		send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-		//d->dialog_c->state=DLG_EARLY;
+		d->dialog_c->state=DLG_EARLY;
 	} else {/*(situation == RELEASE_CALL_EARLY)*/		
 		send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-		//d->dialog_c->state=DLG_EARLY;
+		d->dialog_c->state=DLG_EARLY;
 	}
 
 	/*i need the cell of the invite!!*/
@@ -437,7 +445,7 @@ done:
  * @msg  - the sip message being processed
  * @str1 - the first parameter  "orig" or "term"
  * @str2 - [optional] the Reason header that you want to go to the messages 
- * @returns - TRUE on success or FALSE on misscall and BREAK on error
+ * @returns - BREAK ... whatever happens this message is not relayed
  */
 int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 {
@@ -448,6 +456,8 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	str reason={NULL,0};
 	
 	struct cell* t; /*needed to distinguish between UPDATE and INVITE*/
+	
+	LOG(L_INFO,ANSI_WHITE"P_release_call_on_reply\n");
 	
 	if (str2) {
 		reason.s=str2;
@@ -470,7 +480,7 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 		t=tmb.t_gett();
 		if (!t) {
 			LOG(L_ERR,"P_release_call_onreply(): unable to get transaction\n");
-			return 0;
+			return CSCF_RETURN_BREAK;
 		}
 		if (t->method.len==6 && memcmp(t->method.s,"INVITE",6)==0)
 		{
@@ -480,18 +490,18 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 			{
 				release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
 				d_unlock(d->hash);
-				return CSCF_RETURN_TRUE;
+				return CSCF_RETURN_BREAK;
 			} else {
 				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);
 				d_unlock(d->hash);
-				return CSCF_RETURN_TRUE;
+				return CSCF_RETURN_BREAK;
 			}
 		} else {
 			
 				//UPDATE so early
 				release_call_early(d,488,reason);
 				d_unlock(d->hash);
-				return CSCF_RETURN_TRUE;
+				return CSCF_RETURN_BREAK;
 			 			
 		}
 	} else {
@@ -534,35 +544,59 @@ int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum p_dialog
 	return 0;
 }
 
+// Copied from module tm file dlg.c
 
+static rr_t *revert_route(rr_t *r)
+{
+	rr_t *a, *b;
+
+	a = NULL;
+
+	while (r) {
+		b = r->next;
+		r->next = a;
+		a = r;
+		r = b;
+	}
+
+	return a;
+}
 
 /**
  * Alters the saved dlg_t routes for the dialog by removing
- * the first routes before myself.
- * This is requiered because half of the RRset is useless.
  * @param d - the dialog to modify the Record-Routes
  * @param dir - the direction
  */
-void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir)
+void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_call_situation situation)
 {
-	rr_t *r,*r_new;	
+	rr_t *r;
+	rr_t *r_new;
+		
 	str p; /*this is going to point to the scscf uri*/
 		
+		
 	
-	
+
 	switch (dir) {
 		case DLG_MOBILE_ORIGINATING:
 			p = pcscf_record_route_mo_uri;
+			
 			break;
 		case DLG_MOBILE_TERMINATING:
 			p = pcscf_record_route_mt_uri;
+	
 			break;
 		default:
 			return;
 	}
-	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
-	//for(r=d->route_set;r!=NULL;r=r->next) 
-	//	LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+	if (situation==RELEASE_CALL_EARLY) d->route_set=revert_route(d->route_set);
+	
+	LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
+	for(r=d->route_set;r!=NULL;r=r->next) 
+		LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+	
+	
+	
 		
 	for(r=d->route_set;r!=NULL;r=r->next) {
 		if (r->nameaddr.uri.len>=p.len && 
@@ -572,10 +606,14 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir)
 				r->next=NULL;
 				shm_free_rr(&d->route_set);
 				d->route_set = r_new;
-  	            return;	
+  	            return;
+  	            
+  	          	
+  	            	
 			}
-					
-	}	
+				
+	}
+		
 }		
 
 

@@ -63,13 +63,14 @@
 
 enum release_call_situation{
 	RELEASE_CALL_EARLY=0,
-	RELEASE_CALL_WEIRD=1
+	RELEASE_CALL_WEIRD=1,
 	 /*Weird state is the technical name of the state in which a
 	  * sip session is when the callee has already sent a 200 OK for INVITE
 	  * and the caller hasn't yet recieved this response
 	  * In Weird state the session can only be released by sending an ACK followed
 	  * by a  BYE to the callee and a reply >400 to the caller
 	  * a CANCEL wouldn't be understood by the callee!*/
+	  RELEASE_CALL_CONFIRMED=2
 };
 #define MAX_TIMES_TO_TRY_TO_RELEASE 3
 #define TIME_TO_EXPIRE 60
