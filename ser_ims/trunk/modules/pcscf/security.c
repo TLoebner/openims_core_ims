@@ -448,7 +448,7 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 				if (!ipsec) goto error;
 				s->data.ipsec = ipsec;
 				
-				puri.port_no = ipsec->port_uc;
+				puri.port_no = ipsec->port_us;
 			}
 				break;
 		}
