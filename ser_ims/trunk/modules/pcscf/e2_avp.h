@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: e2_avp.h 299 2007-05-31 18:19:30Z vingarzan $
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -42,61 +42,43 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
- 
-/**
+
+ /**
  * \file
- * 
- * Proxy-CSCF - Registration Related Operations
- * 
+ *
+ * P-CSCF Module - Cx AVP Operations  
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
+ * Copyright (C) 2005 FhG Fokus
+ * 		
  */
-
  
- 
-#ifndef P_CSCF_REGISTRATION_H
-#define P_CSCF_REGISTRATION_H 
+#ifndef P_CSCF_e2_AVP_H
+#define P_CSCF_e2_AVP_H
 
 #include "../../sr_module.h"
+#include "mod.h"
+#include "../cdp/cdp_load.h"
 
-/**< response to NOTIFY for reg event */
-#define MSG_200_OK_NOTIFY "OK Notification received by P-CSCF"
 
-int P_add_path(struct sip_msg *msg,char *str1,char*str2);
+/** NO DATA WILL BE DUPLICATED OR FREED - DO THAT AFTER SENDING THE MESSAGE!!! */
 
-int P_add_require(struct sip_msg *msg,char *str1,char*str2);
+int e2_add_user_name(AAAMessage *uar,str private_identity);
+int e2_add_public_identity(AAAMessage *msg,str data);
+int e2_add_authorization_type(AAAMessage *msg,unsigned int data);
+int e2_add_server_name(AAAMessage *msg,str data);
+int e2_add_result_code(AAAMessage *msg,unsigned int data);
+int e2_add_experimental_result_code(AAAMessage *msg,unsigned int data);
+int e2_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,	unsigned int auth_id,unsigned int acct_id);
+int e2_add_auth_session_state(AAAMessage *msg,unsigned int data);	
+int e2_add_destination_realm(AAAMessage *msg,str data);
+int e2_add_g_unique_address(AAAMessage *msg, str ip,str realm);
+int e2_add_app_identifier(AAAMessage *msg, str data); 
 
-int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2);
-
-int P_add_integrity_protected(struct sip_msg *msg,char *str1,char*str2);
-
-int P_add_p_visited_network_id(struct sip_msg *msg,char *str1,char*str2);
-
-int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2);
-
-int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2);
-
-int P_is_registered(struct sip_msg *msg,char *str1,char *str2);
-
-int P_assert_identity(struct sip_msg *msg,char *str1,char *str2);
-
-int P_assert_called_identity(struct sip_msg *msg,char *str1,char *str2);
-
-int P_process_notification(struct sip_msg *msg,char *str1,char *str2);
-
-int P_mobile_terminating(struct sip_msg *msg,char *str1,char *str2);
-
-int P_remove_route(struct sip_msg *msg,char *str1,char *str2);
-
-int P_NAT_relay(struct sip_msg *msg,char *str1,char *str2);
-
-int P_security_relay(struct sip_msg *msg,char *str1,char *str2);
-
-int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2);
-
-int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2);
-
-int P_access_network_info(struct sip_msg *req,char *str1,char *str2);
-
-#endif /* P_CSCF_REGISTRATION_H */
+/* GET AVPS */
+inline str e2_get_user_name(AAAMessage *msg);
+inline str e2_get_terminal_type(AAAMessage *msg);
+int e2_get_access_net(AAAMessage *msg, int *data);
+int e2_get_location_info(AAAMessage *msg, str *data);
+#endif /* P_CSCF_e2_AVP_H */
