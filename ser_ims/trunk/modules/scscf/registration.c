@@ -877,7 +877,10 @@ success:
 			av = new_auth_vector(item_number,auth_scheme,authenticate,ha1,empty_s,empty_s);
 			if (response_auth.len) //HSS check 
 			{
-				bin_to_base16(ha1.s,ha1.len,auth32);			
+				bin_to_base16(ha1.s,ha1.len,auth32);
+				//memset(auth32,0,HASHHEXLEN+1);
+				//memcpy(auth32,ha1.s,ha1.len>HASHHEXLEN?32:ha1.len);
+							
 				calc_response(auth32, &authenticate, &empty_s,&empty_s,&empty_s,0, &(msg->first_line.u.request.method) ,&server_name , 0,result);
 				LOG(L_INFO,"DBG:"M_NAME":S_MAR: HSS said: %.*s and we  expect %.*s ha1 %.*s\n",
 					response_auth.len,response_auth.s,/*av->authorization.len,av->authorization.s,*/32,result,32,auth32);
