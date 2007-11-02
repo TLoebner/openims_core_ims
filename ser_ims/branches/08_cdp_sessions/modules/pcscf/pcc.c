@@ -116,19 +116,35 @@ void callback_for_pccsession(int event,void *param,void *session)
 {
 	t_authdata *g;
 	cdp_session_t *x=session;
-	LOG(L_CRIT,"callback called!\n");
+	p_dialog *dlg;
+	
+	LOG(L_INFO,"callback_for_pccsession(): called\n");
+	
 	switch (event)
 	{
 		case AUTH_EV_SERVICE_TERMINATED:
-			//
+			
 			g=(t_authdata *)x->u.auth.generic_data;
-			if (g)
-			{
+			if (g) {
+				if (g->callid.s)
+				{	
+					LOG(L_INFO,"someone has this dialog %.*s %i\n",g->callid.len,g->callid.s,g->direction);
+					dlg=get_p_dialog_dir(g->callid,g->direction);
+					LOG(L_INFO,"or not\n");
+					if (dlg) { 
+					dlg->pcc_session=0; // the session is going to be deleted
+					d_unlock(dlg->hash);
+					}
+				}
+					
 				if (g->callid.s) shm_free(g->callid.s);
 				shm_free(g);
 				x->u.auth.generic_data=0;
 			}
-			LOG(L_DBG,"callback_for_pccsession(): done with the work\n");
+			
+	
+	
+			LOG(L_INFO,"callback_for_pccsession(): done with the work\n");
 			break;
 		default:
 			break;
@@ -371,7 +387,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	
 		auth=dlg->pcc_session;
 	}
-	
+	d_unlock(dlg->hash);
 	//cdpb.sessions_lock(auth->hash);	
 	
 	if (pcscf_qos_release7)
@@ -419,8 +435,8 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	 * 					this case, i can then drop the dialog
 	 * 
 	*/
-	dlg->pcc_session=0;	
-	d_unlock(dlg->hash);
+	// dlg->pcc_session=0; Will be done by the callback	
+	
 	
 	return dia_sta;
 error:

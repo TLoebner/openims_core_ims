@@ -68,7 +68,7 @@ int P_local_policy(struct sip_msg* msg, char* str1, char* str2)
 {
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_local_policy: SDP local policy control\n");
 	
-	return 1;	
+	return CSCF_RETURN_TRUE;	
 }
 
 
@@ -105,10 +105,10 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 			str c=cscf_get_content_type(msg);
 			//LOG(L_ERR,"content tpye is %.*s\n",c.len,c.s);
 			/*Check if c is Application/sdp..*/
-				return 1;
+				return CSCF_RETURN_TRUE;
 		} 
 	} 
-		return 0;
+		return CSCF_RETURN_FALSE;
 	
 }
 
@@ -138,21 +138,21 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	//LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR: and release %i\n",pcscf_qos_release7);
 	if (msg->first_line.type == SIP_REQUEST) {
 		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: must be called on SIP reply\n");
-		return 0;
+		return CSCF_RETURN_FALSE;
 	}
 
 	/* Get the SIP request from this transaction */
 	t=tmb.t_gett();
 	if (!t) {
 		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: cannot get the transaction\n"); 
-		return 0;
+		return CSCF_RETURN_FALSE;
 	}
 	
 	if (!(strncmp(t->method.s,"INVITE",6)==0)&&!(strncmp(t->method.s,"UPDATE",6)==0)&&!(strncmp(t->method.s,"PRACK",5)==0))
 	{
 		
 		//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
-		return 1;
+		return CSCF_RETURN_TRUE;
 	}
 
 	/* Create an AAR based on request and reply and send it to PDF */
@@ -161,12 +161,22 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	
 	if (!aaa) goto error;
 	result = PCC_AAA(aaa);
+	LOG(L_INFO,"recieved an AAA with result code %i\n",result);
 	cdpb.AAAFreeMessage(&aaa);
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
-	if (result == AAA_SUCCESS) return 1;
-	else return 0; // if its not a success then that means i want to reject this call! 
+	if (result == AAA_SUCCESS) {
+		return CSCF_RETURN_TRUE;
+	} else {
+		 return CSCF_RETURN_FALSE; // if its not a success then that means i want to reject this call!
+	} 
+	/*
+	 * This behaviour is wrong, if its a reINVITE  then the rules already exist, the PCRF may
+	 * not install the news but remain with the old ones and in that case it will send a DIAMETER_UNABLE_TO_COMPLY
+	 * so we need to catch that posibility here maybe looking at the Error-Message
+	*/
+	
 error:
-	return 1; // default policy is if PDF/PCRF not working or errors , then leave everything flow
+	return CSCF_RETURN_TRUE; // default policy is if PDF/PCRF not working or errors , then leave everything flow
 }
 
 
@@ -187,6 +197,6 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	/*of course here comes some processing*/
 	//int rc = PCC_AAA(sta);
 	// but for now i dont care .. i am going to drop the dialog anyway
-	cdpb.AAAFreeMessage(&sta);
-	return 1;
+	if (sta) cdpb.AAAFreeMessage(&sta);
+	return CSCF_RETURN_TRUE;
 }

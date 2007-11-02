@@ -351,7 +351,6 @@ static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _o
 	rr_t* last, *p, *t;
 	
 	last = 0;
-
 	ptr = _m->record_route;
 	while(ptr) {
 		if (ptr->type == HDR_RECORDROUTE_T) {
@@ -506,6 +505,12 @@ static inline int dlg_new_resp_uac(dlg_t* _d, struct sip_msg* _m)
 		      * Send a request to jan@iptel.org if you need to update
 		      * the structures here
 		      */
+		     /*
+		      * Alberto Diez .. i might need to update the remote tag here?
+		      * and the route set? maybe i do want all that
+		      */
+		      if (response2dlg(_m, _d) < 0) return -1;
+		    
 	} else if ((code >= 200) && (code < 299)) {
 		     /* A final response, update the structures and transit
 		      * into DLG_CONFIRMED
@@ -545,6 +550,8 @@ static inline int dlg_early_resp_uac(dlg_t* _d, struct sip_msg* _m)
 	if (code < 200) {
 		     /* We are in early state already, do nothing
 		      */
+		if (response2dlg(_m, _d) < 0) return -1;
+		_d->state = DLG_EARLY;
 	} else if ((code >= 200) && (code <= 299)) {
 		/* Warning - we can handle here response for non-initial request (for
 		 * example UPDATE within early INVITE/BYE dialog) and move into
