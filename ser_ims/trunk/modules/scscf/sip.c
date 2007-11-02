@@ -230,7 +230,7 @@ str cscf_get_private_identity(struct sip_msg *msg, str realm)
 		
 fallback:
 	LOG(L_INFO,"INF:"M_NAME":cscf_get_private_identity: Falling back to private_id=stripped(public_id)\n"
-		"-> Message did not contain a valid Authorization Header!!! This fallback is deprecated outside Early-IMS!\n");	
+		"-> Message did not contain a valid Authorization Header!!! This fallback is deprecated outside Early-IMS or NASS-Bundled!\n");	
 	pi = cscf_get_public_identity(msg);
 	if (pi.len>4&&strncasecmp(pi.s,"sip:",4)==0) {pi.s+=4;pi.len-=4;}
 	for(i=0;i<pi.len;i++)
@@ -1804,8 +1804,44 @@ struct hdr_field* cscf_get_next_header_type(struct sip_msg * msg ,
 	return h;
 }
 
-str cscf_p_visited_network_id={"P-Visited-Network-ID",20};
 
+str cscf_p_access_network_info={"P-Access-Network-Info",21};
+/**
+ * Return the P-Access-Network-Info header
+ * @param msg - the SIP message
+ * @param h - ptr to the header found
+ * @returns the str with the header's body
+ */
+str cscf_get_access_network_info(struct sip_msg *msg, struct hdr_field **h)
+{
+	str ani={0,0};
+	struct hdr_field *hdr;
+	
+	if (h) *h=0;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_access_network_info: Error parsing until header EOH: \n");
+		return ani;
+	}
+	hdr = msg->headers;
+	while(hdr){
+		if (hdr->name.len==cscf_p_access_network_info.len &&
+			strncasecmp(hdr->name.s,cscf_p_access_network_info.s,hdr->name.len)==0)
+		{
+			if (h) *h = hdr;
+			ani = hdr->body;
+			goto done;
+		}                 
+		hdr = hdr->next;
+	}
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_access_network_info: P-Access-Network-Info header not found \n");
+	
+done:
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_access_network_info: <%.*s> \n",
+		ani.len,ani.s);
+	return ani;
+}
+
+str cscf_p_visited_network_id={"P-Visited-Network-ID",20};
 /**
  * Return the P-Visited-Network-ID header
  * @param msg - the SIP message

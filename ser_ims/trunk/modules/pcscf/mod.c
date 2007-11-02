@@ -73,6 +73,7 @@
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "../dialog/dlg_mod.h"
+#include "../cdp/cdp_load.h"
 
 //#include "db.h"
 #include "registration.h"
@@ -154,10 +155,17 @@ int rtpproxy_disable_tout = 60 ;			/**< disabling timeout for the RTPProxy 			*/
 int rtpproxy_retr = 5;						/**< Retry count 									*/
 int rtpproxy_tout = 1;						/**< Timeout 										*/
 
+/* e2 interface with CLF */
+char* forced_clf_peer="";		/**< FQDN of the forced CLF Diameter Peer (CLF) */
+int pcscf_use_e2=0;								/**< if to enable usage of e2 or not			*/ 
+
+
 /* fixed parameter storage */
 str pcscf_name_str;							/**< fixed SIP URI of this P-CSCF 					*/
 str pcscf_path_hdr_str;						/**< fixed Path header 								*/
 str pcscf_path_str;							/**< fixed Path URI  								*/
+
+str forced_clf_peer_str;					/**< fxied FQDN of the forced CLF DiameterPeer (CLF)*/
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -253,6 +261,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_follows_via_list() - checks if a response coming from a UE contains the same Via headers sent in the corresponding request
  * - P_enforce_via_list() - enforce a response coming from a UE to contain the same Via headers sent in the corresponding request
  * - P_remove_header_tag(hdr_name,tag) - Removes tags from headers (for example sec-agree from Require).
+ * <p>
+ * - P_access_network_info() - modify the P_Access_Network_Info header with e2 information from CLF
  */
 static cmd_export_t pcscf_cmds[]={
 	{"P_add_path",					P_add_path, 				0, 0, REQUEST_ROUTE},
@@ -308,7 +318,10 @@ static cmd_export_t pcscf_cmds[]={
 	
 	{"P_follows_via_list",			P_follows_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
-	{"P_release_call_onreply",		P_release_call_onreply,		1,0,  ONREPLY_ROUTE},
+	{"P_release_call_onreply",		P_release_call_onreply,		1, 0,  ONREPLY_ROUTE},
+	
+	{"P_access_network_info",	P_access_network_info, 			1, 0, REQUEST_ROUTE},
+	
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -362,6 +375,9 @@ static cmd_export_t pcscf_cmds[]={
  * - persistency_timer_dialogs - interval to make dialogs data snapshots at
  * - persistency_timer_registrar - interval to make registrar snapshots at
  * - persistency_timer_subscriptions - interval to make subscriptions snapshots at
+ * <p>
+ * - forced_clf_peer - if you enable the use of the e2 interface, you can force the use of a certain CLF
+ * - use_e2 - if to enable the usage of e2 interface with a CLF
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -421,6 +437,9 @@ static param_export_t pcscf_params[]={
 	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
 #endif /* WITH_IMS_PM */	
 	
+	
+	{"forced_clf_peer",					STR_PARAM, &forced_clf_peer},
+	{"use_e2",							INT_PARAM, &pcscf_use_e2},
 	{0,0,0} 
 };
 
@@ -444,7 +463,8 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 										/**< link to the stateless reply function in sl module */
 
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
-dlg_func_t dialogb;							/**< Structure with pointers to dialog funcs			*/
+dlg_func_t dialogb;						/**< Structure with pointers to dialog funcs			*/
+struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs				*/
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -562,6 +582,9 @@ int fix_parameters()
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
 
+	/* fix the parameters */
+	forced_clf_peer_str.s = forced_clf_peer;
+	forced_clf_peer_str.len = strlen(forced_clf_peer);
 	return 1;
 }
 
@@ -579,6 +602,7 @@ db_con_t* create_pcscf_db_connection()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
+	load_cdp_f load_cdp;
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
@@ -684,7 +708,7 @@ static int mod_init(void)
 		
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
-		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_tm. This module requires tm module\n");
+		LOG(L_ERR, "ERR:"M_NAME":mod_init: Can not import load_tm. This module requires tm module\n");
 		goto error;
 	}
 	if (load_tm(&tmb) == -1)
@@ -693,12 +717,24 @@ static int mod_init(void)
 	/* bind to the dialog module */
 	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
 	if (!load_dlg) {
-		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
+		LOG(L_ERR, "ERR:"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
 		return -1;
 	}
 	if (load_dlg(&dialogb) != 0) {
 		return -1;
 	}
+
+	/* bind to the cdp module */
+	if (pcscf_use_e2){
+		if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module.\n");
+			
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface has been disabled.\n");			
+			pcscf_use_e2 = 0;
+		}
+		if (load_cdp(&cdpb) == -1)
+			goto error;
+	}	
 	
 	/* init the registrar storage */
 	if (!r_storage_init(registrar_hash_size)) goto error;
