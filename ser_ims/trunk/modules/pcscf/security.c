@@ -449,6 +449,11 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 				s->data.ipsec = ipsec;
 				
 				puri.port_no = ipsec->port_us;
+				/*
+				 * this should actually be port_uc... then the cscf_get_ue_via should be 
+				 * changed to give rport and not the port in the via. but this would
+				 * break NATed clients...
+				 */
 			}
 				break;
 		}

@@ -2652,7 +2652,7 @@ static str p_charging_vector_s={"P-Charging-Vector: icid-value=\"",31};
 static str p_charging_vector_1={"\";icid-generated-at=",20};
 static str p_charging_vector_2={";orig-ioi=\"",11};
 static str p_charging_vector_e={"\"\r\n",3};
-static char hex_chars[16]="0123456789abcdef";
+static char hex_chars[17]="0123456789abcdef";
 /**
  * Inserts the P-Charging-Vector header
  * P-Charging-Vector:

@@ -47,28 +47,15 @@
 #include "../../md5.h"
 
 
+static char hexa_chars[17]="0123456789abcdef";
+
 inline void cvt_hex(HASH _b, HASHHEX _h)
 {
-	unsigned short i;
-	unsigned char j;
-	
+	unsigned short i;	
 	for (i = 0; i < HASHLEN; i++) {
-		j = (_b[i] >> 4) & 0xf;
-		if (j <= 9) {
-			_h[i * 2] = (j + '0');
-		} else {
-			_h[i * 2] = (j + 'a' - 10);
-		}
-
-		j = _b[i] & 0xf;
-
-		if (j <= 9) {
-			_h[i * 2 + 1] = (j + '0');
-		} else {
-			_h[i * 2 + 1] = (j + 'a' - 10);
-		}
+		_h[i * 2] = hexa_chars[(_b[i] >> 4) & 0xf];
+		_h[i * 2 + 1] =  hexa_chars[_b[i] & 0xf];
 	};
-
 	_h[HASHHEXLEN] = '\0';
 }
 
