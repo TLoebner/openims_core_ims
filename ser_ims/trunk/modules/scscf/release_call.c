@@ -67,64 +67,58 @@ extern str scscf_record_route_mt_uri;
 
 
 
-static str bye_s={"BYE",3};
+static str method_bye_s={"BYE",3};
 static str default_reason_s={"Reason: SIP ;cause=503 ;text=\"Session Terminated\"\r\n",51};
 static str content_length_s={"Content-Length: 0\r\n",19};
 
 /**
- * This function sends a bye in the specified dialog 
- * the callback function and parameter are the specified arguments
- * @param d - the dlg_t to send it on
- * @param cb -the callback function
- * @param dir -the direction to identify this s_dialog
- * @param reason - a reason header to include - see the 
- * @returns 1 on success or 0 on failure
- */
-int send_bye(dlg_t *d,transaction_cb cb,enum s_dialog_direction dir,str reason)
+ * Sends the request on the dialog with the direction given as a parameter
+ * @param method - the SIP method of the request
+ * @param reqbuf - Any headers to be included in the request
+ * @param d - the dlg_t in which to send the request
+ * @cb - the callback function that will handle the replies for this request
+ * @dir - the direction of the dialog_p to include it as a parameter in the callback
+ * @returns 0 on error or 1 on success
+*/
+int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum s_dialog_direction dir)
 {
-	str bye_header_s={0,0};
-	str reason_header_s={0,0};
 	
-	if (reason.len!=0)
-		reason_header_s = reason;
-	 else 
-		reason_header_s = default_reason_s;
-
-	bye_header_s.len = reason_header_s.len+content_length_s.len;
-	bye_header_s.s = pkg_malloc(bye_header_s.len);
-	if (!bye_header_s.s) {
-		LOG(L_ERR,"ERR:"M_NAME":send_bye(): error allocating %d bytes\n",bye_header_s.len);
-		goto error;
-	}
-	bye_header_s.len=0;
-	STR_APPEND(bye_header_s,reason_header_s);
-	STR_APPEND(bye_header_s,content_length_s);
-				
-	if(d!=NULL)	{
-		enum s_dialog_direction *cbp;
-		cbp = shm_malloc(sizeof(enum s_dialog_direction));
-		if (!cbp){
-			LOG(L_ERR,"ERR:"M_NAME":send_bye(): error allocating %d bytes\n",sizeof(enum s_dialog_direction));
-			goto error;
-		}		
-		*cbp = dir;
-		dialogb.request_inside(&bye_s, &bye_header_s, 0, d,cb,cbp);
-		if (bye_header_s.s) pkg_free(bye_header_s.s);	
+	if((d!=NULL) && (method.s!=NULL))
+	{
+		enum s_dialog_direction *cbp=NULL;
+		
+		if (method.len !=3 || memcmp(method.s,"ACK",3)!=0)
+		{
+			/*In case of ACK i don't want to even send the direction
+			 * moreover as the memory is freed in the callback function
+			 * and the ACK is never replied it would be a bug if i did*/
+			cbp = shm_malloc(sizeof(enum s_dialog_direction));
+			if (!cbp){
+				LOG(L_ERR,"ERR:"M_NAME":send_request(): error allocating %d bytes\n",sizeof(enum s_dialog_direction));
+				return 0;
+			}
+			*cbp=dir;
+		}	
+		dialogb.request_inside(&method,&reqbuf,NULL, d,cb,cbp);
 		return 1;
-	}	
-error:
-	if (bye_header_s.s) pkg_free(bye_header_s.s);	
+	}
+	
 	return 0;
 }
 
 
 
+
+
+
+
+
 /**
- * Callback function for BYE requests!
+ * Callback function for confirmed requests!
  * Identify the s_dialog, then see if one BYE has already been recieved
  * if yes drop it , if no, wait for the second
  */
-void bye_response(struct cell *t,int type,struct tmcb_params *ps)
+void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
 {		
 	s_dialog *d;
 	unsigned int hash;
@@ -142,12 +136,12 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
   	call_id.s+=9;
   	call_id.len-=11;
 
-	LOG(L_INFO,"DBG:"M_NAME":bye_response(): Received a %d response to BYE for a call release for <%.*s> DIR[%d].\n",
+	LOG(L_INFO,"DBG:"M_NAME":confirmed_response(): Received a %d response to BYE for a call release for <%.*s> DIR[%d].\n",
 		ps->code, call_id.len,call_id.s,dir);
 			
 	d = get_s_dialog_dir(call_id,dir);
 	if (!d)	{
-		LOG(L_ERR,"ERR:"M_NAME":bye_response(): Received a BYE response for a call release but there is no dialog for <%.*s> DIR[%d].\n",
+		LOG(L_ERR,"ERR:"M_NAME":confirmed_response(): Received a BYE response for a call release but there is no dialog for <%.*s> DIR[%d].\n",
 			call_id.len,call_id.s,dir);
 		return;
 	}
@@ -155,7 +149,7 @@ void bye_response(struct cell *t,int type,struct tmcb_params *ps)
 	if (ps->code>=200){
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
-			LOG(L_INFO,"INFO:"M_NAME":bye_response(): Received a response to second BYE. Dialog is dropped.\n");
+			LOG(L_INFO,"INFO:"M_NAME":confirmed_response(): Received a response to second BYE. Dialog is dropped.\n");
 			del_s_dialog(d);
 			d_unlock(hash);			 
 		} else {
@@ -252,6 +246,7 @@ int release_call_s(s_dialog *d,str reason)
 {
 	enum s_dialog_direction odir;
 	s_dialog *o;
+	str reqbuf={0,0};
 
 	LOG(L_INFO,"DBG:"M_NAME":release_call_s(): Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
@@ -293,13 +288,78 @@ int release_call_s(s_dialog *d,str reason)
 		
 		/*first generate the bye for called user*/
 		/*then generate the bye for the calling user*/
-		send_bye(d->dialog_c,bye_response,d->direction,reason);
-		send_bye(d->dialog_s,bye_response,d->direction,reason);
+		/*send_bye(d->dialog_c,bye_response,d->direction,reason);
+		send_bye(d->dialog_s,bye_response,d->direction,reason);*/
+		
+		/*now prepare the headers*/
+		if (reason.len)
+		{
+			reqbuf.s=shm_malloc(reason.len+content_length_s.len);
+			reqbuf.len=reason.len+content_length_s.len;
+			STR_APPEND(reqbuf,reason);
+			STR_APPEND(reqbuf,content_length_s);
+			
+		} else 
+		{
+			reqbuf.s=shm_malloc(default_reason_s.len+content_length_s.len);
+			reqbuf.len=default_reason_s.len+content_length_s.len;
+			STR_APPEND(reqbuf,default_reason_s);
+			STR_APPEND(reqbuf,content_length_s);
+		}
+		
+		
+		send_request(method_bye_s,reqbuf,d->dialog_c,confirmed_response,d->direction);
+		send_request(method_bye_s,reqbuf,d->dialog_s,confirmed_response,d->direction);
 		
 		/*the dialog is droped by the callback-function when recieves the two replies */
-	}	 
+	}
+	if (reqbuf.s)
+		shm_free(reqbuf.s);	 
 	return 1;
 }
 
+static str hdrs_notify_s={"Subscription-State: Terminated\r\n",33};
+static str method_NOTIFY_s={"NOTIFY",6};
+static str hdrs_subscribe_s={"Expires: 0\r\n",12};
+static str method_SUBSCRIBE_s={"SUBSCRIBE",9};
 
+int release_subscription(s_dialog *d)
+{
+	/*i dont think in this case all the checking with the directions is needed
+	 * because the SUBSCRIBE initiated dialog doesnt go twice through the S-CSCF or does it?*/
+	str reqbuf={0,0}; 
+	d->is_releasing++;
+	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE)
+	{
+		LOG(L_ERR,"ERR:"M_NAME":release_call_s(): had to delete silently a SUBSCRIBE initiated dialog %.*s\n",d->call_id.len,d->call_id.s);
+		del_s_dialog(d);
+		return 1;
+	}
+	if (d->is_releasing==1)
+	{
+		d->dialog_c->state=DLG_CONFIRMED;
+		alter_dialog_route_set(d->dialog_c,d->direction);
+		
+		/*Add Contents-Length thing makes everything more complicated*/
+		reqbuf.s=shm_malloc(hdrs_subscribe_s.len+content_length_s.len);
+		reqbuf.len=hdrs_subscribe_s.len+content_length_s.len;
+		STR_APPEND(reqbuf,hdrs_subscribe_s);
+		STR_APPEND(reqbuf,content_length_s);
+		
+		send_request(method_SUBSCRIBE_s,reqbuf,d->dialog_c,confirmed_response,d->direction);
+		if (reqbuf.s)
+			shm_free(reqbuf.s);
+			
+		/*Now add the Contents-Length thing for the NOTIFY*/	
+		reqbuf.s=shm_malloc(hdrs_notify_s.len+content_length_s.len);
+		reqbuf.len=hdrs_notify_s.len+content_length_s.len;
+		STR_APPEND(reqbuf,hdrs_notify_s);
+		STR_APPEND(reqbuf,content_length_s);
+		
+		send_request(method_NOTIFY_s,reqbuf,d->dialog_s,confirmed_response,d->direction);
+		if (reqbuf.s)
+			shm_free(reqbuf.s);
+	}
+	return 1;
+}
 
