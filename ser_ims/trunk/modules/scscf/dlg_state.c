@@ -487,8 +487,8 @@ int terminate_s_dialog(s_dialog *d)
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for SUBSCRIBE dialogs!\n");
-			return 0;
+			release_subscription(d);
+			return 1;
 			break;
 		default:
 			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for method[%d]!\n",d->method);

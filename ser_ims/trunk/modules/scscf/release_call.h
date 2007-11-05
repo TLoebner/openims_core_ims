@@ -68,6 +68,6 @@
 
 int release_call(str call_id,str reason);
 int release_call_s(s_dialog *d,str reason);
-
+int release_subscription(s_dialog *d);
 
 #endif /*RELEASE_CALL_H_*/
