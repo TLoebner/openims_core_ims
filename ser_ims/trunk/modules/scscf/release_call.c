@@ -334,6 +334,8 @@ static str method_NOTIFY_s={"NOTIFY",6};
 static str hdr_expires_s={"Expires: 0\r\n",12};
 static str hdr_event1_s={"Event: ",7};
 static str hdr_event2_s={"\r\n",2};
+static str hdr_contact1_s={"Contact: <",10};
+static str hdr_contact2_s={">\r\n",3};
 static str method_SUBSCRIBE_s={"SUBSCRIBE",9};
 
 
@@ -341,8 +343,10 @@ int release_subscription(s_dialog *d)
 {
 	/*i dont think in this case all the checking with the directions is needed
 	 * because the SUBSCRIBE initiated dialog doesnt go twice through the S-CSCF or does it?*/
-	str reqbuf={0,0}; 
+	str reqbuf={0,0};
+	str c_uri={0,0}; 
 	d->is_releasing++;
+	
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE)
 	{
 		LOG(L_ERR,"ERR:"M_NAME":release_subscription(): had to delete silently a SUBSCRIBE initiated dialog %.*s\n",d->call_id.len,d->call_id.s);
@@ -354,10 +358,14 @@ int release_subscription(s_dialog *d)
 		d->dialog_c->state=DLG_CONFIRMED;
 		alter_dialog_route_set(d->dialog_c,d->direction);
 		
+		//SUBSCRIBE
 		/*Add Contents-Length thing makes everything more complicated*/
+		c_uri = d->dialog_c->rem_target;
 		reqbuf.len = hdr_expires_s.len+content_length_s.len;
 		if (d->event.len) 
 			reqbuf.len+=hdr_event1_s.len+d->event.len+hdr_event2_s.len;			
+		if (c_uri.len) 
+			reqbuf.len+=hdr_contact1_s.len+c_uri.len+hdr_contact2_s.len;			
 		reqbuf.s=pkg_malloc(reqbuf.len);
 		if (!reqbuf.s){
 			LOG(L_ERR,"ERR:"M_NAME":release_subscription(): Error allocating %d bytes.\n",
@@ -371,16 +379,25 @@ int release_subscription(s_dialog *d)
 			STR_APPEND(reqbuf,d->event);			
 			STR_APPEND(reqbuf,hdr_event2_s);
 		}
+		if (c_uri.len){
+			STR_APPEND(reqbuf,hdr_contact1_s);
+			STR_APPEND(reqbuf,c_uri);			
+			STR_APPEND(reqbuf,hdr_contact2_s);
+		}
 		STR_APPEND(reqbuf,content_length_s);
 		
 		send_request(method_SUBSCRIBE_s,reqbuf,d->dialog_c,confirmed_response,d->direction);
 		if (reqbuf.s)
 			pkg_free(reqbuf.s);
-			
+		
+		//NOTIFY	
 		/*Now add the Contents-Length thing for the NOTIFY*/
+		c_uri = d->dialog_s->rem_target;
 		reqbuf.len = hdrs_notify_s.len+content_length_s.len;
 		if (d->event.len) 
 			reqbuf.len+=hdr_event1_s.len+d->event.len+hdr_event2_s.len;
+		if (c_uri.len) 
+			reqbuf.len+=hdr_contact1_s.len+c_uri.len+hdr_contact2_s.len;			
 		reqbuf.s = pkg_malloc(reqbuf.len);
 		if (!reqbuf.s){
 			LOG(L_ERR,"ERR:"M_NAME":release_subscription(): Error allocating %d bytes.\n",
@@ -394,6 +411,11 @@ int release_subscription(s_dialog *d)
 			STR_APPEND(reqbuf,d->event);			
 			STR_APPEND(reqbuf,hdr_event2_s);
 		}
+		if (c_uri.len){
+			STR_APPEND(reqbuf,hdr_contact1_s);
+			STR_APPEND(reqbuf,c_uri);			
+			STR_APPEND(reqbuf,hdr_contact2_s);
+		}	
 		STR_APPEND(reqbuf,content_length_s);
 		
 		send_request(method_NOTIFY_s,reqbuf,d->dialog_s,confirmed_response,d->direction);
