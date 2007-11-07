@@ -360,7 +360,7 @@ int release_subscription(s_dialog *d)
 		
 		//SUBSCRIBE
 		/*Add Contents-Length thing makes everything more complicated*/
-		c_uri = d->dialog_c->rem_target;
+		c_uri = d->dialog_s->rem_target;
 		reqbuf.len = hdr_expires_s.len+content_length_s.len;
 		if (d->event.len) 
 			reqbuf.len+=hdr_event1_s.len+d->event.len+hdr_event2_s.len;			
@@ -392,7 +392,7 @@ int release_subscription(s_dialog *d)
 		
 		//NOTIFY	
 		/*Now add the Contents-Length thing for the NOTIFY*/
-		c_uri = d->dialog_s->rem_target;
+		c_uri = d->dialog_c->rem_target;
 		reqbuf.len = hdrs_notify_s.len+content_length_s.len;
 		if (d->event.len) 
 			reqbuf.len+=hdr_event1_s.len+d->event.len+hdr_event2_s.len;
