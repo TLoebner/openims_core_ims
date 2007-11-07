@@ -276,7 +276,7 @@ int release_call_s(s_dialog *d,str reason)
 		
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
 		LOG(L_ERR,"ERR:"M_NAME":release_call_s(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
-		del_s_dialog(d);
+		
 		return 0;
 	}
 	if (d->is_releasing==1) {	
@@ -294,15 +294,26 @@ int release_call_s(s_dialog *d,str reason)
 		/*now prepare the headers*/
 		if (reason.len)
 		{
-			reqbuf.s=shm_malloc(reason.len+content_length_s.len);
-			reqbuf.len=reason.len+content_length_s.len;
+			reqbuf.len = reason.len+content_length_s.len;
+			reqbuf.s = pkg_malloc(reqbuf.len);
+			if (!reqbuf.s){
+				LOG(L_ERR,"ERR:"M_NAME":release_call_s(): Error allocating %d bytes.\n",
+					reqbuf.len);
+				return 0;
+			}		
+			reqbuf.len=0;
 			STR_APPEND(reqbuf,reason);
 			STR_APPEND(reqbuf,content_length_s);
 			
-		} else 
-		{
-			reqbuf.s=shm_malloc(default_reason_s.len+content_length_s.len);
-			reqbuf.len=default_reason_s.len+content_length_s.len;
+		} else {
+			reqbuf.len = default_reason_s.len+content_length_s.len;
+			reqbuf.s = pkg_malloc(reqbuf.len);
+			if (!reqbuf.s){
+				LOG(L_ERR,"ERR:"M_NAME":release_call_s(): Error allocating %d bytes.\n",
+					reqbuf.len);
+				return 0;
+			}		
+			reqbuf.len=0;
 			STR_APPEND(reqbuf,default_reason_s);
 			STR_APPEND(reqbuf,content_length_s);
 		}
@@ -314,7 +325,7 @@ int release_call_s(s_dialog *d,str reason)
 		/*the dialog is droped by the callback-function when recieves the two replies */
 	}
 	if (reqbuf.s)
-		shm_free(reqbuf.s);	 
+		pkg_free(reqbuf.s);	 
 	return 1;
 }
 
@@ -331,7 +342,7 @@ int release_subscription(s_dialog *d)
 	d->is_releasing++;
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE)
 	{
-		LOG(L_ERR,"ERR:"M_NAME":release_call_s(): had to delete silently a SUBSCRIBE initiated dialog %.*s\n",d->call_id.len,d->call_id.s);
+		LOG(L_ERR,"ERR:"M_NAME":release_subscription(): had to delete silently a SUBSCRIBE initiated dialog %.*s\n",d->call_id.len,d->call_id.s);
 		del_s_dialog(d);
 		return 1;
 	}
@@ -341,24 +352,36 @@ int release_subscription(s_dialog *d)
 		alter_dialog_route_set(d->dialog_c,d->direction);
 		
 		/*Add Contents-Length thing makes everything more complicated*/
-		reqbuf.s=shm_malloc(hdrs_subscribe_s.len+content_length_s.len);
-		reqbuf.len=hdrs_subscribe_s.len+content_length_s.len;
+		reqbuf.len = hdrs_subscribe_s.len+content_length_s.len;
+		reqbuf.s=pkg_malloc(reqbuf.len);
+		if (!reqbuf.s){
+			LOG(L_ERR,"ERR:"M_NAME":release_subscription(): Error allocating %d bytes.\n",
+				reqbuf.len);
+			return 0;
+		}
+		reqbuf.len=0;
 		STR_APPEND(reqbuf,hdrs_subscribe_s);
 		STR_APPEND(reqbuf,content_length_s);
 		
 		send_request(method_SUBSCRIBE_s,reqbuf,d->dialog_c,confirmed_response,d->direction);
 		if (reqbuf.s)
-			shm_free(reqbuf.s);
+			pkg_free(reqbuf.s);
 			
-		/*Now add the Contents-Length thing for the NOTIFY*/	
-		reqbuf.s=shm_malloc(hdrs_notify_s.len+content_length_s.len);
-		reqbuf.len=hdrs_notify_s.len+content_length_s.len;
+		/*Now add the Contents-Length thing for the NOTIFY*/
+		reqbuf.len = hdrs_notify_s.len+content_length_s.len;
+		reqbuf.s = pkg_malloc(reqbuf.len);
+		if (!reqbuf.s){
+			LOG(L_ERR,"ERR:"M_NAME":release_subscription(): Error allocating %d bytes.\n",
+				reqbuf.len);
+			return 0;
+		}		
+		reqbuf.len=0;
 		STR_APPEND(reqbuf,hdrs_notify_s);
 		STR_APPEND(reqbuf,content_length_s);
 		
 		send_request(method_NOTIFY_s,reqbuf,d->dialog_s,confirmed_response,d->direction);
 		if (reqbuf.s)
-			shm_free(reqbuf.s);
+			pkg_free(reqbuf.s);
 	}
 	return 1;
 }
