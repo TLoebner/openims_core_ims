@@ -329,7 +329,7 @@ int release_call_s(s_dialog *d,str reason)
 	return 1;
 }
 
-static str hdrs_notify_s={"Subscription-State: Terminated\r\n",33};
+static str hdrs_notify_s={"Subscription-State: terminated\r\n",32};
 static str method_NOTIFY_s={"NOTIFY",6};
 static str hdr_expires_s={"Expires: 0\r\n",12};
 static str hdr_event1_s={"Event: ",7};
