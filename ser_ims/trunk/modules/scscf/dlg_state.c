@@ -480,14 +480,18 @@ int terminate_s_dialog(s_dialog *d)
 	if (!scscf_dialogs_enable_release) return 0;	
 	switch (d->method){
 		case DLG_METHOD_INVITE:
-			if (release_call_s(d,Reason)==-1){
+			if (release_call_s(d,Reason)<=0){
 				//dialog has expired and not confirmed
+				// or error releasing dialog
 				del_s_dialog(d);
 			}
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:
-			release_subscription(d);
+			if (!release_subscription(d)){
+				//error releasing the subscription - just drop silently
+				del_s_dialog(d);
+			}
 			return 1;
 			break;
 		default:
