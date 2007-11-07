@@ -331,8 +331,11 @@ int release_call_s(s_dialog *d,str reason)
 
 static str hdrs_notify_s={"Subscription-State: Terminated\r\n",33};
 static str method_NOTIFY_s={"NOTIFY",6};
-static str hdrs_subscribe_s={"Expires: 0\r\n",12};
+static str hdr_expires_s={"Expires: 0\r\n",12};
+static str hdr_event1_s={"Event: ",7};
+static str hdr_event2_s={"\r\n",2};
 static str method_SUBSCRIBE_s={"SUBSCRIBE",9};
+
 
 int release_subscription(s_dialog *d)
 {
@@ -352,7 +355,9 @@ int release_subscription(s_dialog *d)
 		alter_dialog_route_set(d->dialog_c,d->direction);
 		
 		/*Add Contents-Length thing makes everything more complicated*/
-		reqbuf.len = hdrs_subscribe_s.len+content_length_s.len;
+		reqbuf.len = hdr_expires_s.len+content_length_s.len;
+		if (d->event.len) 
+			reqbuf.len+=hdr_event1_s.len+d->event.len+hdr_event2_s.len;			
 		reqbuf.s=pkg_malloc(reqbuf.len);
 		if (!reqbuf.s){
 			LOG(L_ERR,"ERR:"M_NAME":release_subscription(): Error allocating %d bytes.\n",
@@ -360,7 +365,12 @@ int release_subscription(s_dialog *d)
 			return 0;
 		}
 		reqbuf.len=0;
-		STR_APPEND(reqbuf,hdrs_subscribe_s);
+		STR_APPEND(reqbuf,hdr_expires_s);
+		if (d->event.len){
+			STR_APPEND(reqbuf,hdr_event1_s);
+			STR_APPEND(reqbuf,d->event);			
+			STR_APPEND(reqbuf,hdr_event2_s);
+		}
 		STR_APPEND(reqbuf,content_length_s);
 		
 		send_request(method_SUBSCRIBE_s,reqbuf,d->dialog_c,confirmed_response,d->direction);
@@ -369,6 +379,8 @@ int release_subscription(s_dialog *d)
 			
 		/*Now add the Contents-Length thing for the NOTIFY*/
 		reqbuf.len = hdrs_notify_s.len+content_length_s.len;
+		if (d->event.len) 
+			reqbuf.len+=hdr_event1_s.len+d->event.len+hdr_event2_s.len;
 		reqbuf.s = pkg_malloc(reqbuf.len);
 		if (!reqbuf.s){
 			LOG(L_ERR,"ERR:"M_NAME":release_subscription(): Error allocating %d bytes.\n",
@@ -377,6 +389,11 @@ int release_subscription(s_dialog *d)
 		}		
 		reqbuf.len=0;
 		STR_APPEND(reqbuf,hdrs_notify_s);
+		if (d->event.len){
+			STR_APPEND(reqbuf,hdr_event1_s);
+			STR_APPEND(reqbuf,d->event);			
+			STR_APPEND(reqbuf,hdr_event2_s);
+		}
 		STR_APPEND(reqbuf,content_length_s);
 		
 		send_request(method_NOTIFY_s,reqbuf,d->dialog_s,confirmed_response,d->direction);
