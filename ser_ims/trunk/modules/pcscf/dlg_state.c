@@ -500,7 +500,7 @@ int terminate_p_dialog(p_dialog *d)
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for SUBSCRIBE dialogs!\n");
+			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not needed for SUBSCRIBE dialogs - silent drop on expiration.\n");
 			return 0;
 			break;
 		default:
@@ -1587,7 +1587,7 @@ void dialog_timer(unsigned int ticks, void* param)
 			d = p_dialogs[i].head;
 			while(d){
 				dn = d->next;
-				if (d->direction==DLG_MOBILE_TERMINATING&&d->expires<=d_time_now) {						
+				if (d->expires<=d_time_now) {						
 						if (!terminate_p_dialog(d)) 
 							del_p_dialog(d);					
 				}
