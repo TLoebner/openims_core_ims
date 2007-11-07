@@ -465,7 +465,8 @@ int udp_rcv_loop()
 			LOG(L_WARN, "WARNING: udp_rcv_loop: "
 					"upstream bug - 0-terminated packet from %s %d\n",
 					tmp, htons(ri.src_port));
-			len--;
+			LOG(L_WARN, "WARNING: this fix was disabled as it was modifying correct messages <dvi>.\n");
+			//len--;
 		}
 #endif
 #endif
