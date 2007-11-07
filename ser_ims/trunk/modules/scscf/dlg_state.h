@@ -106,6 +106,8 @@ typedef struct _s_dialog {
 	str refresher;						/**< session refresher							*/
 	unsigned char uac_supp_timer; 		/**< requester uac supports timer 				*/
 	
+	str event;							/**< event header - used for release			*/
+	
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 											released or not, or its peer, with count on 
 											tries 										*/	

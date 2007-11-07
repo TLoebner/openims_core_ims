@@ -527,7 +527,9 @@ void free_s_dialog(s_dialog *d)
 	if (d->aor.s) shm_free(d->aor.s);	
 	if (d->method_str.s) shm_free(d->method_str.s);
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
-	if (d->dialog_c) tmb.free_dlg(d->dialog_c);		
+	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
+	if (d->refresher.s) shm_free(d->refresher.s); 		
+	if (d->event.s) shm_free(d->event.s); 		
 	shm_free(d);
 	s_dialog_count_decrement(); 	
 }
@@ -547,11 +549,15 @@ void print_s_dialogs(int log_level)
 		d_lock(i);
 			d = s_dialogs[i].head;
 			while(d){
-				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t DIR[%d] AOR:<%.*s>\tMet:[%d]\tState:[%d] Exp:[%4d]\n",i,				
+				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t DIR[%d] AOR:<%.*s>\n",i,				
 					d->call_id.len,d->call_id.s,d->direction,
-					d->aor.len,d->aor.s,
-					d->method,d->state,
-					(int)(d->expires - d_time_now));
+					d->aor.len,d->aor.s);
+				LOG(log_level,"INF:"M_NAME":\t\tMethod:[%d]\tState:[%d] Exp:[%4d] Ref:[%.*s] Event:[%.*s]\n",				
+					d->method,
+					d->state,
+					(int)(d->expires - d_time_now),
+					d->refresher.len,d->refresher.s,
+					d->event.len,d->event.s);
 					
 				d = d->next;
 			} 		
@@ -827,6 +833,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	time_t t_time;
 	str ses_exp = {0,0};
 	str refresher = {0,0};
+	str event = {0,0};
 	struct hdr_field *h;
 	unsigned int hash;
 	
@@ -886,6 +893,13 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 						&d->dialog_c);
 	
 	tmb.new_dlg_uas(msg,99,&d->dialog_s);
+	
+	event = cscf_get_event(msg);
+	if (event.len){
+		STR_SHM_DUP(d->event,event,"shm");
+	}
+	else
+		d->event = event;
 
 	d_unlock(d->hash);
 	
