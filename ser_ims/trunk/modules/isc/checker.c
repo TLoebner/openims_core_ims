@@ -338,7 +338,7 @@ static inline isc_match* isc_new_match(ims_filter_criteria *fc,int index)
 		memcpy(r->server_name.s,fc->application_server.server_name.s,fc->application_server.server_name.len);
 	}	
 	r->default_handling = fc->application_server.default_handling;
-	if (r->service_info.len) {
+	if (fc->application_server.service_info.len) {
 		r->service_info.s = pkg_malloc(fc->application_server.service_info.len);
 		if (!r->service_info.s){
 			LOG(L_ERR,"ERR:"M_NAME":isc_new_match(): error allocating %d bytes\n",fc->application_server.service_info.len);
