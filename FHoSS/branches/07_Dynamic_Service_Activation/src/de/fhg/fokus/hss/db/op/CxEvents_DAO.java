@@ -1,5 +1,6 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
+  *  Parts by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
@@ -33,12 +34,12 @@
   * fact and have to agree to check out carefully before installing,
   * using and extending the Open Source IMS Core System, if related
   * patents and licenses may become applicable to the intended usage
-  * context. 
+  * context.
   *
   * You should have received a copy of the GNU General Public License
   * along with this program; if not, write to the Free Software
-  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
-  * 
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  *
   */
 
 package de.fhg.fokus.hss.db.op;
@@ -50,28 +51,41 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.CxEvents;
+import de.fhg.fokus.hss.db.model.IMPI;
+import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.db.model.IMSU;
+import de.fhg.fokus.hss.db.model.ShNotification;
+import de.fhg.fokus.hss.db.model.ShSubscription;
+import de.fhg.fokus.hss.sh.ShConstants;
+import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
- * @author adp dot fokus dot fraunhofer dot de 
+ * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
+ * to support the propagation of users Service Profile in Cx Interface due to changes in DSAI,
+ * according to Release 7.
+ *
+ * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
+ * @author Instrumentacion y Componentes S.A (Inycom)
+ * for modifications (ims at inycom dot es)
  */
 public class CxEvents_DAO {
-	
+
 	public static void insert(Session session, CxEvents cx_events){
 		session.save(cx_events);
 	}
-	
+
 	public static void update(Session session, CxEvents cx_events){
 		session.saveOrUpdate(cx_events);
 	}
-	
+
 	public static void mark_all_from_grp(Session session, int grp){
 		Query query;
 		query = session.createSQLQuery("update cx_events set hopbyhop=1 where grp=?");
 		query.setInteger(0, grp);
 		query.executeUpdate();
 	}
-	
+
 	public static List get_all_from_grp(Session session, int grp){
 		Query query;
 		query = session.createSQLQuery("select * from cx_events where grp=?")
@@ -79,7 +93,7 @@ public class CxEvents_DAO {
 		query.setInteger(0, grp);
 		return query.list();
 	}
-	
+
 	public static void update_by_grp(Session session, int grp, long hopByHopID, long endToEndID){
 		Query query;
 		query = session.createSQLQuery("update cx_events set hopbyhop=?, endtoend=? where grp=?")
@@ -88,7 +102,7 @@ public class CxEvents_DAO {
 				.setInteger(2, grp);
 		query.executeUpdate();
 	}
-	
+
 	public static void delete(Session session, long hopbyhop, long endtoend){
 		Query query = session.createSQLQuery("delete from cx_events where hopbyhop=? and endtoend=?");
 		query.setLong(0, hopbyhop);
@@ -111,8 +125,8 @@ public class CxEvents_DAO {
 		query.setLong(1, endtoend);
 		return query.list();
 	}
-	
-	
+
+
 	public static int get_max_grp(Session session){
 		Query query = session.createSQLQuery("select max(grp) from cx_events");
 		Integer result = (Integer) query.uniqueResult();
@@ -120,7 +134,7 @@ public class CxEvents_DAO {
 			return 0;
 		return result.intValue();
 	}
-	
+
 	public static CxEvents get_one_from_grp (Session session, long hopbyhop, long endtoend){
 		Query query;
 		query = session.createSQLQuery("select * from cx_events where hopbyhop=? and endtoend=? limit 1")
@@ -128,5 +142,33 @@ public class CxEvents_DAO {
 		query.setLong(0, hopbyhop);
 		query.setLong(1, endtoend);
 		return (CxEvents) query.uniqueResult();
+	}
+
+
+	/**
+     * This method inserts a new Cx_Event in the table Cx_Events.
+     * <p>
+     * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es) to support the DSAI Information Element
+     *
+     * @params session, impu_id
+     * @return void
+     */
+
+	public static void insert_CxEvent (Session session, int impu_id){
+
+		IMPI impi = IMPI_IMPU_DAO.get_registered_IMPI_by_IMPU_ID(session, impu_id);
+		if (impi != null) {
+			IMSU imsu = IMSU_DAO.get_by_IMPI_ID(session, impi.getId());
+			CxEvents rtr_ppr = new CxEvents();
+			rtr_ppr.setGrp(CxEvents_DAO.get_max_grp(session) + 1);
+			// type for PPR is 2
+			rtr_ppr.setType(2);
+			//		userdata
+			rtr_ppr.setSubtype(0);
+			rtr_ppr.setDiameter_name(imsu.getDiameter_name());
+			rtr_ppr.setId_impi(impi.getId());
+			rtr_ppr.setId_impu(impu_id);
+			CxEvents_DAO.insert(session, rtr_ppr);
+		}
 	}
 }

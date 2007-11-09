@@ -33,12 +33,12 @@
   * fact and have to agree to check out carefully before installing,
   * using and extending the Open Source IMS Core System, if related
   * patents and licenses may become applicable to the intended usage
-  * context. 
+  * context.
   *
   * You should have received a copy of the GNU General Public License
   * along with this program; if not, write to the Free Software
-  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
-  * 
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  *
   */
 
 package de.fhg.fokus.hss.main;
@@ -53,20 +53,20 @@ import org.hibernate.Session;
 import de.fhg.fokus.hss.db.hibernate.HibernateUtil;
 import de.fhg.fokus.hss.diam.*;
 /**
- * @author adp dot fokus dot fraunhofer dot de 
+ * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
  */
 
 public class HSSContainer {
 	private static Logger logger = Logger.getLogger(HSSContainer.class);
-	
+
 	public LinkedBlockingQueue tasksQueue;
 	public Worker [] workers;
-	
+
 	// diameter stack
 	public DiameterStack diamStack;
 	public TomcatServer tomcatServer;
-	
+
 	public HSSContainer(){
 		try{
 			tomcatServer = new TomcatServer();
@@ -83,7 +83,7 @@ public class HSSContainer {
         Session session = HibernateUtil.getCurrentSession();
         HibernateUtil.commitTransaction();
         HibernateUtil.closeSession();
-		
+
         // initialise the tasksQueue and start the workers
 		tasksQueue = new LinkedBlockingQueue();
 		workers = new Worker[10];
@@ -93,19 +93,19 @@ public class HSSContainer {
 		}
 		// Initialise the diameter stack
 		diamStack = new DiameterStack(this);
-		
+
 		// CxEvents Worker
 		CxEventsWorker cxEventsWorker = new CxEventsWorker(diamStack, 10);
 		cxEventsWorker.start();
-		
+
 		// ShEvents Worker
 		ShEventsWorker shEventsWorker = new ShEventsWorker(diamStack, 10);
 		shEventsWorker.start();
-		
+
 
 	}
-		
-	
+
+
 	public static void main(String args[]){
 		HSSContainer hssContainer = new HSSContainer();
 		waitForExit();
@@ -117,35 +117,35 @@ public class HSSContainer {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		
+
         hssContainer.diamStack.diameterPeer.shutdown();
         System.exit(1);
 	}
-	
+
 	/**
 	 * This method waits until exit is typed in the console
 	 * If wait is typed, then it returns.
 	 */
 	private static void waitForExit() {
-		byte[] buffer = new byte[80]; 
+		byte[] buffer = new byte[80];
 		int read;
 		String input="";
 		while (true){
 		    try{
-		        logger.info("\nType \"exit\" to stop FHoSS!");			       
-		        read = System.in.read(buffer, 0, 80);			        
+		        logger.info("\nType \"exit\" to stop FHoSS!");
+		        read = System.in.read(buffer, 0, 80);
 		        input = new String(buffer, 0, read);
 		        input  = input.trim();
 		    }
 		    catch (IOException e){
 		        e.printStackTrace();
 		    }
-			   
+
 		    if(input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("x")){
 		    	return;
 		    }
 		}
 	}
-	
-	
+
+
 }

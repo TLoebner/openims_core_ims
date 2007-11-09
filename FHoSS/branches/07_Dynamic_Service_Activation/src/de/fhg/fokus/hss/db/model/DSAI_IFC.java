@@ -1,6 +1,8 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
+  * Developed by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+  *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
   *
@@ -46,8 +48,11 @@ package de.fhg.fokus.hss.db.model;
 import java.io.Serializable;
 
 /**
- * @authors inycom.es
+ * @author Instrumentacion y Componentes S.A (Inycom).
+ * Contact at: ims at inycom dot es
+ *
  */
+
 public class DSAI_IFC implements Serializable {
 	private static final long serialVersionUID=1L;
 

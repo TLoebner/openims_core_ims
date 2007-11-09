@@ -1,6 +1,8 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
+  * Developed by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+  *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
   *
@@ -50,21 +52,53 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.DSAI;
-import de.fhg.fokus.hss.db.model.SP;
 
 /**
- * @authors inycom.es
+ * @author Instrumentacion y Componentes S.A (Inycom).
+ * Contact at: ims at inycom dot es
+ *
  */
+
 public class DSAI_DAO {
 	private static Logger logger = Logger.getLogger(DSAI_DAO.class);
+
+	/**
+	 * This method saves a new DSAI in the database
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element.
+	 *
+	 * @param session	Hibernate session
+	 * @param dsai	object of type DSAI
+	 */
 
 	public static void insert(Session session, DSAI dsai){
 		session.save(dsai);
 	}
 
+	/**
+	 * This method updates any of the fields of a DSAI already saved in the database
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element.
+	 *
+	 * @param session	Hibernate session
+	 * @param dsai	object of type DSAI
+	 */
 	public static void update(Session session, DSAI dsai){
 		session.save(dsai);
 	}
+
+	/**
+	 * This method retrieves a DSAI from the database whose identifier is the given one.
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element.
+	 *
+	 * @param session	Hibernate session
+	 * @param id	identifier
+	 * @return object of type DSAI
+	 */
 
 	public static DSAI get_by_ID(Session session, int id){
 		Query query;
@@ -75,6 +109,16 @@ public class DSAI_DAO {
 		return (DSAI) query.uniqueResult();
 	}
 
+	/**
+	 * This method retrieves a DSAI from the database whose dsai_tag is the given one.
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element
+	 *
+	 * @param session	Hibernate session
+	 * @param dsai_tag Tag that identifies the DSAI
+	 * @return object of type DSAI
+	 */
 
 	public static DSAI get_by_Dsai_tag(Session session, String dsai_tag){
 		Query query;
@@ -94,6 +138,19 @@ public class DSAI_DAO {
 		return result;
 	}
 
+	/**
+	 * This method retrieves from the database a number of DSAIs equal to maxResult, beginning in the row firstResult.
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element.
+	 *
+	 * @param session	Hibernate session
+	 * @param firstResult row of the first DSAI to retrieve
+	 * @param maxResults number of DSAIs to retrieve
+	 * @return Array composed of 2 objects, the second one is a List of DSAIs and the first one, an
+	 * Integer that expreses the number of elements of the list of DSAIs.
+	 */
+
 	public static Object[] get_all(Session session, int firstResult, int maxResults){
 		Query query;
 		query = session.createSQLQuery("select * from dsai")
@@ -107,6 +164,16 @@ public class DSAI_DAO {
 		return result;
 	}
 
+	/**
+	 * This method retrieves all DSAIs saved in the database.
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element
+	 *
+	 * @param session	Hibernate session
+	 * @return List of DSAI objects
+	 */
+
 	public static List get_all(Session session){
 		Query query;
 		query = session.createSQLQuery("select * from dsai")
@@ -115,11 +182,35 @@ public class DSAI_DAO {
 		return query.list();
 	}
 
+	/**
+	 * This method deletes the DSAI with the identifier given from the database.
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element
+	 *
+	 * @param session	Hibernate session
+	 * @param id	DSAI identifier
+	 * @return result of the update
+	 */
+
 	public static int delete_by_ID(Session session, int id){
 		Query query = session.createSQLQuery("delete from dsai where id=?");
 		query.setInteger(0, id);
 		return query.executeUpdate();
 	}
+
+	/**
+	 * This method retrieves the DSAIs with the Tag given that are between the row first
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to support the DSAI Information Element.
+	 *
+	 * @param session	Hibernate session
+	 * @param dsai_tag Tag that identifies the DSAI
+	 * @param firstResult first row to look for
+	 * @param maxResults number of rows to look for
+	 * @return Array of objects that contains the DSAIs retrieved
+	 */
 
 	public static Object[] get_by_Wildcarded_Tag(Session session, String dsai_tag,
 			int firstResult, int maxResults){

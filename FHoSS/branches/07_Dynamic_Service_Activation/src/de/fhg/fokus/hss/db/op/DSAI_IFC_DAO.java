@@ -1,6 +1,8 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
+  * Developed by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+  *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
   *
@@ -50,10 +52,14 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.DSAI_IFC;
+import de.fhg.fokus.hss.db.model.IFC;
 
 /**
- * @authors inycom.es
+ * @author Instrumentacion y Componentes S.A (Inycom).
+ * Contact at: ims at inycom dot es
+ *
  */
+
 public class DSAI_IFC_DAO {
 	private static Logger logger = Logger.getLogger(DSAI_IFC_DAO.class);
 
@@ -64,6 +70,18 @@ public class DSAI_IFC_DAO {
 	public static void update(Session session, DSAI_IFC dsai_ifc){
 		session.saveOrUpdate(dsai_ifc);
 	}
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to get an unique object for an IFC and DSAI given
+	 *
+	 * @param session	Hibernate session
+	 * @param id_dsai	DSAI
+	 * @param id_ifc	IFC identifier
+	 * @return
+	 */
 
 	public static DSAI_IFC get_by_DSAI_and_IFC_ID(Session session, int id_dsai, int id_ifc){
 		Query query;
@@ -84,11 +102,95 @@ public class DSAI_IFC_DAO {
 		return result;
 	}
 
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to get all IFC from a DSAI given
+	 *
+	 * @param session	Hibernate session
+	 * @param id_dsai	DSAI identifier
+	 * @return
+	 */
+
 	public static List get_all_IFC_by_DSAI_ID(Session session, int id_dsai){
-		List result = null;
 
-		//#### TO DO ####
+		Query query;
+		query = session.createSQLQuery(
+					"select * from ifc " +
+					"	inner join dsai_ifc on ifc.id = dsai_ifc.id_ifc" +
+					"		where dsai_ifc.id_dsai=?")
+						.addEntity(IFC.class);
+		query.setInteger(0, id_dsai);
 
-		return result;
+		return query.list();
+	}
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to delete an ifc and DSAI given
+	 *
+	 * @param session	Hibernate session
+	 * @param id_dsai	DSAI identifier
+	 * @param id_ifc	IFC identifier
+	 * @return
+	 */
+
+	public static int delete_by_DSAI_and_IFC_ID(Session session, int id_dsai, int id_ifc){
+
+		Query query;
+		query = session.createSQLQuery("delete from dsai_ifc where id_dsai=? and id_ifc=?");
+		query.setInteger(0, id_dsai);
+		query.setInteger(1, id_ifc);
+		return query.executeUpdate();
+	}
+
+
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to get a list of IFCs attached to a dsai except for the IFC given.
+	 *
+	 * @param session	Hibernate session
+	 * @param id_ifc	IFC	identifier
+	 * @param id_dsai	DSAI identifier
+	 * @return
+	 */
+
+	public static List get_all_IFC_associated_except_IFC_given(Session session, int id_ifc, int id_dsai){
+
+		Query query;
+		query = session.createSQLQuery("select id_ifc from dsai_ifc where id_dsai=? and id_ifc<>? ");
+		query.setInteger(0, id_dsai);
+		query.setInteger(1, id_ifc);
+
+		return query.list();
+	}
+
+
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to return IFC attached to the same DSAI as the IMPU given
+	 *
+	 * @param session	Hibernate session
+	 * @param id_impu	IMPU identifier
+	 * @return
+	 */
+
+	public static List get_IFC_attached_to_same_DSAI_as_IMPU(Session session, int id_impu){
+
+		Query query;
+		query=session.createSQLQuery("select distinct ifc.* from ifc, dsai_ifc, dsai_impu where dsai_impu.id_impu=? " +
+									"and dsai_ifc.id_dsai=dsai_impu.id_dsai " +
+									"and ifc.id=dsai_ifc.id_ifc").addEntity(IFC.class);
+		query.setInteger(0,id_impu);
+		return query.list();
 	}
 }

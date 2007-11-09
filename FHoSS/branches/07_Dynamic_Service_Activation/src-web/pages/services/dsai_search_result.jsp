@@ -31,6 +31,7 @@ function submitForm(pageId){
 
 function rowsPerPageChanged(){
 	document.DSAI_SearchForm.crtPage.value = 1;
+	//document.DSAI_SearchForm.rowsPerPageChanged=true;
 	document.DSAI_SearchForm.submit();
 }
 </script>
@@ -44,12 +45,7 @@ function rowsPerPageChanged(){
 			<h1> DSAI Search </h1>
 			<br/><br/>
 		</td>
-	<tr>
-		<td align="left">
-			<!-- Print errors, if any -->
-			<jsp:include page="/pages/tiles/error.jsp"></jsp:include>
-		</td>
-	</tr>
+
 	</table> <!-- title-table -->
 
 	<table id="main-table" align="center" valign="middle">
@@ -75,7 +71,7 @@ function rowsPerPageChanged(){
 							<%= dsai.getId() %>
 						</td>
 						<td>
-							<a href="/hss.web.console/DSAI_Load.do?id=<%= dsai.getId() %>">
+								<a href="/hss.web.console/DSAI_Load.do?id=<%= dsai.getId() %>">
 								<%= dsai.getDsai_tag() %>
 							</a>
 						</td>

@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2004-2006 FhG Fokus
  *
+ * Parts by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+ *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
  *
@@ -35,12 +37,12 @@
  * fact and have to agree to check out carefully before installing,
  * using and extending the Open Source IMS Core System, if related
  * patents and licenses may become applicable to the intended usage
- * context. 
+ * context.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
- * 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
  */
 package de.fhg.fokus.hss.main;
 
@@ -51,14 +53,22 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+
+
 /**
  * It contains some variables which describe the HSS properties.Further it reads
  * the values for those variables from a property file.
+ * <p>
+ * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
+ * to support the erasing of expired Subscriptions from Sh_Subscription table (variable expiry_time_lim).
+ *
  * @author Andre Charton (dev -at- open-ims dot org)
+ * @author Instrumentacion y Componentes S.A (Inycom)
+ * for modifications (ims at inycom dot es)
  */
 
 public class HSSProperties {
-	
+
 	private static final Logger LOGGER = Logger.getLogger(HSSProperties.class);
 	public static String TOMCAT_HOST;
 	public static String TOMCAT_PORT;
@@ -70,17 +80,19 @@ public class HSSProperties {
 	public static int IND_LEN = 5;
 	public static int delta = 268435456;
 	public static int L = 32;
-	
+
+	public static int Expiry_time_lim = -1;  // If this parameter is -1, unlimited subscribtions are allowed
+
 	public static boolean iFC_NOTIF_ENABLED = false;
 	private static String fileName = "hss.properties";
-	
+
 	static {
 		Properties props;
-		
+
 		try{
 			props = new Properties();
 			props.load(new FileInputStream(fileName));
-			
+
 			TOMCAT_HOST = props.getProperty("host");
 			TOMCAT_PORT = props.getProperty("port");
 			OPERATOR_ID = props.getProperty("operatorId");
@@ -90,6 +102,7 @@ public class HSSProperties {
 			delta = Integer.parseInt(props.getProperty("delta"));
 			L = Integer.parseInt(props.getProperty("L"));
 			iFC_NOTIF_ENABLED = Boolean.valueOf(props.getProperty("iFC_NOTIF_ENABLED")).booleanValue();
+			Expiry_time_lim = Integer.parseInt(props.getProperty("expiry_time_lim"));
 		}
 		catch (FileNotFoundException e) {
 			LOGGER.error("FileNotFoundException !", e);

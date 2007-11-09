@@ -1,5 +1,6 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
+  *  Parts by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
   *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
@@ -33,23 +34,28 @@
   * fact and have to agree to check out carefully before installing,
   * using and extending the Open Source IMS Core System, if related
   * patents and licenses may become applicable to the intended usage
-  * context. 
+  * context.
   *
   * You should have received a copy of the GNU General Public License
   * along with this program; if not, write to the Free Software
-  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
-  * 
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  *
   */
 
 package de.fhg.fokus.hss.sh;
 
 /**
- * @author adp dot fokus dot fraunhofer dot de 
+ * This class has been modified by Instrumentacion y Componentes S.A. (ims at inycom dot es) to support the DSAI
+ * Information Element according to release 7 (DSAI_value).
+ *
+ * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
+ * @author Instrumentacion y Componentes S.A (Inycom) for modifications (ims at inycom dot es)
+ *
  */
 
 public class ShConstants {
-	
+
 	// Data-Reference Constants
 	public static final int Data_Ref_Repository_Data = 0;
 	public static final int Data_Ref_IMS_Public_Identity = 10;
@@ -63,22 +69,27 @@ public class ShConstants {
 	public static final int Data_Ref_PSI_Activation = 18;
 	public static final int Data_Ref_DSAI = 19;
 	public static final int Data_Ref_Aliases_Repository_Data = 20;
-	
-	
+
+
 	// Send-Data-Indication
 	public static final int User_Data_Not_Requested = 0;
 	public static final int User_Data_Requested = 1;
-	
+
 	// Subs-Req-Type
 	public static final int Subs_Req_Type_Subscribe = 0;
 	public static final int Subs_Req_Type_UnSubscribe = 1;
-	
+
 	// Identity-Set
 	public static final int Identity_Set_All_Identities = 0;
 	public static final int Identity_Set_Registered_Identities = 1;
 	public static final int Identity_Set_Implicit_Identities = 2;
 	public static final int Identity_Set_Alias_Identities = 3;
-	
-	
-	
+
+	// DSAI_value
+	public static final String DSAI_value_Inactive_Name = "Inactive";
+	public static final String DSAI_value_Active_Name = "Active";
+	public static final int DSAI_value_Inactive = 0;
+	public static final int DSAI_value_Active = 1;
+
+
 }

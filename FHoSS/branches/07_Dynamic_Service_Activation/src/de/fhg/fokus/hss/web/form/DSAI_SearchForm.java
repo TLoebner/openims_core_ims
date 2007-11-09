@@ -1,6 +1,8 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
+  * Developed by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+  *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
   *
@@ -65,8 +67,11 @@ import de.fhg.fokus.hss.db.op.SP_IFC_DAO;
 import de.fhg.fokus.hss.db.op.SP_Shared_IFC_Set_DAO;
 
 /**
- * @author inycom.es
+ * @author Instrumentacion y Componentes S.A (Inycom).
+ * Contact at: ims at inycom dot es
+ *
  */
+
 
 public class DSAI_SearchForm extends ActionForm implements Serializable{
 	private static final long serialVersionUID=1L;
@@ -76,21 +81,17 @@ public class DSAI_SearchForm extends ActionForm implements Serializable{
 	private String id_dsai;
 	private String dsai_tag;
 
-	private String crtPage;
-	private String rowsPerPage;
+	private String crtPage;		//Current page
+	private String rowsPerPage;	//Rows to show in each page
+
 
 	public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request){
         ActionErrors actionErrors = new ActionErrors();
 
-        //Repasar este método antes de ejecutar porque no tengo nada claro que funcione
-
-    	boolean dbException = false;
+        boolean dbException = false;
     	try{
-    		Session session = HibernateUtil.getCurrentSession();
-    		HibernateUtil.beginTransaction();
 
-
-    		if (!isInteger(id_dsai)& id_dsai!="" ){ //"isInteger" is an auxiliar method that checks if the value introduced in ID field is an integer.
+    		if (!isInteger(id_dsai)&& id_dsai!="" && id_dsai!=null ){ //"isInteger" is an auxiliar method that checks if the value introduced in ID field is an integer.
     			actionErrors.add("dsai.error.id_not_integer", new ActionMessage("dsai.error.id_not_integer"));
     		}
 
@@ -103,7 +104,6 @@ public class DSAI_SearchForm extends ActionForm implements Serializable{
 
     	}
 
-    	//I think that these catch are not necessary because no access to database is needed. Check!!!
     	catch(DatabaseException e){
     		logger.error("Database Exception occured!\nReason:" + e.getMessage());
     		e.printStackTrace();
