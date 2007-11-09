@@ -64,6 +64,8 @@
 #include "../../db/db.h"
 #include "../tm/tm_load.h"
 
+#include "mark.h"
+
 int str2cmp(str x,str y);
 
 int str2icmp(str x,str y);
@@ -71,13 +73,13 @@ int str2icmp(str x,str y);
 int isc_is_initial_request(struct sip_msg *msg);
 int isc_is_register(struct sip_msg *msg);
 	
-int isc_get_originating_user( struct sip_msg * msg, str *uri );
+int isc_get_originating_user( struct sip_msg * msg, isc_mark *mark, str *uri );
 
 int isc_is_registered(str *uri);
 
 inline int isc_get_terminating_type(str *uri);
 
-int isc_get_terminating_user( struct sip_msg * msg, str *uri );
+int isc_get_terminating_user( struct sip_msg * msg, isc_mark *mark, str *uri );
 	
 int isc_get_expires(struct sip_msg *msg);
 

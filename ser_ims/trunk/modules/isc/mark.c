@@ -53,13 +53,14 @@
  * 
  * The mark is as following: 
  * \code
-Route: <appserver_uri>, <sip:ifcmark@[isc_my_uri];lr;s=xxx;h=xxx;d=xxx>
+Route: <appserver_uri>, <sip:ifcmark@[isc_my_uri];lr;s=xxx;h=xxx;d=xxx;a=xxx>
   \endcode  
  *
  *		- s - skip
  * 		- h - default handling
  * 		- d - direction  
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * 		- a - the user aor encoded in base16
+ *  \author Dragos Vingarzan   dragos dot vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
 
@@ -77,32 +78,44 @@ Route: <appserver_uri>, <sip:ifcmark@[isc_my_uri];lr;s=xxx;h=xxx;d=xxx>
 extern str isc_my_uri;				/**< Uri of myself to loop the message in str	*/
 
 
+
+
+/** base16 char constants */ 
+char *hexchars="0123456789abcdef";
 /**
- * Duplicate a isc_mark structure into shm.
- * @param m - the isc mark to duplicate
- * @returns the new isc_mark* or NULL on error
+ * Converts a binary encoded value to its base16 representation.
+ * @param from - buffer containing the input data
+ * @param len - the size of from
+ * @param to - the output buffer  !!! must have at least len*2 allocated memory 
+ * @returns the written length 
  */
-inline isc_mark* isc_mark_dup(isc_mark *m)
+int bin_to_base16(char *from,int len, char *to)
 {
-	isc_mark *x;
-	x = shm_malloc(sizeof(isc_mark));
-	if (!x){
-		LOG(L_ERR, "ERR:"M_NAME":isc_mark_dup: Error allocating %d bytes\n",sizeof(isc_mark));
-		return 0;
-	}
-	x->skip = m->skip;
-	x->handling = m->handling;
-	x->direction = m->direction;
-	return x;
+	int i,j;
+	for(i=0,j=0;i<len;i++,j+=2){
+		to[j] = hexchars[(((unsigned char)from[i]) >>4 )&0x0F];
+		to[j+1] = hexchars[(((unsigned char)from[i]))&0x0F];
+	}	
+	return 2*len;
 }
 
+/** from base16 char to int */
+#define HEX_DIGIT(x) \
+	((x>='0'&&x<='9')?x-'0':((x>='a'&&x<='f')?x-'a'+10:((x>='A'&&x<='F')?x-'A'+10:0)))
 /**
- * Frees an isc_mark structure
- * @param m - the isc_mark to deallocate
+ * Converts a hex encoded value to its binary value
+ * @param from - buffer containing the input data
+ * @param len - the size of from
+ * @param to - the output buffer  !!! must have at least len/2 allocated memory 
+ * @returns the written length 
  */
-inline void isc_mark_free(isc_mark *m)
+int base16_to_bin(char *from,int len, char *to)
 {
-	if (m) shm_free(m);
+	int i,j;
+	for(i=0,j=0;j<len;i++,j+=2){
+		to[i] = (unsigned char) ( HEX_DIGIT(from[j])<<4 | HEX_DIGIT(from[j+1]));
+	}	
+	return i;
 }
 
 /**
@@ -119,17 +132,21 @@ int isc_mark_set(struct sip_msg *msg, isc_match *match, isc_mark *mark)
 	str route={0,0};
 	str as={0,0};
 	char chr_mark[256];
+	char aor_hex[256];
+	int len;
 
 	/* Drop all the old Header Lump "Route: <as>, <my>" */
 	isc_mark_drop_route(msg);
 	
+	len = bin_to_base16(mark->aor.s,mark->aor.len,aor_hex);
 	/* Create the Marking */		
-	sprintf(chr_mark,"%s@%.*s;lr;s=%d;h=%d;d=%d",
+	sprintf(chr_mark,"%s@%.*s;lr;s=%d;h=%d;d=%d;a=%.*s",
 		ISC_MARK_USERNAME,
 		isc_my_uri.len,isc_my_uri.s,
 		mark->skip,
 		mark->handling,
-		mark->direction
+		mark->direction,
+		len,aor_hex
 		);
 	/* Add it in a lump */
 	route.s = chr_mark;
@@ -150,6 +167,9 @@ int isc_mark_set(struct sip_msg *msg, isc_match *match, isc_mark *mark)
 void isc_mark_get(str x,isc_mark *mark)
 {
 	int i,j,k;
+	str aor_hex={0,0};
+	if (mark->aor.s) pkg_free(mark->aor.s);
+	mark->aor=aor_hex;
 	for(i=0;i<x.len&&x.s[i]!=';';i++);
 	while(i<x.len){
 		if (x.s[i+1]=='=') {
@@ -165,6 +185,20 @@ void isc_mark_get(str x,isc_mark *mark)
 					break;
 				case 'd':
 					mark->direction = k;
+					break;
+				case 'a':
+					aor_hex.s=x.s+i+2;
+					aor_hex.len=0;
+					for(j=i+2;j<x.len && x.s[j]!=';';j++)
+						aor_hex.len++;
+					mark->aor.len = aor_hex.len/2;
+					mark->aor.s = pkg_malloc(mark->aor.len);
+					if (!mark->aor.s){
+						LOG(L_ERR, "ERR:"M_NAME":isc_mark_get: Error allocating %d bytes\n",mark->aor.len);
+						mark->aor.len = 0;
+					}else{
+						mark->aor.len = base16_to_bin(aor_hex.s,aor_hex.len,mark->aor.s);
+					}
 					break;
 				default:
 					LOG(L_ERR,"INFO:"M_NAME":isc_mark_get: unkown parameter found: %c !\n",x.s[i]);

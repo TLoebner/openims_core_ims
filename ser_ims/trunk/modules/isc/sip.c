@@ -66,6 +66,7 @@
 
 #include "sip.h"
 #include "mod.h"
+#include "mark.h"
 
 extern struct tm_binds isc_tmb;            /**< Structure with pointers to tm funcs 		*/
 extern struct scscf_binds isc_scscfb;            /**< Structure with pointers to S-CSCF funcs 		*/
@@ -207,9 +208,13 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
  * @param uri - uri to fill into
  * @returns 1 if found, 0 if not
  */
-int isc_get_originating_user( struct sip_msg * msg, str *uri )
+int isc_get_originating_user( struct sip_msg * msg, isc_mark *mark, str *uri )
 {
 	struct to_body * from;
+	if (mark && mark->aor.len){
+		*uri = mark->aor;
+		return 1;
+	}
 	*uri = cscf_get_asserted_identity(msg);
 	if (!uri->len) {		
 		/* Fallback to From header */
@@ -266,7 +271,7 @@ inline int isc_get_terminating_type(str *uri)
 str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 {
 	str pu={0,0};
-	
+	int i;
 	if (msg->first_line.type!=SIP_REQUEST) {
 		LOG(L_INFO,"ERR:"M_NAME":cscf_get_public_identity_from_requri: This ain't a request \n");	
 		return pu;
@@ -275,42 +280,9 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg)
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: Error parsing requesturi \n");	
 		return pu;
 	}
-	if (msg->parsed_uri.user.len) {
-		switch (msg->parsed_uri.type) {
-			case SIP_URI_T:
-				pu.len = 4 + msg->parsed_uri.user.len + 1 + msg->parsed_uri.host.len;
-				pu.s = pkg_malloc(pu.len+1);
-				sprintf(pu.s,"sip:%.*s@%.*s",
-					msg->parsed_uri.user.len,	
-					msg->parsed_uri.user.s,	
-					msg->parsed_uri.host.len,	
-					msg->parsed_uri.host.s);
-				break;
-			case TEL_URI_T:
-				pu.len = 4 + msg->parsed_uri.user.len;
-				pu.s = pkg_malloc(pu.len+1);
-				sprintf(pu.s,"tel:%.*s",
-					msg->parsed_uri.user.len,	
-					msg->parsed_uri.user.s);
-				break;
-			case SIPS_URI_T:
-				LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: uri type not supported: sips\n");	
-				return pu;
-			case TELS_URI_T:
-				LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: uri type not supported: tels\n");	
-				return pu;
-			default:
-				LOG(L_ERR,"ERR:"M_NAME":cscf_get_public_identity_from_requri: uri type not supported: unknown\n");	
-				return pu;
-		}
-			
-	}else{
-		pu.len = 4 + msg->parsed_uri.host.len;
-		pu.s = pkg_malloc(pu.len+1);
-		sprintf(pu.s,"sip:%.*s",
-			msg->parsed_uri.host.len,	
-			msg->parsed_uri.host.s);	
-	}
+	pu = msg->first_line.u.request.uri;
+	for(i=0;i<pu.len&& pu.s[i]!=';'&&pu.s[i]!='?';i++);
+	pu.len = i;
 	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_public_identity_from_requri: <%.*s> \n",
 		pu.len,pu.s);	
@@ -324,8 +296,12 @@ str cscf_get_public_identity_from_requri(struct sip_msg *msg)
  * @param uri - uri to fill into
  * @returns #IMS_USER_REGISTERED if found, else #IMS_USER_NOT_REGISTERED 
  */
-int isc_get_terminating_user( struct sip_msg * msg, str *uri )
+int isc_get_terminating_user( struct sip_msg * msg, isc_mark *mark, str *uri )
 {
+	if (mark && mark->aor.len){
+		*uri = mark->aor;
+		return 1;
+	}	
 	*uri = cscf_get_public_identity_from_requri(msg);
 	if (!uri->len) return IMS_USER_NOT_REGISTERED;
 	/*if ( isc_get_terminating_type( uri ) == IFC_TERMINATING_UNREGISTERED )
