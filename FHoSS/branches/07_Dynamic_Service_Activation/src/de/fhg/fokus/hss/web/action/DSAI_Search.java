@@ -1,6 +1,8 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
+  * Developed by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+  *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
   *
@@ -64,11 +66,27 @@ import de.fhg.fokus.hss.web.form.DSAI_SearchForm;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
- * @author inycom.es
+ * @author Instrumentacion y Componentes S.A (Inycom).
+ * Contact at: ims at inycom dot es
+ *
  */
+
 
 public class DSAI_Search extends Action{
 	private static Logger logger = Logger.getLogger(DSAI_Search.class);
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to...
+	 *
+	 * @param actionMapping
+	 * @param actionForm
+	 * @param request
+	 * @param response
+	 * @return forward
+	 */
 
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {

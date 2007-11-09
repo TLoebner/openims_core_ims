@@ -1,6 +1,8 @@
 /*
   *  Copyright (C) 2004-2007 FhG Fokus
   *
+  * Developed by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+  *
   * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
   * implementation
   *
@@ -68,11 +70,26 @@ import de.fhg.fokus.hss.web.form.DSAI_Form;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
- * @author inycom.es
+ * @author Instrumentacion y Componentes S.A (Inycom).
+ * Contact at: ims at inycom dot es
+ *
  */
 
 public class DSAI_Load extends Action {
 	private static Logger logger = Logger.getLogger(DSAI_Load.class);
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to...
+	 *
+	 * @param actionMapping
+	 * @param actionForm
+	 * @param request
+	 * @param response
+	 * @return forward
+	 */
 
 	public ActionForward execute(ActionMapping actionMapping, ActionForm actionForm,
 			HttpServletRequest request, HttpServletResponse reponse) {
@@ -91,27 +108,28 @@ public class DSAI_Load extends Action {
 			Session session = HibernateUtil.getCurrentSession();
 			HibernateUtil.beginTransaction();
 
+
 			// load
 			DSAI dsai = DSAI_DAO.get_by_ID(session, id);
 			DSAI_Load.setForm(form, dsai);
 
-			// set select_ifc & select_shared_ifc
-			select_ifc = IFC_DAO.get_all(session);
-			form.setSelect_ifc(select_ifc);
-
 			attached_ifc_list = DSAI_IFC_DAO.get_all_IFC_by_DSAI_ID(session, id);
 
-			select_impu = IMPU_DAO.get_all_IMPU_for_IFC_list(session, attached_ifc_list);
-			form.setSelect_impu(select_impu);
-
-			attached_impu_list = DSAI_IMPU_DAO.get_all_IMPU_by_DSAI_ID(session, id);
-
-			if (attached_ifc_list != null){
+			if ((attached_ifc_list != null) && (attached_ifc_list.size()>0)){ //There is at least one ifc attached to the dsai
+				select_ifc=IFC_DAO.get_all_by_Same_AS_ID(session,attached_ifc_list); //Select only shows ifcs with the same as of the
+																					 //ifc attached.
 				request.setAttribute("attached_ifc_list", attached_ifc_list);
 			}
-			else{
+			else{   //No ifc is attached to the dsai yet. Select shows every ifc of the system.
+				select_ifc = IFC_DAO.get_all(session);
 				request.setAttribute("attached_ifc_list", new ArrayList());
 			}
+			form.setSelect_ifc(select_ifc);
+			select_impu = IMPU_DAO.get_all_IMPU_for_IFC_list(session, attached_ifc_list); //select_impu only shows impus that have
+																						  //in their Service Profile at least one of
+																						  //the ifcs attached to the dsai.
+			form.setSelect_impu(select_impu);
+			attached_impu_list = DSAI_IMPU_DAO.get_all_IMPU_by_DSAI_ID(session, id);
 
 			if (attached_impu_list != null){
 				request.setAttribute("attached_impu_list", attached_impu_list);
@@ -126,6 +144,7 @@ public class DSAI_Load extends Action {
 			else{
 				request.setAttribute("deleteDeactivation", "true");
 			}
+
 
 			forward = actionMapping.findForward(WebConstants.FORWARD_SUCCESS);
 			forward = new ActionForward(forward.getPath() + "?id=" + id);
@@ -154,6 +173,16 @@ public class DSAI_Load extends Action {
 		return forward;
 	}
 
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to...
+	 *
+	 * @param session	Hibernate session
+	 * @param id	identifier
+	 * @return true, if
+	 */
 
 	public static boolean testForDelete(Session session, int id){
 		List result = DSAI_IFC_DAO.get_all_IFC_by_DSAI_ID(session, id);
@@ -167,6 +196,17 @@ public class DSAI_Load extends Action {
 
 		return true;
 	}
+
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to...
+	 *
+	 * @param form
+	 * @param dsai
+	 * @return true, if
+	 */
 
 	public static boolean setForm(DSAI_Form form, DSAI dsai){
 		boolean exitCode = false;

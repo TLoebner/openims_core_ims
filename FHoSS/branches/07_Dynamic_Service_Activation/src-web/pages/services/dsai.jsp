@@ -20,6 +20,7 @@
 <jsp:useBean id="attached_ifc_list" type="java.util.List" scope="request"></jsp:useBean>
 <jsp:useBean id="attached_impu_list" type="java.util.List" scope="request"></jsp:useBean>
 
+
 <%
 	int id = Integer.parseInt(request.getParameter("id"));
 	Session hibSession = HibernateUtil.getCurrentSession();
@@ -68,6 +69,12 @@ function add_action_for_form(action, associated_ID) {
 			document.DSAI_Form.nextAction.value="attach_impu";
 			document.DSAI_Form.submit();
 			break;
+
+		case 14:
+			document.DSAI_Form.nextAction.value="change_dsai_value";
+			document.DSAI_Form.associated_ID.value = associated_ID;
+			document.DSAI_Form.submit();
+			break;
 	}
 }
 
@@ -109,7 +116,7 @@ function add_action_for_form(action, associated_ID) {
 					</tr>
 					<tr bgcolor="#FFCC66">
 						<td>DSAI-Tag* </td>
-						<td><html:text property="name" styleClass="inputtext" style="width:200px;"/> </td>
+						<td><html:text property="dsai_tag" styleClass="inputtext" style="width:200px;"/> </td>
 					</tr>
 					</table> <!-- fields-table -->
 				</td>
@@ -246,19 +253,24 @@ function add_action_for_form(action, associated_ID) {
 					</td>
 
 					<td>
+					<%
+				if(attached_ifc_list != null && attached_ifc_list.size()!=0){  //Table Attach IMPU is only shown if there is at least
+																			   //one IFC attached to the DSAI.
+					%>
 						<table id="bottom-right-table">
 						<%
-							if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+						if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
 						%>
 						<tr>
 							<td>
 								<h2>Attach IMPU </h2>
+
 								<table id="impu-table" class="as" border="0" cellspacing="1" align="center" width="400" style="border:2px solid #FF6600;">
 								<tr class="even">
 									<td>
 										<html:select property="impu_id" value="-1" name="DSAI_Form" styleClass="inputtext" size="1" style="width:150px;">
 											<html:option value="-1">Select IMPU...</html:option>
-											<html:optionsCollection name="DSAI_Form" property="select_impu" label="name" value="id_impu"/>
+											<html:optionsCollection name="DSAI_Form" property="select_impu" label="identity" value="id"/>
 										</html:select>
 									</td>
 									<td>
@@ -279,14 +291,18 @@ function add_action_for_form(action, associated_ID) {
 								<tr class="header">
 									<td class="header"> ID </td>
 									<td class="header"> IMPU Identity </td>
+									<td class="header"> DSAI Value </td>
+
+
 									<%
 										if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
 									%>
-									<td class="header"> Detach </td>
+									<td class="header"> Delete </td>
 									<%
 										}
 									%>
 								</tr>
+
 								<%
 									if (attached_impu_list != null){
 										Iterator it = attached_impu_list.iterator();
@@ -296,25 +312,53 @@ function add_action_for_form(action, associated_ID) {
 											impu = (IMPU) it.next();
 
 								%>
-										<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
-											<td>  <%= impu.getId() %></td>
-											<td>
-												<a href="/hss.web.console/IMPU_Load.do?id_set=<%= impu.getId() %>" >
-													<%= impu.getIdentity() %>
-												</a>
-											</td>
 
-											<%
-												if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
-											%>
-											<td>
-												<input type="button" name="detach_impu"
-													"value="Detach" onclick="add_action_for_form(6, <%= impu.getId_set() %>);"/>
-											</td>
-											<%
-												}
-											%>
-										</tr>
+								<tr class="<%= idx % 2 == 0 ? "even" : "odd" %>">
+									<td>  <%= impu.getId() %></td>
+									<td>
+										<a href="/hss.web.console/IMPU_Load.do?id=<%= impu.getId() %>" >
+											<%= impu.getIdentity() %>
+										</a>
+									</td>
+									<%
+										//Get dsai_value from the DB
+										DSAI_IMPU dsai_impu =DSAI_IMPU_DAO.get_by_DSAI_and_IMPU_ID(hibSession, id, impu.getId());
+										String dsai;
+										int dsai_val_int=dsai_impu.getDsai_value();
+										if(dsai_val_int==0) {
+											dsai=WebConstants.DSAI_INACTIVE;
+										}
+										else{
+											dsai=WebConstants.DSAI_ACTIVE;
+										}
+									%>
+
+									<td>
+										<table>
+											<tr style="width:200px;">
+												<td width="100">
+													<% out.print(dsai);  // Print dsai_value %>
+
+										   		</td>
+										   		<td>
+										   			<input type="button" name="change"	value="Change" onclick="add_action_for_form(14, <%=impu.getId() %>);"/>
+							   			   		</td>
+										   	</tr>
+										</table>
+									</td>
+
+										<%
+											if (request.isUserInRole(WebConstants.Security_Permission_ADMIN)){
+										%>
+
+									<td>
+										<input type="button" name="detach_impu"
+										value="Delete" onclick="add_action_for_form(6, <%= impu.getId() %>);"/>
+									</td>
+										<%
+											}
+										%>
+								</tr>
 								<%
 											idx++;
 											}
@@ -323,7 +367,11 @@ function add_action_for_form(action, associated_ID) {
 								</table> <!-- list-impu-table -->
 							</td>
 						</tr>
-						</table> <!--bottom-right-table>
+
+						</table> <!--bottom-right-table-->
+						<%
+							}
+						%>
 					</td>
 				</tr>
 				</table> <!-- bottom-side-table -->
@@ -333,7 +381,7 @@ function add_action_for_form(action, associated_ID) {
 			}
 		%>
 		</table> <!-- main-table-->
-	</html:form>
+</html:form>
 </body>
 
 </html>
