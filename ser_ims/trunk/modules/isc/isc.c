@@ -61,12 +61,14 @@
 #include "mark.h"
 #include "sip.h"
 #include "../scscf/scscf_load.h"
-
-
+#include "../../timer.h"
+												/**< link to the stateless reply function in sl module	*/
 extern struct tm_binds isc_tmb;		/**< Structure with pointers to tm funcs 		*/
 
 extern str isc_my_uri;				/**< Uri of myself to loop the message in str	*/
 extern str isc_my_uri_sip;			/**< Uri of myself to loop the message in str with leading "sip:" */
+extern int isc_fr_timeout;			/**< default ISC response timeout in ms */
+extern int isc_fr_inv_timeout;		/**< default ISC INVITE response timeout in ms */
 
 
 /**
@@ -81,6 +83,9 @@ extern str isc_my_uri_sip;			/**< Uri of myself to loop the message in str with 
  */
 int isc_forward( struct sip_msg *msg, isc_match *m,isc_mark *mark)
 {
+	struct cell *t;
+	unsigned int hash,label;
+	ticks_t fr_timeout,fr_inv_timeout;
 	DBG( "DEBUG:"M_NAME":isc_forward(): marking for AS <%.*s>\n",
 		m->server_name.len, m->server_name.s );
 
@@ -99,15 +104,21 @@ int isc_forward( struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	if (*isc_tmb.route_mode == MODE_ONFAILURE) 
 		append_branch(msg,msg->first_line.u.request.uri.s,msg->first_line.u.request.uri.len,
 			msg->dst_uri.s,msg->dst_uri.len,0,0);
-
+	
+	/* set the timeout timers to a lower value */
+	cscf_get_transaction(msg,&hash,&label);
+	t = isc_tmb.t_gett();
+	fr_timeout = t->fr_timeout;
+	fr_inv_timeout = t->fr_inv_timeout;
+	t->fr_timeout=S_TO_TICKS(isc_fr_timeout)/1000;
+	t->fr_inv_timeout=S_TO_TICKS(isc_fr_inv_timeout)/1000;
+	
 	/* send it */
 	isc_tmb.t_relay(msg,0,0);
-//	/* decrease the reply timers to compensate*/
-//	t = isc_tmb.t_gett();
-//	if (t){
-//		t->fr_timeout = 5000;
-//		t->fr_inv_timeout = 5000;
-//	}
+	
+	/* recover the timeouts */
+	t->fr_timeout=fr_timeout;
+	t->fr_inv_timeout=fr_inv_timeout;
 	
 	LOG(L_INFO,"INFO:"M_NAME">>       msg was fwded to AS\n");
 	

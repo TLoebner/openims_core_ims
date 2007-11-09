@@ -80,13 +80,10 @@ typedef struct _isc_mark{
 	int skip;		/**< how many IFCs to skip */
 	char handling;	/**< handling to apply on failure to contact the AS */
 	char direction;	/**< session case: orig,term,term unreg */
+	str aor;		/**< the save user aor - terminating or originating */
 } isc_mark;
 
 
-
-inline isc_mark* isc_mark_dup(isc_mark *m);
-
-inline void isc_mark_free(isc_mark *m);
 
 int isc_mark_set(struct sip_msg *msg, isc_match *match, isc_mark *mark);
 

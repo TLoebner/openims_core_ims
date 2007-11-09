@@ -91,7 +91,8 @@ int ISC_is_session_continued(struct sip_msg *msg,char *str1,char *str2);
 char *isc_my_uri_c = "scscf.open-ims.test:6060";				/**< Uri of myself to loop the message*/
 str isc_my_uri={0,0};				/**< Uri of myself to loop the message in str	*/
 str isc_my_uri_sip={0,0};			/**< Uri of myself to loop the message in str with leading "sip:" */
-
+int isc_fr_timeout=5000;			/**< default ISC response timeout in ms */
+int isc_fr_inv_timeout=20000;		/**< default ISC invite response timeout in ms */
 int isc_expires_grace=120;			/**< expires value to add to the expires in the 3rd party register
 										 to prevent expiration in AS */
 
@@ -140,9 +141,17 @@ static cmd_export_t isc_cmds[] = {
  * 	to prevent expiration in AS 
  */
 static param_export_t isc_params[] = {
-	{"my_uri",  		STR_PARAM, & isc_my_uri_c},		/**< SIP Uri of myself for getting the messages back */
+	{"my_uri",  			STR_PARAM, &isc_my_uri_c},		/**< SIP Uri of myself for getting the messages back */
 
-	{"expires_grace",	INT_PARAM, & isc_expires_grace},/**< expires value to add to the expires in the 3rd party register
+	{"isc_fr_timeout",		INT_PARAM, &isc_fr_timeout},	/**< Time in ms that we are waiting for a AS response until we
+															consider it dead. Has to be lower than SIP transaction timeout
+															to prevent downstream timeouts. Not too small though because
+															AS are usually slow as hell... */
+	{"isc_fr_inv_timeout",	INT_PARAM, &isc_fr_timeout},	/**< Time in ms that we are waiting for a AS INVITE response until we
+															consider it dead. Has to be lower than SIP transaction timeout
+															to prevent downstream timeouts. Not too small though because
+															AS are usually slow as hell... */
+	{"expires_grace",		INT_PARAM, & isc_expires_grace},/**< expires value to add to the expires in the 3rd party register
 										 to prevent expiration in AS */
 #ifdef WITH_IMS_PM
 	{"ims_pm_node_type",				STR_PARAM, &ims_pm_node_type},
@@ -403,30 +412,35 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 		
 	/* starting or resuming? */
 	memset(&old_mark,0,sizeof(isc_mark));
+	memset(&new_mark,0,sizeof(isc_mark));
 	if (isc_mark_get_from_msg(msg,&old_mark)){		
-		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Message returned s=%d;h=%d;d=%d\n",
-			str1,old_mark.skip,old_mark.handling,old_mark.direction);
+		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Message returned s=%d;h=%d;d=%d;a=%.*s\n",
+			str1,old_mark.skip,old_mark.handling,old_mark.direction,old_mark.aor.len,old_mark.aor.s);
 	}
 	else {
 		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Starting triggering\n",str1);				
 	}
 	
+
 	if (*isc_tmb.route_mode==MODE_ONFAILURE) {
 		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): failure\n",str1);
 		
 		/* need to find the handling for the failed trigger */
 		if (dir==DLG_MOBILE_ORIGINATING){
-			k = isc_get_originating_user(msg,&s);
+			k = isc_get_originating_user(msg,&old_mark,&s);
 			if (k){
 				k = isc_is_registered(&s);
-				if (k==NOT_REGISTERED) return ISC_MSG_NOT_FORWARDED;
-				
+				if (k==NOT_REGISTERED) {
+					ret = ISC_MSG_NOT_FORWARDED;
+					goto done;
+				}
+				new_mark.direction = IFC_ORIGINATING_SESSION;
 				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
 					s.len,s.s,k);
-			} else return ret;
+			} else goto done;
 		}
 		if (dir==DLG_MOBILE_TERMINATING){
-			k = isc_get_terminating_user(msg,&s);
+			k = isc_get_terminating_user(msg,&old_mark,&s);
 			if (k){
 				k = isc_is_registered(&s);
 				if (k==REGISTERED) {
@@ -436,22 +450,22 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 				}
 				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Term User <%.*s> [%d]\n",str1,
 					s.len,s.s,k);
-				if (s.s) pkg_free(s.s);	
 			} else {
-				if (s.s) pkg_free(s.s);	
-				return ret;
+				goto done;
 			}
 		}
 		struct cell * t = isc_tmb.t_gett();
+		LOG(L_CRIT,"SKIP: %d\n",old_mark.skip);
 		int index = old_mark.skip;
 		for (k=0;k<t->nr_of_outgoings;k++) {
-			m = isc_checker_find(s,old_mark.direction,index,msg);
+			m = isc_checker_find(s,new_mark.direction,index,msg);
 			if (m) {
 				index = m->index;
 				if (k < t->nr_of_outgoings - 1) isc_free_match(m);
 			} else {
 				LOG(L_ERR,"ERR:"M_NAME":ISC_match_filter(%s): On failure, previously matched trigger no longer matches?!\n", str1);
-				return ISC_RETURN_BREAK;
+				ret = ISC_RETURN_BREAK;
+				goto done;
 			}
 		}
 		if (m->default_handling==IFC_SESSION_TERMINATED) {
@@ -464,7 +478,8 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 				msg->first_line.u.request.uri.len,
 				msg->first_line.u.request.uri.s);
 			isc_free_match(m);
-			return ISC_RETURN_BREAK;
+			ret = ISC_RETURN_BREAK;
+			goto done;
 		}
 		
 		/* skip the failed triggers (IFC_SESSION_CONTINUED) */
@@ -476,7 +491,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 
 	/* originating leg */
 	if (dir==DLG_MOBILE_ORIGINATING){
-		k = isc_get_originating_user(msg,&s);
+		k = isc_get_originating_user(msg,&old_mark,&s);
 		if (k){
 			k = isc_is_registered(&s);
 			if (k==NOT_REGISTERED) return ISC_MSG_NOT_FORWARDED;
@@ -488,17 +503,18 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 				new_mark.direction = IFC_ORIGINATING_SESSION;
 				new_mark.skip = m->index+1;
 				new_mark.handling = m->default_handling;
+				new_mark.aor = s;
 				ret = isc_forward(msg,m,&new_mark);
 				isc_free_match(m);
-				return ret;
+				goto done;
 			}
 		}
-		return ret;
+		goto done;
 	}
 
 	/* terminating leg */
 	if (dir==DLG_MOBILE_TERMINATING){
-		k = isc_get_terminating_user(msg,&s);
+		k = isc_get_terminating_user(msg,&old_mark,&s);
 		if (k){
 			k = isc_is_registered(&s);
 			if (k==REGISTERED) {
@@ -512,16 +528,17 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			if (m){
 				new_mark.skip = m->index+1;
 				new_mark.handling = m->default_handling;
+				new_mark.aor = s;
 				ret = isc_forward(msg,m,&new_mark);
 				isc_free_match(m);
-				if (s.s) pkg_free(s.s);	
-				return ret;
+				goto done;
 			}
 		}
-		if (s.s) pkg_free(s.s);	
-		return ret;
-	}					
-		
+		goto done;
+	}				
+	
+done:
+	if (old_mark.aor.s) pkg_free(old_mark.aor.s);		
 	return ret;
 }
 
@@ -554,7 +571,7 @@ int ISC_match_filter_reg(struct sip_msg *msg,char *str1,char *str2)
 	/* originating leg */
 
 	if (dir==DLG_MOBILE_ORIGINATING){
-		k = isc_get_originating_user(msg,&s);
+		k = isc_get_originating_user(msg,&old_mark,&s);
 		if (k){
 			k = isc_is_registered(&s);
 			
