@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2004-2007 FhG Fokus
  *
- *  Parts by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
+ *  Parts by Instrumentacion y Componentes S.A. (Inycom). Contact at: ims at inycom dot es
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -90,13 +90,13 @@ import de.fhg.fokus.hss.sh.data.ShDataParser;
 import de.fhg.fokus.hss.sh.data.ShIMSDataElement;
 
 /**
- * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
+ * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
  * to support the DSAI concept according to Release 7
  *
  * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
  * @author Instrumentacion y Componentes S.A (Inycom)
- * for modifications (ims at inycom dot es)
+ * for modifications (ims at inycom dot es)
  */
 public class PUR {
 	private static Logger logger = Logger.getLogger(PUR.class);
