@@ -67,11 +67,12 @@
  *
  * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
- * \todo Realm routing (because this is not yet supported, when using you will have to 
- * specify each time the FQDN of the destination host. This is usualy a configuration
- * parameter other the modules using this one).
+ * Realm routing is integrated - see the example configuration file for a simple
+ * usage example.
  * 
- * \todo Session support (although not required on the IMS Cx interfaces).
+ * \todo Session support (although not required on the IMS Cx interfaces). Work in progress in the 08_cdp_sessions
+ * branch.
+ * 
  * 
  * 
  * \section cdp_overview Overview
@@ -101,7 +102,7 @@
  * For configuration parameters look at #cdp_params.\n 
  * 
  * For input configuration file, take a look at configdtd.h for the structure. Here we have
- * an example:
+ * an example (not really usable, but you should be able to derive your own):
  * \code
 <?xml version="1.0" encoding="UTF-8"?>
 <DiameterPeer 
@@ -115,16 +116,31 @@
 	Workers="4"
 	QueueLength="32"
 >
-	<Peer FQDN="hss.open-ims.test" Realm="open-ims.test" port="3868"/>
+	<Peer FQDN="hss1.open-ims.test" Realm="open-ims.test" port="3868"/>
+	<Peer FQDN="hss2.open-ims.test" Realm="open-ims.test" port="3868"/>
 
 	<Acceptor port="3868"  />
 	<Acceptor port="3869" bind="127.0.0.1" />
 	<Acceptor port="3870" bind="192.168.1.1" />
 	
-	<Acct id="16777216" vendor="10415" />
-	<Acct id="16777216" vendor="0" />
-	<Auth id="16777216" vendor="10415"/>
-	<Auth id="16777216" vendor="0" />
+    <Auth id="16777216" vendor="10415"/><!-- 3GPP Cx -->
+    <Auth id="16777216" vendor="4491"/><!-- CableLabs Cx -->
+    <Auth id="16777216" vendor="13019"/><!-- ETSI/TISPAN Cx -->
+
+	<Realm name="my.open-ims.test">
+		<Route FQDN="blackjack" metric="2"/>
+		<Route FQDN="test1" metric="3"/>
+		<Route FQDN="test2" metric="5"/>
+	</Realm>
+	<Realm name="test1.open-ims.test">
+		<Route FQDN="test3" metric="7"/>
+		<Route FQDN="test4" metric="11"/>
+	</Realm>
+	<Realm name="test2.open-ims.test">
+		<Route FQDN="test5" metric="13"/>
+	</Realm>
+	<DefaultRoute FQDN="hss1.open-ims.test" metric="15"/>
+	<DefaultRoute FQDN="hss2.open-ims.test" metric="13"/>
 
 </DiameterPeer>
  * \endcode
