@@ -163,6 +163,8 @@ int I_UAA(struct sip_msg* msg, AAAMessage* uaa)
 	str server_name;
 	int *m_capab=0,m_capab_cnt=0;
 	int *o_capab=0,o_capab_cnt=0;
+	str *p_server_names=0;
+	int p_server_names_cnt=0;
 	scscf_entry *list=0;
 	str call_id;
 	
@@ -234,11 +236,12 @@ int I_UAA(struct sip_msg* msg, AAAMessage* uaa)
 	
 success:
 	server_name = Cx_get_server_name(uaa);
-	Cx_get_capabilities(uaa,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt);
+	Cx_get_capabilities(uaa,&m_capab,&m_capab_cnt,&o_capab,&o_capab_cnt,&p_server_names,&p_server_names_cnt);
 
-	list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt,0);
+	list = I_get_capab_ordered(server_name,m_capab,m_capab_cnt,o_capab,o_capab_cnt,p_server_names,p_server_names_cnt,0);
 	if (m_capab) shm_free(m_capab);
 	if (o_capab) shm_free(o_capab);
+	if (p_server_names) shm_free(p_server_names);
 
 	if (!list) {
 		cscf_reply_transactional(msg,600,MSG_600_EMPTY_LIST);	

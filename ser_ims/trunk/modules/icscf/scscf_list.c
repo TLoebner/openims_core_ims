@@ -190,12 +190,16 @@ static inline scscf_entry* I_add_to_scscf_list(scscf_entry *root,str name,int sc
  * @param orig - indicates originating session case
  * @returns list of S-CSCFs, terminated with a str={0,0}
  */
-scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt, int orig)
+scscf_entry* I_get_capab_ordered(str scscf_name,int *m,int mcnt,int *o,int ocnt, str *p, int pcnt,int orig)
 {
 	scscf_entry *list=0;
 	int i,r;
 	
 	if (scscf_name.len) list = I_add_to_scscf_list(list,scscf_name,MAXINT, orig);
+
+	for(i=0;i<pcnt;i++)
+		list = I_add_to_scscf_list(list,p[i],MAXINT-i,orig);
+		
 	for(i=0;i<SCSCF_Capabilities_cnt;i++){
 		r = I_get_capab_match(SCSCF_Capabilities+i,m,mcnt,o,ocnt);
 		if (r!=-1){
