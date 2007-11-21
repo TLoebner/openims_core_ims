@@ -97,7 +97,8 @@ int Cx_get_userdata_available(AAAMessage *msg, int *data);
 int Cx_get_result_code(AAAMessage *msg,int *data);
 int Cx_get_experimental_result_code(AAAMessage *msg, int *data);
 str Cx_get_server_name(AAAMessage *msg);
-int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt);
+int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt,
+	str **p,int *p_cnt);
 int Cx_get_sip_number_auth_items(AAAMessage *msg,int *data);
 int Cx_get_auth_data_item_request(AAAMessage *msg,
 		 str *auth_scheme, str *authorization);
