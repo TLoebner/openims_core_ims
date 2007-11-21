@@ -831,7 +831,8 @@ inline str Cx_get_server_name(AAAMessage *msg)
  * @param o_cnt - size of the array above to be filled
  * @returns 1 on success 0 on fail
  */
-inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt)
+inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o_cnt,
+	str **p,int *p_cnt)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP *avp;
@@ -847,25 +848,57 @@ inline int Cx_get_capabilities(AAAMessage *msg,int **m,int *m_cnt,int **o,int *o
 	avp = list.head;
 	*m_cnt=0;
 	*o_cnt=0;
+	*p_cnt=0;
 	while(avp){
 		if (avp->code == AVP_IMS_Mandatory_Capability) (*m_cnt)++;
 		if (avp->code == AVP_IMS_Optional_Capability) (*o_cnt)++;		
+		if (avp->code == AVP_IMS_Server_Name) (*p_cnt)++;
 		avp = avp->next;
 	}
 	avp = list.head;
 	*m=shm_malloc(sizeof(int)*(*m_cnt));
+	if (!*m){
+		LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): cannot allocated %d bytes of shm.\n",
+			sizeof(int)*(*m_cnt));
+		goto error;
+	}
 	*o=shm_malloc(sizeof(int)*(*o_cnt));
+	if (!*o){
+		LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): cannot allocated %d bytes of shm.\n",
+			sizeof(int)*(*o_cnt));
+		goto error;
+	}
+	*p=shm_malloc(sizeof(str)*(*p_cnt));
+	if (!*p){
+		LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): cannot allocated %d bytes of shm.\n",
+			sizeof(str)*(*p_cnt));
+		goto error;
+	}
+	
 	*m_cnt=0;
 	*o_cnt=0;
+	*p_cnt=0;
 	while(avp){
 		if (avp->code == AVP_IMS_Mandatory_Capability) 
 			(*m)[(*m_cnt)++]=get_4bytes(avp->data.s);
 		if (avp->code == AVP_IMS_Optional_Capability)		
 			(*o)[(*o_cnt)++]=get_4bytes(avp->data.s);
+		if (avp->code == AVP_IMS_Server_Name)		
+			(*p)[(*p_cnt)++]=avp->data;
 		avp = avp->next;
 	}
 	cdpb.AAAFreeAVPList(&list);
 	return 1;
+	
+error:
+	cdpb.AAAFreeAVPList(&list);
+	if (*m) shm_free(*m);	
+	if (*o) shm_free(*o);	
+	if (*p) shm_free(*p);
+	*m_cnt=0;
+	*o_cnt=0;
+	*p_cnt=0;
+	return 0;
 }
 
 /**
