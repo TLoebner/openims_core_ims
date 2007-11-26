@@ -201,32 +201,34 @@ public class PUR {
 				if (shIMSData == null){
 					throw new ShFinalResultException(DiameterConstants.ResultCode.DIAMETER_UNABLE_TO_COMPLY);
 				}
-				String dsai_tag = UtilAVP.getDSAITag(request);
+
+				List list_dsai_tag = shIMSData.getDsaiList();
+				//Only need the first (maybe the only one)
+				Iterator it= list_dsai_tag.iterator();
+				//while (it.hasNext(){
+				DSAIElement dsai_shdata= (DSAIElement) it.next();
+				String dsai_tag = dsai_shdata.getTag();
 				DSAI dsai = DSAI_DAO.get_by_Dsai_tag(session, dsai_tag);
 				if (dsai==null){
-					new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
+					throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
 				}
 				else {
 					int id_impu= impu.getId();
 					int id_dsai= dsai.getId();
 					DSAI_IMPU dsai_impu= DSAI_IMPU_DAO.get_by_DSAI_and_IMPU_ID(session, id_dsai, id_impu);
 					if (dsai_impu ==null){
-						new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
+						throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
 					}
 					else {
-						String server_name = UtilAVP.getServerName(request);
-						ApplicationServer as_by_server_name = ApplicationServer_DAO.get_by_Diameter_Address(session, server_name);
-						List ifc_list = IFC_DAO.get_all_by_AS_ID_and_IMPU_ID_and_DSAI_ID(session, as_by_server_name.getId(), id_impu, id_dsai);
+						ApplicationServer as_by_diameter_address = ApplicationServer_DAO.get_by_Diameter_Address(session, origin_host);
+						List ifc_list = IFC_DAO.get_all_by_AS_ID_and_IMPU_ID_and_DSAI_ID(session, as_by_diameter_address.getId(), id_impu, id_dsai);
 						if (ifc_list.isEmpty()){
-							new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
+							throw new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
 						}
 						else{
-							//Only need the first (maybe the only one)
-							Iterator it= shIMSData.getDsaiList().iterator();
-							DSAIElement dsai_value= (DSAIElement) it.next();
 							//Only save this change if dsai_value is changed
-							if (dsai_impu.getDsai_value()!= dsai_value.getValue()){
-								dsai_impu.setDsai_value(dsai_value.getValue());
+							if (dsai_impu.getDsai_value()!= dsai_shdata.getValue()){
+								dsai_impu.setDsai_value(dsai_shdata.getValue());
 								DSAI_IMPU_DAO.update(session, dsai_impu);
 								ShNotification_DAO.insert_notif_for_DSAI(session, dsai_impu);
 								//Insert also notification for the ASs related to that active IMPU and iFC.
@@ -238,6 +240,7 @@ public class PUR {
 						}
 					}
 				}
+				//} //end while
 			}
 
 

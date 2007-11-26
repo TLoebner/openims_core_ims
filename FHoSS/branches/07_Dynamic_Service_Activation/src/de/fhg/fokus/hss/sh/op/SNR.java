@@ -296,7 +296,7 @@ public class SNR {
 
 						else if (crt_data_ref == ShConstants.Data_Ref_DSAI){
 
-							sh_subs = ShSubscription_DAO.get_by_AS_IMPU_DataRef_and_DSAITag(session, application_server.getId(), impu.getId(), crt_data_ref, dsai_tag);
+							sh_subs = ShSubscription_DAO.get_by_AS_IMPU_DataRef_DSAITag_and_Server_name(session, application_server.getId(), impu.getId(), crt_data_ref, dsai_tag, server_name);
 							//
 							if (sh_subs == null){
 								sh_subs = new ShSubscription();
@@ -309,6 +309,7 @@ public class SNR {
 								if (expiration_date != -1){
 									sh_subs.setExpires(expiration_date);
 								}
+								sh_subs.setServer_name(server_name);
 							}
 						}
 
@@ -418,7 +419,7 @@ public class SNR {
 			e.printStackTrace();
 		}*/
 		finally{
-			// commit transaction only when a Database doesn't occured
+			// commit transaction only when a Database exception doesn't occured
 			if (!dbException){
 				HibernateUtil.commitTransaction();
 			}
