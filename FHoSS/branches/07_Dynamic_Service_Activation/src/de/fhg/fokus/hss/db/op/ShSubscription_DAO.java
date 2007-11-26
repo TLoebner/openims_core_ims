@@ -302,7 +302,7 @@ public class ShSubscription_DAO {
 	}
 
 	/**
-	 * Get a subscription with especific Application Server, IMPU, Data Reference and DSAITag
+	 * Get a subscription with especific Application Server, IMPU, Data Reference, DSAITag and Server Name
 	 * <p>
 	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
 	 * to support DSAI concepts according to release 7
@@ -312,17 +312,19 @@ public class ShSubscription_DAO {
 	 * @param id_impu	impu identifier
 	 * @param data_ref	data reference identifier type
 	 * @param dsai_tag	dsai name
+	 * @param server_name Names of the AS to suscribe
 	 * @return	subscription
 	 */
 
-	public static ShSubscription get_by_AS_IMPU_DataRef_and_DSAITag(Session session, int id_application_server, int id_impu,
-			int data_ref, String dsai_tag){
+	public static ShSubscription get_by_AS_IMPU_DataRef_DSAITag_and_Server_name(Session session, int id_application_server, int id_impu,
+			int data_ref, String dsai_tag, String server_name){
 		Query query = session.createSQLQuery("select * from sh_subscription where id_application_server=? and id_impu=? and " +
-				"data_ref=? and dsai_tag=?");
+				"data_ref=? and dsai_tag=? and server_name=?");
 		query.setInteger(0, id_application_server);
 		query.setInteger(1, id_impu);
 		query.setInteger(2, data_ref);
 		query.setString(3, dsai_tag);
+		query.setString(4, server_name);
 		ShSubscription updated_subscription = update_unique_subscription(session, (ShSubscription) query.uniqueResult());
 		return updated_subscription;
 	}

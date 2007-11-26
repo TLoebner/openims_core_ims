@@ -326,10 +326,10 @@ function add_action_for_form(action, associated_ID) {
 										String dsai;
 										int dsai_val_int=dsai_impu.getDsai_value();
 										if(dsai_val_int==0) {
-											dsai=WebConstants.DSAI_INACTIVE;
+											dsai=WebConstants.DSAI_ACTIVE;
 										}
 										else{
-											dsai=WebConstants.DSAI_ACTIVE;
+											dsai=WebConstants.DSAI_INACTIVE;
 										}
 									%>
 

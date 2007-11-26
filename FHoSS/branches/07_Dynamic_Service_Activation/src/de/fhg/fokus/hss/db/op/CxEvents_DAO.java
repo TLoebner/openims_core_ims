@@ -44,6 +44,7 @@
 
 package de.fhg.fokus.hss.db.op;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.hibernate.Hibernate;
@@ -60,14 +61,14 @@ import de.fhg.fokus.hss.sh.ShConstants;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 /**
- * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
+ * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
  * to support the propagation of users Service Profile in Cx Interface due to changes in DSAI,
  * according to Release 7.
  *
  * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
  * @author Instrumentacion y Componentes S.A (Inycom)
- * for modifications (ims at inycom dot es)
+ * for modifications (ims at inycom dot es)
  */
 public class CxEvents_DAO {
 
@@ -150,25 +151,30 @@ public class CxEvents_DAO {
      * <p>
      * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es) to support the DSAI Information Element
      *
-     * @params session, impu_id
+     * @params session Hibernate Session
+     * @params impu_id IMPU Identifier
      * @return void
      */
 
 	public static void insert_CxEvent (Session session, int impu_id){
 
-		IMPI impi = IMPI_IMPU_DAO.get_registered_IMPI_by_IMPU_ID(session, impu_id);
-		if (impi != null) {
-			IMSU imsu = IMSU_DAO.get_by_IMPI_ID(session, impi.getId());
-			CxEvents rtr_ppr = new CxEvents();
-			rtr_ppr.setGrp(CxEvents_DAO.get_max_grp(session) + 1);
-			// type for PPR is 2
-			rtr_ppr.setType(2);
-			//		userdata
-			rtr_ppr.setSubtype(0);
-			rtr_ppr.setDiameter_name(imsu.getDiameter_name());
-			rtr_ppr.setId_impi(impi.getId());
-			rtr_ppr.setId_impu(impu_id);
-			CxEvents_DAO.insert(session, rtr_ppr);
+		List impi_list = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, impu_id);
+		if (impi_list != null && impi_list.size()> 0 ) {
+			Iterator impi_it = impi_list.iterator();
+			while (impi_it.hasNext()){
+				IMPI impi = (IMPI) impi_it.next();
+				IMSU imsu = IMSU_DAO.get_by_IMPI_ID(session, impi.getId());
+				CxEvents rtr_ppr = new CxEvents();
+				rtr_ppr.setGrp(CxEvents_DAO.get_max_grp(session) + 1);
+				//	Type for PPR is 2
+				rtr_ppr.setType(2);
+				//	Subtype	userdata is 0
+				rtr_ppr.setSubtype(0);
+				rtr_ppr.setDiameter_name(imsu.getDiameter_name());
+				rtr_ppr.setId_impi(impi.getId());
+				rtr_ppr.setId_impu(impu_id);
+				CxEvents_DAO.insert(session, rtr_ppr);
+			}
 		}
 	}
 }

@@ -63,6 +63,7 @@ import de.fhg.fokus.hss.db.model.IMPU;
 import de.fhg.fokus.hss.db.op.DSAI_DAO;
 import de.fhg.fokus.hss.db.op.DSAI_IFC_DAO;
 import de.fhg.fokus.hss.db.op.DSAI_IMPU_DAO;
+import de.fhg.fokus.hss.sh.ShConstants;
 import de.fhg.fokus.hss.web.util.WebConstants;
 
 import java.io.Serializable;
@@ -110,7 +111,7 @@ public class DSAI_Form extends ActionForm implements Serializable{
 	public void reset(ActionMapping actionMapping, HttpServletRequest request){
     	this.id = -1;
     	this.dsai_tag = null;
-    	this.dsai_value=1;
+    	this.dsai_value=ShConstants.DSAI_value_Active;
 
     	this.ifc_id = -1;
     	this.impu_id = -1;
@@ -242,8 +243,9 @@ public class DSAI_Form extends ActionForm implements Serializable{
 						Iterator attached_impu_it=attached_impu.iterator();
 
 						while (attached_impu_it.hasNext()){
-							if(!impu_ifc_list.contains(attached_impu_it.next())){
+							if(!impu_ifc_list.contains((IMPU)attached_impu_it.next())){
 								same_list=false;
+								break;
 							}
 						}
 
