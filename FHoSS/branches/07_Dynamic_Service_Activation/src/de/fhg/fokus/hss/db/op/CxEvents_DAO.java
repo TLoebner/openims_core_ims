@@ -163,6 +163,7 @@ public class CxEvents_DAO {
 			Iterator impi_it = impi_list.iterator();
 			while (impi_it.hasNext()){
 				IMPI impi = (IMPI) impi_it.next();
+				IMPU impu = IMPU_DAO.get_by_ID(session, impu_id);
 				IMSU imsu = IMSU_DAO.get_by_IMPI_ID(session, impi.getId());
 				CxEvents rtr_ppr = new CxEvents();
 				rtr_ppr.setGrp(CxEvents_DAO.get_max_grp(session) + 1);
@@ -170,6 +171,7 @@ public class CxEvents_DAO {
 				rtr_ppr.setType(2);
 				//	Subtype	userdata is 0
 				rtr_ppr.setSubtype(0);
+				rtr_ppr.setId_implicit_set(impu.getId_implicit_set());
 				rtr_ppr.setDiameter_name(imsu.getDiameter_name());
 				rtr_ppr.setId_impi(impi.getId());
 				rtr_ppr.setId_impu(impu_id);
