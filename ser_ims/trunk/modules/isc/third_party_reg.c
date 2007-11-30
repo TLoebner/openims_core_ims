@@ -145,7 +145,6 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 
 static str method={"REGISTER",8};
 static str event_hdr={"Event: registration\r\n",21};
-static str content_len_hdr={"Content-Length: 0\r\n",19};
 static str max_fwds_hdr={"Max-Forwards: 10\r\n",18};
 static str expires_s={"Expires: ",9};
 static str expires_e={"\r\n",2};
@@ -182,7 +181,7 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
         LOG(L_DBG,"DBG:"M_NAME":r_send_third_party_reg: REGISTER to <%.*s>\n",
                 r->req_uri.len,r->req_uri.s);
 
-        h.len = event_hdr.len+content_len_hdr.len+max_fwds_hdr.len;
+        h.len = event_hdr.len+max_fwds_hdr.len;
         h.len += expires_s.len + 12 + expires_e.len;
 
         h.len += contact_s.len + isc_my_uri_sip.len + contact_e.len;
@@ -205,8 +204,6 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
 
         h.len = 0;
         STR_APPEND(h,event_hdr);
-        
-        if (r->service_info.len==0) STR_APPEND(h,content_len_hdr);
         
         STR_APPEND(h,max_fwds_hdr);
 
