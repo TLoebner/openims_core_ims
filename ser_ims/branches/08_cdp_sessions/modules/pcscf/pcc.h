@@ -57,6 +57,7 @@
 #include "mod.h"
 #include "../cdp/cdp_load.h"
 
+
 typedef struct authdata {
 	str callid;
 	unsigned int direction; // 0 ORIGINATING  1 TERMINATING

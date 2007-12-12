@@ -71,6 +71,8 @@ extern str forced_qos_peer; /*its the PCRF in this case*/
 
 extern int pcscf_qos_release7;
 
+str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
+
 inline str pcc_get_destination_realm(str s)
 {
 	str p;
@@ -118,7 +120,7 @@ void callback_for_pccsession(int event,void *param,void *session)
 	cdp_session_t *x=session;
 	p_dialog *dlg;
 	
-	LOG(L_INFO,"callback_for_pccsession(): called\n");
+	LOG(L_DBG,"callback_for_pccsession(): called\n");
 	
 	switch (event)
 	{
@@ -128,11 +130,17 @@ void callback_for_pccsession(int event,void *param,void *session)
 			if (g) {
 				if (g->callid.s)
 				{	
-					LOG(L_INFO,"someone has this dialog %.*s %i\n",g->callid.len,g->callid.s,g->direction);
+					
 					dlg=get_p_dialog_dir(g->callid,g->direction);
-					LOG(L_INFO,"or not\n");
+					
 					if (dlg) { 
-					dlg->pcc_session=0; // the session is going to be deleted
+					if (dlg->pcc_session)
+					// if its not set, someone has handled this before us so...
+					{
+						dlg->pcc_session=0; // the session is going to be deleted
+						if (dlg->state>DLG_STATE_CONFIRMED)
+							release_call_p(dlg,503,reason_terminate_dialog_s);
+					}
 					d_unlock(dlg->hash);
 					}
 				}
@@ -141,10 +149,6 @@ void callback_for_pccsession(int event,void *param,void *session)
 				shm_free(g);
 				x->u.auth.generic_data=0;
 			}
-			
-	
-	
-			LOG(L_INFO,"callback_for_pccsession(): done with the work\n");
 			break;
 		default:
 			break;
@@ -177,10 +181,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	int i=0;
 	
 	if (tag) 
-		LOG(L_INFO, "INF:"M_NAME":PCC_AAR: terminating side\n");
+		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
 	else 
-		LOG(L_INFO, "INF:"M_NAME":PCC_AAR: originating side\n");
-	
+		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
+
 	
 	
 	/* Check for the existence of an auth session for this dialog */							
@@ -200,7 +204,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 	if (!dlg->pcc_session) {
 		 /*For the first time*/
-		 LOG(L_INFO,"doing this for the first time\n");
+		 
 		 generic=shm_malloc(sizeof(t_authdata));
 		 generic->callid.s=0; generic->callid.len=0;
 		 STR_SHM_DUP(generic->callid,call_id,"shm");
@@ -212,10 +216,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 		 {
 		 	LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
 		 }		 
-		 LOG(L_ERR,"PCC_AAR(): creating PCC Session\n");
+		 LOG(L_DBG,"PCC_AAR(): creating PCC Session\n");
 		 dlg->pcc_session = auth;
 	}else{ 
-		LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
+		LOG(L_DBG,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
 		auth = dlg->pcc_session;
 	}
 	
@@ -307,7 +311,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	
 	*/
 	
-	LOG(L_INFO,ANSI_WHITE"sending AAR\n");
+	LOG(L_INFO,"PCC_AAR() : sending AAR to PCRF\n");
 	/*---------- 3. Send AAR to PCRF ----------*/
 	if (forced_qos_peer.len)
 		aaa = cdpb.AAASendRecvMessageToPeer(aar,&forced_qos_peer);
@@ -323,7 +327,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 out_of_memory:
 	LOG(L_CRIT,"PCC_AAR():out of memory\n");
 error:
-	LOG(L_ERR,"PCC_AAR(): big ERROR!!\n");
+	LOG(L_ERR,"PCC_AAR(): unexpected ERROR!!\n");
 	if (auth) {
 		hash=auth->hash;
 		cdpb.sessions_lock(hash);
@@ -362,7 +366,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
 	p_dialog *dlg;
-	
+	char x[4];
 	
 	
 /** get Diameter session based on sip call_id */
@@ -377,7 +381,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 		
 		
 	if (!dlg)	{
-		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callidd %.*s and tag %i\n",call_id.len,call_id.s,tag);
+		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,tag);
 		goto end;
 		}
 	if (!dlg->pcc_session) {
@@ -387,8 +391,11 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	
 		auth=dlg->pcc_session;
 	}
+	dlg->pcc_session=0; // done here , so that the callback doesnt call release_call	
 	d_unlock(dlg->hash);
 	//cdpb.sessions_lock(auth->hash);	
+	
+	LOG(L_INFO,"PCC_STR() : terminating auth session\n");
 	
 	if (pcscf_qos_release7)
 		dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, auth);
@@ -410,7 +417,8 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	} 
 	
 	/*Termination-Cause*/
-	
+	set_4bytes(x,1)
+	cdpb.AAAAddAVPToMessage(dia_str,cdpb.AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA),dia_str->avpList.tail);
 	
 	
 	if (forced_qos_peer.len)
@@ -429,13 +437,13 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	 * case B) STR after BYE recieved
 	 * 				-> dialog is dropped by the SIP part of P-CSCF
 	 * case C) STR after ASR-ASA 
-	 * 				-> for now its done when upon reciept of ASR
+	 * 				-> for now its done upon reciept of ASR
 	 * 				-> this is an automaticly generated  STR by the State Machine
 	 * 					so when i recieve an ashyncronous STA for this session, it should be
 	 * 					this case, i can then drop the dialog
 	 * 
 	*/
-	// dlg->pcc_session=0; Will be done by the callback	
+	
 	
 	
 	return dia_sta;
@@ -448,7 +456,7 @@ end:
 	return NULL;
 }
 
-str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
+
 /*
  * Called upon reciept of an ASR terminates the user session and returns the ASA
  * Terminates the corresponding dialog
@@ -469,10 +477,10 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 	session=cdpb.get_session(request->sessionId->data);
 	
 	if (!session) {
-		LOG(L_ERR,"recovered an ASA but the session is already deleted\n");
+		LOG(L_DBG,"recovered an ASR but the session is already deleted\n");
 		return 0;
 		}
-		
+	LOG(L_INFO,"PCC_ASA() : PCRF requested an ASR.. ok!, replying with ASA\n");
 	hash=session->hash;
 	data = (t_authdata *) session->u.auth.generic_data; //casting
 	
@@ -482,11 +490,13 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 		p=get_p_dialog_dir(data->callid,data->direction);
 		release_call_p(p,503,reason_terminate_dialog_s);
 		//of course it would be nice to first have a look on the Abort-Cause AVP
+		p->pcc_session=0; // this is because if i deleted the dialog already 
+							//i want the callback of the pccsession to know it
 		d_unlock(p->hash);
 	}
-	LOG(L_INFO,"before unlocking in PCC_ASA\n");
+	//LOG(L_DBG,"before unlocking in PCC_ASA\n");
 	cdpb.sessions_unlock(hash);
-	LOG(L_INFO,"ending PCC_ASA\n");
+	//LOG(L_DBG,"ending PCC_ASA\n");
 	return 0;
 }
 

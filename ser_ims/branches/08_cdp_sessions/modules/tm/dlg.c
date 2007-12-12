@@ -349,6 +349,7 @@ static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _o
 {
 	struct hdr_field* ptr;
 	rr_t* last, *p, *t;
+	rr_t* r;
 	
 	last = 0;
 	ptr = _m->record_route;
@@ -377,6 +378,7 @@ static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _o
 		*_rs = revert_route(*_rs);
 	}
 	
+
 	return 0;
 
  error:
@@ -902,7 +904,7 @@ int update_dlg_uas(dlg_t *_d, int _code, str* _tag)
 			&& (!memcmp(_tag->s, _d->id.loc_tag.s, _tag->len))) {
 				LOG(L_DBG, "update_dlg_uas(): Local tag is already set\n");
 			} else {
-				LOG(L_ERR, "update_dlg_uas(): ERROR: trying to rewrite local tag\n");
+				LOG(L_ERR, "update_dlg_uas(): ERROR: trying to rewrite local tag it was %.*s and you want to write %.*s\n",_d->id.loc_tag.len,_d->id.loc_tag.s,_tag->len,_tag->s);
 				return -3;
 			}
 		} else {

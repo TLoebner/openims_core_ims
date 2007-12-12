@@ -284,6 +284,8 @@ typedef enum {
 	AVP_Destination_Host              =  293,
 	AVP_Termination_Cause             =  295,
 	AVP_Origin_Realm                  =  296,
+	AVP_Experimental_Result			  =  297,
+	AVP_Experimental_Result_Code      =  298
 }AAA_AVPCodeNr;
 
 

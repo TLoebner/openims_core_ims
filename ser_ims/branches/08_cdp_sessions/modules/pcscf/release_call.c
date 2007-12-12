@@ -133,9 +133,17 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 		default:
 			odir = d->direction;
 	}	
-	
+	 time_t time_now=time(0);
 	o = get_p_dialog_dir_nolock(d->call_id,odir);
-	if (o && !o->is_releasing) o->is_releasing = 1;
+	if (o && o->is_releasing==0) {
+		 o->is_releasing = 1;
+		 //in case of an error this dialog should also expire quickly
+		
+		if (o->expires>time_now+TIME_TO_EXPIRE)
+		{
+			o->expires=time_now+TIME_TO_EXPIRE;
+		}
+	}
 		
 	d->is_releasing++;
 		
@@ -147,7 +155,7 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 	if (d->is_releasing==1) {	
 		/*The first time i decrease the expire time for the dialog expire , so that i guarantee that
 		 * its going to be deleted from the table sometime*/
-		time_t time_now=time(0);
+		
 		if (d->expires>time_now+TIME_TO_EXPIRE)
 		{
 			d->expires=time_now+TIME_TO_EXPIRE;
@@ -285,14 +293,18 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	time_t time_now=time(0);
 	
 	o = get_p_dialog_dir_nolock(d->call_id,odir);
-	if (o && !o->is_releasing)  {
+	
+		
+	if (o && o->is_releasing==0)  {
+		
 		o->is_releasing = 1;
 		// Addition from Alberto Diez the 2nd November 2007
 		// I am going to have this dialog deleted yes or yes
 		// the idea is to put the other one to expire in TIME_TO_EXPIRE 
 		// just in case no reply is received
-		if (o->expires>time_now+TIME_TO_EXPIRE)
+		if (o->expires>time_now+TIME_TO_EXPIRE) {
 				o->expires=time_now+TIME_TO_EXPIRE;
+		}
 		
 	}
 	d->is_releasing++;
@@ -318,17 +330,7 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	/*this is just a trick to use the same callback function*/	
 	
 	
-	/*trick or treat!*/
-		d->dialog_c->state=DLG_CONFIRMED;
 	
-	if (situation == RELEASE_CALL_WEIRD){
-		send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
-		send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-		d->dialog_c->state=DLG_EARLY;
-	} else {/*(situation == RELEASE_CALL_EARLY)*/		
-		send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-		d->dialog_c->state=DLG_EARLY;
-	}
 
 	/*i need the cell of the invite!!*/
 	/*this is very experimental
@@ -339,24 +341,70 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 		/*first trick: i really want to get this reply sent even though we are onreply*/
 		*tmb.route_mode=MODE_ONFAILURE;
 		
-		/*second trick .. i haven't recieve any response from the uac
-		 * if i don't do this i get a cancel sent to the S-CSCF .. its not a big deal*/
-		 /*if i cared about sip forking then probably i would not do that and let the 
-		  * CANCEL go to the S-CSCF (reread specifications needed)*/
-		for (i=0; i< t->nr_of_outgoings; i++)
-			t->uac[i].last_received=99;
-		/*t->uas.status=100;*/ /*no one cares about this*/
-		/*now its safe to do this*/
+						
+		if (situation == RELEASE_CALL_WEIRD){
+			/*second trick .. i haven't recieve any response from the uac
+		 	* if i don't do this i get a cancel sent to the S-CSCF .. its not a big deal*/
+		 	/*if i cared about sip forking then probably i would not do that and let the 
+		  	* CANCEL go to the S-CSCF (reread specifications needed)*/
+			//for (i=0; i< t->nr_of_outgoings; i++)
+			//	t->uac[i].last_received=99;
+			/*t->uas.status=100;*/ /*no one cares about this*/
+			/*now its safe to do this*/
 		
-		tmb.t_reply(t->uas.request,reason_code,reason_text.s);
-		*tmb.route_mode=MODE_ONREPLY;
-		tmb.t_release(t->uas.request);
-
+			/*trick or treat!*/
+			for (i=0; i< t->nr_of_outgoings; i++)
+				t->uac[i].last_received=99;
+			t->uas.status=100;
+			d->dialog_c->state=DLG_CONFIRMED;
+			send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
+			send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
+			d->dialog_c->state=DLG_EARLY;
+				
+			tmb.t_reply(t->uas.request,reason_code,reason_text.s);
+			*tmb.route_mode=MODE_ONREPLY;
+			t->uas.status=488;
+			tmb.t_release(t->uas.request);
 		/*needed because if not i get last message retransmited... 
 		 * probably there is a more logical way to do this.. but since i really
 		 * want this transaction to end .. whats the point?*/
+		} else {/*(situation == RELEASE_CALL_EARLY)*/
+			d->dialog_c->loc_seq.value++;
+			
+			d->dialog_c->state=DLG_CONFIRMED;		
+			send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
+			d->dialog_c->state=DLG_EARLY;
+			tmb.t_reply(t->uas.request,reason_code,reason_text.s);
+			
+			/*
+			 * tm module is so fucked up that i have to do this here too.. but the opposite
+			 * to be able to send a CANCEL...
+			 * or maybe its how i am using it but no one did a fucking manual or a decent api!
+			 * if you give me the money i will rewrite it nicely
+			 * 
+			 * */
+			/*for (i=0; i< t->nr_of_outgoings; i++)
+				t->uac[i].last_received=180;
+			
+			
+			tmb.cancel_uacs(t,0xFFFF,F_CANCEL_B_FAKE_REPLY);
+			*/
+			t->uas.status=488;
+			tmb.t_release(t->uas.request);
+			
+			
+			// this functions sends a reply that i dont like (no reason and no 488) but 
+			// sends a nice cancel with the right branch parameter.. and that i like
+			// its easy ..  but the reason header is needed!
+			
+			
+			// I thought of deleting the dialog here.. but 
+			// a good SIP client will respond to the CANCEL with a 487
+			//del_p_dialog(d);
+		}	
 	}
 	
+	if (hdrs.s) pkg_free(hdrs.s);
 	return 1;
 error:
 	if (hdrs.s) pkg_free(hdrs.s);
@@ -454,6 +502,7 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	str callid;
 	struct hdr_field *h1;
 	str reason={NULL,0};
+	unsigned int hash;
 	
 	struct cell* t; /*needed to distinguish between UPDATE and INVITE*/
 	
@@ -477,6 +526,8 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	callid=cscf_get_call_id(msg,&h1);
 	if (is_p_dialog_dir(callid,dir)) {
 		d=get_p_dialog_dir(callid,dir);
+		hash=d->hash;
+		
 		t=tmb.t_gett();
 		if (!t) {
 			LOG(L_ERR,"P_release_call_onreply(): unable to get transaction\n");
@@ -489,24 +540,24 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 			if (msg->first_line.u.reply.statuscode > 199)
 			{
 				release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
-				d_unlock(d->hash);
-				return CSCF_RETURN_BREAK;
 			} else {
-				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);
-				d_unlock(d->hash);
-				return CSCF_RETURN_BREAK;
+				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);		
 			}
+			d->pcc_session=0; // This means we already finished with the dialog
+			d_unlock(hash);
+			return CSCF_RETURN_BREAK;
 		} else {
 			
 				//UPDATE so early
 				release_call_early(d,488,reason);
-				d_unlock(d->hash);
+				d_unlock(hash);
 				return CSCF_RETURN_BREAK;
 			 			
 		}
+		
 	} else {
 		LOG(L_ERR,"ERR:"M_NAME "P_release_call_onreply :  unable to find dialog\n");
-		return CSCF_RETURN_BREAK;
+		return CSCF_RETURN_ERROR;
 	}
 	
 }
@@ -591,9 +642,9 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 	}
 	if (situation==RELEASE_CALL_EARLY) d->route_set=revert_route(d->route_set);
 	
-	LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
-	for(r=d->route_set;r!=NULL;r=r->next) 
-		LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
+	//for(r=d->route_set;r!=NULL;r=r->next) 
+		//LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
 	
 	
 	

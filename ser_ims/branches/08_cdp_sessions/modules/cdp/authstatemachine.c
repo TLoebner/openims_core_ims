@@ -133,7 +133,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SEND_REQ:
 					s->application_id = msg->applicationId;
 					s->u.auth.state = AUTH_ST_PENDING;
-					LOG(L_INFO,"state machine: i was in idle and i am going to pending\n");
+					//LOG(L_INFO,"state machine: i was in idle and i am going to pending\n");
 					break;				
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -153,11 +153,11 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			switch(event){
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
-					LOG(L_INFO,"state machine: i was in pending and i am going to open\n");
+					//LOG(L_INFO,"state machine: i was in pending and i am going to open\n");
 					break;
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
-					LOG(L_INFO,"state machine: i was in pending and i am going to discon\n");
+					//LOG(L_INFO,"state machine: i was in pending and i am going to discon\n");
 					Send_STR(s,msg);
 					break;										
 				default:
@@ -186,29 +186,29 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					break;				
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
-					LOG(L_INFO,"state machine: i was in open and i am going to open\n");
+					//LOG(L_INFO,"state machine: i was in open and i am going to open\n");
 					break;
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
-					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
+					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					break;										
 				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SERVICE_TERMINATED:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state = AUTH_ST_DISCON;
-					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
+					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					Send_STR(s,msg);
 					
 					break;		
 				case AUTH_EV_SEND_ASA_SUCCESS:
 					x->state = AUTH_ST_DISCON;
-					LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
+					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
 					Send_STR(s,msg);
 					
 					break;
 				case AUTH_EV_SEND_ASA_UNSUCCESS:
 					x->state = AUTH_ST_OPEN;
-					LOG(L_INFO,"state machine: i was in open and i am going to open\n");
+					//LOG(L_INFO,"state machine: i was in open and i am going to open\n");
 					break;	
 				case AUTH_EV_RECV_ASR: 
 					// two cases , client will comply or will not
@@ -229,12 +229,12 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			switch (event) {
 				case AUTH_EV_RECV_ASR:
 					x->state = AUTH_ST_DISCON;
-					LOG(L_INFO,"state machine: i was in discon and i am going to discon\n");
+					//LOG(L_INFO,"state machine: i was in discon and i am going to discon\n");
 					Send_ASA(s,msg);
 					break;
 				case AUTH_EV_RECV_STA:
 					x->state = AUTH_ST_IDLE;
-					LOG(L_INFO,"state machine: about to clean up\n");
+					//LOG(L_INFO,"state machine: about to clean up\n");
 					Session_Cleanup(s,msg);
 					break; 	
 				default:
@@ -442,7 +442,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	AAAMessage *str=0;
 	AAA_AVP *avp=0;
 	char x[4];
-	LOG(L_INFO,"Send_STR() : sending STR\n");
+	LOG(L_DBG,"Send_STR() : sending STR\n");
 	str = AAACreateRequest(s->application_id,IMS_STR,Flag_Proxyable,s);
 	
 	if (!str) {
@@ -453,11 +453,11 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	
 	set_4bytes(x,s->application_id);
 	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
-	AAAAddAVPToMessage(str,avp,0);
+	AAAAddAVPToMessage(str,avp,str->avpList.tail);
 	
 	set_4bytes(x,4); // Diameter_administrative
 	avp = AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
-	AAAAddAVPToMessage(str,avp,0);
+	AAAAddAVPToMessage(str,avp,str->avpList.tail);
 	//todo - add all the other avps
 	peer *p;
 			p = get_routing_peer(str);
@@ -470,7 +470,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 			{
 				AAAFreeMessage(&str);	
 			} else { 
-				LOG(L_INFO,"success sending STR\n");
+				LOG(L_DBG,"success sending STR\n");
 			}
 	 
 }

@@ -164,7 +164,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	LOG(L_INFO,"recieved an AAA with result code %i\n",result);
 	cdpb.AAAFreeMessage(&aaa);
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
-	if (result == AAA_SUCCESS) {
+	if (result >= 2000 && result < 3000 ) {
 		return CSCF_RETURN_TRUE;
 	} else {
 		 return CSCF_RETURN_FALSE; // if its not a success then that means i want to reject this call!

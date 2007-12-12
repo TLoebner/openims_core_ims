@@ -152,7 +152,7 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
 	
 	avp = cdpb.AAAFindMatchingAVP(msg,0,AVP_Result_Code,0,0);
 	if (avp==0){
-		LOG(L_INFO,"INFO:"M_NAME":%s: Failed finding avp\n",func);
+		//LOG(L_INFO,"INFO:"M_NAME":%s: Failed finding avp\n",func);
 		return r;
 	}
 	else 
@@ -238,7 +238,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  	list.head=0;	 	
  	list.tail=0;
  	
- 	
+ 	LOG(L_DBG,"PCC_add_media_component_description() : starting\n");
  	
  	/*media-component-number*/
  	 	
@@ -252,7 +252,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  	{
  		cdpb.AAAAddAVPToList(&list,media_component_number);
  	} else {
- 		LOG(L_INFO, ANSI_RED"INF:"M_NAME"Unable to create media_component_number AVP");
+ 		LOG(L_ERR,"ERR:"M_NAME"Unable to create media_component_number AVP");
  		return 0;
  	}
  	
@@ -261,7 +261,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 	n=PCC_create_add_media_subcomponents(&list,sdpinvite,sdp200,number,media_sub_component,tag);
  	if(n==-1)
  	{
- 		LOG(L_INFO, ANSI_RED"INF:"M_NAME"Unable to create media_sub_components list AVP");
+ 		LOG(L_ERR,"ERR:"M_NAME"Unable to create media_sub_components list AVP");
  		cdpb.AAAFreeAVP(&media_component_number);
  		list.head=0;
  		list.tail=0;	
@@ -326,7 +326,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  	
  	/*Max-Requested-Bandwidth-UL*/
  	/*Max-Requested-Bandwidth-DL*/
- 	/*SDP bodies have been check by gq_create_add_media_subcomponents*/
+ 	/*SDP bodies have been checked by gq_create_add_media_subcomponents*/
  	
  	i=1;
  	ptr=find_sdp_line(sdp200.s,(sdp200.s+sdp200.len),'m');
@@ -501,13 +501,13 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  				AVP_FREE_DATA,
  				__FUNCTION__);
  	
- 			
+ 	LOG(L_DBG,"PCC_add_media_component_description() : about to end\n");		
  	cdpb.AAAFreeAVP(&media_component_number);
  	for(i=0;i<n;i++)
  	{
  		cdpb.AAAFreeAVP(&media_sub_component[i]);
  	}
- 	
+ 	LOG(L_DBG,"PCC_add_media_component_description() : bandwidths\n");	
  	if (bwUL.bAS!=0)
 	 {	
 	 	cdpb.AAAFreeAVP(&Max_UL);	 	
@@ -517,7 +517,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 		cdpb.AAAFreeAVP(&Max_DL);		
 	}
 	
-	
+	LOG(L_DBG,"PCC_add_media_component_description() : RS RSS\n");	
 	cdpb.AAAFreeAVP(&flow_status);
 	if (RS!=0)
  	{
@@ -527,7 +527,7 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
  	{
  		cdpb.AAAFreeAVP(&RR);
  	}
- 	
+ 	LOG(L_DBG,"PCC_add_media_component_description() : media type and codec-data\n");	
  	cdpb.AAAFreeAVP(&media_type);
  	cdpb.AAAFreeAVP(&codec_data1);
  	cdpb.AAAFreeAVP(&codec_data2);
@@ -562,9 +562,10 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  	char *newline,*rtp;
 	int ports=1; /*how many ports does this m line define?*/
 		
- 		
+ 		LOG(L_DBG,"PCC_add_media_subcomponents() : starting\n");
  		if (!extract_mclines(sdpA,sdpB,&mlineA,&clineA,&mlineB,&clineB,number))
  		{
+ 			LOG(L_DBG,"PCC_add_media_subcomponents(): error extracting lines of sdp content\n");
  			return -1;
  		}
  		   
@@ -688,7 +689,8 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 		 			 * RTCP flows*/
  				}						
  											
- 			}							
+ 			}
+ 			LOG(L_DBG,"PCC_add_media_subcomponents() : ending\n");							
  	  	
  	return (i);
  }
@@ -904,6 +906,11 @@ AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction)
  * returns 1 on success 0 on error
  */
  
+ /*
+  * If the clients are not following the offer-answer thing we die after this
+  * because i keep searching for m lines that arent there
+ */
+ 
 int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number)
 {
  	
@@ -925,7 +932,7 @@ int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,
 	if (*clineA==NULL || *clineB==NULL || *mlineA==NULL || *mlineB==NULL)
  	{
  		/*missing at least one cline and mline in each SDPbody*/
- 		LOG(L_ERR, ANSI_RED"ERR:"M_NAME" Malformed SDP body\n");
+ 		LOG(L_ERR,"ERR:"M_NAME" Malformed SDP body\n");
  		return 0;
  	} 	
  	
@@ -1251,20 +1258,46 @@ int is_an_address(char *ad)
 
 /**
  * Returns the Result-Code AVP from a Diameter message.
+ * or the Experimental-Result-Code if there is no Result-Code , because .. who cares
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
 inline int PCC_get_result_code(AAAMessage *msg, int *data)
 {
-	str s;
-	
-	s = PCC_get_avp(msg,
-		AVP_Result_Code,
-		0,
-		__FUNCTION__);
-	if (!s.s) return 0;
-	*data = get_4bytes(s.s);
 
-	return 1;
+	AAA_AVP *avp;
+	AAA_AVP_LIST list;
+	list.head=0;
+	list.tail=0;
+	*data=0;
+	
+	for (avp=msg->avpList.tail;avp;avp=avp->prev)
+	{
+		//LOG(L_INFO,"pcc_get_result_code: looping with avp code %i\n",avp->code);
+		if (avp->code==AVP_Result_Code)
+		{
+			*data = get_4bytes(avp->data.s);	
+				
+		} else if (avp->code==AVP_Experimental_Result)
+		{
+			list=cdpb.AAAUngroupAVPS(avp->data);
+			for(avp=list.head;avp;avp=avp->next)
+			{
+				//LOG(L_CRIT,"in the loop with avp code %i\n",avp->code);
+				if (avp->code==AVP_IMS_Experimental_Result_Code)
+				{
+					*data = get_4bytes(avp->data.s);
+					cdpb.AAAFreeAVPList(&list);
+					return 1;				
+				}
+			}
+			cdpb.AAAFreeAVPList(&list);
+			return 0; // this has to be here because i have changed the avp!!!
+					
+		}
+	
+	}
+	return 0;
 }
+
 
