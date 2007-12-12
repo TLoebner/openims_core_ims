@@ -72,8 +72,8 @@ enum release_call_situation{
 	  * a CANCEL wouldn't be understood by the callee!*/
 	  RELEASE_CALL_CONFIRMED=2
 };
-#define MAX_TIMES_TO_TRY_TO_RELEASE 3
-#define TIME_TO_EXPIRE 60
+#define MAX_TIMES_TO_TRY_TO_RELEASE 2
+#define TIME_TO_EXPIRE 30
 /*
  * When a release_call process it started , if it goes good, the dialog is deleted when the answers
  * are recieved.

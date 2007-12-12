@@ -515,6 +515,7 @@ str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
  */
 int terminate_p_dialog(p_dialog *d)
 {
+	LOG(L_INFO,"terminate_p_dialog(): called for dialog %.*s and direction %u\n",d->call_id.len,d->call_id.s,d->direction);
 	if (!pcscf_dialogs_enable_release) return 0;
 	switch (d->method){
 		case DLG_METHOD_INVITE:
@@ -585,7 +586,7 @@ void print_p_dialogs(int log_level)
 		d_lock(i);
 			d = p_dialogs[i].head;
 			while(d){
-				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t%d://%.*s:%d\tMet:[%d]\tState:[%d] Exp:[%4d]\n",i,				
+				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t%d://%.*s:%d\tMet:[%d]\tState:[%d] Exp:[%d]\n",i,				
 					d->call_id.len,d->call_id.s,
 					d->transport,d->host.len,d->host.s,d->port,
 					d->method,d->state,
@@ -1108,6 +1109,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		d = get_p_dialog(call_id,host,port,transport);		
 	}
 	if (!d){
+		
 		LOG(L_CRIT,"ERR:"M_NAME":P_update_dialog: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
 	}
@@ -1119,6 +1121,9 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
 		if (cseq>d->last_cseq) d->last_cseq = cseq;
+		// shouldnt the CSeq of tm be updated?
+		d->dialog_c->loc_seq.value++; // is this the right one?		
+			
 		if (get_dialog_method(msg->first_line.u.request.method) == DLG_METHOD_INVITE)
 		{
 			d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
@@ -1126,19 +1131,21 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			ses_exp = cscf_get_session_expires_body(msg, &h);
 			t_time = cscf_get_session_expires(ses_exp, &refresher);
 			if (!t_time){
-				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+				if (!d->is_releasing) d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 				d->lr_session_expires = 0;
 			} else {
-				d->expires = d_act_time() + t_time;
+				if(!d->is_releasing) d->expires = d_act_time() + t_time;
 				d->lr_session_expires = t_time;
 				if (refresher.len)
 					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
 			}
+			
 		}
 		else
 		{
-			d->expires = d_act_time()+pcscf_dialogs_expiration_time;
-			d->lr_session_expires = 0;		
+			if(!d->is_releasing) d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+			d->lr_session_expires = 0;
+				
 		}
 	}else{
 		/* Reply */
@@ -1181,7 +1188,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
-					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+					if(!d->is_releasing) d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 					d->lr_session_expires = 0;
 					break;
 				case DLG_METHOD_INVITE:
@@ -1215,6 +1222,14 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					break;
 			}
 			if (cseq>d->last_cseq) d->last_cseq = cseq;
+			/*
+			 * Alberto 14 November
+			 * please update the cseq in the tm dialog structures too
+			 * 
+			 * */
+
+			
+			
 		}
 	}
 	
@@ -1593,7 +1608,7 @@ void dialog_timer(unsigned int ticks, void* param)
 			while(d){
 				dn = d->next;
 				/*Why are we only terminating dialogs on  MOBILE_ORIGINATING side???*/
-				if (d->direction==DLG_MOBILE_ORIGINATING && d->expires<=d_time_now) {						
+				if ((int)(d->expires-(int)d_time_now)<=0) {						
 						if (!terminate_p_dialog(d)) 
 							del_p_dialog(d);					
 				}
