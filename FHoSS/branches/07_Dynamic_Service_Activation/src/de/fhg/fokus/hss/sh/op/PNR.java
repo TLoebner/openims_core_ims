@@ -269,7 +269,7 @@ public class PNR {
 					asElement.setServiceInfo(serviceAS.getService_info());
 
 					// Set of IFCs active for the user (not de-activated by any DSAI)
-					List ifcList = IFC_DAO.get_all_by_IMPU_ID_and_DSAI_Value_Active(session, shNotification.getId_impu());
+					List ifcList = IFC_DAO.get_all_IFCs_by_IMPU_ID_and_DSAI_Value_Active(session, shNotification.getId_impu());
 					if (ifcList != null){
 
 						Iterator it = ifcList.iterator();

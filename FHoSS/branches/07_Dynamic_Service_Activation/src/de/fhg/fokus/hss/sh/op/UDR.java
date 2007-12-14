@@ -367,7 +367,7 @@ public class UDR {
 							return;
 						}
 
-						List ifcList = SP_IFC_DAO.get_all_IFC_by_SP_ID(session, impu.getId_sp());
+						List ifcList = IFC_DAO.get_all_IFCs_by_IMPU_ID_and_DSAI_Value_Active(session, impu.getId());
 						if (ifcList != null){
 							ApplicationServerElement asElement = new ApplicationServerElement();
 							asElement.setDefaultHandling(serviceAS.getDefault_handling());

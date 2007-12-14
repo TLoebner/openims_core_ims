@@ -409,7 +409,7 @@ public class IMPU_DAO {
 		}
 
 		if(ifc_lista.isEmpty()){
-			ifc_lista.add(1);
+			return null;
 		}
 
 		Query query = null;

@@ -158,25 +158,23 @@ public class CxEvents_DAO {
 
 	public static void insert_CxEvent (Session session, int impu_id){
 
-		List impi_list = IMPI_IMPU_DAO.get_all_IMPI_by_IMPU_ID(session, impu_id);
-		if (impi_list != null && impi_list.size()> 0 ) {
-			Iterator impi_it = impi_list.iterator();
-			while (impi_it.hasNext()){
-				IMPI impi = (IMPI) impi_it.next();
-				IMPU impu = IMPU_DAO.get_by_ID(session, impu_id);
-				IMSU imsu = IMSU_DAO.get_by_IMPI_ID(session, impi.getId());
-				CxEvents rtr_ppr = new CxEvents();
-				rtr_ppr.setGrp(CxEvents_DAO.get_max_grp(session) + 1);
-				//	Type for PPR is 2
-				rtr_ppr.setType(2);
-				//	Subtype	userdata is 0
-				rtr_ppr.setSubtype(0);
-				rtr_ppr.setId_implicit_set(impu.getId_implicit_set());
-				rtr_ppr.setDiameter_name(imsu.getDiameter_name());
-				rtr_ppr.setId_impi(impi.getId());
-				rtr_ppr.setId_impu(impu_id);
-				CxEvents_DAO.insert(session, rtr_ppr);
-			}
+		int id_impi = IMPU_DAO.get_a_registered_IMPI_ID(session, impu_id);
+		if (id_impi != -1) {
+			IMPI impi = IMPI_DAO.get_by_ID(session, id_impi);
+			IMPU impu = IMPU_DAO.get_by_ID(session, impu_id);
+	//		IMSU imsu = IMSU_DAO.get_by_IMPI_ID(session, impi.getId());
+			CxEvents rtr_ppr = new CxEvents();
+			rtr_ppr.setGrp(CxEvents_DAO.get_max_grp(session) + 1);
+			//	Type for PPR is 2
+			rtr_ppr.setType(2);
+			//	Subtype	userdata is 0
+			rtr_ppr.setSubtype(0);
+			rtr_ppr.setId_implicit_set(impu.getId_implicit_set());
+	//		rtr_ppr.setDiameter_name(imsu.getDiameter_name());
+			rtr_ppr.setId_impi(impi.getId());
+			rtr_ppr.setId_impu(impu_id);
+			CxEvents_DAO.insert(session, rtr_ppr);
 		}
+
 	}
 }
