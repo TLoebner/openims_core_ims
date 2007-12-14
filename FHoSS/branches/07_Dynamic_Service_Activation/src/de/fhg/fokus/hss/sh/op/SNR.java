@@ -288,9 +288,7 @@ public class SNR {
 								sh_subs.setId_application_server(application_server.getId());
 								sh_subs.setData_ref(crt_data_ref);
 								sh_subs.setId_impu(impu.getId());
-								if (expiration_date != -1){
-									sh_subs.setExpires(expiration_date);
-								}
+								sh_subs.setExpires(expiration_date);
 							}
 						}
 
@@ -306,9 +304,7 @@ public class SNR {
 								//
 								sh_subs.setDsai_tag(dsai_tag);
 								//
-								if (expiration_date != -1){
-									sh_subs.setExpires(expiration_date);
-								}
+								sh_subs.setExpires(expiration_date);
 								sh_subs.setServer_name(server_name);
 							}
 						}
@@ -321,9 +317,7 @@ public class SNR {
 								sh_subs.setId_application_server(application_server.getId());
 								sh_subs.setData_ref(crt_data_ref);
 								sh_subs.setId_impu(impu.getId());
-								if (expiration_date != -1){
-									sh_subs.setExpires(expiration_date);
-								}
+								sh_subs.setExpires(expiration_date);
 								sh_subs.setServer_name(server_name);
 							}
 						}
@@ -374,9 +368,7 @@ public class SNR {
 								}
 
 								sh_subs.setService_indication(crt_service_indication);
-								if (expiration_date != -1){
-									sh_subs.setExpires(expiration_date);
-								}
+								sh_subs.setExpires(expiration_date);
 								ShSubscription_DAO.update(session, sh_subs);
 							}
 						}

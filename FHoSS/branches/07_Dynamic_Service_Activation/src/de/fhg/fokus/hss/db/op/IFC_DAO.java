@@ -56,11 +56,12 @@ import org.hibernate.Session;
 import de.fhg.fokus.hss.db.model.ApplicationServer;
 import de.fhg.fokus.hss.db.model.ChargingInfo;
 import de.fhg.fokus.hss.db.model.IFC;
+import de.fhg.fokus.hss.sh.ShConstants;
 
 /**
  * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
  * to support the DSAI concept according to Release 7 (methods get_all_by_Same_AS_ID,
- * get_all_by_AS_ID_and_IMPU_ID_and_DSAI_ID and get_all_by_IMPU_ID_and_DSAI_Value_Active).
+ * get_all_by_AS_ID_and_IMPU_ID_and_DSAI_ID and get_all_IFCs_by_IMPU_ID_and_DSAI_Value_Active).
  *
  * @author adp dot fokus dot fraunhofer dot de
  * Adrian Popescu / FOKUS Fraunhofer Institute
@@ -265,8 +266,7 @@ public class IFC_DAO {
 	}
 
 	/**
-     * This method returns all iFCs associated to the same DSAI as the IMPU given whose DSAI-value is
-     * set to active.
+     * This method returns all iFCs associated actived for the IMPU given.
      * <p>
      * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
      * to support the DSAI Information Element
@@ -276,14 +276,41 @@ public class IFC_DAO {
      * @return List of IFC
      */
 
-	public static List get_all_by_IMPU_ID_and_DSAI_Value_Active(Session session, int id_impu){
+	public static List get_all_IFCs_by_IMPU_ID_and_DSAI_Value_Active(Session session, int id_impu){
+
+		//we get all associated IFCs to the IMPU.
 		Query query;
-		query = session.createSQLQuery("select ifc.* from"+
-				" ifc ifc, dsai_ifc dsai_ifc, dsai_impu dsai_impu where"+
-				" dsai_impu.id_impu=? and dsai_impu.dsai_value=1 and "+
-				" dsai_impu.id_dsai=dsai_ifc.id_dsai and dsai_ifc.id_ifc=ifc.id;")
+		query = session.createSQLQuery("select IFC.* from"+
+				" ifc IFC, sp_ifc SP_IFC, impu IMPU where"+
+				" IMPU.id=? and IMPU.id_sp=SP_IFC.id_sp and SP_IFC.id_ifc=IFC.id;")
 		.addEntity(IFC.class);
 		query.setInteger(0, id_impu);
-		return query.list();
+		List all_ifc= query.list();
+
+		// get IFCs with a dsai inactived for the IMPU given
+		Integer Dsai_value= (Integer) ShConstants.DSAI_value_Inactive;
+		Query query2;
+		query2 = session.createSQLQuery("select IFC.* from"+
+				" ifc IFC, dsai_ifc DS_IF, dsai_impu DS_IM, sp_ifc SP_IFC, impu IMPU where"+
+				" DS_IM.id_impu=? and DS_IM.dsai_value=? and DS_IM.id_impu=IMPU.id and "+
+				" IMPU.id_sp=SP_IFC.id_sp and SP_IFC.id_ifc=IFC.id and"+
+				" DS_IM.id_dsai=DS_IF.id_dsai and DS_IF.id_ifc=IFC.id;")
+		.addEntity(IFC.class);
+		query2.setInteger(0, id_impu);
+		query2.setInteger(1, Dsai_value);
+
+		List ifc_inactive =query2.list();
+		if (ifc_inactive.isEmpty()){
+			return all_ifc;
+		}
+		List result= new ArrayList();
+		Iterator it=all_ifc.iterator();
+		while (it.hasNext()){
+			IFC a_ifc = (IFC) it.next();
+			if (!(ifc_inactive.contains(a_ifc))) {
+				result.add(a_ifc);
+			}
+		}
+		return result;
 	}
 }

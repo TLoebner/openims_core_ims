@@ -53,6 +53,7 @@ import org.hibernate.Session;
 
 import de.fhg.fokus.hss.db.model.DSAI_IMPU;
 import de.fhg.fokus.hss.db.model.IMPU;
+import de.fhg.fokus.hss.sh.ShConstants;
 
 /**
  * @author Instrumentacion y Componentes S.A (Inycom).
@@ -188,7 +189,9 @@ public class DSAI_IMPU_DAO {
 	public static List get_IMPU_by_DSAI_for_IFC_list(Session session, int id_dsai, List ifc_list){
 
 		Query query;
-		query = session.createSQLQuery("Select distinct i.* FROM sp_ifc s, impu i, dsai_impu di where di.id_dsai=? and i.id=di.id_impu and i.id_sp=s.id_sp and s.id_ifc in (:ifc_list)").addEntity(IMPU.class);
+		query = session.createSQLQuery("Select distinct i.* FROM sp_ifc s, impu i, dsai_impu di"+
+				" where di.id_dsai=? and i.id=di.id_impu"+
+				" and i.id_sp=s.id_sp and s.id_ifc in (:ifc_list)").addEntity(IMPU.class);
 		query.setInteger(0, id_dsai);
 		query.setParameterList("ifc_list", ifc_list);
 
@@ -219,4 +222,29 @@ public class DSAI_IMPU_DAO {
 
 	}
 
+	/**
+	 *
+	 * <p>
+	 * Method developed by Instrumentacion y Componentes S.A (Inycom) (ims at inycom dot es)
+	 * to test if there is any Dsai inactived for the IMPU given.
+	 *
+	 * @param session	Hibernate session
+	 * @param id_impu	IMPU identifier
+	 * @return Number   Integer with muber of DSAI inactived
+	 */
+
+	public static boolean test_DSAI_Inactived_by_IMPU_id(Session session, int id_impu){
+
+		Integer Dsai_value= (Integer) ShConstants.DSAI_value_Inactive;
+		Query query;
+		query = session.createSQLQuery("select * from dsai_impu where id_impu=? and dsai_value=?");
+		query.setInteger(0, id_impu);
+		query.setInteger(1, Dsai_value);
+
+		List result = query.list();
+		if (result != null && result.size() > 0){
+			return true;
+		}
+		return false;
+	}
 }
