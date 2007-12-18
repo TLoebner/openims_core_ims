@@ -384,7 +384,7 @@ CREATE TABLE `sh_subscription` (
   `service_indication` varchar(255) default NULL,
   `dsai_tag` varchar(255) default NULL,
   `server_name` varchar(255) default NULL,
-  `expires` bigint(20) NOT NULL default '0',
+  `expires` bigint(20) NOT NULL default '-1',
   PRIMARY KEY  (`id`),
   KEY `idx_id_impu` (`id_impu`),
   KEY `idx_id_as` USING BTREE (`id_application_server`),
