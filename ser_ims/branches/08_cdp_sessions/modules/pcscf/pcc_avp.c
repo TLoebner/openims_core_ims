@@ -202,6 +202,63 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 			AVP_DUPLICATE_DATA,
 			__FUNCTION__);
 }
+/*
+ * Creates and adds a Subscription_Id AVP
+ * @param msg - the Diameter message to add to.
+ * @param r - the sip_message to extract the data from.
+ * @param tag - originating (0) terminating (1)
+ * @return 1 on success or 0 on error
+ * 
+ */
+/*
+ * For now i add the IMPU because i dont know where to get the IMSI from
+ */
+inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
+{
+	AAA_AVP_LIST list;
+	AAA_AVP *type,*data;
+	str identification;
+	char x[4];
+	int revalue;
+	list.head=0;
+	list.tail=0;
+	
+	LOG(L_INFO,"ADDING SUBSCRIPTION ID\n");
+	revalue=extract_id(r,tag,&identification);
+	// if this returns -1 then better not to add anything
+	if (revalue==-1)
+		return 1;
+		
+ 	set_4bytes(x,revalue);
+	
+	/*identification is just a pointer to something reserved somewhere else and a number...*/
+	type=cdpb.AAACreateAVP(AVP_IMS_Subscription_Id_Type,
+ 											AAA_AVP_FLAG_MANDATORY,
+ 											0,x,4,
+ 											AVP_DUPLICATE_DATA);
+	
+	data=cdpb.AAACreateAVP(AVP_IMS_Subscription_Id_Data,
+ 											AAA_AVP_FLAG_MANDATORY,
+ 											0,identification.s,identification.len,
+ 											AVP_DUPLICATE_DATA);
+ 											
+ 	cdpb.AAAAddAVPToList(&list,type);
+ 	cdpb.AAAAddAVPToList(&list,data);
+ 	
+	identification=cdpb.AAAGroupAVPS(list);
+  	 		
+  	PCC_add_avp(msg,identification.s,identification.len,AVP_IMS_Subscription_Id,
+ 				AAA_AVP_FLAG_MANDATORY,0,
+ 				AVP_FREE_DATA,
+ 				__FUNCTION__);
+ 				
+ 	cdpb.AAAFreeAVPList(&list);
+ 	return 1;
+}
+
+
+
+
  
 /**
  * Creates and adds a Media Component Description AVP
@@ -1095,6 +1152,81 @@ int extract_bandwidth(bandwidth *bw,str sdp,char *start)
 		
 		return 1;
 }
+
+/* Gets the identification and the type 
+ * @param r - the sip request or reply
+ * @param tag - the tag
+ * @param identification - pointer to str to fill (no memory allocation needed)
+ * returns the type of identificator according to the definition of RFC 4006 or -1 on error
+*/
+
+/*
+ * 
+ * could return somthing like 
+ * 
+ * <tel:+1-234-1234-2134>  and 0
+ * <sip:elbueno@estatriste.com> and 3
+ */
+
+int extract_id(struct sip_msg *r,int tag,str *identification)
+{
+
+	char *f;
+	int len,i=0;
+	
+	identification->s=0;
+	identification->len=0;
+	if (!tag)
+	{
+		f=r->from->body.s;
+		len=r->from->body.len;
+	} else {
+		f=r->to->body.s;
+		len=r->to->body.len;
+	}
+	while (i<len)
+	{
+	
+		switch (f[i])
+		{
+	
+			case '<' :
+				identification->s=f+i;
+				i++;
+				break;
+			case '>' :
+				if (identification->s)
+				 {
+				 	identification->len=(f+i)-identification->s+1;
+				 	i=len; // just to get out of here
+					break;
+				 } else {
+				 	LOG(L_ERR,"extract_id return -1\n");
+				 	return -1;
+				 }
+			default :
+				i++;
+		}
+	}
+
+	if (!identification->s || !identification->len)
+	{
+		LOG(L_ERR,"extract id returns -1\n");
+		return -1;
+	}
+	
+	if (*(identification->s+1)=='t' && *(identification->s+2)=='e' && *(identification->s+3)=='l')
+	{
+		return AVP_IMS_Subscription_Id_Type_E164;
+	} else {
+		return AVP_IMS_Subscription_Id_Type_SIP_URI;
+	}
+	
+}
+
+
+
+
 
 
 /* Check for sendonly or recvonly modifiers in a= lines

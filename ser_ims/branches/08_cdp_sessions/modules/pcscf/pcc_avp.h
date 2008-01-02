@@ -70,6 +70,7 @@
 #include <string.h>
 #include <stdio.h>
 
+
 /** NO DATA WILL BE DUPLICATED OR FREED - DO THAT AFTER SENDING THE MESSAGE!!! */
 
 typedef struct _bandwidth {
@@ -85,6 +86,7 @@ typedef struct _bandwidth {
 
 int PCC_add_destination_realm(AAAMessage *msg, str data);
 int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
 AAA_AVP *PCC_create_media_subcomponent(int number,
 									char *proto, char *ipA,
 									char *portA, char *ipB,
@@ -98,6 +100,7 @@ AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number);
 int extract_token(char *line,char *token,int max,int number);
 int extract_bandwidth(bandwidth *bw,str sdp,char *start);
+int extract_id(struct sip_msg *r,int tag,str *identification);
 int check_atributes(str sdpbody,char *mline);
 int is_a_port(char *port);
 /*int is_an_address(char *ad);*/

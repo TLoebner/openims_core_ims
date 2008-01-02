@@ -1120,10 +1120,16 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		LOG(L_DBG,"DBG:"M_NAME":P_update_dialog(%s): Method <%.*s> \n",str1,
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
-		if (cseq>d->last_cseq) d->last_cseq = cseq;
-		// shouldnt the CSeq of tm be updated?
-		d->dialog_c->loc_seq.value++; // is this the right one?		
-			
+		if (cseq>d->last_cseq) 
+		{	
+			d->last_cseq = cseq;
+			d->dialog_c->loc_seq.value=cseq;
+			//This is a shit but is going to work
+			// because d->last_cseq is actually the last one we saw... then if its bigger..
+			// soo..
+			//d->dialog_s->loc_seq.is_set=1;
+			//d->dialog_s->loc_seq.value=cseq; 	
+		}	
 		if (get_dialog_method(msg->first_line.u.request.method) == DLG_METHOD_INVITE)
 		{
 			d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
@@ -1139,7 +1145,8 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				if (refresher.len)
 					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
 			}
-			
+		
+		
 		}
 		else
 		{

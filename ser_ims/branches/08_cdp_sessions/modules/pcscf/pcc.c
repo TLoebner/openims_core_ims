@@ -299,15 +299,18 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 		mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 	}
 	
+	
+		PCC_add_subscription_ID(aar,req,tag);
+	
+	
 	/*
 	to be added here
 		
-		Rx_add_specific_action(dia_aar,ACTION);
-		Rx_add_subscription_ID(dia_aar,IMSI);
-		Rx_add_reservation_priority(dia_aar,TISPANthing);
-		Rx_add_Framed_IP_Address(dia_aar,Mariusthing);
-		Rx_add_Framed_IPv6_Prefix(dia_aar,Mariusthing);
-		Rx_add_Service_URN(dia_aar,emergencysession);
+		PCC_add_specific_action(dia_aar,ACTION);
+		PCC_add_reservation_priority(dia_aar,TISPANthing);
+		PCC_add_Framed_IP_Address(dia_aar,Mariusthing);
+		PCC_add_Framed_IPv6_Prefix(dia_aar,Mariusthing);
+		PCC_add_Service_URN(dia_aar,emergencysession);
 	
 	*/
 	

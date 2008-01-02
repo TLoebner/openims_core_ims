@@ -371,9 +371,9 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 		} else {/*(situation == RELEASE_CALL_EARLY)*/
 			d->dialog_c->loc_seq.value++;
 			
-			d->dialog_c->state=DLG_CONFIRMED;		
-			send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-			d->dialog_c->state=DLG_EARLY;
+			//d->dialog_c->state=DLG_CONFIRMED;		
+			//send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
+			//d->dialog_c->state=DLG_EARLY;
 			tmb.t_reply(t->uas.request,reason_code,reason_text.s);
 			
 			/*
@@ -383,12 +383,16 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 			 * if you give me the money i will rewrite it nicely
 			 * 
 			 * */
-			/*for (i=0; i< t->nr_of_outgoings; i++)
+			for (i=0; i< t->nr_of_outgoings; i++)
 				t->uac[i].last_received=180;
 			
 			
+			//do_something_strange_before_cancel_uacs(t);
+			
 			tmb.cancel_uacs(t,0xFFFF,F_CANCEL_B_FAKE_REPLY);
-			*/
+			
+			//undo_something_strange_after_cancel_uacs(t);
+			
 			t->uas.status=488;
 			tmb.t_release(t->uas.request);
 			
@@ -640,13 +644,11 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 		default:
 			return;
 	}
-	if (situation==RELEASE_CALL_EARLY) d->route_set=revert_route(d->route_set);
-	
+	d->route_set=revert_route(d->route_set);
+		
 	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
 	//for(r=d->route_set;r!=NULL;r=r->next) 
 		//LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
-	
-	
 	
 		
 	for(r=d->route_set;r!=NULL;r=r->next) {
@@ -666,5 +668,14 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 	}
 		
 }		
+/*
+do_something_strange_before_cancel_uacs(struct cell *t)
+{
+	
+}
 
-
+undo_something_strange_after_cancel_uacs(struct cell *t)
+{
+	
+}
+*/
