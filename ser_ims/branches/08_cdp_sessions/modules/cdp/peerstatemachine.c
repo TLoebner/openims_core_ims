@@ -59,11 +59,13 @@
 #include "diameter_api.h"
 #include "diameter_ims.h"
 
+#include "utils.h"
 #include "receiver.h"
 #include "peermanager.h"
 #include "config.h"
 #include "worker.h"
 #include "authstatemachine.h"
+
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
@@ -75,6 +77,13 @@ char *dp_events[]={"Start","Stop","Timeout","Win_Election","R_Conn_CER","I_Rcv_C
 	"I_Rcv_DPR","I_Rcv_DPA","R_Rcv_DPR","R_Rcv_DPA",
 	"I_Rcv_DWR","I_Rcv_DWA","R_Rcv_DWR","R_Rcv_DWA",
 	"Send_Message","I_Rcv_Message","R_Rcv_Message","I_Peer_Disc","R_Peer_Disc"};
+
+
+
+
+
+
+
 
 /**
  * Diameter base protocol state-machine processing.
@@ -996,6 +1005,23 @@ void Snd_Message(peer *p, AAAMessage *msg)
 					}else
 						auth_client_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
 				}
+				break;
+			case AUTH_SERVER_STATEFULL:
+				if (is_req(msg))
+				{
+					if (msg->commandCode== IMS_ASR)
+					{
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ASR,msg);
+					} else {
+						//would be a RAR but ok!
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
+					}
+				} else {
+					if (msg->commandCode == IMS_STR)
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_STA,msg);
+					else
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+				}
 				break;				 
 			default:
 				break;
@@ -1037,6 +1063,17 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
 				}
 				break;
+			 case AUTH_SERVER_STATEFULL:
+			 	if (is_req(msg))
+			 	{
+			 		auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+			 	}else{
+			 		if (msg->commandCode==IMS_ASA)
+			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ASA,msg);
+			 		else
+			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
+			 	}
+			 	break;
 			default:
 				break;			 
 		}
@@ -1044,8 +1081,17 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 	}else{
 		if (msg->sessionId){
 			if (msg->commandCode == IMS_ASR) 
-				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg); 
+				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg);
+			if (msg->commandCode == IMS_AAR)
+			{
+				session=AAACreateAuthSession(0,0,1,0,0);
+				
+				shm_str_dup(session->id,msg->sessionId->data); 
+				auth_server_statefull_sm_process(0,AUTH_EV_RECV_REQ,msg);				
+			}
+			// Any other cases to think about?	 
 		} 
+				 
 	}
 
 	if (!put_task(p,msg)){

@@ -71,6 +71,7 @@ void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage
 void Send_ASA(cdp_session_t* s, AAAMessage* msg);
 
 void Send_STR(cdp_session_t* s, AAAMessage* msg);
+void Send_ASR(cdp_session_t* s, AAAMessage* msg);
 
 void Session_Cleanup(cdp_session_t* s, AAAMessage* msg);
 

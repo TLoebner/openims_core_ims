@@ -139,7 +139,10 @@ enum {
 	AVP_IMS_Experimental_Result							= 297,
 /** 300 to 399 reserved for TS29.234											*/
 	
-/** 400 to 499 reserved for TS29.109											*/
+/** 400 to 499 reserved for TS29.109 or   RFC 4006 							*/
+ 	AVP_IMS_Subscription_Id								= 443,
+ 	AVP_IMS_Subscription_Id_Type						= 450,
+ 	AVP_IMS_Subscription_Id_Data						= 444,
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_IMS_Abort_Cause									= 500,
 	AVP_IMS_Access_Network_Charging_Address				= 501,
@@ -418,7 +421,14 @@ enum {
 	AVP_IMS_Deregistration_Reason_Remove_S_CSCF			= 3
 };
 
-
+/** Subscription-ID-Type						*/
+enum {
+	AVP_IMS_Subscription_Id_Type_E164					= 0,
+	AVP_IMS_Subscription_Id_Type_IMSI					= 1,
+	AVP_IMS_Subscription_Id_Type_SIP_URI				= 2,
+	AVP_IMS_Subscription_Id_Type_NAI					= 3,
+	AVP_IMS_Subscription_Id_Type_USER_PRIVATE			= 4
+};
 
 /** Abort-Cause AVP */
 enum {

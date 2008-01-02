@@ -71,11 +71,41 @@ char *auth_events[]={};
 
 int get_result_code(AAAMessage* msg)
 {
+	AAA_AVP *avp;
+	AAA_AVP_LIST list;
+	list.head=0;
+	list.tail=0;
+	int rc=-1;
+	
         if (!msg) goto error;
-        AAA_AVP* rc = AAAFindMatchingAVP(msg, 0, AVP_Result_Code, 0, 0);
-        if (!rc) goto error;
-        return get_4bytes(rc->data.s);
-
+        
+        for (avp=msg->avpList.tail;avp;avp=avp->prev)
+		{
+		
+			if (avp->code==AVP_Result_Code)
+			{
+				rc = get_4bytes(avp->data.s);	
+				goto finish;
+			} else if (avp->code==AVP_Experimental_Result)
+			{
+				list=AAAUngroupAVPS(avp->data);
+				for(avp=list.head;avp;avp=avp->next)
+				{
+					if (avp->code==AVP_IMS_Experimental_Result_Code)
+						{
+							rc = get_4bytes(avp->data.s);
+							AAAFreeAVPList(&list);
+							goto finish;
+						}
+			 	}
+				AAAFreeAVPList(&list);
+			 
+					
+			}
+	
+		}
+finish:
+		return rc;
 error:
         LOG(L_ERR, "ERR:get_result_code(): no AAAMessage or Result Code not found\n");
         return -1;
@@ -258,9 +288,22 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	
 	if (!s) return;
 	x = &(s->u.auth);
+	
+
 	switch(x->state){
 		case AUTH_ST_IDLE:
 			switch (event) {
+				case AUTH_EV_RECV_REQ:
+					// The RequestHandler will generate a Send event for the answer
+					// and we will only then now if the user is authorised or not
+					// if its not authorised it will move back to idle and cleanup the session 
+					// so no big deal
+					x->state = AUTH_ST_OPEN;
+					break;
+				case AUTH_EV_SEND_STA:
+					x->state = AUTH_ST_IDLE;
+					Session_Cleanup(s,msg);
+					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -268,7 +311,36 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			break;
 		
 		case AUTH_ST_OPEN:
+		
+		
+			if (event == AUTH_EV_SEND_ANS && msg && !is_req(msg)){
+				int rc = get_result_code(msg);
+				if (rc>=2000 && rc<3000)
+					event = AUTH_EV_SEND_ANS_SUCCESS;
+				else
+					event = AUTH_EV_SEND_ANS_UNSUCCESS;
+			}
+		
+		
 			switch (event) {
+				case AUTH_EV_SEND_ANS_SUCCESS:
+					x->state = AUTH_ST_OPEN;
+					break;
+				case AUTH_EV_SEND_ANS_UNSUCCESS:
+					x->state = AUTH_ST_IDLE;
+					Session_Cleanup(s,msg);					
+					break;
+				case AUTH_EV_SEND_ASR:
+					x->state = AUTH_ST_DISCON;
+					break;
+				case AUTH_EV_SESSION_TIMEOUT:
+				//case AUTH_EV_AUTH_EV_SESSION_GRACE_TIMEOUT:
+					x->state=AUTH_ST_IDLE;
+					Session_Cleanup(s,msg);
+				case AUTH_EV_SEND_STA:
+					x->state = AUTH_ST_IDLE;
+					Session_Cleanup(s,msg);
+					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -277,6 +349,17 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 		
 		case AUTH_ST_DISCON:
 			switch (event) {
+				case AUTH_EV_RECV_ASA_SUCCESS:
+					x->state=AUTH_ST_IDLE;
+					Session_Cleanup(s,msg);
+				case AUTH_EV_RECV_ASA_UNSUCCESS:
+					Send_ASR(s,msg);
+					// how many times will this be done?
+					x->state=AUTH_ST_DISCON;
+				case AUTH_EV_SEND_STA:
+					x->state = AUTH_ST_IDLE;
+					Session_Cleanup(s,msg);
+					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -471,6 +554,44 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 				AAAFreeMessage(&str);	
 			} else { 
 				LOG(L_DBG,"success sending STR\n");
+			}
+	 
+}
+
+void Send_ASR(cdp_session_t* s, AAAMessage* msg)
+{
+	AAAMessage *asr=0;
+	AAA_AVP *avp=0;
+	char x[4];
+	LOG(L_DBG,"Send_ASR() : sending ASR\n");
+	asr = AAACreateRequest(s->application_id,IMS_ASR,Flag_Proxyable,s);
+	
+	if (!asr) {
+		LOG(L_ERR,"ERR:Send_ASR(): error creating ASR!\n");
+		return;
+	}
+	
+	
+	set_4bytes(x,s->application_id);
+	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+	AAAAddAVPToMessage(asr,avp,asr->avpList.tail);
+	
+	set_4bytes(x,3); // Not specified
+	avp = AAACreateAVP(AVP_IMS_Abort_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+	AAAAddAVPToMessage(asr,avp,asr->avpList.tail);
+	//todo - add all the other avps
+	peer *p;
+			p = get_routing_peer(asr);
+			if (!p) {
+				LOG(L_ERR,"unable to get routing peer in Send_ASR \n");
+				AAAFreeMessage(&asr);
+			}
+			
+			if (!peer_send_msg(p,asr))
+			{
+				AAAFreeMessage(&asr);	
+			} else { 
+				LOG(L_DBG,"success sending ASR\n");
 			}
 	 
 }

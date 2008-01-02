@@ -81,7 +81,7 @@ and load them writting at the end of dictionary.xml
 
 
 
-Seagull files to simulate a PCRF are also included in this doc/Seagull
+Seagull files to simulate a PDF are also included in this doc/Seagull
 
 Three files are needed for seagull to act as a PDF
 config file --> conf.server.xml
