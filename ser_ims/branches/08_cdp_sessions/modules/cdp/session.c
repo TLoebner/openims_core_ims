@@ -366,18 +366,16 @@ void session_timer(time_t now, void* ptr)
 			
 			LOG(L_INFO,"session of type [%i] with id %.*s",x->type,x->id.len,x->id.s);
 			if (x->type==AUTH_CLIENT_STATEFULL) {
-				LOG(L_INFO,"auth state %i\n",x->u.auth.state);
+				LOG(L_INFO,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
 			} else LOG(L_INFO,"\n");
 			
 			
-			 // Alberto Diez @ 30 October 2007
-			 // This is very nice and all .. but it makes the P-CSCF die so i put it
-			 // on quarenteen until i have the time to take a closer look at it
-			
+			 
 			switch (x->type){
 				case AUTH_CLIENT_STATEFULL:
 					if (x->u.auth.timeout!=0 && x->u.auth.timeout<=now){
 						//Session timeout
+						LOG(L_CRIT,"session TIMEOUT\n");
 						if (x->cb) {
 							cb = x->cb;
 							(cb)(AUTH_EV_SESSION_TIMEOUT,x->cb_param,x);
@@ -386,6 +384,7 @@ void session_timer(time_t now, void* ptr)
 					}
 					if (x->u.auth.timeout!=0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
 						//lifetime + grace timeout
+						LOG(L_CRIT,"grace TIMEOUT\n");
 						if (x->cb){
 							cb = x->cb;	
 							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x->cb_param,x);
@@ -400,7 +399,7 @@ void session_timer(time_t now, void* ptr)
 		}
 		sessions_unlock(hash);
 	}
-	LOG(L_INFO,"-----------------------------\n");
+	LOG(L_INFO,"-------------------------------\n");
 					
 }
 
@@ -456,7 +455,9 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 		s->u.auth.generic_data = generic_data;
 		s->cb = cb;
 		s->cb_param = param;
-		s->u.auth.timeout=0; // for now we dont have timeouts!
+		s->u.auth.timeout=time(0)+config->tc*30; 
+		s->u.auth.lifetime=time(0)+config->tc*32;
+		s->u.auth.grace_period=config->tc*2;
 	}
 	add_session(s);
 	return s;
