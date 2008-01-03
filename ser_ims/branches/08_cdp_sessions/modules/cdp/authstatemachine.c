@@ -51,7 +51,7 @@
  * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
  * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
- * 
+ * \author Alberto Diez Albaladejo Alberto.Diez at fokus dot fraunhofer dot de
  */
 
 #include <time.h>
@@ -68,6 +68,7 @@
 char *auth_states[]={"Idle","Pending","Open","Discon"};
 char *auth_events[]={};
 
+extern dp_config *config;	// because i want to use tc for the expire times...
 
 int get_result_code(AAAMessage* msg)
 {
@@ -157,6 +158,11 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 		return;
 	}
 	x = &(s->u.auth);
+	
+	// I dont want the session to expire!
+	x->timeout+=config->tc*30;
+	x->lifetime=x->timeout+config->tc*32;
+	
 	switch(x->state){
 		case AUTH_ST_IDLE:
 			switch (event) {
@@ -262,6 +268,12 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					//LOG(L_INFO,"state machine: i was in discon and i am going to discon\n");
 					Send_ASA(s,msg);
 					break;
+				// Just added this because it might happen if the other peer doesnt 
+				// send a valid STA, then the session stays open forever...
+				// We dont accept that... we have lifetime+grace_period for that
+				// This is not in the Diameter RFC ...	
+				case AUTH_EV_SESSION_GRACE_TIMEOUT:
+				// thats the addition
 				case AUTH_EV_RECV_STA:
 					x->state = AUTH_ST_IDLE;
 					//LOG(L_INFO,"state machine: about to clean up\n");
@@ -289,6 +301,9 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	if (!s) return;
 	x = &(s->u.auth);
 	
+	// I dont want the session to expire!
+	x->timeout+=config->tc*30;
+	x->lifetime=x->timeout+config->tc*2;
 
 	switch(x->state){
 		case AUTH_ST_IDLE:
@@ -298,6 +313,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					// and we will only then now if the user is authorised or not
 					// if its not authorised it will move back to idle and cleanup the session 
 					// so no big deal
+					// but this is not the Diameter RFC...
 					x->state = AUTH_ST_OPEN;
 					break;
 				case AUTH_EV_SEND_STA:
@@ -334,7 +350,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					x->state = AUTH_ST_DISCON;
 					break;
 				case AUTH_EV_SESSION_TIMEOUT:
-				//case AUTH_EV_AUTH_EV_SESSION_GRACE_TIMEOUT:
+				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state=AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
 				case AUTH_EV_SEND_STA:
