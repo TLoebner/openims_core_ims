@@ -124,6 +124,8 @@ void callback_for_pccsession(int event,void *param,void *session)
 	
 	switch (event)
 	{
+		case AUTH_EV_SESSION_TIMEOUT:
+		case AUTH_EV_SESSION_GRACE_TIMEOUT:
 		case AUTH_EV_SERVICE_TERMINATED:
 			
 			g=(t_authdata *)x->u.auth.generic_data;
@@ -366,7 +368,7 @@ int PCC_AAA(AAAMessage *dia_msg)
 AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 {
 	AAAMessage* dia_str = NULL;
-	AAAMessage* dia_sta = NULL;
+	//AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
 	p_dialog *dlg;
 	char x[4];
@@ -394,6 +396,17 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	
 		auth=dlg->pcc_session;
 	}
+
+	if (auth->u.auth.state==AUTH_ST_DISCON)
+	{
+		// If we are in DISCON is because an STR was already sent
+		// so just wait for STA or for Grace Timout to happen
+		dlg->pcc_session=0;
+		goto error_dlg;
+	} 
+	
+	
+	
 	dlg->pcc_session=0; // done here , so that the callback doesnt call release_call	
 	d_unlock(dlg->hash);
 	//cdpb.sessions_lock(auth->hash);	
@@ -423,13 +436,22 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	set_4bytes(x,1)
 	cdpb.AAAAddAVPToMessage(dia_str,cdpb.AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA),dia_str->avpList.tail);
 	
+
 	
 	if (forced_qos_peer.len)
-		dia_sta = cdpb.AAASendRecvMessageToPeer(dia_str,&forced_qos_peer);
-	else 
-		dia_sta = cdpb.AAASendRecvMessage(dia_str);	
+	{
+		//dia_sta = cdpb.AAASendRecvMessageToPeer(dia_str,&forced_qos_peer);
+		 cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
+	}else { 
+		//dia_sta = cdpb.AAASendRecvMessage(dia_str);
+		cdpb.AAASendMessage(dia_str,NULL,NULL);	
+	} 
+	// I send STR and i dont wait for STA because the diameter state machine will do
+	// This prevents a memory leak !!!
+	// The SM sometimes sends STR by itself and then later has to free STA
+	// but if i do it there i cant access sta here.. 
 	
-	LOG(L_INFO,"PCC_STR successful STR-STA exchange\n");
+	//LOG(L_INFO,"PCC_STR successful STR-STA exchange\n");
 	/*
 	 * After a succesfull STA is recieved the auth session should be dropped
 	 * and the dialog tooo.. 
@@ -448,8 +470,8 @@ AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
 	*/
 	
 	
-	
-	return dia_sta;
+	return NULL;
+	//return dia_sta;
 error:
 	//cdpb.sessions_unlock(auth->hash);
 	//cdpb.AAADropAuthSession(auth);

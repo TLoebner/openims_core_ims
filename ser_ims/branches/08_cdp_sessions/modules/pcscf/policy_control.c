@@ -92,7 +92,8 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_ERR,"P_generates_aar(): unable to get transaction\n");
 		return 0;
 	}
-	//LOG(L_INFO,"P_generates_aar() : method %.*s\n",t->method.len,t->method.s);
+	//LOG(L_INFO,"the sip message is %s\n",msg->buf);
+	//LOG(L_INFO,"P_generates_aar() : method %i %.*s\n",t->method.len,t->method.len,t->method.s);
 	if ((t->method.len==5 && memcmp(t->method.s,"PRACK",5)==0)||(t->method.len==6 && (memcmp(t->method.s,"INVITE",6)==0||memcmp(t->method.s,"UPDATE",6)==0)))
 	{
 		
@@ -102,7 +103,7 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 		 * the request has ... if not , the problem is in the client..*/
 		if (cscf_get_content_len(msg)!=0)
 		{
-			str c=cscf_get_content_type(msg);
+			//str c=cscf_get_content_type(msg);
 			//LOG(L_ERR,"content tpye is %.*s\n",c.len,c.s);
 			/*Check if c is Application/sdp..*/
 				return CSCF_RETURN_TRUE;
@@ -135,7 +136,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	AAAMessage* aaa;
 	int result = AAA_SUCCESS;
 	
-	//LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR: and release %i\n",pcscf_qos_release7);
+	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR: CALLED\n");
 	if (msg->first_line.type == SIP_REQUEST) {
 		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: must be called on SIP reply\n");
 		return CSCF_RETURN_FALSE;
@@ -193,10 +194,9 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	AAAMessage* sta;
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
 	sta = PCC_STR(msg, atoi(str1));
-
-	/*of course here comes some processing*/
-	//int rc = PCC_AAA(sta);
-	// but for now i dont care .. i am going to drop the dialog anyway
+	// if you really want the STA just declare a ResponseHandler for it because its never going
+	// to arrive here.. or never again
+	
 	if (sta) cdpb.AAAFreeMessage(&sta);
 	return CSCF_RETURN_TRUE;
 }
