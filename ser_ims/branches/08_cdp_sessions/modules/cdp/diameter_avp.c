@@ -178,7 +178,7 @@ AAA_AVP*  AAACreateAVP(
 		avp->data.len = length;
 		avp->free_it = (data_status==AVP_FREE_DATA)?1:0;
 	}
-
+	
 	return avp;
 error:
 	LOG(L_ERR,"ERROR:AAACreateAVP: no more free memory!\n");
@@ -367,6 +367,7 @@ AAAReturnCode  AAARemoveAVPFromMessage(
  */
 AAAReturnCode  AAAFreeAVP(AAA_AVP **avp)
 {
+	
 	/* some checks */
 	if (!avp || !(*avp)) {
 		LOG(L_ERR,"ERROR:AAAFreeAVP: param avp cannot be null!!\n");

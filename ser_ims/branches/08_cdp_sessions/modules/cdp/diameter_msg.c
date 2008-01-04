@@ -373,7 +373,7 @@ AAAReturnCode  AAAFreeAVPList(AAA_AVP_LIST *avpList)
  */
 AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 {
-	LOG(L_DBG,"DBG:AAAFreeMessage: Freeing message (%p) %d\n",*msg,(*msg)->commandCode);
+	
 	/* param check */
 	if (!msg || !(*msg))
 		goto done;
@@ -549,6 +549,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 	msg->sessionId = AAAFindMatchingAVP(msg,0,AVP_Session_Id,0,0);
 
 	//AAAPrintMessage( msg );
+	 
 	return  msg;
 error:
 	LOG(L_ERR,"ERROR:AAATranslateMessage: message conversion droped!!\n");

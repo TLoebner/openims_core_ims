@@ -277,7 +277,12 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_RECV_STA:
 					x->state = AUTH_ST_IDLE;
 					//LOG(L_INFO,"state machine: about to clean up\n");
-					Session_Cleanup(s,msg);
+					AAAFreeMessage(&msg);
+					// If I register a ResponseHandler then i Free the STA there not here..
+					// but i dont have interest in that now..
+					
+					// I dont know if putting this here or in Session_Cleanup!!! has to be decided
+					Session_Cleanup(s,NULL);
 					break; 	
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -563,6 +568,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 			if (!p) {
 				LOG(L_ERR,"unable to get routing peer in Send_STR \n");
 				AAAFreeMessage(&str);
+				return;
 			}
 			
 			if (!peer_send_msg(p,str))
@@ -623,5 +629,6 @@ void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)
 		cb = s->cb;
 		(cb) (AUTH_EV_SERVICE_TERMINATED,s->cb_param,s);
 	}
+	
 	AAADropAuthSession(s);
 }

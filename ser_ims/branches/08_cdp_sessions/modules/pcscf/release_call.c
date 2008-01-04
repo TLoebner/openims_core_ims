@@ -58,7 +58,6 @@
 extern struct tm_binds tmb; 
 extern dlg_func_t dialogb;	
 
-
 extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
 
@@ -253,7 +252,8 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	enum p_dialog_direction odir;
 	int i;
 	str r;
-	str hdrs={0,0};	
+	str hdrs={0,0};
+	str firstcseq;	
 	char buf[256];
 	
 	LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Releasing call <%.*s> DIR[%d].\n",
@@ -335,9 +335,36 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	/*i need the cell of the invite!!*/
 	/*this is very experimental
 	 * and very tricky too*/
-	t=tmb.t_gett();
+	//t=tmb.t_gett();
+	i=0;
+	i=snprintf(buf,256,"%i",d->first_cseq); // i just use buf because its there..
 	
+	if (i==256) {
+		LOG(L_ERR,"release_call_previous: some client used first CSeq way too big\n");
+		goto error;		
+	} 
+	
+	firstcseq.s=pkg_malloc(i+1); // the \0
+	firstcseq.len=i;
+	sprintf(firstcseq.s,"%i",d->first_cseq);
+	LOG(L_INFO,"CALLED t_lookup_callid with %.*s, %.*s\n",d->call_id.len,d->call_id.s,firstcseq.len,firstcseq.s);
+	tmb.t_lookup_callid(&t,d->call_id,firstcseq);
+	
+	pkg_free(firstcseq.s);
+		
 	if (t && t!=(void*) -1  && t->uas.request) {
+		
+		
+		if (t->method.len!=6 || t->method.s[0]!='I' || t->method.s[1]!='N' || t->method.s[2]!='V')
+		{
+			//well this is the transaction of a subsequent request within the dialog
+			//and the dialog is not confirmed yet, so its a PRACK or an UPDATE
+			//could also be an options, but the important thing is how am i going to get
+			//the transaction of the invite, that is the one i have to cancel
+			LOG(L_ERR,"this is not my transaction so where am i?\n");		
+		}
+		
+			
 		/*first trick: i really want to get this reply sent even though we are onreply*/
 		*tmb.route_mode=MODE_ONFAILURE;
 		
@@ -374,34 +401,23 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 			//d->dialog_c->state=DLG_CONFIRMED;		
 			//send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
 			//d->dialog_c->state=DLG_EARLY;
+			
 			tmb.t_reply(t->uas.request,reason_code,reason_text.s);
 			
 			/*
-			 * tm module is so fucked up that i have to do this here too.. but the opposite
-			 * to be able to send a CANCEL...
-			 * or maybe its how i am using it but no one did a fucking manual or a decent api!
-			 * if you give me the money i will rewrite it nicely
-			 * 
-			 * */
 			for (i=0; i< t->nr_of_outgoings; i++)
 				t->uac[i].last_received=180;
+			*/
 			
+			// t_reply has decided to send a CANCEL already so no big deal!
+						
+			//tmb.cancel_uacs(t,0xFFFF,F_CANCEL_B_FAKE_REPLY);
+					
+			//t->uas.status=488;
+						
+			//tmb.t_release(t->uas.request);
 			
-			//do_something_strange_before_cancel_uacs(t);
-			
-			tmb.cancel_uacs(t,0xFFFF,F_CANCEL_B_FAKE_REPLY);
-			
-			//undo_something_strange_after_cancel_uacs(t);
-			
-			t->uas.status=488;
-			tmb.t_release(t->uas.request);
-			
-			
-			// this functions sends a reply that i dont like (no reason and no 488) but 
-			// sends a nice cancel with the right branch parameter.. and that i like
-			// its easy ..  but the reason header is needed!
-			
-			
+					
 			// I thought of deleting the dialog here.. but 
 			// a good SIP client will respond to the CANCEL with a 487
 			//del_p_dialog(d);
@@ -444,7 +460,8 @@ int release_call_early200(p_dialog *d,int reason_code,str reason_text)
   * matter because both do the same at that point!
   */
 int release_call_p(p_dialog *d,int reason_code,str reason_text)
-{		
+{	
+		
 	if (d->state>=DLG_STATE_CONFIRMED)
 			return(release_call_confirmed(d,reason_code,reason_text));
 	 else  
@@ -668,14 +685,3 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 	}
 		
 }		
-/*
-do_something_strange_before_cancel_uacs(struct cell *t)
-{
-	
-}
-
-undo_something_strange_after_cancel_uacs(struct cell *t)
-{
-	
-}
-*/
