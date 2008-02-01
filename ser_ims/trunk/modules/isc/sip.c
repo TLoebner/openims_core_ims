@@ -243,6 +243,7 @@ int isc_is_registered(str *uri)
 	r_public *p;
 	
 	p = isc_scscfb.get_r_public(*uri);
+	
 	if (p) {
 		result = p->reg_state;
 		isc_scscfb.r_unlock(p->hash);

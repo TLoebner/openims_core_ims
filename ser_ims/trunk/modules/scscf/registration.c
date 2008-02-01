@@ -252,6 +252,7 @@ int S_add_p_charging_function_addresses(struct sip_msg *msg,char *str1,char *str
 	public_identity = cscf_get_public_identity(msg);	
 	LOG(L_INFO,"DBG:"M_NAME":S_add_p_charging_function_addresses: Looking for <%.*s>\n",public_identity.len,public_identity.s);
 	p = get_r_public(public_identity);
+	
 	if (!p) {
 		LOG(L_INFO,"DBG:"M_NAME":S_add_p_charging_function_addresses: No entry in registrar for <%.*s>\n",public_identity.len,public_identity.s);
 		goto done;
@@ -463,6 +464,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 			if (received.len) sent_by=received;
 			/* if match, return authorized */
 			p = get_r_public(public_identity);
+			
 			if (p && p->early_ims_ip.len == sent_by.len &&
 				strncasecmp(p->early_ims_ip.s,sent_by.s,sent_by.len)==0){
 				ret = CSCF_RETURN_TRUE;

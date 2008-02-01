@@ -443,6 +443,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			k = isc_get_terminating_user(msg,&old_mark,&s);
 			if (k){
 				k = isc_is_registered(&s);
+				//LOG(L_DBG,"after isc_is_registered in ISC_match_filter\n");
 				if (k==REGISTERED) {
 					new_mark.direction = IFC_TERMINATING_SESSION;
 				} else {
@@ -524,6 +525,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			}
 			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Term User <%.*s> [%d]\n",str1,
 				s.len,s.s,k);
+			
 			m = isc_checker_find(s,new_mark.direction,old_mark.skip,msg);
 			if (m){
 				new_mark.skip = m->index+1;

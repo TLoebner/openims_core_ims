@@ -182,6 +182,7 @@ void registrar_timer(unsigned int ticks, void* param)
 										if (pi->public_identity.len == p->aor.len &&
 											strncasecmp(pi->public_identity.s,p->aor.s,p->aor.len)==0) continue;
 										rpublic = get_r_public_previous_lock(pi->public_identity,p->hash);
+										
 										if(!rpublic){
 											LOG(L_INFO,"INFO:"M_NAME":registrar_timer: The implicit set public identity <%.*s> was not found in the registrar",
 												pi->public_identity.len,pi->public_identity.s);
@@ -671,7 +672,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
             }
 
             p = get_r_public(public_identity);
-			if (!p){
+            if (!p){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - not found in registrar\n",
 					public_identity.len,public_identity.s);
 				goto error;
@@ -750,6 +751,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				goto error;
 			}
 			p = get_r_public(public_identity);
+			
 
 			if (!p){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - not found in registrar\n",
@@ -1013,7 +1015,7 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str
 				return CSCF_RETURN_BREAK;
 			}		
 		}
-	/* we might get gere and not know what to do actually - e.g. from S_update_contacts */
+	/* we might get here and not know what to do actually - e.g. from S_update_contacts */
 	if (assignment_type<0){
 		if (max_expires>0) {
 			str public_identity;
@@ -1180,9 +1182,17 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_DBG,"DBG:"M_NAME":S_lookup: Looking for <%.*s>\n",uri.len,uri.s);
 	
 	p = get_r_public(uri);
+	
 //	pkg_free(uri.s);
 	if (!p) return CSCF_RETURN_FALSE;
+	
 	if (p->reg_state!=IMS_USER_REGISTERED){
+		// I guess i dont need this anymore
+		/*if (p->reg_state==IMS_USER_UNREGISTERED)
+		{
+			r_unlock(p->hash);
+			return CSCF_RETURN_TRUE;
+		}*/
 		r_unlock(p->hash);
 		return CSCF_RETURN_FALSE;
 	}
@@ -1316,6 +1326,7 @@ int r_is_not_registered_id(str public_identity)
 	/* First check the parameters */
 	
 	p = get_r_public(public_identity);
+	
 	if (!p) return 1;
 	if (p->reg_state==IMS_USER_NOT_REGISTERED){
 		r_unlock(p->hash);
@@ -1341,6 +1352,7 @@ int r_is_unregistered_id(str public_identity)
 	/* First check the parameters */
 	
 	p = get_r_public(public_identity);
+	
 	if (!p) return 0;
 	if (p->reg_state!=IMS_USER_UNREGISTERED){
 		r_unlock(p->hash);
@@ -1581,6 +1593,7 @@ int S_add_p_asserted_identity(struct sip_msg *msg,char *str1,char *str2)
 	}else{
 	//check if it is a tel uri
 		p = get_r_public(public_identity);
+		
 		if (!p||!p->s) goto error;
 		
 		for(i=0;i<p->s->service_profiles_cnt;i++)
@@ -1856,6 +1869,7 @@ int S_is_barred(str public_identity)
 	/* First check the parameters */
 	
 	p = get_r_public(public_identity);
+	
 	if (!p) return 0;
 	if (!p->s) return 0;
 	

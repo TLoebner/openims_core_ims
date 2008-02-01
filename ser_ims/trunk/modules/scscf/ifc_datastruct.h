@@ -153,6 +153,7 @@ typedef struct _ims_application_server
 typedef struct {
 	char barring;				/**< Barring state									*/
 	str public_identity;		/**< Public Identity string							*/
+	str wildcarded_psi;		/** if exists is the wildcarded psi					*/
 } ims_public_identity;
 
 /** Initial Filter Criteria Structure */
@@ -187,6 +188,11 @@ typedef struct {
 /** User Subscription Structure */ 
 typedef struct {	
 	str private_identity;					/**< private identity 				*/
+	int wpsi;								/**
+												This is not in the standards
+												0 normal user or distinct psi inside
+												1 wildcarded psi 
+											**/
 	ims_service_profile *service_profiles;	/**< array of service profiles		*/
 	unsigned short service_profiles_cnt;				/**< size of the array above		*/
 		

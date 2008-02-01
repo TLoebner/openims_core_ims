@@ -53,6 +53,39 @@
  * 
  */
 
+/*
+ * 
+ * Big change done, a new hash slot is added at the end of the table.
+ * All the wildcarded PSIs will be added there in the r_public format 
+ * the functions update_r_public, update_r_public_previous_lock are the ones
+ * that will check that the subscription being saved is a wildcarded PSI and
+ * will then insert it in the last slot
+ * 
+ * The function get_r_public will try to match the aor given with the wildcarded PSIs
+ * if there is no record for that aor. 
+ * 
+ * 
+ * \Author Alberto Diez  alberto dot diez -at- fokus dot fraunhofer dot de
+ * 
+ * 
+ * r_storage_init changed to add 1 slot more
+ * r_storage_destroy changed to delete 1 slot more
+ * new_r_public changed, if its a wpsi then i give the fixed hash number (r_hash_size)
+ * 				and i compile the regexp and save it in the r_public->regexp
+ * 
+ * 
+*/
+
+
+
+
+
+
+
+
+
+
+
 #include <time.h>
 
 #include "mod.h"
@@ -64,6 +97,7 @@ extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 
 
 int r_hash_size;						/**< Size of S-CSCF registrar hash table		*/
 r_hash_slot *registrar=0;				/**< The S-CSCF registrar 						*/
+
 
 time_t time_now;						/**< Current time of the S-CSCF registrar 		*/
 		
@@ -137,10 +171,10 @@ int r_storage_init(int hash_size)
 	int i;
 	
 	r_hash_size = hash_size;
-	registrar = shm_malloc(sizeof(r_hash_slot)*r_hash_size);
-	memset(registrar,0,sizeof(r_hash_slot)*r_hash_size);
+	registrar = shm_malloc(sizeof(r_hash_slot)*(r_hash_size+1)); // 1 slot extra for the WildPSI
+	memset(registrar,0,sizeof(r_hash_slot)*(r_hash_size+1));
 	
-	for(i=0;i<r_hash_size;i++){
+	for(i=0;i<r_hash_size+1;i++){
 		registrar[i].lock = lock_alloc();
 		if (!registrar[i].lock){
 			LOG(L_ERR,"ERR:"M_NAME":r_storage_init(): Error creating lock\n");
@@ -161,7 +195,7 @@ void r_storage_destroy()
 {
 	int i;
 	r_public *p,*np;
-	for(i=0;i<r_hash_size;i++){
+	for(i=0;i<r_hash_size+1;i++){
 		r_lock(i);
 			p = registrar[i].head;
 			while(p){
@@ -182,9 +216,9 @@ void r_storage_destroy()
  */
 inline void r_lock(unsigned int hash)
 {
-//	LOG(L_CRIT,"GET %d\n",hash);
+	// LOG(L_CRIT,"GET %d\n",hash);
 	lock_get(registrar[(hash)].lock);
-//	LOG(L_CRIT,"GOT %d\n",hash);	
+	// LOG(L_CRIT,"GOT %d\n",hash);	
 }
 
 /**
@@ -194,14 +228,8 @@ inline void r_lock(unsigned int hash)
 inline void r_unlock(unsigned int hash)
 {
 	lock_release(registrar[(hash)].lock);
-//	LOG(L_CRIT,"RELEASED %d\n",hash);	
+	// LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
-
-
-
-
-
-
 
 
 
@@ -541,6 +569,53 @@ void free_r_contact(r_contact *c)
 	shm_free(c);
 }
 
+
+void free_regexp_list(t_regexp_list **regexp);
+
+/*
+ * This function just needed because for regexp * by itself has no meaning
+ * it has to be .* that means any character none or more times
+ *  * ->.*
+ *  ? ->.  or .?  we do .? because it is more logical
+ *  . -> \.
+ *  and we terminate it with \0 because its for regcomp
+*/
+char *escape_all_wildcards_and_copy(str wpsi)
+{
+	char *res;
+	int i,j,len;
+	len=1+wpsi.len; // the \0
+	j=0;
+	//first lets see how many wildcards there are to see how much space is needed
+	for (i=0;i<wpsi.len;i++)
+	{
+		switch(wpsi.s[i])
+		{
+			case '?': case '*':// case '.':
+				len++;
+				break;
+		}
+	}
+	res=shm_malloc(len);
+	// then do the copy
+	for (i=0;i<wpsi.len;i++)
+	{
+		switch(wpsi.s[i]) {
+			case '.':
+				res[j++]='\\';
+				res[j++]=wpsi.s[i];
+				break;
+			case '?' : case '*':
+				res[j++]='.';
+			default :
+				res[j++]=wpsi.s[i];	
+				break;
+		}
+	}
+	res[j]=0;
+	return res;
+}
+
 /**
  * Creates a registrar r_public.
  * This does not insert it in the registrar
@@ -549,9 +624,19 @@ void free_r_contact(r_contact *c)
  * @param s - the ims subscription to which this belongs
  * @returns - the r_public created, NULL on error
  */
+ /**
+  * In case of a Wildcarded PSI, it compiles the regexp for quick processing
+  */
 r_public* new_r_public(str aor, enum Reg_States reg_state, ims_subscription *s)
 {
 	r_public *p;
+	
+	/*I didn't want to make this so complicated..*/
+	t_regexp_unit *newwpsi;
+	char *temp=0;
+	int i,j;
+	//int len;
+	//int errcode;
 	
 	p = shm_malloc(sizeof(r_public));
 	if (!p){
@@ -560,10 +645,80 @@ r_public* new_r_public(str aor, enum Reg_States reg_state, ims_subscription *s)
 		goto error;
 	}	
 	memset(p,0,sizeof(r_public));
-	
-	p->hash = get_aor_hash(aor,r_hash_size);
-	
-	p->aor.s = shm_malloc(aor.len);
+	if (s->wpsi !=1)
+	{
+		//very sensible thing to do...
+		p->hash = get_aor_hash(aor,r_hash_size);
+		
+	} else {
+		
+		//here it gets a bit complicated
+		
+		/* if its a wildcarded psi....*/
+		p->hash=r_hash_size;
+		/*will be in the last slot*/
+		p->regexp=shm_malloc(sizeof(t_regexp_list));
+		p->regexp->head=NULL;
+		p->regexp->tail=NULL;
+		/*lets compile the regular expression and compile it..*/
+		for (i=0;i<s->service_profiles_cnt;i++)
+		{
+			for (j=0;j<s->service_profiles[i].public_identities_cnt;j++)
+			{
+				if (s->service_profiles[i].public_identities[j].wildcarded_psi.s && s->service_profiles[i].public_identities[j].wildcarded_psi.len>0)
+				 {
+					// for each wildcardpsi we add a member to the regexp list in the r_public
+					newwpsi=shm_malloc(sizeof(t_regexp_unit));
+					newwpsi->next=NULL;
+					newwpsi->prev=NULL;
+					// now we have to deal with using an external function that expects
+					// some string with a finishing \0 character
+					//len=s->service_profiles[i].public_identities[j].wildcarded_psi.len;
+					temp=escape_all_wildcards_and_copy(s->service_profiles[i].public_identities[j].wildcarded_psi);
+					//temp=shm_malloc(len+1);
+					//memcpy(temp,s->service_profiles[i].public_identities[j].wildcarded_psi.s,len);
+					//temp[len]=0;
+					LOG(L_DBG,"New_r_public : REGULAR EXPRESSION is %s\n\n",temp);
+					/*errcode=regcomp(&(newwpsi->exp),temp,REG_ICASE|REG_EXTENDED|REG_NOSUB);
+					if(errcode!=0)
+					{
+						// there was an error
+						LOG(L_DBG,"there was at least ONE error in regcomp %i\n",errcode);
+						//shm_free(temp); temp=NULL;
+						len=regerror(errcode,&(newwpsi->exp),NULL,0);
+						temp=shm_malloc(len);
+						regerror(errcode,&(newwpsi->exp),temp,len);
+						LOG(L_DBG,"and that was %s",temp);
+						shm_free(temp); temp=NULL;
+						
+						shm_free(newwpsi);
+						goto error;
+					}*/
+					newwpsi->s=temp;
+					//LOG(L_DBG,"there was NO error in regcomp\n");
+					//shm_free(temp); temp=NULL;
+					newwpsi->prev=p->regexp->tail;
+					if (p->regexp->tail)
+					{
+						p->regexp->tail->next=newwpsi;
+						p->regexp->tail=newwpsi;
+					} else {
+						// no tail means no head too...
+						p->regexp->head=newwpsi;
+						p->regexp->tail=newwpsi;
+					}
+					
+				}
+			}
+		}
+		
+		
+		
+			
+		
+	}
+	//LOG(L_DBG,"after the mess inside new_r_public\n");
+	p->aor.s = shm_malloc(aor.len); // I wonder if this should be done in the case of wildpsi
 	if (!p->aor.s){
 		LOG(L_ERR,"ERR:"M_NAME":new_r_public(): Unable to alloc %d bytes\n",
 			aor.len);
@@ -580,15 +735,92 @@ r_public* new_r_public(str aor, enum Reg_States reg_state, ims_subscription *s)
 		s->ref_count++;
 		lock_release(s->lock);
 	}
-		
+	//LOG(L_DBG,"new_r_public we are returning %p\n",p);	
 	return p;
 error:
 	if (p){
-		if (p->aor.s) shm_free(p->aor.s);	
+		if (p->aor.s) shm_free(p->aor.s);
+		// free the regexp list of shit!	
+		if (p->regexp) free_regexp_list(&(p->regexp));
+		//if (temp) shm_free(temp);
 		shm_free(p);
 	}
+	//LOG(L_DBG,"new_r_public we are returning error\n");	
 	return 0;	
 }
+
+
+
+
+/**
+ * Searches in the last hash slot (Wildcarded PSI) for a match on the aor within the regular expressions
+ * \note Aquires the lock on the last hash slot on success, so release it when you are done.
+ * @param aor - the address of record to look for
+ * @returns - the r_public found, 0 if not found
+ */
+
+r_public* get_matching_wildcard_psi(str aor)
+{
+	r_public *p=0;
+	t_regexp_unit *t;
+	regex_t exp;
+	char *c,*temp;
+	int len;
+	int errcode;
+	
+	p = registrar[r_hash_size].head;
+	
+	r_lock(r_hash_size);
+	
+	while (p)
+	{
+		
+		for(t=p->regexp->head;t;t=t->next)
+		{
+			LOG(L_DBG,"get_matching_wildcard_psi match %.*s with %s\n",aor.len,aor.s,t->s);
+			
+			c=shm_malloc((aor.len)+1);
+			memcpy(c,aor.s,aor.len);
+			c[aor.len]='\0';
+			
+			
+					errcode=regcomp(&(exp),t->s,REG_ICASE|REG_EXTENDED|REG_NOSUB);
+					if(errcode!=0)
+					{
+						// there was an error
+						LOG(L_DBG,"there was at least ONE error in regcomp %i\n",errcode);
+						//shm_free(temp); temp=NULL;
+						len=regerror(errcode,&(exp),NULL,0);
+						temp=shm_malloc(len);
+						regerror(errcode,&(exp),temp,len);
+						LOG(L_DBG,"and that was %s",temp);
+						shm_free(temp); temp=NULL;
+						//shm_free(newwpsi);
+						r_unlock(r_hash_size);
+						return NULL;
+					}
+					
+			
+			if (regexec(&(exp),c,0,NULL,0)==0)
+			{
+				LOG(L_DBG,"A match has been produced!!!!!\n");
+				shm_free(c);
+				return p;
+			} else 
+			{
+				//LOG(L_ERR,"there was no match\n");
+			}
+			shm_free(c);				 
+		}		
+		p=p->next;
+	}
+	LOG(L_ERR,"get_r_public (Trying wildcard PSI) found no match\n");
+	r_unlock(r_hash_size);
+	
+	return 0;
+}
+
+
 
 /**
  * Searches for a r_public record and returns it.
@@ -609,8 +841,44 @@ r_public* get_r_public(str aor)
 		p = p->next;
 	}
 	r_unlock(hash);
-	return 0;
+	
+	/*
+	 * Here i plan to put the function that tries to match the aor with the wPSI
+	 * There might be an issue 
+	 * if i return this locked, then i have to wait for the lock in the next one...
+	 * mmmh... might be an issue
+	 * */
+	 
+	 return(get_matching_wildcard_psi(aor));
+	 
 }
+
+/* This function gets a r_public record from the Wildcarded PSI slot whose  Public Identity
+ * is equal to the one given as an argument. 
+ * Main costumer is update_r_public, because there you dont want to find an AOR to send a message
+ * but you really want the record..  first of being use check its a WildCardPSI
+ * \note Aquires the lock of the hash on success, so release it when you are done
+ * @param pi -the public identity of the WildCardPSI
+ * @returns - the r_public found, 0 if not found
+ *
+*/
+
+r_public* get_r_public_wpsi(str pi)
+{
+	r_public *p=0;
+	r_lock(r_hash_size);
+	p = registrar[r_hash_size].head;
+	while(p){
+		if (p->aor.len == pi.len &&
+			strncasecmp(p->aor.s,pi.s,pi.len)==0) return p;
+		p = p->next;
+	}
+	r_unlock(r_hash_size);
+	return 0;
+	
+}
+
+
 
 /**
  * Searches for a r_public record and returns its expiration value.
@@ -650,6 +918,7 @@ r_public* get_r_public_nolock(str aor)
 			strncasecmp(p->aor.s,aor.s,aor.len)==0) return p;
 		p = p->next;
 	}
+	LOG(L_ERR,"no match found but get_r_public_nolock doesn't look in the WildCardedPSI area\n");
 	return 0;
 }
 
@@ -691,16 +960,18 @@ r_public* add_r_public(str aor,enum Reg_States reg_state,ims_subscription *s)
 {
 	r_public *p;
 	unsigned int hash;
-
+	
 	p = new_r_public(aor,reg_state,s);
+	
 	hash = p->hash;
 	if (!p) return 0;	
 	p->next=0;
 	r_lock(hash);
 		p->prev=registrar[hash].tail;
 		if (p->prev) p->prev->next = p;
-		registrar[hash].tail = p;
+		registrar[hash].tail = p;		
 		if (!registrar[hash].head) registrar[hash].head=p;
+	
 	return p;
 }
 
@@ -746,11 +1017,19 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 	str *ccf1, str *ccf2, str *ecf1, str *ecf2)
 {
 	r_public *p=0;
-
-	p = get_r_public(aor);
+	//LOG(L_CRIT,"update_r_public():with aor %.*s\n",aor.len,aor.s);
+	
+	if ((*s)->wpsi) {
+		p = get_r_public_wpsi(aor);
+	} else {
+		p = get_r_public(aor);
+	}
+	
 	if (!p){
+		//LOG(L_DBG,"updating a new r_public profile\n");			 
 		if (reg_state && *reg_state && *reg_state!=NOT_REGISTERED && s){
 			p = add_r_public(aor,*reg_state,*s);
+			
 			if (!p) return p;			
 			if (ccf1) {
 				if (p->ccf1.s) shm_free(p->ccf1.s);
@@ -768,12 +1047,15 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 				if (p->ecf2.s) shm_free(p->ecf2.s);
 				STR_SHM_DUP(p->ecf2,*ecf2,"SHM ECF2");
 			}
+			//LOG(L_DBG,"update_r_public():  it was actually adding\n");
 			return p;
 		}
 		else return 0;
 	}else{
+		//LOG(L_DBG,"updating a not so new r_public profile\n");		
 		if (reg_state) p->reg_state = *reg_state;
 		if (*s) {
+			
 			if (p->s){
 				lock_get(p->s->lock);
 				if (p->s->ref_count==1){
@@ -787,6 +1069,25 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 			lock_get(p->s->lock);
 				p->s->ref_count++;
 			lock_release(p->s->lock);
+			
+			
+			 if ((*s)->wpsi)
+			 {	
+			 	
+			 	 p->s=NULL; 
+			 	 			 	 
+			 	 if (p->prev) p->prev->next=p->next;
+			 	 else registrar[r_hash_size].head=p->next;	
+			 	 if (p->next) p->next->prev=p->prev;
+			 	 else registrar[r_hash_size].tail=p->prev;
+			 	 
+			 	 free_r_public(p);
+			 	 r_unlock(r_hash_size);			 
+			 	 p=add_r_public(aor,0,*s);
+			 	 
+			 }
+			
+			
 		}
 		if (ccf1) {
 			if (p->ccf1.s) shm_free(p->ccf1.s);
@@ -804,6 +1105,7 @@ r_public* update_r_public(str aor,enum Reg_States *reg_state,ims_subscription **
 			if (p->ecf2.s) shm_free(p->ecf2.s);
 			STR_SHM_DUP(p->ecf2,*ecf2,"SHM ECF2");
 		}
+		//LOG(L_DBG,"update_r_public():    return normaly\n");
 		return p;
 	}
 out_of_memory:
@@ -904,6 +1206,7 @@ void r_public_expire(str public_id)
 	expire = time_now;
 	
 	r_pub	=	get_r_public(public_id);
+	
 	if (!r_pub){
 		LOG(L_ERR,"ERR:"M_NAME":set_expires: identity not found in registrar <%.*s>\n",public_id.len,public_id.s);
 		return;
@@ -967,6 +1270,25 @@ void del_r_public(r_public *p)
 	free_r_public(p);
 }
 
+void free_regexp_list(t_regexp_list **regexp)
+{
+	t_regexp_unit *un,*dos;
+	
+	un=(*regexp)->head;
+		while (un)
+		{
+			dos=un->next;
+			if (un->s) shm_free(un->s);
+			//if (1) regfree(&(un->exp));
+			shm_free(un);
+			un=dos;
+		}
+		shm_free(*regexp);
+	
+}
+
+
+
 /**
  * Frees memory taken by a r_public aor structure
  * @param p - the r_public to be deallocated
@@ -975,6 +1297,7 @@ void free_r_public(r_public *p)
 {
 	r_contact *c,*n;
 	r_subscriber *s,*m;
+	
 	if (!p) return;
 	if (p->aor.s) shm_free(p->aor.s);
 	if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
@@ -985,6 +1308,10 @@ void free_r_public(r_public *p)
 			free_user_data(p->s);
 		}else lock_release(p->s->lock);
 	}
+	
+	if (p->regexp) free_regexp_list(&(p->regexp));	
+
+	
 	if (p->ccf1.s) shm_free(p->ccf1.s);
 	if (p->ccf2.s) shm_free(p->ccf2.s);
 	if (p->ecf1.s) shm_free(p->ecf1.s);

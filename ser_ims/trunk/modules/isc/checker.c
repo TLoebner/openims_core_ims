@@ -115,6 +115,7 @@ static int isc_check_headers(ims_spt *spt, struct hdr_field *headers)
 			(regexec(&(header_comp),i->name.s,0,NULL,0)==0)//or matches the name
 		   )		
 		{
+			regfree(&(header_comp));
 			i->name.s[i->name.len]=ch;
 			DBG("DEBUG:"M_NAME":ifc_check_headers:            Found Header[%.*s(%d)] %.*s \n",
 					i->name.len,i->name.s,i->type,i->body.len,i->body.s);
@@ -126,6 +127,7 @@ static int isc_check_headers(ims_spt *spt, struct hdr_field *headers)
 			i->body.s[i->body.len]=0;
 			if (regexec(&(content_comp),i->body.s,0,NULL,0)==0)//regex match
 			{
+				regfree(&(content_comp));
 				i->body.s[i->body.len]=c;
 				return TRUE;
 			}
@@ -387,6 +389,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 	ims_filter_criteria *fc;
 	isc_match *r;
 	
+	
 	if (skip==0) LOG(L_INFO,"INFO:"M_NAME":isc_checker_find: starting search\n");
 	else LOG(L_INFO,"INFO:"M_NAME":isc_checker_find: resuming search from %d\n",skip);
 
@@ -404,8 +407,11 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 	domain.len = uri.len - i - 1;
 
 	p = isc_scscfb.get_r_public(uri);
+	
 	if (!p) return 0;
+	LOG(L_DBG,"isc_checker_find(): got a r_public for the user %.*s\n",uri.len,uri.s);
 	if (!p->s) {
+		LOG(L_DBG,"isc_checker_find() : got an user without a subscription\n");
 		isc_scscfb.r_unlock(p->hash);
 		return 0;
 	}
@@ -423,21 +429,35 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 		cnt = next;
 		si++;
 	}
-	
+	//LOG(L_INFO,"looking for the thing.. cnt %i si %i sj %i\n",cnt,si,sj);
 	/* iterate through the rest and check for matches */
 	i = si;
 	while(i<p->s->service_profiles_cnt){
 		sp = p->s->service_profiles +i;
 		k=0;
 		for(j=0;j<sp->public_identities_cnt;j++)
+		{
+			//LOG(L_INFO,"comparing %.*s with %.*s\n",sp->public_identities[j].public_identity.len,sp->public_identities[j].public_identity.s,uri.len,uri.s);
+			if (p->s->wpsi)
+			{
+					// here i should regexec again!
+					//isc_check_wpsi_match();
+					k = 1;
+					break;	
+							
+			} else {
 			if (sp->public_identities[j].public_identity.len == uri.len &&
 				strncasecmp(sp->public_identities[j].public_identity.s,uri.s,uri.len)==0){
 					k = 1;
 					break;
 				}
+			}
+		}
 		if (!k){/* this sp is not for this id */
+			
 			cnt += sp->filter_criteria_cnt;
 		}else{
+			
 			for(j=sj;j<sp->filter_criteria_cnt;j++){
 				fc = sp->filter_criteria+j;
 				if (fc->profile_part_indicator){				
@@ -448,6 +468,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 						continue;
 					}
 				}
+				
 				if (isc_check_filter_criteria(fc,msg,direction,registration_type)){
 					LOG(L_INFO,"INFO:"M_NAME":isc_checker_find: MATCH -> %.*s (%.*s) handling %d \n",
 						fc->application_server.server_name.len,
@@ -457,6 +478,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 						fc->application_server.default_handling );		
 					r = isc_new_match(fc,cnt);	
 					isc_scscfb.r_unlock(p->hash);
+					
 					return r;	
 				}else{
 					cnt++;

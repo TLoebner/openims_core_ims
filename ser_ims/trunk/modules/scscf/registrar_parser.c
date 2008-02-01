@@ -297,7 +297,9 @@ static inline char ifc_tProfilePartIndicator2char(xmlChar *x)
 static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_identity *pi)
 {
 	xmlNodePtr child;
+	xmlNodePtr grandson;
 	xmlChar *x;
+	int return_code=1;
 	
 	for(child=root->children;child;child=child->next)
 		if (child->type==XML_ELEMENT_NODE)
@@ -313,9 +315,49 @@ static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_iden
 					x = xmlNodeListGetString(doc,child->xmlChildrenNode,1);
 					pi->barring = ifc_tBool2char(x);
 					xmlFree(x);
+					break;
+				//lets add something 
+				case 'E' : case 'e':
+					// that would be Extension
+					// here i need to parse Identity Type 
+					// if its two then  wildcardedpsi
+					// and then extension!!!
+					// I have to check how you parse this shit
+
+					for(grandson=child->children;grandson;grandson=grandson->next)
+					{
+						
+						
+						if (grandson->type==XML_ELEMENT_NODE)
+						{
+							switch (grandson->name[0]) {
+								case 'I' : case 'i':
+									//identity type
+									//x = xmlNodeListGetString(doc,grandson->xmlChildrenNode,1);
+									// i need to compare x with 2, but i have to trim leading 
+									// space characters or tabs			
+									//xmlFree(x);
+									break;
+								case 'W' : case 'w':
+									//wildcardpsi
+									
+									x = xmlNodeListGetString(doc,grandson->xmlChildrenNode,1);
+									
+									// i wanted to make a pointer out of it but better not
+									//pi->wildcarded_psi=shm_malloc(str);
+									space_trim_dup(&(pi->wildcarded_psi),(char*)x);
+									
+									xmlFree(x);
+									return_code=2;
+									break;
+							}
+						}
+					}
+										
 					break;				
 			}
-	return 1;
+
+	return return_code;
 }
 
 /**
@@ -744,6 +786,7 @@ static int parse_service_profile(xmlDocPtr doc, xmlNodePtr root, ims_service_pro
 	unsigned short pi_cnt=0,ifc_cnt=0,sh_cnt=0;
 	int i,j;
 	ims_filter_criteria fctemp;
+	int returncode=0;
 	
 	for(child=root->children;child;child=child->next)
 		if (child->type==XML_ELEMENT_NODE)
@@ -789,7 +832,8 @@ static int parse_service_profile(xmlDocPtr doc, xmlNodePtr root, ims_service_pro
 		if (child->type==XML_ELEMENT_NODE)
 			switch (child->name[0]){
 				case 'P': case 'p':
-					if (parse_public_identity(doc,child,&(sp->public_identities[sp->public_identities_cnt])))
+					returncode=parse_public_identity(doc,child,&(sp->public_identities[sp->public_identities_cnt]));
+					if (returncode)
 						sp->public_identities_cnt++;
 					break;		
 				case 'I':case 'i':	//InitialFilterCriteria
@@ -814,7 +858,9 @@ static int parse_service_profile(xmlDocPtr doc, xmlNodePtr root, ims_service_pro
 					sp->shared_ifc_set[sp->shared_ifc_set_cnt++]=atoi((char*)x);
 					xmlFree(x);
 					break;								
-			}	
+			}
+	if (returncode==2)
+		return 2; // i need to know if there is a wildcardpsi hiding in the public_identity
 	return 1;
 }
 
@@ -830,6 +876,7 @@ static ims_subscription* parse_ims_subscription(xmlDocPtr doc, xmlNodePtr root)
 	xmlChar *x;
 	ims_subscription *s;
 	unsigned short sp_cnt=0;
+	int rc;
 	
 	if (!root) return 0;
 	while(root->type!=XML_ELEMENT_NODE || strcasecmp((char*)root->name,"IMSSubscription")!=0){
@@ -868,8 +915,13 @@ static ims_subscription* parse_ims_subscription(xmlDocPtr doc, xmlNodePtr root)
 	for(child=root->children;child;child=child->next)
 		if (child->type==XML_ELEMENT_NODE)
 			if (child->name[0]=='S' || child->name[0]=='s')
-				if (parse_service_profile(doc,child,&(s->service_profiles[s->service_profiles_cnt])))
-					s->service_profiles_cnt++;				
+			{
+				rc=parse_service_profile(doc,child,&(s->service_profiles[s->service_profiles_cnt]));
+				if (rc==2)
+					s->wpsi=1;
+				if (rc)
+					s->service_profiles_cnt++;
+			}				
 	s->lock = lock_alloc();
 	s->lock = lock_init(s->lock);
 	return s;
@@ -1033,7 +1085,10 @@ void free_user_data(ims_subscription *s)
 	for(i=0;i<s->service_profiles_cnt;i++){
 		for(j=0;j<s->service_profiles[i].public_identities_cnt;j++){
 			if (s->service_profiles[i].public_identities[j].public_identity.s)
-				shm_free(s->service_profiles[i].public_identities[j].public_identity.s);			
+				shm_free(s->service_profiles[i].public_identities[j].public_identity.s);
+			if (s->service_profiles[i].public_identities[j].wildcarded_psi.s)
+				shm_free(s->service_profiles[i].public_identities[j].wildcarded_psi.s);
+						
 		}		
 		if (s->service_profiles[i].public_identities) 
 			shm_free(s->service_profiles[i].public_identities);

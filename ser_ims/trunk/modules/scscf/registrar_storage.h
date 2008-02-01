@@ -107,19 +107,32 @@ enum Reg_States {
 	UNREGISTERED=-1				/**< User not-registered, profile stored	*/
 } ;
 
+typedef struct _t_regexp_unit {
+	//regex_t exp; this is apearently useless
+	char *s; // it is null terminated
+	struct _t_regexp_unit *next,*prev;
+} t_regexp_unit;
+
+typedef struct _t_regexp_list {
+	t_regexp_unit *head;
+	t_regexp_unit *tail;
+} t_regexp_list;
+
+
 /** registrar public identity structure */
 typedef struct _r_public {
-	unsigned int hash;			/**< the hash value 					*/
-	str aor;					/**< the public identity 				*/
-	str early_ims_ip;			/**< IP Address for Early-IMS Auth		*/
-	enum Reg_States reg_state;	/**< registration state					*/
-	ims_subscription *s;		/**< subscription to which it belongs 	*/
-	str ccf1,ccf2,ecf1,ecf2;	/**< charging functions					*/
+	unsigned int hash;			/**< the hash value 						*/
+	str aor;					/**< the public identity 					*/
+	str early_ims_ip;			/**< IP Address for Early-IMS Auth			*/
+	enum Reg_States reg_state;	/**< registration state						*/
+	ims_subscription *s;		/**< subscription to which it belongs 		*/
+	t_regexp_list *regexp;		/**< regular expresion in case of wild PSI 	*/
+	str ccf1,ccf2,ecf1,ecf2;	/**< charging functions						*/
 
-	r_contact *head,*tail;		/**< list of contacts					*/
-	r_subscriber *shead,*stail;	/**< list of subscribers attached		*/
+	r_contact *head,*tail;		/**< list of contacts						*/
+	r_subscriber *shead,*stail;	/**< list of subscribers attached			*/
 	
-	struct _r_public *next,*prev; /**< collision hash neighbours		*/
+	struct _r_public *next,*prev; /**< collision hash neighbours			*/
 } r_public;
 
 
@@ -127,7 +140,7 @@ typedef struct _r_public {
 typedef struct {
 	r_public *head;					/**< first slot in the table			*/
 	r_public *tail;					/**< last slot in the table				*/
-	gen_lock_t *lock;			/**< slot lock 							*/	
+	gen_lock_t *lock;				/**< slot lock 							*/	
 } r_hash_slot;
 
 
