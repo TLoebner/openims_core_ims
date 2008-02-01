@@ -130,7 +130,7 @@ typedef struct _auth_userdata{
 	unsigned int hash;		/**< hash of the auth data		*/
 	str private_identity;	/**< authorization username		*/
 	str public_identity;	/**< public identity linked to	*/
-	time_t expires;	/**< expires in					*/
+	time_t expires;			/**< expires in					*/
 	
 	auth_vector *head;		/**< first auth vector in list	*/
 	auth_vector *tail;		/**< last auth vector in list	*/
