@@ -105,37 +105,51 @@ static int isc_check_headers(ims_spt *spt, struct hdr_field *headers)
 	buf[spt->sip_header.content.len]=0;
 	regcomp(&(content_comp),buf,REG_ICASE|REG_EXTENDED);
 	
-	DBG("DEBUG:"M_NAME":ifc_check_headers:            Looking for Header[%.*s(%d)] %.*s \n",
+	DBG("DEBUG:"M_NAME":isc_check_headers: Looking for Header[%.*s(%d)] %.*s \n",
 		spt->sip_header.header.len,spt->sip_header.header.s,spt->sip_header.type,
 		spt->sip_header.content.len,spt->sip_header.content.s);
 	while(i!=NULL){
 		ch = i->name.s[i->name.len];
 		i->name.s[i->name.len]=0;
+		
 		if ((spt->sip_header.type>0&&spt->sip_header.type==i->type)|| //matches known type
 			(regexec(&(header_comp),i->name.s,0,NULL,0)==0)//or matches the name
 		   )		
 		{
-			regfree(&(header_comp));
+			
 			i->name.s[i->name.len]=ch;
-			DBG("DEBUG:"M_NAME":ifc_check_headers:            Found Header[%.*s(%d)] %.*s \n",
+			DBG("DEBUG:"M_NAME":isc_check_headers: Found Header[%.*s(%d)] %.*s \n",
 					i->name.len,i->name.s,i->type,i->body.len,i->body.s);
 			//if the header should be absent but found it
+		
 			if (spt->sip_header.content.s==NULL)
-				if (spt->condition_negated) return FALSE;
+				if (spt->condition_negated) {
+						regfree(&(header_comp));
+						regfree(&(content_comp));	
+						return FALSE;
+					}
+													
 			//check regex
 			c = i->body.s[i->body.len];
 			i->body.s[i->body.len]=0;
+		
 			if (regexec(&(content_comp),i->body.s,0,NULL,0)==0)//regex match
 			{
+		
+				regfree(&(header_comp));
 				regfree(&(content_comp));
 				i->body.s[i->body.len]=c;
 				return TRUE;
 			}
+	
 			i->body.s[i->body.len]=c;
 		}
 		else i->name.s[i->name.len]=ch;
 		i = i->next;
 	}
+	
+	regfree(&(header_comp));
+	regfree(&(content_comp));
 	return FALSE;
 }
 
@@ -398,16 +412,17 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 	if (!registered) registration_type = IFC_INITIAL_REGISTRATION;
 	else if (expires>0) registration_type = IFC_RE_REGISTRATION;
 		 else registration_type = IFC_DE_REGISTRATION;
-		
+	
 	/* get the user profile from the scscf module */	
 	i=0;
+
 	while(i<uri.len && uri.s[i]!='@') 
 		i++;
 	domain.s = uri.s+i+1;
 	domain.len = uri.len - i - 1;
 
 	p = isc_scscfb.get_r_public(uri);
-	
+
 	if (!p) return 0;
 	LOG(L_DBG,"isc_checker_find(): got a r_public for the user %.*s\n",uri.len,uri.s);
 	if (!p->s) {
@@ -429,6 +444,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 		cnt = next;
 		si++;
 	}
+
 	//LOG(L_INFO,"looking for the thing.. cnt %i si %i sj %i\n",cnt,si,sj);
 	/* iterate through the rest and check for matches */
 	i = si;
@@ -453,6 +469,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 				}
 			}
 		}
+
 		if (!k){/* this sp is not for this id */
 			
 			cnt += sp->filter_criteria_cnt;
@@ -478,7 +495,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 						fc->application_server.default_handling );		
 					r = isc_new_match(fc,cnt);	
 					isc_scscfb.r_unlock(p->hash);
-					
+
 					return r;	
 				}else{
 					cnt++;
@@ -490,6 +507,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 		sj = 0;
 	}
 	isc_scscfb.r_unlock(p->hash);
+
 	return 0;
 }
 
