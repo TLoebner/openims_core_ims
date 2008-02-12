@@ -351,9 +351,6 @@ int peer_connect(peer *p)
 {
 	int sock;
 	int pid;
-	unsigned char servip[4];
-	struct sockaddr_in6 servaddr;
-
 	unsigned int option = 1;
 	
 	struct addrinfo *ainfo=0,*res=0,hints;		
