@@ -427,7 +427,7 @@ int S_assign_server_unreg(struct sip_msg *msg,char *str1,char *str2 )
 	//else
 	data_available = AVP_IMS_SAR_USER_DATA_NOT_AVAILABLE;
 	
-	ret = SAR(msg,realm,public_identity,private_identity,assignment_type,data_available);
+	ret = SAR(0,realm,public_identity,private_identity,assignment_type,data_available);
 	
 	return ret;	
 error:
@@ -519,7 +519,7 @@ success:
 	}
 	
 	Cx_get_charging_info(saa,&ccf1,&ccf2,&ecf1,&ecf2);
-	if (msg){
+	if (msg||assignment_type==AVP_IMS_SAR_UNREGISTERED_USER){
 		int ret = save_location(msg,assignment_type,&xml,&ccf1,&ccf2,&ecf1,&ecf2);
 		if (saa) cdpb.AAAFreeMessage(&saa);
 		return ret;
@@ -607,17 +607,19 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	str public_identity,sent_by={0,0};
 	
 //	if (!*s) return 1;
-	
-	/* check for Early-IMS case */
-	if (!registration_disable_early_ims && !msg->authorization){
-		str received={0,0};		
-		sent_by = cscf_get_last_via_sent_by(msg);
-		if (sent_by.len){
-			received = cscf_get_last_via_received(msg);
-			if (received.len) sent_by=received;				
+	if (msg) {
+		/* check for Early-IMS case */
+		if (!registration_disable_early_ims && !msg->authorization){
+			str received={0,0};		
+			sent_by = cscf_get_last_via_sent_by(msg);
+			if (sent_by.len){
+				received = cscf_get_last_via_received(msg);
+				if (received.len) sent_by=received;				
+			}
 		}
+		expires_hdr = cscf_get_expires_hdr(msg);
 	}
-	expires_hdr = cscf_get_expires_hdr(msg);
+	
 	r_act_time();
 	LOG(L_DBG,"DBG:"M_NAME":update_contacts: Assign Type %d\n",assignment_type);
 	switch (assignment_type){
@@ -672,7 +674,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
             }
 
             p = get_r_public(public_identity);
-            if (!p){
+			if (!p){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - not found in registrar\n",
 					public_identity.len,public_identity.s);
 				goto error;
@@ -751,7 +753,6 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				goto error;
 			}
 			p = get_r_public(public_identity);
-			
 
 			if (!p){
 				LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - not found in registrar\n",
@@ -982,66 +983,68 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str
 		print_user_data(L_DBG,s);
 	}
 	
-	if (parse_headers(msg, HDR_EOH_F, 0) <0) {
-		LOG(L_ERR,"ERR:"M_NAME":save_location: error parsing headers\n");
-		goto error;
-	}	
-	
-	b = cscf_parse_contacts(msg);
-	
-	if (!b||(!b->contacts && !b->star)) {
-		LOG(L_ERR,"ERR:"M_NAME":save_location: No contacts found\n");
-		goto error;
-	}
+	if (msg){
+		if (parse_headers(msg, HDR_EOH_F, 0) <0) {
+			LOG(L_ERR,"ERR:"M_NAME":save_location: error parsing headers\n");
+			goto error;
+		}	
+		
+		b = cscf_parse_contacts(msg);
+		
+		if (!b||(!b->contacts && !b->star)) {
+			LOG(L_ERR,"ERR:"M_NAME":save_location: No contacts found\n");
+			goto error;
+		}
 			
-	/* check for too brief interval for registration */
-	expires_hdr = cscf_get_expires_hdr(msg);
-	max_expires = expires_hdr;		
-	
-	for(h=msg->contact;h;h=h->next)
-		if (h->type==HDR_CONTACT_T && h->parsed)
-		 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-			if(ci->expires){
-				if (!str2int(&(ci->expires->body), (unsigned int*)&exp)){
-					expires = exp;
-					if (expires>max_expires) max_expires = expires;
+		/* check for too brief interval for registration */
+		expires_hdr = cscf_get_expires_hdr(msg);
+		max_expires = expires_hdr;		
+		
+		for(h=msg->contact;h;h=h->next)
+			if (h->type==HDR_CONTACT_T && h->parsed)
+			 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+				if(ci->expires){
+					if (!str2int(&(ci->expires->body), (unsigned int*)&exp)){
+						expires = exp;
+						if (expires>max_expires) max_expires = expires;
+					}
+					else expires = -1;
 				}
-				else expires = -1;
+				else expires = expires_hdr;
+				if (expires>0 && expires<registration_min_expires){
+					if (!cscf_add_header_rpl(msg,&scscf_registration_min_expires)) return CSCF_RETURN_ERROR;			
+					S_REGISTER_reply(msg,423,MSG_423_INTERVAL_TOO_BRIEF);		
+					return CSCF_RETURN_BREAK;
+				}		
 			}
-			else expires = expires_hdr;
-			if (expires>0 && expires<registration_min_expires){
-				if (!cscf_add_header_rpl(msg,&scscf_registration_min_expires)) return CSCF_RETURN_ERROR;			
-				S_REGISTER_reply(msg,423,MSG_423_INTERVAL_TOO_BRIEF);		
-				return CSCF_RETURN_BREAK;
-			}		
-		}
-	/* we might get here and not know what to do actually - e.g. from S_update_contacts */
-	if (assignment_type<0){
-		if (max_expires>0) {
-			str public_identity;
-			public_identity=cscf_get_public_identity(msg);
-
-			if (r_is_registered_id(public_identity)) 
-				assignment_type = AVP_IMS_SAR_RE_REGISTRATION;
-			else
-				assignment_type = AVP_IMS_SAR_REGISTRATION;
-		}
-		else {
-			if (server_assignment_store_data) 
-				assignment_type = AVP_IMS_SAR_USER_DEREGISTRATION_STORE_SERVER_NAME;
-			else assignment_type = AVP_IMS_SAR_USER_DEREGISTRATION;
-		}
-	}
- 	//LOG(L_CRIT,"max_expires %d assign_type %d\n",max_expires, assignment_type);
-
-	ua = cscf_get_user_agent(msg);
+		/* we might get gere and not know what to do actually - e.g. from S_update_contacts */
+		if (assignment_type<0){
+			if (max_expires>0) {
+				str public_identity;
+				public_identity=cscf_get_public_identity(msg);
 	
-	path = cscf_get_path(msg);
+				if (r_is_registered_id(public_identity)) 
+					assignment_type = AVP_IMS_SAR_RE_REGISTRATION;
+				else
+					assignment_type = AVP_IMS_SAR_REGISTRATION;
+			}
+			else {
+				if (server_assignment_store_data) 
+					assignment_type = AVP_IMS_SAR_USER_DEREGISTRATION_STORE_SERVER_NAME;
+				else assignment_type = AVP_IMS_SAR_USER_DEREGISTRATION;
+			}
+		}
+	 	//LOG(L_CRIT,"max_expires %d assign_type %d\n",max_expires, assignment_type);
 	
-	/* we insert p associated uri first because update will destroy s */
-	if (assignment_type==AVP_IMS_SAR_REGISTRATION ||
-		assignment_type==AVP_IMS_SAR_RE_REGISTRATION)
-		if (!insert_p_associated_uri(msg,s)) goto error;
+		ua = cscf_get_user_agent(msg);
+		
+		path = cscf_get_path(msg);
+		
+		/* we insert p associated uri first because update will destroy s */
+		if (assignment_type==AVP_IMS_SAR_REGISTRATION ||
+			assignment_type==AVP_IMS_SAR_RE_REGISTRATION)
+			if (!insert_p_associated_uri(msg,s)) goto error;
+	}	
 	
 	result = update_contacts(msg,assignment_type, b->star,  &s, &ua,&path,ccf1,ccf2,ecf1,ecf2); 
 
@@ -1182,17 +1185,9 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_DBG,"DBG:"M_NAME":S_lookup: Looking for <%.*s>\n",uri.len,uri.s);
 	
 	p = get_r_public(uri);
-	
 //	pkg_free(uri.s);
 	if (!p) return CSCF_RETURN_FALSE;
-	
 	if (p->reg_state!=IMS_USER_REGISTERED){
-		// I guess i dont need this anymore
-		/*if (p->reg_state==IMS_USER_UNREGISTERED)
-		{
-			r_unlock(p->hash);
-			return CSCF_RETURN_TRUE;
-		}*/
 		r_unlock(p->hash);
 		return CSCF_RETURN_FALSE;
 	}
@@ -1326,7 +1321,6 @@ int r_is_not_registered_id(str public_identity)
 	/* First check the parameters */
 	
 	p = get_r_public(public_identity);
-	
 	if (!p) return 1;
 	if (p->reg_state==IMS_USER_NOT_REGISTERED){
 		r_unlock(p->hash);
@@ -1352,7 +1346,6 @@ int r_is_unregistered_id(str public_identity)
 	/* First check the parameters */
 	
 	p = get_r_public(public_identity);
-	
 	if (!p) return 0;
 	if (p->reg_state!=IMS_USER_UNREGISTERED){
 		r_unlock(p->hash);
@@ -1593,7 +1586,6 @@ int S_add_p_asserted_identity(struct sip_msg *msg,char *str1,char *str2)
 	}else{
 	//check if it is a tel uri
 		p = get_r_public(public_identity);
-		
 		if (!p||!p->s) goto error;
 		
 		for(i=0;i<p->s->service_profiles_cnt;i++)
@@ -1869,7 +1861,6 @@ int S_is_barred(str public_identity)
 	/* First check the parameters */
 	
 	p = get_r_public(public_identity);
-	
 	if (!p) return 0;
 	if (!p->s) return 0;
 	
