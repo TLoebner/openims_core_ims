@@ -94,6 +94,7 @@ int create_socket(int listen_port,str bind_to,unsigned int *sock)
 	struct addrinfo *ainfo=0,*res=0,hints;
 	char buf[256],host[256],serv[256];
 	int error=0;
+	unsigned int option;
 	
 	memset (&hints, 0, sizeof(hints));
 	//hints.ai_protocol = IPPROTO_SCTP;
@@ -134,8 +135,8 @@ int create_socket(int listen_port,str bind_to,unsigned int *sock)
 				" %s\n",host,serv,strerror(errno));
 			goto error;
 		}
-		//option = 1;
-		//setsockopt(server_sock,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
+		option = 1;
+		setsockopt(server_sock,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
 		
 		if (bind( 	server_sock,ainfo->ai_addr,ainfo->ai_addrlen)==-1 ) {
 			LOG(L_ERR,"ERROR:create_socket(): error binding on %s port %s >"
