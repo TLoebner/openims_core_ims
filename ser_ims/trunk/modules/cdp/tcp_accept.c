@@ -84,71 +84,80 @@ extern int h_errno;
 /**
  * Creates a socket and binds it.
  * @param listen_port - port to listen to
- * @param bind_to - IP address to bind to - if empty, will bind to 0.0.0.0 (all)
+ * @param bind_to - IP address to bind to - if empty, will bind to :: (0.0.0.0) (all)
  * @param sock - socket to be update with the identifier of the opened one
  * @returns 1 on success, 0 on error
  */
 int create_socket(int listen_port,str bind_to,unsigned int *sock)
 {
-	unsigned char servip[4];
-	struct sockaddr_in servaddr;
-	unsigned int server_sock4=-1;
-	unsigned int option;
-	struct hostent *host=0;
+	unsigned int server_sock=-1;
+	struct addrinfo *ainfo=0,*res=0,hints;
+	char buf[256],host[256],serv[256];
+	int error=0;
+	
+	memset (&hints, 0, sizeof(hints));
+	//hints.ai_protocol = IPPROTO_SCTP;
+ 	//hints.ai_protocol = IPPROTO_TCP;
+ 	hints.ai_flags = AI_PASSIVE;
+	hints.ai_socktype = SOCK_STREAM;
 
+	sprintf(buf,"%d",listen_port);
+	
 	if (bind_to.len){
-		host = gethostbyname(bind_to.s);
-		if (!host){
-			LOG(L_WARN,"WARNING:create_sockets(): Error binding to %.*s:%d >%s\n",
-				bind_to.len,bind_to.s,listen_port,strerror(h_errno));
+		error = getaddrinfo(bind_to.s, buf, &hints, &res);
+		if (error!=0){
+			LOG(L_WARN,"WARNING:create_socket(): Error opening %.*s port %d while doing gethostbyname >%s\n",
+				bind_to.len,bind_to.s,listen_port,gai_strerror(error));
+			goto error;
+		}
+	}else{
+		error = getaddrinfo(NULL, buf, &hints, &res);
+		if (error!=0){
+			LOG(L_WARN,"WARNING:create_socket(): Error opening ANY port %d while doing gethostbyname >%s\n",
+				listen_port,gai_strerror(error));
 			goto error;
 		}
 	}
 		
 	LOG(L_DBG,"DBG:create_sockets: create socket and bind for IPv4...\n");
 
-	if ((server_sock4 = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		LOG(L_ERR,"ERROR:create_sockets: error creating server socket IPv4:"
-			" %s\n",strerror(errno));
-		goto error;
-	}
-	option = 1;
-	setsockopt(server_sock4,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
-
-	memset( &servip, 0, sizeof(servip) );
-	if (bind_to.len==0) {
-		*((unsigned int*)servip) = INADDR_ANY;
-	}else{
-		memcpy( &servip, host->h_addr_list[0], 4);
-	}
-
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(listen_port);
-	servaddr.sin_addr.s_addr = *(unsigned int*)servip;
-
-	if ((bind( 	server_sock4,
-				(struct sockaddr*) &servaddr,
-				sizeof(struct sockaddr_in)))==-1 ) {
-		LOG(L_ERR,"ERROR:init_tcp_shell: error binding server socket IPv4:"
-			" %s\n",strerror(errno));
-		goto error;
-	}
-
-	if (listen( server_sock4, 4) == -1) {
-		LOG(L_ERR,"ERROR:init_tcp_shell: error listening on server socket "
-			"IPv4: %s\n",strerror(errno) );
-		goto error;
-	}
-
-	*sock = server_sock4;	
+	for(ainfo = res;ainfo;ainfo = ainfo->ai_next)
+	{
+		if (getnameinfo(ainfo->ai_addr,ainfo->ai_addrlen,
+			host,256,serv,256,NI_NUMERICHOST|NI_NUMERICSERV)==0){
+				LOG(L_WARN,"INFO:create_socket(): Trying to open/bind/listen on %s port %s\n",
+					host,serv);
+		}				
+		//ainfo->ai_protocol = listen_port;
+		if ((server_sock = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol)) == -1) {
+			LOG(L_ERR,"ERROR:create_socket(): error creating server socket on %s port %s >"
+				" %s\n",host,serv,strerror(errno));
+			goto error;
+		}
+		//option = 1;
+		//setsockopt(server_sock,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
+		
+		if (bind( 	server_sock,ainfo->ai_addr,ainfo->ai_addrlen)==-1 ) {
+			LOG(L_ERR,"ERROR:create_socket(): error binding on %s port %s >"
+				" %s\n",host,serv,strerror(errno));
+			goto error;
+		}
 	
-	LOG(L_INFO,"INFO:create_sockets: IPv4 Listening on %d.%d.%d.%d:%d\n",
-		servip[0],servip[1],servip[2],servip[3],listen_port);
+		if (listen( server_sock, 5) == -1) {
+			LOG(L_ERR,"ERROR:create_socket(): error listening on %s port %s > %s\n",host,serv,strerror(errno) );
+			goto error;
+		}
 	
+		*sock = server_sock;	
+		
+		LOG(L_WARN,"INFO:create_socket(): Successful socket open/bind/listen on %s port %s\n",
+					host,serv);
+	}
+	if (res) freeaddrinfo(res);	
 	return 1;
 error:
-	
-	if (server_sock4!=-1) close(server_sock4);
+	if (res) freeaddrinfo(res);
+	if (server_sock!=-1) close(server_sock);
 	return 0;
 	
 }
