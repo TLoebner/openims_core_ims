@@ -67,7 +67,7 @@ typedef struct{
 /** Acceptor socket configuration. */
 typedef struct{
 	int port;	/**< TCP port number to listen on */ 
-	str bind;	/**< IP address to bind to (if null, then 0.0.0.0 - all) */
+	str bind;	/**< IP address to bind to (if null, then :: (0.0.0.0) - all) */
 } acceptor_config;
 
 typedef enum {
