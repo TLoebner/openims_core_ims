@@ -528,22 +528,33 @@ void I_Snd_CER(peer *p)
 	AAAMessage *cer=0;
 //	AAA_AVP *avp;
 	unsigned long ip;
-	struct sockaddr_in addr;
+	struct sockaddr_in6 addr;
 	socklen_t addrlen;
-	char x[6];
+	char x[18];
 	
 	cer = AAANewMessage(Code_CE,0,0,0);
 	if (!cer) return;
 	cer->hopbyhopId = next_hopbyhop();
 	cer->endtoendId = next_endtoend();
-	addrlen = sizeof(struct sockaddr_in);
+	addrlen = sizeof(struct sockaddr_in6);
 	if (getsockname(p->I_sock,(struct sockaddr*) &addr, &addrlen) == -1) { 
 		LOG(L_ERR,"ERROR:I_Snd_CER(): Error on finding local host address > %s\n",strerror(errno));
 	}else{
-		set_2bytes(x,1);
-		ip = htonl(addr.sin_addr.s_addr);
-		set_4bytes(x+2,ip);
-		AAACreateAndAddAVPToMessage(cer,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,6);
+		switch(addr.sin6_family){
+			case AF_INET:
+				set_2bytes(x,1);
+				ip = htonl(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
+				set_4bytes(x+2,ip);
+				AAACreateAndAddAVPToMessage(cer,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,6);
+				break;
+			case AF_INET6:
+				set_2bytes(x,2);
+				memcpy(x+2,addr.sin6_addr.in6_u.u6_addr8,16);
+				AAACreateAndAddAVPToMessage(cer,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,18);
+				break;
+			default:
+				LOG(L_ERR,"ERROR:I_Snd_CER(): unknown address type with family %d\n",addr.sin6_family);
+		}
 	}
 
 	set_4bytes(x,config->vendor_id);
@@ -889,21 +900,32 @@ void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 {
 	AAAMessage *cea;
 	unsigned int ip;
-	struct sockaddr_in addr;
+	struct sockaddr_in6 addr;
 	socklen_t addrlen;
-	char x[6];
+	char x[18];
 	
 	cea = AAANewMessage(Code_CE,0,0,cer);	
 	if (!cea) goto done;
 	
-	addrlen = sizeof(struct sockaddr_in);
-	if (getsockname(sock,(struct sockaddr*) &addr, &addrlen) == -1) { 
+	addrlen = sizeof(struct sockaddr_in6);
+	if (getsockname(sock, (struct sockaddr*)&addr, &addrlen) == -1) { 
 		LOG(L_ERR,"ERROR:Snd_CEA(): Error on finding local host address > %s\n",strerror(errno));
 	}else{
-		set_2bytes(x,1);
-		ip = htonl(addr.sin_addr.s_addr);
-		set_4bytes(x+2,ip);
-		AAACreateAndAddAVPToMessage(cea,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,6);
+		switch(addr.sin6_family){
+			case AF_INET:
+				set_2bytes(x,1);
+				ip = htonl(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
+				set_4bytes(x+2,ip);
+				AAACreateAndAddAVPToMessage(cea,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,6);
+				break;
+			case AF_INET6:
+				set_2bytes(x,2);
+				memcpy(x+2,addr.sin6_addr.in6_u.u6_addr8,16);
+				AAACreateAndAddAVPToMessage(cea,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,18);
+				break;
+			default:
+				LOG(L_ERR,"ERROR:Snd_CEA(): unknown address type with family %d\n",addr.sin6_family);
+		}
 	}
 
 	set_4bytes(x,config->vendor_id);
