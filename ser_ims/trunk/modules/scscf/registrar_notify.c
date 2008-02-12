@@ -338,7 +338,7 @@ int S_subscribe(struct sip_msg *msg,char *str1,char *str2)
 		subscriber.len,subscriber.s);
 	
 	p = get_r_public(uri);
-	LOG(L_INFO,"S_Subscribe is the one with the lock\n");
+
 	/* Registration is possible even if the user is not registered... so just create one */
 	if (!p){
 		p = add_r_public(uri,0,0);
