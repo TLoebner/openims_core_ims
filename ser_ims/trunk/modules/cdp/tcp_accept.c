@@ -99,7 +99,7 @@ int create_socket(int listen_port,str bind_to,unsigned int *sock)
 	memset (&hints, 0, sizeof(hints));
 	//hints.ai_protocol = IPPROTO_SCTP;
  	//hints.ai_protocol = IPPROTO_TCP;
- 	hints.ai_flags = AI_PASSIVE;
+ 	hints.ai_flags = AI_PASSIVE|AI_ADDRCONFIG;
 	hints.ai_socktype = SOCK_STREAM;
 
 	sprintf(buf,"%d",listen_port);
@@ -129,7 +129,7 @@ int create_socket(int listen_port,str bind_to,unsigned int *sock)
 				LOG(L_WARN,"INFO:create_socket(): Trying to open/bind/listen on %s port %s\n",
 					host,serv);
 		}				
-		//ainfo->ai_protocol = listen_port;
+
 		if ((server_sock = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol)) == -1) {
 			LOG(L_ERR,"ERROR:create_socket(): error creating server socket on %s port %s >"
 				" %s\n",host,serv,strerror(errno));
