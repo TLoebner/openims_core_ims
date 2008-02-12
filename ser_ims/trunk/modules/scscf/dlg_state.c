@@ -1117,7 +1117,9 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				if (response>300){
 					d->state = DLG_STATE_TERMINATED;
 					d_unlock(d->hash);				
-					return S_drop_dialog(msg,str1,str2);
+					struct cell * t = tmb.t_gett();
+					if(t->nr_of_outgoings < 2)
+						return S_drop_dialog(msg,str1,str2);
 				}				
 		}else{
 			/* reply to subsequent request */			
