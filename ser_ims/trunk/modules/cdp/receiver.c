@@ -352,65 +352,84 @@ int peer_connect(peer *p)
 	int sock;
 	int pid;
 	unsigned char servip[4];
-	struct sockaddr_in servaddr;
+	struct sockaddr_in6 servaddr;
+
 	unsigned int option = 1;
-	struct hostent *host=0;
+	
+	struct addrinfo *ainfo=0,*res=0,hints;		
+	char buf[256],host[256],serv[256];
+	int error;
 
-	host = gethostbyname(p->fqdn.s);
-	if (!host){
+	memset (&hints, 0, sizeof(hints));
+	//hints.ai_protocol = IPPROTO_SCTP;
+ 	//hints.ai_protocol = IPPROTO_TCP;
+ 	hints.ai_flags = AI_ADDRCONFIG;
+	hints.ai_socktype = SOCK_STREAM;
+	
+	sprintf(buf,"%d",p->port);
+
+	error = getaddrinfo(p->fqdn.s, buf, &hints, &res);
+
+	if (error!=0){
 		LOG(L_WARN,"WARNING:peer_connect(): Error opening connection to %.*s:%d >%s\n",
-			p->fqdn.len,p->fqdn.s,p->port,strerror(h_errno));
+			p->fqdn.len,p->fqdn.s,p->port,gai_strerror(error));
 		goto error;
 	}
 		
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if ( sock==-1) {
-		LOG(L_ERR,"ERROR:peer_connect(): cannot connect, failed to create "
-				"new socket\n");
-		goto error;
-	}
-	memset( &servip, 0, sizeof(servip) );
-	memcpy( &servip, host->h_addr_list[0], 4);
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(p->port);
-	servaddr.sin_addr.s_addr = *(unsigned int*)servip;
+	for(ainfo = res;ainfo;ainfo = ainfo->ai_next)
+	{
+		if (getnameinfo(ainfo->ai_addr,ainfo->ai_addrlen,
+			host,256,serv,256,NI_NUMERICHOST|NI_NUMERICSERV)==0){
+				LOG(L_WARN,"INFO:peer_connect(): Trying to connect to %s port %s\n",
+					host,serv);
+		}				
 
-	if (connect(sock,(struct sockaddr*)&servaddr, sizeof(struct sockaddr_in))!=0) {
-		LOG(L_WARN,"WARNING:peer_connect(): Error opening connection to %.*s:%d >%s\n",
-			p->fqdn.len,p->fqdn.s,p->port,strerror(errno));		
-		goto error;
-	}
+		if ((sock = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol)) == -1) {
+			LOG(L_ERR,"ERROR:create_socket(): error creating client socket to %s port %s >"
+				" %s\n",host,serv,strerror(errno));
+			continue;
+		}
+
+		if (connect(sock,ainfo->ai_addr,ainfo->ai_addrlen)!=0) {
+			LOG(L_WARN,"WARNING:peer_connect(): Error opening connection to to %s port %s >%s\n",
+				host,serv,strerror(errno));
+			close(sock);		
+			continue;
+		}
 	
-	setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
+		setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
 	
-	LOG(L_INFO,"INFO:peer_connect(): Peer %.*s:%d connected\n",p->fqdn.len,p->fqdn.s,p->port);
+		LOG(L_INFO,"INFO:peer_connect(): Peer %.*s:%d connected\n",p->fqdn.len,p->fqdn.s,p->port);
 
 	
-	receiver_init(sock,p);
+		receiver_init(sock,p);
 	
-	#ifdef CDP_FOR_SER
-		pid = fork_process(p->port,"receiver I",0);
-	#else
-		pid = fork();
-	#endif
-	if (pid<0){
-		LOG(L_ERR,"ERROR:peer_connect(): fork() failed > %s\n",strerror(errno));
-		goto error;
-	}
-	if (pid==0){
-		/* child */
-		receiver_process(sock);
-		LOG(L_CRIT,"ERROR:peer_connect(): receiver_process finished without exit!\n");
-		exit(-1);
-	}else{
-		/* parent */
-		LOG(L_INFO,"INFO:peer_connect(): Receiver process forked [%d]\n",pid);
+		#ifdef CDP_FOR_SER
+			pid = fork_process(p->port,"receiver I",0);
+		#else
+			pid = fork();
+		#endif
+		if (pid<0){
+			LOG(L_ERR,"ERROR:peer_connect(): fork() failed > %s\n",strerror(errno));
+			goto error;
+		}
+		if (pid==0){
+			/* child */
+			receiver_process(sock);
+			LOG(L_CRIT,"ERROR:peer_connect(): receiver_process finished without exit!\n");
+			exit(-1);
+		}else{
+			/* parent */
+			LOG(L_INFO,"INFO:peer_connect(): Receiver process forked [%d]\n",pid);
+			
+			dp_add_pid(pid);
+		}
 		
-		dp_add_pid(pid);
+		if (res) freeaddrinfo(res);			
+		return sock;
 	}
-		
-	return sock;
 error:
+	if (res) freeaddrinfo(res);	
 	return -1;	
 }
 
