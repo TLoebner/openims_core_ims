@@ -398,6 +398,59 @@ int S_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2 )
 	return ret?CSCF_RETURN_TRUE:CSCF_RETURN_FALSE;
 }
 
+/**
+ * Check if the sent_by ip address matches the storred ip addreses for Early-IMS.
+ * @param ip - the byte array containing the 4/16 bytes of the IP address
+ * @param sent_by - the sent_by parameter from the Via header
+ * @returns 1 on match or 0 on no match
+ */
+static int matchesEarlyIMSIP(str ip,str sent_by)
+{
+	struct addrinfo *ainfo,*res=0,hints;
+	int error;
+	char c;
+	//int i;
+	
+	memset (&hints, 0, sizeof(hints));
+	
+	c = sent_by.s[sent_by.len];
+	sent_by.s[sent_by.len]=0;
+	
+	error = getaddrinfo(sent_by.s, 0, &hints, &res);
+	
+	sent_by.s[sent_by.len]=c;
+	
+	if (error!=0){
+		LOG(L_ERR,"ERROR:matchesEarlyIMSIP(): Error on getaddrinfo for sent_by = <%.*s>  >%s\n",
+			sent_by.len,sent_by.s,gai_strerror(error));
+		goto error;
+	}
+		
+	for(ainfo = res;ainfo;ainfo = ainfo->ai_next)
+	{	
+//		for(i=0;i<ainfo->ai_addrlen;i++)
+//			LOG(L_CRIT,">> %2d. \t %3d \t %.02x\n",i,ainfo->ai_addr->sa_data[i],ainfo->ai_addr->sa_data[i]);
+		switch (ainfo->ai_family){
+			case AF_INET:
+				if (ip.len==4&&memcmp(ainfo->ai_addr->sa_data+2,ip.s,4)==0)
+						goto success;
+				break;
+			case AF_INET6:
+				if (ip.len==16&&memcmp(ainfo->ai_addr->sa_data+6,ip.s,16)==0)
+						goto success;
+				break;
+			default:
+				LOG(L_ERR,"ERROR:matchesEarlyIMSIP(): Invalid ai_family %d\n",ainfo->ai_family);			
+		}
+	}
+error:
+	if (res) freeaddrinfo(res);		 
+	return 0;
+success:
+	if (res) freeaddrinfo(res);		 
+	return 1;	
+}
+
 
 char *zero_padded="00000000000000000000000000000000";
 static str empty_s={0,0};
@@ -465,8 +518,8 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 			/* if match, return authorized */
 			p = get_r_public(public_identity);
 			
-			if (p && p->early_ims_ip.len == sent_by.len &&
-				strncasecmp(p->early_ims_ip.s,sent_by.s,sent_by.len)==0){
+			if (p && p->early_ims_ip.len!=0 &&
+				matchesEarlyIMSIP(p->early_ims_ip,sent_by)){
 				ret = CSCF_RETURN_TRUE;
 				goto done_early_ims;
 			}
@@ -483,9 +536,37 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 				}										
 				av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_UNUSED,0,&aud_hash);
 			} while(!av);
-			LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: IP address in MAA was <%.*s>\n",av->authorization.len,av->authorization.s);
-			if (av->authorization.len == sent_by.len &&
-				strncasecmp(av->authorization.s,sent_by.s,sent_by.len)==0){
+			switch (av->authorization.len){
+				case 4:
+					LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: IP address in MAA was <%d.%d.%d.%d>\n",
+						av->authorization.s[0],
+						av->authorization.s[1],
+						av->authorization.s[2],
+						av->authorization.s[3]);
+					break;
+				case 16:
+					LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: IP address in MAA was <%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x>\n",
+						(unsigned char)av->authorization.s[0],
+						(unsigned char)av->authorization.s[1],
+						(unsigned char)av->authorization.s[2],
+						(unsigned char)av->authorization.s[3],
+						(unsigned char)av->authorization.s[4],
+						(unsigned char)av->authorization.s[5],
+						(unsigned char)av->authorization.s[6],
+						(unsigned char)av->authorization.s[7],
+						(unsigned char)av->authorization.s[8],
+						(unsigned char)av->authorization.s[9],
+						(unsigned char)av->authorization.s[10],
+						(unsigned char)av->authorization.s[11],
+						(unsigned char)av->authorization.s[12],
+						(unsigned char)av->authorization.s[13],
+						(unsigned char)av->authorization.s[14],
+						(unsigned char)av->authorization.s[15]
+						);
+					break;
+			}					
+			if (av->authorization.len &&
+				matchesEarlyIMSIP(av->authorization,sent_by)){
 				ret = CSCF_RETURN_TRUE;
 				if (p) STR_SHM_DUP(p->early_ims_ip,av->authorization,"IP Early IMS");												
 			}else
