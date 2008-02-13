@@ -913,8 +913,8 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
  */
 int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2) 
 {
-	str dst;
-	int len, i;
+	str dst={0,0};
+	int len;
 	struct ip_addr ip;
 	unsigned short int port;
 	r_contact *c=0;
@@ -954,19 +954,48 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 		port = req->rcv.src_port;	
 	}
 
-	len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */;
-	dst.s = pkg_malloc(len);
-	if (!dst.s){
-		LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
-		if (c) r_unlock(c->hash);
-		return CSCF_RETURN_FALSE;
+	switch(ip.af){
+		case AF_INET:
+			if (ip.len<4) break;
+			len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */;
+			dst.s = pkg_malloc(len);
+			if (!dst.s){
+				LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
+				if (c) r_unlock(c->hash);
+				return CSCF_RETURN_FALSE;
+			}
+			dst.len = sprintf(dst.s, "sip:%d.%d.%d.%d:%d", ip.u.addr[0],ip.u.addr[1],ip.u.addr[2],ip.u.addr[3],port);		
+			break;
+		case AF_INET6:
+			if (ip.len<16) break;
+			len = 5 /* sip:[ */ + 2 * ip.len /* ip address */ + 7/*:*/ + 2/* ]: */ + 6 /* port */;
+			dst.s = pkg_malloc(len);
+			if (!dst.s){
+				LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
+				if (c) r_unlock(c->hash);
+				return CSCF_RETURN_FALSE;
+			}
+			dst.len = sprintf(dst.s, "sip:[%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x]:%d", 
+				ip.u.addr[0],
+				ip.u.addr[1],
+				ip.u.addr[2],
+				ip.u.addr[3],
+				ip.u.addr[4],
+				ip.u.addr[5],
+				ip.u.addr[6],
+				ip.u.addr[7],
+				ip.u.addr[8],
+				ip.u.addr[9],
+				ip.u.addr[10],
+				ip.u.addr[11],
+				ip.u.addr[12],
+				ip.u.addr[13],
+				ip.u.addr[14],
+				ip.u.addr[15],
+				port);			
+			break;
 	}
-	strcpy(dst.s, "sip:");
-	dst.len = 4;		
-	dst.len += sprintf(dst.s + 4, "%d", ip.u.addr[0]);		
-	for(i = 1; i < ip.len; i++)
-		dst.len += sprintf(dst.s + dst.len, ".%d", ip.u.addr[i]);			
-	dst.len += sprintf(dst.s + dst.len, ":%d", port);
+			
 
 	if (c) r_unlock(c->hash);
 	
