@@ -603,7 +603,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	ims_public_identity *pi=0;
 	struct hdr_field *h;
 	contact_t *ci;
-	int reg_state,expires_hdr,expires,hash,rpublic_hash;
+	int reg_state,expires_hdr=-1,expires,hash,rpublic_hash;
 	str public_identity,sent_by={0,0};
 	
 //	if (!*s) return 1;
