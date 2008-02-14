@@ -125,6 +125,8 @@ int* scscf_dialog_count = 0;			/**< Counter for saved dialogs					*/
 int scscf_max_dialog_count=20000;		/**< Maximum number of dialogs					*/ 
 gen_lock_t* scscf_dialog_count_lock=0; 	/**< Lock for the dialog counter				*/
 
+int scscf_support_wildcardPSI =0;
+
 persistency_mode_t scscf_persistency_mode=NO_PERSISTENCY;			/**< the type of persistency				*/
 char* scscf_persistency_location="/opt/OpenIMSCore/persistency";	/**< where to dump the persistency data 	*/
 int scscf_persistency_timer_authdata=60;							/**< interval to snapshot authorization data*/ 
@@ -343,7 +345,7 @@ static param_export_t scscf_params[]={
 	{"dialogs_enable_release",			INT_PARAM, &scscf_dialogs_enable_release},
 	{"max_dialog_count",				INT_PARAM, &scscf_max_dialog_count},
 	{"min_se", 							INT_PARAM, &scscf_min_se},
-	
+	{"support_wildcardPSI",				INT_PARAM, &scscf_support_wildcardPSI},
 	{"persistency_mode",	 			INT_PARAM, &scscf_persistency_mode},	
 	{"persistency_location", 			STR_PARAM, &scscf_persistency_location},
 	{"persistency_timer_authdata",		INT_PARAM, &scscf_persistency_timer_authdata},
