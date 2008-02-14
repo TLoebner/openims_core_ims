@@ -95,6 +95,8 @@
 
 extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 		*/
 
+extern int scscf_support_wildcardPSI;
+
 int r_hash_size;						/**< Size of S-CSCF registrar hash table		*/
 r_hash_slot *registrar=0;				/**< The S-CSCF registrar 						*/
 
@@ -803,7 +805,7 @@ r_public* get_matching_wildcard_psi(str aor)
 			
 			if (regexec(&(exp),c,0,NULL,0)==0)
 			{
-				LOG(L_DBG,"A match has been produced!!!!!\n");
+				//LOG(L_DBG,"A match has been produced!!!!!\n");
 				shm_free(c);
 				return p;
 			} else 
@@ -848,8 +850,10 @@ r_public* get_r_public(str aor)
 	 * if i return this locked, then i have to wait for the lock in the next one...
 	 * mmmh... might be an issue
 	 * */
-	 
-	 return(get_matching_wildcard_psi(aor));
+	 if (scscf_support_wildcardPSI)
+	 	return(get_matching_wildcard_psi(aor));
+	 else
+	 	return 0;
 	 
 }
 

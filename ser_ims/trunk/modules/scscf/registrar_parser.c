@@ -69,6 +69,8 @@
 extern char *scscf_user_data_dtd; /* Path to "CxDataType.dtd" 	 							*/
 extern char *scscf_user_data_xsd; /* Path to "CxDataType_Rel6.xsd" or "CxDataType_Rel7.xsd" */
 
+extern int scscf_support_wildcardPSI;
+
 int ctxtInit=0;							/**< the XML context		*/
 
 static xmlDtdPtr	dtd=0;				/**< DTD file 				*/
@@ -292,7 +294,7 @@ static inline char ifc_tProfilePartIndicator2char(xmlChar *x)
  * @param doc - the XML document
  * @param root - the current node
  * @param pi - structure to fill
- * @returns 1 on success, 0 on failure
+ * @returns 1 on success, 0 on failure , 2 if its a wildcardpsi
  */
 static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_identity *pi)
 {
@@ -326,13 +328,12 @@ static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_iden
 
 					for(grandson=child->children;grandson;grandson=grandson->next)
 					{
-						
-						
+												
 						if (grandson->type==XML_ELEMENT_NODE)
 						{
 							switch (grandson->name[0]) {
 								case 'I' : case 'i':
-									//identity type
+									//identity type 0 public identity 1 distinct psi 2 wildcard psi
 									//x = xmlNodeListGetString(doc,grandson->xmlChildrenNode,1);
 									// i need to compare x with 2, but i have to trim leading 
 									// space characters or tabs			
@@ -340,15 +341,19 @@ static int parse_public_identity(xmlDocPtr doc, xmlNodePtr root, ims_public_iden
 									break;
 								case 'W' : case 'w':
 									//wildcardpsi
+									if(!scscf_support_wildcardPSI) {
+										LOG(L_ERR,"Configured without support for Wildcard PSI and got one from HSS\n");
+										LOG(L_ERR,"the identity will be stored but never be matched, please include the parameter to support wildcard PSI in the config file\n");
+									}
 									
 									x = xmlNodeListGetString(doc,grandson->xmlChildrenNode,1);
 									
-									// i wanted to make a pointer out of it but better not
-									//pi->wildcarded_psi=shm_malloc(str);
 									space_trim_dup(&(pi->wildcarded_psi),(char*)x);
 									
 									xmlFree(x);
 									return_code=2;
+									break;
+								default :
 									break;
 							}
 						}

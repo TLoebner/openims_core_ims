@@ -444,8 +444,7 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 		cnt = next;
 		si++;
 	}
-
-	//LOG(L_INFO,"looking for the thing.. cnt %i si %i sj %i\n",cnt,si,sj);
+	
 	/* iterate through the rest and check for matches */
 	i = si;
 	while(i<p->s->service_profiles_cnt){
@@ -453,10 +452,13 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 		k=0;
 		for(j=0;j<sp->public_identities_cnt;j++)
 		{
-			//LOG(L_INFO,"comparing %.*s with %.*s\n",sp->public_identities[j].public_identity.len,sp->public_identities[j].public_identity.s,uri.len,uri.s);
+			
 			if (p->s->wpsi)
 			{
 					// here i should regexec again!
+					// to check this , but anyway if i already got p
+					// from the get_r_public , that is already checked...
+					// or not if there is no wildcardPSI but ... then ...
 					//isc_check_wpsi_match();
 					k = 1;
 					break;	
