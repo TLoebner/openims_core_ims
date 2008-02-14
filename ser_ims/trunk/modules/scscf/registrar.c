@@ -965,7 +965,8 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str
 {
 	ims_subscription *s=0,*s_copy=0;
 	contact_t *ci;
-	contact_body_t* b=0;	
+	contact_body_t* b=0;
+	unsigned char star=0;	
 	struct hdr_field *h;
 	str ua={0,0};
 	str path={0,0};
@@ -1046,7 +1047,10 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str
 			if (!insert_p_associated_uri(msg,s)) goto error;
 	}	
 	
-	result = update_contacts(msg,assignment_type, b->star,  &s, &ua,&path,ccf1,ccf2,ecf1,ecf2); 
+	if (b) star = b->star;
+	else star = 0;
+	
+	result = update_contacts(msg,assignment_type, star,  &s, &ua,&path,ccf1,ccf2,ecf1,ecf2); 
 
 	if (path.s) pkg_free(path.s);
 	return result;
