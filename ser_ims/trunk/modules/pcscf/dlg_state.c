@@ -974,6 +974,8 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 		}
 		else// uac supports timer, but no session-expires header found in response
 		{
+			d->expires = d_act_time()+d->lr_session_expires;
+			
 			new_ses_exp.len = 11/*int value*/ + str_se.len+s_refresher.len+8;
 			new_ses_exp.s = pkg_malloc(new_ses_exp.len+1);
 			if (!new_ses_exp.s) {
@@ -1023,6 +1025,10 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 			}
 		}
 	}
+	else{
+		d->expires = d_act_time() + t_time;
+		d->lr_session_expires = t_time;
+	}	
 	return 1;
 error:
 	if (new_ses_exp.s) pkg_free(new_ses_exp.s);
