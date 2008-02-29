@@ -605,6 +605,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	contact_t *ci;
 	int reg_state,expires_hdr=-1,expires,hash,rpublic_hash;
 	str public_identity,sent_by={0,0};
+	int contacts_added=0;
 	
 //	if (!*s) return 1;
 	if (msg) {
@@ -658,12 +659,15 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 										S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
 									
 								}
+							if (!contacts_added){
+								for(c=p->head;c;c=c->next)
+									r_add_contact(msg,c->uri,c->expires-time_now);
+								contacts_added = 1;
+							}
 						}
 						r_unlock(p->hash);
 					}
 				}
-			if(c) r_add_contact(msg,c->uri,c->expires-time_now);
-			
 			break;
 		case AVP_IMS_SAR_RE_REGISTRATION:
 			reg_state = IMS_USER_REGISTERED;
@@ -699,9 +703,10 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                         if (assignment_type == AVP_IMS_SAR_REGISTRATION)
                             S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
                         else
-                            S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-                        r_add_contact(msg,c->uri,c->expires-time_now);
+                            S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);                        
                     }
+				for(c=p->head;c;c=c->next)
+					r_add_contact(msg,c->uri,c->expires-time_now);
             }            
 
 			/* now update the implicit set */
@@ -782,6 +787,8 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 								del_r_contact(p,c);
 							}
 						}
+				for(c=p->head;c;c=c->next)
+					r_add_contact(msg,c->uri,c->expires-time_now);						
 			}
 
 			/* now update the implicit set */
