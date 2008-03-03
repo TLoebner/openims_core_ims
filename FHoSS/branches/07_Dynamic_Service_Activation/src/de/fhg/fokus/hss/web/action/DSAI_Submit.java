@@ -166,7 +166,7 @@ public class DSAI_Submit extends Action{
 				if (!DSAI_Load.setForm(form, dsai)){
 								logger.error("The Dynamic Service Activation Information withe the ID:" + id + " was not loaded from database!");
 				}
-				//this line recovers all impu associated to that DSAI and that iFC whose DSAI-value is 0 (inacive).
+				//this line recovers all impu associated to that DSAI and that iFC whose DSAI-value is 0 (inactive).
 				int dsaivalue= ShConstants.DSAI_value_Inactive;
 				List attached_impu=IMPU_DAO.get_all_by_DSAI_IFC_and_DSAI_value(session, id, form.getIfc_id(), dsaivalue);
 				Iterator it=attached_impu.iterator();

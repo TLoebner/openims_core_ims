@@ -226,8 +226,8 @@ public class WebConstants {
 		select_dsai_value.add(new Tuple(ShConstants.DSAI_value_Active_Name, ShConstants.DSAI_value_Active));
 		select_dsai_value.add(new Tuple(ShConstants.DSAI_value_Inactive_Name, ShConstants.DSAI_value_Inactive));
 	}
-	public static final String DSAI_ACTIVE = "Active";
-	public static final String DSAI_INACTIVE = "Inactive";
+	//public static final String DSAI_ACTIVE = "Active";
+	//public static final String DSAI_INACTIVE = "Inactive";
 
 
 	// Tomcat Security Permissions

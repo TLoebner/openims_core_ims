@@ -175,7 +175,7 @@ public class UDR {
 				//	check if the server_name is present in the request (only for DSAI)
 				if ((crt_data_ref == ShConstants.Data_Ref_DSAI) && (server_name == null))
 				{
-					throw new ShExperimentalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
+					throw new ShFinalResultException(DiameterConstants.ResultCode.DIAMETER_MISSING_AVP);
 				}
 				//TODO MSISDN
 
@@ -242,10 +242,10 @@ public class UDR {
 			UtilAVP.addExperimentalResultCode(response, e.getErrorCode(), e.getVendor());
 			e.printStackTrace();
 		}
-/*		catch(ShFinalResultException e){
+		catch(ShFinalResultException e){
 			UtilAVP.addResultCode(response, e.getErrorCode());
 			e.printStackTrace();
-		}*/
+		}
 		finally{
 			// commit transaction only when a Database doesn't occured
 			if (!dbException){
@@ -501,7 +501,7 @@ public class UDR {
 								new ShExperimentalResultException(DiameterConstants.ResultCode.RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE);
 							}
 
-							DSAIElement dsai_element = null;
+							DSAIElement dsai_element = new DSAIElement();
 							dsai_element.setTag(dsai_tag);
 							//this dsai_value is associated only with the impu
 							dsai_element.setValue(dsai_impu.getDsai_value());
