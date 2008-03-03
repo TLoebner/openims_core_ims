@@ -319,12 +319,14 @@ public class ShSubscription_DAO {
 	public static ShSubscription get_by_AS_IMPU_DataRef_DSAITag_and_Server_name(Session session, int id_application_server, int id_impu,
 			int data_ref, String dsai_tag, String server_name){
 		Query query = session.createSQLQuery("select * from sh_subscription where id_application_server=? and id_impu=? and " +
-				"data_ref=? and dsai_tag=? and server_name=?");
+				"data_ref=? and dsai_tag=? and server_name=?")
+		.addEntity(ShSubscription.class);
 		query.setInteger(0, id_application_server);
 		query.setInteger(1, id_impu);
 		query.setInteger(2, data_ref);
 		query.setString(3, dsai_tag);
 		query.setString(4, server_name);
+
 		ShSubscription updated_subscription = update_unique_subscription(session, (ShSubscription) query.uniqueResult());
 		return updated_subscription;
 	}
