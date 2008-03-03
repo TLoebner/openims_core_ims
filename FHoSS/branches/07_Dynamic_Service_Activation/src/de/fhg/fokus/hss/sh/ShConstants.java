@@ -88,8 +88,8 @@ public class ShConstants {
 	// DSAI_value
 	public static final String DSAI_value_Inactive_Name = "Inactive";
 	public static final String DSAI_value_Active_Name = "Active";
-	public static final int DSAI_value_Inactive = 0;
-	public static final int DSAI_value_Active = 1;
+	public static final int DSAI_value_Inactive = 1;
+	public static final int DSAI_value_Active = 0;
 
 
 }
