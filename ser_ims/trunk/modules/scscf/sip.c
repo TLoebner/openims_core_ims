@@ -1596,6 +1596,7 @@ str cscf_get_called_party_id(struct sip_msg *msg,struct hdr_field **hr)
 
 static str s_subscription_state={"Subscription-State",18};
 static str s_active={"active",6};
+static str s_pending={"pending",7};
 static str s_terminated={"terminated",10};
 static str s_expires={"expires=",8};
 /**
@@ -1630,7 +1631,8 @@ int cscf_get_subscription_state(struct sip_msg *msg)
 			
 			if (state.len>=s_terminated.len && strncasecmp(state.s,s_terminated.s,s_terminated.len)==0)
 				return 0;
-			else if (state.len>=s_active.len && strncasecmp(state.s,s_active.s,s_active.len)==0){
+			else if ((state.len>=s_active.len && strncasecmp(state.s,s_active.s,s_active.len)==0) || 
+				(state.len>=s_pending.len &&  strncasecmp(state.s,s_pending.s,s_pending.len)==0)){
 				i=0;
 				while(i<state.len-s_expires.len && strncasecmp(state.s+i,s_expires.s,s_expires.len)!=0)
 					i++;
