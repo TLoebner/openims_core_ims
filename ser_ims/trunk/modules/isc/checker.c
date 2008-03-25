@@ -226,10 +226,10 @@ static int isc_check_spt(ims_spt *spt,struct sip_msg *msg,char direction,char re
 				msg->first_line.u.request.method.s);
 			r=(str2icmp(spt->method,msg->first_line.u.request.method)==0);
 			if (r &&
-				spt->registration_type!=0 &&
 				spt->method.len==8 && 
 				strncasecmp(spt->method.s,"REGISTER",8)==0 &&				
-				!(registration_type | spt->registration_type))	r = 0;							
+				!(spt->registration_type==0 ||(registration_type | spt->registration_type))
+				)	r = 0;							
 			break;
 		case IFC_SIP_HEADER:
 			DBG("DEBUG:"M_NAME":ifc_check_spt:             SPT type %d -> Header[%.*s]  %%= %.*s ?\n",spt->type,
