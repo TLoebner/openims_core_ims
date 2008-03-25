@@ -500,11 +500,11 @@ int terminate_p_dialog(p_dialog *d)
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not needed for SUBSCRIBE dialogs - silent drop on expiration.\n");
+			LOG(L_ERR,"ERR:"M_NAME":terminate_p_dialog(): Not needed for SUBSCRIBE dialogs - silent drop on expiration.\n");
 			return 0;
 			break;
 		default:
-			LOG(L_ERR,"ERR:"M_NAME":terminate_s_dialog(): Not implemented yet for method[%d]!\n",d->method);
+			LOG(L_ERR,"ERR:"M_NAME":terminate_p_dialog(): Not implemented yet for method[%d]!\n",d->method);
 			return 0;
 	}
 }
@@ -963,6 +963,7 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 	str refresher = {0,0};
 	str new_ses_exp = {0,0};
 	str new_ext = {0,0};
+	int expires = 0;
 
 	ses_exp = cscf_get_session_expires_body(msg, &h);
 	t_time = cscf_get_session_expires(ses_exp, &refresher);
@@ -970,7 +971,15 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 	{
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
-			d->expires = d_act_time()+pcscf_dialogs_expiration_time;	
+			expires = cscf_get_expires_hdr(msg);
+			if (expires >= 0)
+			{
+				d->expires = d_act_time()+expires;	
+			}
+			else
+			{
+				d->expires = d_act_time()+pcscf_dialogs_expiration_time;	
+			}
 		}
 		else// uac supports timer, but no session-expires header found in response
 		{
@@ -1076,7 +1085,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_INFO,"DBG:"M_NAME":P_update_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
+	LOG(L_DBG,"DBG:"M_NAME":P_update_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
 	d = get_p_dialog(call_id,host,port,transport);
 	if (!d && msg->first_line.type==SIP_REPLY){
@@ -1116,9 +1125,34 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
 			}
 		}
+		else if (d->method == DLG_METHOD_SUBSCRIBE && 
+			msg->first_line.u.request.method.len == 6 && 
+			strncasecmp(msg->first_line.u.request.method.s,"NOTIFY",6)==0)
+		{
+			// Subscription-State header is mandatory for NOTIFY. See RFC 3265, Section 7.2
+			expires = cscf_get_subscription_state(msg);
+			if (expires >= 0)
+			{
+				d->expires = d_act_time()+expires;
+			}
+			else
+			{
+				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+			}
+		}
 		else
 		{
-			d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+			expires = cscf_get_expires_hdr(msg);
+			if (expires >= 0) 
+			{
+				LOG(L_INFO,"DBG:"M_NAME":P_update_dialog(%.*s): Update expiration time to %d via Expire header 2\n",call_id.len,call_id.s,expires);
+				d->expires = d_act_time()+expires;
+			}
+			else
+			{
+				LOG(L_INFO,"INF:"M_NAME": update_dialog(%.*s): d->expires+=pcscf_dialogs_expiration_time 4\n",call_id.len,call_id.s);
+				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+			}
 			d->lr_session_expires = 0;		
 		}
 	}else{
@@ -1162,7 +1196,15 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
-					d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+					expires = cscf_get_expires_hdr(msg);
+					if (expires >= 0)
+					{
+						d->expires = d_act_time()+expires;
+					}
+					else
+					{
+						d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+					}
 					d->lr_session_expires = 0;
 					break;
 				case DLG_METHOD_INVITE:
@@ -1236,7 +1278,7 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
-	LOG(L_INFO,"DBG:"M_NAME":P_drop_dialog(%s): Call-ID <%.*s> %d://%.*s:%d\n",
+	LOG(L_DBG,"DBG:"M_NAME":P_drop_dialog(%s): Call-ID <%.*s> %d://%.*s:%d\n",
 		str1,call_id.len,call_id.s,
 		transport,host.len,host.s,port);
 
