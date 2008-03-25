@@ -228,7 +228,7 @@ static int isc_check_spt(ims_spt *spt,struct sip_msg *msg,char direction,char re
 			if (r &&
 				spt->method.len==8 && 
 				strncasecmp(spt->method.s,"REGISTER",8)==0 &&				
-				!(spt->registration_type==0 ||(registration_type | spt->registration_type))
+				!(spt->registration_type==0 ||(registration_type & spt->registration_type))
 				)	r = 0;							
 			break;
 		case IFC_SIP_HEADER:
