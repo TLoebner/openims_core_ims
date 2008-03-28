@@ -1118,9 +1118,11 @@ int extract_bandwidth(bandwidth *bw,str sdp,char *start)
 	bw->bAS=0; bw->bRS=0; bw->bRR=0;	
 	
 	b=find_next_sdp_line(start,(sdp.s+sdp.len),'b',NULL);
+	m=find_next_sdp_line(b,(sdp.s+sdp.len),'m',NULL); // we only do this once!!!
+	
 	while (b!=NULL) {
 				
-		m=find_next_sdp_line(b,(sdp.s+sdp.len),'m',NULL);
+		
 		if (m!=NULL && b>m)
 		{
 		/*this bandwidth belongs to some other media!*/
