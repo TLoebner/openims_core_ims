@@ -306,6 +306,13 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 	int assignment_type = AVP_IMS_SAR_NO_ASSIGNMENT;
 	int data_available = AVP_IMS_SAR_USER_DATA_NOT_AVAILABLE;
 	int expires;
+	r_public *p;
+	int require_user_data=0;
+	contact_body_t* b=0;
+	struct hdr_field *h=0;
+	contact_t *ci=0;
+	r_contact *c=0;
+	int n_contacts=0,contacts_reg=0;
 
 	LOG(L_DBG,"DBG:"M_NAME":S_assign_server: Assigning server...\n");
 	
@@ -335,22 +342,63 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 	if (expires>0) {
 		if (r_is_registered_id(public_identity)) 
 			assignment_type = AVP_IMS_SAR_RE_REGISTRATION;
-		else
+		else{
 			assignment_type = AVP_IMS_SAR_REGISTRATION;
+			require_user_data=1;
+		}
 	}
 	else {
 		if (server_assignment_store_data) 
 			assignment_type = AVP_IMS_SAR_USER_DEREGISTRATION_STORE_SERVER_NAME;
 		else assignment_type = AVP_IMS_SAR_USER_DEREGISTRATION;
+
+		b = cscf_parse_contacts(msg);
+		
+		if (!b||(!b->contacts && !b->star)) {
+			LOG(L_ERR,"ERR:"M_NAME":S_assign_server: No contacts found - this was just bindings fetch, no SAR done\n");
+			ret = CSCF_RETURN_TRUE;
+			goto done;
+		}
+		
+		if (!b->star){
+			// If not all contacts would be de-registered now, then we actually skip the SAR
+			p = get_r_public(public_identity);
+			if(!p)	goto error;
+			
+			for(h=msg->contact;h;h=h->next){
+				if (h->type==HDR_CONTACT_T && h->parsed){
+					for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+						if (get_r_contact(p,ci->uri))
+							n_contacts++;
+					}
+				}
+			}
+			
+			for(c=p->head;c;c=c->next)
+				contacts_reg++;
+			r_unlock(p->hash);
+			
+			if (n_contacts < contacts_reg){
+				// There are still contacts left for this public id
+				drop_auth_userdata(private_identity,public_identity);
+				ret = save_location(msg,assignment_type,0,0,0,0,0); 
+				goto done;
+			} 			
+		}
 	}
 	
 	//TODO
 	//if (userdataavailable) data_available = AVP_IMS_SAR_USER_DATA_ALREADY_AVAILABLE;
 	//else
-	data_available = AVP_IMS_SAR_USER_DATA_NOT_AVAILABLE;
+
+	if(require_user_data)
+		data_available = AVP_IMS_SAR_USER_DATA_NOT_AVAILABLE;
+	else
+		data_available = AVP_IMS_SAR_USER_DATA_ALREADY_AVAILABLE;
 	
 	ret = SAR(msg,realm,public_identity,private_identity,assignment_type,data_available);
-			
+
+done:			
 	return ret;	
 error:
 	ret = CSCF_RETURN_ERROR;		
