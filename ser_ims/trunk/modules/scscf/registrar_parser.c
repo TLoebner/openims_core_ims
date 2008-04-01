@@ -438,6 +438,39 @@ static int parse_session_desc(xmlDocPtr doc,xmlNodePtr node,ims_session_desc *sd
 }
 
 /**
+ *	Parse a Service Point Trigger Extension (RegistrationType).
+ * @param doc - the XML document
+ * @param node - the current node
+ * @param spt - structure to fill
+ * @returns 1 on success, 0 on failure
+ */
+static int parse_spt_extension(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt)
+{
+	xmlNodePtr child;
+	xmlChar *x;
+
+	for(child=node->children ; child ; child=child->next) {
+		if (child->type==XML_ELEMENT_NODE && (child->name[0]=='R' || child->name[0]=='r')) {
+			x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
+			switch(atoi((char*)x)) {
+				case 0:
+					spt->registration_type |= IFC_INITIAL_REGISTRATION;
+					break;
+				case 1:
+					spt->registration_type |= IFC_RE_REGISTRATION;
+					break;
+				case 2:
+					spt->registration_type |= IFC_DE_REGISTRATION;
+					break;
+			}								
+			xmlFree(x);
+		}
+	}
+//	LOG(L_CRIT,"INFO:"M_NAME":parse_spt_extension: spt->registration_type=%d\n",spt->registration_type);
+	return 1;			
+}
+
+/**
  *	Parse a Service Point Trigger.
  * @param doc - the XML document
  * @param node - the current node
@@ -473,31 +506,14 @@ static int parse_spt(xmlDocPtr doc,xmlNodePtr node,ims_spt *spt_to,unsigned shor
 					spt->group=atoi((char*)x);
 					xmlFree(x);
 					break;
-				case 'R':case 'r': {//RequestUri/RegistrationType
-					switch(child->name[2]){
-						case 'Q':case 'q':
-							spt->type=IFC_REQUEST_URI;
-							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							space_trim_dup(&(spt->request_uri),(char*)x);
-							xmlFree(x);
-							break;
-						case 'G':case 'g':
-							x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
-							switch(atoi((char*)x)){
-								case 0:
-									spt->registration_type |= IFC_INITIAL_REGISTRATION;
-									break;
-								case 1:
-									spt->registration_type |= IFC_RE_REGISTRATION;
-									break;
-								case 2:
-									spt->registration_type |= IFC_DE_REGISTRATION;
-									break;
-							}								
-							xmlFree(x);
-							break;
-					}
-					}
+				case 'R':case 'r': //RequestUri
+					spt->type=IFC_REQUEST_URI;
+					x = xmlNodeListGetString(doc, child->xmlChildrenNode, 1);
+					space_trim_dup(&(spt->request_uri),(char*)x);
+					xmlFree(x);
+					break;
+				case 'E':case 'e': //Extension
+				    parse_spt_extension(doc,child,spt);
 					break;
 				case 'M':case 'm': //method
 					spt->type=IFC_METHOD;
