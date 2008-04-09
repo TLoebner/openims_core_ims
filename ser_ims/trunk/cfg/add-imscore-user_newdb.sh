@@ -2,15 +2,17 @@
 # 
 # $Id$
 # 
-# add-imscore-user.sh
-# Version: 0.4
+# add-imscore-user_newdb.sh
+# Version: 0.5
 # Released: 02/06/07
 # Author: Sven Bornemann -at- materna de
 #
 # History:
-#	0.4 (06/21/07)
-#	  * upgraded to the new db structures	
-#   0.3 (03/09/07(:
+#   0.51 (04/08/08)
+#     * added tel-URI support incl. implicit-set
+#   0.4 (06/21/07)
+#     * upgraded to the new db structures	
+#   0.3 (03/09/07):
 #     * sip2ims transactions are commented out.
 #   0.2 (02/06/07): 
 #     * Changed parameter handling (getopt).
@@ -47,8 +49,10 @@
 Usage()
 {
     echo "ERROR: Invalid parameters"
-    echo "add-imscore-user.sh -u <user> [-r <realm> -p <password>] [-a|-d]"
+    echo "add-imscore-user.sh -u <user> [-t <tel-URI>] [-r <realm> -p <password>] [-a|-d]"
     echo "  -u <user>: The username (e.g. 'brooke')"
+    echo "  -t <tel-URI>: The tel-URI (e.g. 'tel:+49123456789'). If used with -a, -d requires"
+    echo "     this parameter too!"
     echo "  -r <realm>: The realm. Default is 'open-ims.test'"
     echo "  -i <impi>: The Private Identity (e.g. 'brooke@open-ims.test'). The -u option overrides this."
     echo "  -b <impu>: The Public Identity (e.g. 'sip:brooke@open-ims.test') The -u option overrides this."
@@ -66,13 +70,14 @@ SCRIPT=
 EXIT_CODE=0
 DBUSER=root
 
-while getopts u:r:i:b:p:o:c?:ad? option;
+while getopts u:r:i:b:p:o:c?:adt:? option;
 do
     case $option in
         u) IMSUSER=$OPTARG;;
         r) REALM=$OPTARG;;
         i) IMPI=$OPTARG;;
         b) IMPU=$OPTARG;;        
+        t) TELURI=$OPTARG;;        
         p) PASSWORD=$OPTARG;;
         a) OPTION_ADD=1;;
         d) OPTION_DELETE=1;;
@@ -128,9 +133,8 @@ values( '$IMPI',
         '\0\0',
         '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0');
 
---add Public Identity
+--add Public SIP Identity
 insert into hss_db.impu(identity,id_sp) values ('$IMPU', (select id from hss_db.sp order by id limit 1));
-
 update hss_db.impu set id_implicit_set=id where hss_db.impu.identity='$IMPU';
 
 --add Public Identity to Private Identity
@@ -138,21 +142,37 @@ insert into hss_db.impi_impu(id_impi,id_impu) values ((select id from hss_db.imp
 
 --add roaming network
 insert into hss_db.impu_visited_network(id_impu, id_visited_network) values((select id from hss_db.impu where hss_db.impu.identity='$IMPU'), (select id from hss_db.visited_network where hss_db.visited_network.identity='$REALM'));
+"
 
- "
+CREATE_TELURI_IMPU_TEMPLATE="
+--add Public tel-URI Identity
+insert into hss_db.impu(identity,id_sp) values ('$TELURI', (select id from hss_db.sp order by id limit 1));
+select @id:=id from hss_db.impu where hss_db.impu.identity='$IMPU';
+update hss_db.impu set id_implicit_set=@id where hss_db.impu.identity='$TELURI';
 
+--add Public Identity to Private Identity
+insert into hss_db.impi_impu(id_impi,id_impu) values ((select id from hss_db.impi where hss_db.impi.identity='$IMPI'), (select id from hss_db.impu where hss_db.impu.identity='$TELURI'));
+
+--add roaming network
+insert into hss_db.impu_visited_network(id_impu, id_visited_network) values((select id from hss_db.impu where hss_db.impu.identity='$TELURI'), (select id from hss_db.visited_network where hss_db.visited_network.identity='$REALM'));
+"
 
 DELETE_SCRIPT_TEMPLATE=" 
-
 delete from hss_db.impu_visited_network where id_impu = (select id from hss_db.impu where hss_db.impu.identity='$IMPU');
-
 delete from hss_db.impi_impu where id_impi = (select id from hss_db.impi where hss_db.impi.identity='$IMPI');
-
-delete from hss_db.impi where identity = '$IMPI';
-
 delete from hss_db.impu where identity = '$IMPU';
+delete from hss_db.imsu where name = '<USER>_imsu';
+"
 
-delete from hss_db.imsu where name = '<USER>_imsu';"
+DELETE_TELURI_IMPU_TEMPLATE=" 
+delete from hss_db.impu_visited_network where id_impu = (select id from hss_db.impu where hss_db.impu.identity='$TELURI');
+delete from hss_db.impi_impu where id_impi = (select id from hss_db.impi where hss_db.impi.identity='$IMPI');
+delete from hss_db.impu where identity = '$TELURI';
+"
+
+DELETE_IMPI_TEMPLATE="
+delete from hss_db.impi where identity = '$IMPI';
+"
 
 # Create SQL add script
 echo "$CREATE_SCRIPT_TEMPLATE" | sed $SED_SCRIPT > $CREATE_SCRIPT 
@@ -160,6 +180,13 @@ if [ $? -ne 0 ]; then
     echo "Failed to write $CREATE_SCRIPT"
     exit -1
 fi
+if [ ! -z $TELURI ]; then
+    echo "$CREATE_TELURI_IMPU_TEMPLATE" | sed $SED_SCRIPT >> $CREATE_SCRIPT 
+    if [ $? -ne 0 ]; then
+        echo "Failed to write $CREATE_SCRIPT"
+        exit -1
+    fi
+fi    
 echo "Successfully wrote $CREATE_SCRIPT"
 
 # Create SQL delete script
@@ -168,12 +195,20 @@ if [ $? -ne 0 ]; then
     echo "Failed to write $DELETE_SCRIPT"
     exit -1
 fi
+if [ ! -z $TELURI ]; then
+    echo "$DELETE_TELURI_IMPU_TEMPLATE" | sed $SED_SCRIPT >> $DELETE_SCRIPT
+    if [ $? -ne 0 ]; then
+        echo "Failed to write $DELETE_SCRIPT"
+        exit -1
+    fi
+fi
+echo "$DELETE_IMPI_TEMPLATE" | sed $SED_SCRIPT >> $DELETE_SCRIPT
 echo "Successfully wrote $DELETE_SCRIPT"
 
 # Apply scripts directly?
 if [ $OPTION_ADD -eq 1 ]; then
     echo Apply $CREATE_SCRIPT as user $DBUSER...
-    mysql -u $DBUSER -p < $CREATE_SCRIPT
+    mysql -u $DBUSER -p < $CREATE_SCRIPT > /dev/null
     EXIT_CODE=$?
     SCRIPT=$CREATE_SCRIPT
 elif [ $OPTION_DELETE -eq 1 ]; then
