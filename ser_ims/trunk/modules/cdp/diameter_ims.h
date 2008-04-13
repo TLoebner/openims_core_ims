@@ -66,6 +66,8 @@
 #define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
 #define IMS_e2	16777231	/**< e2 interface between CLF and AF	 		*/
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
+#define IMS_Rx  16777236	/**< Rx interface between P-CSCF and PCRF 		*/
+#define IMS_Gx	16777224	/**< Gx interface between PCRF and PCEF 		*/
 
 /* Vendor ID	*/
 
@@ -91,6 +93,9 @@
 #define IMS_STA		275		/**< Session Termination 		Answer	*/
 #define IMS_ASR		274		/**< Abort-Session-Request		Request */
 #define IMS_ASA		274		/**< Abort-Session-Request		Answer	*/
+/* The Gx Interface */
+#define IMS_CCR		272
+#define IMS_CCA		272
 /*		The Cx/Dx Interface 			*/
 #define IMS_UAR		300		/**< User-Authorization			Request	*/
 #define IMS_UAA		300		/**< User-Authorization			Answer	*/
@@ -134,6 +139,10 @@ enum {
 /** 300 to 399 reserved for TS29.234											*/
 	
 /** 400 to 499 reserved for TS29.109											*/
+	AVP_IMS_CCR_Number									= 415,
+	AVP_IMS_CCR_Type									= 416,
+
+
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_IMS_Abort_Cause									= 500,
 	AVP_IMS_Access_Network_Charging_Address				= 501,
@@ -158,6 +167,7 @@ enum {
 	AVP_IMS_RR_Bandwidth								= 521,
 	AVP_IMS_RS_Bandwidth								= 522,
 	AVP_IMS_SIP_Forking_Indication						= 523,
+	AVP_IMS_Codec_Data									= 524,
 /** 600 to 699 reserved for TS29.229											*/
 	AVP_IMS_Visited_Network_Identifier					= 600,
 	AVP_IMS_Public_Identity								= 601,
@@ -205,9 +215,24 @@ enum {
 	AVP_IMS_Identity_Set								= 708,
 	AVP_IMS_Expiry_Time									= 709,
 	AVP_IMS_Send_Data_Indication						= 710,
-	AVP_IMS_DSAI_Tag									= 711
+	AVP_IMS_DSAI_Tag									= 711,
 	
-/** 800 to 899 reserved for TS29.299											*/
+/** 800 to 899 reserved for TS29.299		
+ *									*/
+ 
+ /** 1000   from TS29.212 */
+ 	AVP_IMS_Bearer_Identifier							= 1020,
+ 	AVP_IMS_Charging_Rule_Install						= 1001,
+ 	AVP_IMS_Charging_Rule_Remove						= 1002,
+ 	AVP_IMS_Charging_Rule_Definition					= 1003,
+ 	AVP_IMS_Charging_Rule_Base_Name						= 1004,
+ 	AVP_IMS_Charging_Rule_Name							= 1005,
+ 	AVP_IMS_Charging_Rule_Report						= 1018,
+ 	AVP_IMS_Event_Trigger								= 1006,
+ 	AVP_IMS_Pcc_Rule_Status								= 1019,
+ 	AVP_IMS_QoS_Information								= 1016,
+ 	AVP_IMS_QoS_Class_Identifier						= 1028,
+ 	AVP_IMS_Service_Identifier							= 439,
 };
 
 /** ETSI AVP Codes */ 
