@@ -713,7 +713,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  				{
 		 			rtp=strstr(mlineA,"RTP");
 		 			newline=index(mlineA,'\n');
-		 	
+		 			if (newline==NULL) newline=index(mlineA,'\0');
 		 			if (rtp!=NULL && rtp < newline)
 		 	 		{
 		 			i++;
@@ -909,6 +909,7 @@ AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction)
 		
 		
 		r=index(p,'\n');
+		if (!r) r=index(p,'\0');
 		memcpy(data+l,p,r-p+1);
 		l+=r-p+1;
 		/*the m= line is always copied*/
@@ -917,8 +918,8 @@ AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction)
 		
 		
 		p=r+1; /* p is always the start of the line*/
-		r=index(r+1,'\n'); /*r always the \n char of that line*/
-		
+		r=index(p,'\n'); /*r always the \n char of that line*/
+		if (!r) r=index(p,'\0');
 		while(p+2<q && (l+r-p+1)<PCC_MAX_Char4)
 			{
 				/*what about spaces? think it closely*/
@@ -928,14 +929,15 @@ AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction)
 						strncmp(p,"b=RS",4)==0 || strncmp(p,"b=RR",4)==0 || strncmp(p,"b=AS",4)==0)
 				{
 							p=r+1; 		/*skip this line*/
-							r=index(r+1,'\n');
-				
+							r=index(p,'\n');
+							if (!r) r=index(p,'\0');
 						
 				} else {
 						memcpy(data+l,p,r-p+1);
 						l+=r-p+1;
 						p=r+1;
-						r=index(r+1,'\n');
+						r=index(p,'\n');
+						if (!r) r=index(p,'\0');
 				}
 			}
 		data[l-2]='\0';
@@ -1089,6 +1091,7 @@ int extract_token(char *line,char *token,int max,int number)
 	}
 	q=index(p,' ');
 	r=index(p,'\n');
+	if (!r) r=index(p,'\0');
 	q=q < r? q : r;
 	while isspace(*(q-1)) q--;
 	if (q-p<max) 
@@ -1118,6 +1121,7 @@ int extract_bandwidth(bandwidth *bw,str sdp,char *start)
 	bw->bAS=0; bw->bRS=0; bw->bRR=0;	
 	
 	b=find_next_sdp_line(start,(sdp.s+sdp.len),'b',NULL);
+	if (!b) return 0;
 	m=find_next_sdp_line(b,(sdp.s+sdp.len),'m',NULL); // we only do this once!!!
 	
 	while (b!=NULL) {

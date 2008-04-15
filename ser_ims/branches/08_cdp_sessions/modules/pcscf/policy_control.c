@@ -92,31 +92,17 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_ERR,"P_generates_aar(): unable to get transaction\n");
 		return 0;
 	}
-	//LOG(L_INFO,"the sip message is %s\n",msg->buf);
-	//LOG(L_INFO,"P_generates_aar() : method %i %.*s\n",t->method.len,t->method.len,t->method.s);
+	
 	if ((t->method.len==5 && memcmp(t->method.s,"PRACK",5)==0)||(t->method.len==6 && (memcmp(t->method.s,"INVITE",6)==0||memcmp(t->method.s,"UPDATE",6)==0)))
 	{
-		
-		/*here we should check if both have some SDP content the request and the response....*/
-		//LOG(L_INFO,"P_generates_aar() : content length %i\n",cscf_get_content_len(msg));
-		/* I have a lazy day so i am only going to check the answer, if the answer has SDP is because
-		 * the request has ... if not , the problem is in the client..*/
-		if (cscf_get_content_len(msg)!=0)
+		if (cscf_get_content_len(msg)!=0 && cscf_get_content_len(t->uas.request)!=0)
 		{
-			//str c=cscf_get_content_type(msg);
-			//LOG(L_ERR,"content tpye is %.*s\n",c.len,c.s);
-			/*Check if c is Application/sdp..*/
+			// Need to check SDP validity
 				return CSCF_RETURN_TRUE;
 		} 
 	} 
 		return CSCF_RETURN_FALSE;
-	
 }
-
-
-
-
-
 
 
 /**
