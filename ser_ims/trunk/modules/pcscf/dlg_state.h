@@ -135,9 +135,9 @@ inline void d_unlock(unsigned int hash);
 
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
-int is_p_dialog(str call_id,str host,int port, int transport);
+int is_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);
 int is_p_dialog_dir(str call_id,enum p_dialog_direction dir);
-p_dialog* get_p_dialog(str call_id,str host,int port, int transport);
+p_dialog* get_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);
 p_dialog* get_p_dialog_dir(str call_id,enum p_dialog_direction dir);
 p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir);
 int terminate_p_dialog(p_dialog *d);

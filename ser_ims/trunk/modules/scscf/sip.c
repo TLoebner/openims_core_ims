@@ -2618,7 +2618,7 @@ int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *tr
  */
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport)
 {
-	struct sip_msg *req;	
+	struct sip_msg *req;
 	req = msg;	
 	if (!req){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_terminating_contact: NULL message!!!\n");
@@ -2628,6 +2628,14 @@ int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *tr
  		req = cscf_get_request_from_reply(req);
  	}
 	
+	/* first check if there are some Route header still to parse... then the terminating contact can't be 
+	 * extracted from the Request-URI because there are still hops to go through next 
+	 * - but this does not work because SER will then crash as hell... oh joy...*/
+	/*r = cscf_get_next_route(req,r);
+	if (r) {
+		r = cscf_get_next_route(req,r);
+		if (r) return 0;
+	}*/
 	if (!req->parsed_orig_ruri_ok)
 		if (parse_orig_ruri(req) < 0) 
 			return 0;
