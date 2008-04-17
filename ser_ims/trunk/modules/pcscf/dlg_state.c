@@ -348,10 +348,11 @@ p_dialog* add_p_dialog(str call_id,str host,int port, int transport)
  * @param host - host that originates/terminates this dialog
  * @param port - port that originates/terminates this dialog
  * @param transport - transport that originates/terminates this dialog
+ * @param dir - the direction of the dialog. if NULL, it doesn't matter
  * @returns - 1 if the dialog exists, 0 if not
  * \note transport is ignored.
  */
-int is_p_dialog(str call_id,str host,int port, int transport)
+int is_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir)
 {
 	p_dialog *d=0;
 	unsigned int hash = get_p_dialog_hash(call_id);
@@ -359,7 +360,8 @@ int is_p_dialog(str call_id,str host,int port, int transport)
 	d_lock(hash);
 		d = p_dialogs[hash].head;
 		while(d){
-			if (d->port == port &&
+			if ((!dir || d->direction == *dir) &&
+				d->port == port &&
 /*				d->transport == transport &&*/
 /* commented because of strange behaviour */
 				d->host.len == host.len &&
@@ -407,9 +409,10 @@ int is_p_dialog_dir(str call_id,enum p_dialog_direction dir)
  * @param host - host that originates/terminates this dialog
  * @param port - port that originates/terminates this dialog
  * @param transport - transport that originates/terminates this dialog
+ * @param dir - the direction of the dialog. if NULL, it doesn't matter
  * \note transport is ignored.
  */
-p_dialog* get_p_dialog(str call_id,str host,int port, int transport)
+p_dialog* get_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir)
 {
 	p_dialog *d=0;
 	unsigned int hash = get_p_dialog_hash(call_id);
@@ -417,7 +420,8 @@ p_dialog* get_p_dialog(str call_id,str host,int port, int transport)
 	d_lock(hash);
 		d = p_dialogs[hash].head;
 		while(d){
-			if (d->port == port &&
+			if ((!dir || d->direction == *dir) &&
+				d->port == port &&
 /*				d->transport == transport &&*/
 /* commented because of strange behaviour */
 				d->host.len == host.len &&
@@ -553,7 +557,7 @@ void free_p_dialog(p_dialog *d)
 void print_p_dialogs(int log_level)
 {
 	p_dialog *d;
-	int i/*,j*/;
+	int i,j;
 	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List begin --------------\n");
@@ -561,19 +565,52 @@ void print_p_dialogs(int log_level)
 		d_lock(i);
 			d = p_dialogs[i].head;
 			while(d){
-				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t%d://%.*s:%d\tMet:[%d]\tState:[%d] Exp:[%4d]\n",i,				
+				LOG(log_level,"INF:"M_NAME":[%4d] Dir:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"]\tCall-ID:<"ANSI_BLUE"%.*s"ANSI_GREEN
+					">\t"ANSI_RED"%d://%.*s:%d"ANSI_GREEN"\n"
+					,i,				
+					d->direction,
 					d->call_id.len,d->call_id.s,
-					d->transport,d->host.len,d->host.s,d->port,
+					d->transport,d->host.len,d->host.s,d->port);
+				LOG(log_level,"INF:"M_NAME":\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] State:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN"]\n",
 					d->method,d->state,
-					(int)(d->expires - d_time_now));
-//				for(j=0;j<d->routes_cnt;j++)
-//					LOG(log_level,"INF:"M_NAME":\t RR: <%.*s>\n",			
-//						d->routes[j].len,d->routes[j].s);					
+					(int)(d->expires - d_time_now));	
+				for(j=0;j<d->routes_cnt;j++)
+					LOG(log_level,"INF:"M_NAME":\t\t RR: <"ANSI_YELLOW"%.*s"ANSI_GREEN">\n",			
+						d->routes[j].len,d->routes[j].s);					
 				d = d->next;
 			} 		
 		d_unlock(i);
 	}
 	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List end   --------------\n");	
+}
+
+/**
+ * Returns the p_dialog_direction from the direction string.
+ * @param direction - "orig" or "term"
+ * @returns the p_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
+ */
+static inline enum p_dialog_direction get_dialog_direction(char *direction)
+{
+	if (!direction) {
+		LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction NULL");
+		return DLG_MOBILE_UNKNOWN;
+	}
+	switch(direction[0]){
+		case 'o':
+		case 'O':
+		case '0':
+			return DLG_MOBILE_ORIGINATING;
+		case 't':
+		case 'T':
+		case '1':
+			return DLG_MOBILE_TERMINATING;
+		default:
+			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
+			return DLG_MOBILE_UNKNOWN;
+	}
 }
 
 /**
@@ -585,26 +622,21 @@ void print_p_dialogs(int log_level)
  * @param transport - transport to fill with the results
  * @returns 1 if found, 0 if not
  */
-static inline int find_dialog_contact(struct sip_msg *msg,char *direction,str *host,int *port,int *transport)
+static inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport)
 {
-	if (!direction) return 0;
-	switch(direction[0]){
-		case 'o':
-		case 'O':
-		case '0':
+	switch(dir){
+		case DLG_MOBILE_ORIGINATING:
 			if (!cscf_get_originating_contact(msg,host,port,transport))
 				return 0;
 			if (*port==0) *port = 5060;
 			return 1;
-		case 't':
-		case 'T':
-		case '1':
+		case DLG_MOBILE_TERMINATING:
 			if (!cscf_get_terminating_contact(msg,host,port,transport))
 				return 0;
 			if (*port==0) *port = 5060;
 			return 1;
 		default:
-			LOG(L_CRIT,"ERR:"M_NAME":find_dialog_contact(): Unknown direction %s",direction);
+			LOG(L_CRIT,"ERR:"M_NAME":find_dialog_contact(): Unknown direction %d",dir);
 			return 0;
 	}
 	return 1;
@@ -622,8 +654,11 @@ int P_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str call_id;
 	str host;
 	int port,transport;
+	enum p_dialog_direction dir;
 
-	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
+	dir = get_dialog_direction(str1);
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(%s): Error retrieving %s contact\n",str1,str1);
 		return CSCF_RETURN_BREAK;
 	}		
@@ -632,16 +667,8 @@ int P_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
-	
-//	d = get_p_dialog(call_id,host,port,transport);
-//	if (!d){
-//		/* if no dialog found, get out now */
-//		return CSCF_RETURN_FALSE;
-//	}
-//	d_unlock(d->hash);
-//	return CSCF_RETURN_TRUE;
-		
-	if (is_p_dialog(call_id,host,port,transport)) {
+			
+	if (is_p_dialog(call_id,host,port,transport,0)) {
 		return CSCF_RETURN_TRUE;
 	}
 	else 
@@ -808,8 +835,11 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str tag,ruri,uri,x;
 	struct hdr_field *h;
 	unsigned int hash;
+	enum p_dialog_direction dir;
 	
-	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
+	dir = get_dialog_direction(str1);
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
@@ -820,7 +850,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	LOG(L_DBG,"DBG:"M_NAME":P_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
-	if (is_p_dialog(call_id,host,port,transport)){
+	if (is_p_dialog(call_id,host,port,transport,&dir)){
 		LOG(L_ERR,"ERR:"M_NAME":P_save_dialog: dialog already exists!\n");	
 		return CSCF_RETURN_TRUE;
 	}
@@ -848,20 +878,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 			STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
 	}
 	
-	switch(str1[0]) {
-		case 'o':
-		case 'O':
-		case '0':
-				d->direction=DLG_MOBILE_ORIGINATING;
-				break;
-		case 't':
-		case 'T':
-		case '1':
-				d->direction=DLG_MOBILE_TERMINATING;
-				break;
-		default:
-				d->direction=DLG_MOBILE_UNKNOWN;
-	}
+	d->direction=dir;
 				
 	cscf_get_from_tag(msg,&tag);
 	cscf_get_from_uri(msg,&x);
@@ -881,7 +898,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	tmb.new_dlg_uas(msg,99,&d->dialog_s);
 		
 	d_unlock(d->hash);
-	//print_p_dialogs(L_INFO);
+	print_p_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;
 out_of_memory:
@@ -1075,8 +1092,13 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	time_t t_time=0;
 	str ses_exp = {0,0};
 	str refresher = {0,0};
+	enum p_dialog_direction dir;
 	
-	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
+	dir = get_dialog_direction(str1);
+	
+	if (msg->first_line.type==SIP_REPLY) req = cscf_get_request_from_reply(msg);
+	else req = msg;
+	if (!find_dialog_contact(req,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
 		return CSCF_RETURN_BREAK;
 	}		
@@ -1087,19 +1109,19 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	LOG(L_DBG,"DBG:"M_NAME":P_update_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
-	d = get_p_dialog(call_id,host,port,transport);
-	if (!d && msg->first_line.type==SIP_REPLY){
-		/* Try to get the dialog from the request */
-		req = cscf_get_request_from_reply(msg);		
-		if (!find_dialog_contact(req,str1,&host,&port,&transport)){
-			LOG(L_ERR,"ERR:"M_NAME":P_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
-			return CSCF_RETURN_BREAK;
-		}		
-		d = get_p_dialog(call_id,host,port,transport);		
-	}
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if (!d)
+		d = get_p_dialog(call_id,host,port,transport,0);
 	if (!d){
-		LOG(L_CRIT,"ERR:"M_NAME":P_update_dialog: dialog does not exists!\n");	
-		return CSCF_RETURN_FALSE;
+		if (msg->first_line.type==SIP_REQUEST &&
+			msg->first_line.u.request.method.len == 3 && 
+			strncasecmp(msg->first_line.u.request.method.s,"ACK",3)){
+			/* to skip the ACK after a 4xx when the dialog was dropped already*/
+			return CSCF_RETURN_TRUE;
+		}else{
+			LOG(L_CRIT,"ERR:"M_NAME":P_update_dialog: dialog does not exists!\n");
+			return CSCF_RETURN_FALSE;
+		}	
 	}
 
 
@@ -1267,9 +1289,13 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str host;
 	int port,transport;
 	struct sip_msg *req;
+	enum p_dialog_direction dir;
 	
+	dir = get_dialog_direction(str1);
 	
-	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
+	if (msg->first_line.type==SIP_REPLY) req = cscf_get_request_from_reply(msg);
+	else req = msg;
+	if (!find_dialog_contact(req,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
@@ -1282,16 +1308,9 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 		str1,call_id.len,call_id.s,
 		transport,host.len,host.s,port);
 
-	d = get_p_dialog(call_id,host,port,transport);
-	if (!d && msg->first_line.type==SIP_REPLY){
-		/* Try to get the dialog from the request */
-		req = cscf_get_request_from_reply(msg);		
-		if (!find_dialog_contact(req,str1,&host,&port,&transport)){
-			LOG(L_ERR,"ERR:"M_NAME":P_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
-			return CSCF_RETURN_BREAK;
-		}		
-		d = get_p_dialog(call_id,host,port,transport);		
-	}
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if (!d)
+		d = get_p_dialog(call_id,host,port,transport,0);
 	if (!d){
 		LOG(L_INFO,"INFO:"M_NAME":P_drop_dialog: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
@@ -1358,8 +1377,11 @@ int P_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 	p_dialog *d;
 	str call_id,host;
 	int port,transport;
+	enum p_dialog_direction dir;
 	
-	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
+	dir = get_dialog_direction(str1);
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_follows_dialog_routes(): Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
@@ -1372,7 +1394,9 @@ int P_follows_dialog_routes(struct sip_msg *msg,char *str1,char *str2)
 		str1,call_id.len,call_id.s,
 		transport,host.len,host.s,port);
 
-	d = get_p_dialog(call_id,host,port,transport);
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if (!d)
+		d = get_p_dialog(call_id,host,port,transport,0);
 	if (!d){
 		LOG(L_ERR,"ERR:"M_NAME":P_follows_dialog_routes: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
@@ -1446,8 +1470,11 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 	str call_id,host;
 	int port,transport;
 	str x;
+	enum p_dialog_direction dir;
+	
+	dir = get_dialog_direction(str1);
 		
-	if (!find_dialog_contact(msg,str1,&host,&port,&transport)){
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_enforce_dialog_routes(): Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
 	}		
@@ -1460,7 +1487,9 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 		str1,call_id.len,call_id.s,
 		transport,host.len,host.s,port);
 
-	d = get_p_dialog(call_id,host,port,transport);
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if (!d)
+		d = get_p_dialog(call_id,host,port,transport,0);
 	if (!d){
 		LOG(L_ERR,"ERR:"M_NAME":P_enforce_dialog_routes: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
@@ -1522,27 +1551,6 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 
 
 
-/**
- * Returns the p_dialog_direction from the direction string.
- * @param direction - "orig" or "term"
- * @returns the p_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
- */
-static inline enum p_dialog_direction get_dialog_direction(char *direction)
-{
-	switch(direction[0]){
-		case 'o':
-		case 'O':
-		case '0':
-			return DLG_MOBILE_ORIGINATING;
-		case 't':
-		case 'T':
-		case '1':
-			return DLG_MOBILE_TERMINATING;
-		default:
-			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
-			return DLG_MOBILE_UNKNOWN;
-	}
-}
 
 static str s_record_route_s={"Record-Route: <",15};
 static str s_record_route_e={";lr>\r\n",6};
