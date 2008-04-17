@@ -344,7 +344,7 @@ s_dialog* add_s_dialog(str call_id,str aor,enum s_dialog_direction dir)
  * @param aor - aor of the user
  * @returns 1 if found, 0 if not found
  */
-int is_s_dialog(str call_id,str aor)
+int is_s_dialog(str call_id,str aor,enum s_dialog_direction dir)
 {
 	s_dialog *d=0;
 	unsigned int hash = get_s_dialog_hash(call_id);
@@ -352,10 +352,11 @@ int is_s_dialog(str call_id,str aor)
 	d_lock(hash);
 		d = s_dialogs[hash].head;
 		while(d){
-				if (d->aor.len == aor.len &&
-				d->call_id.len == call_id.len &&
-				strncasecmp(d->aor.s,aor.s,aor.len)==0 &&
-				strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
+				if (d->direction == dir &&
+					d->aor.len == aor.len &&
+					d->call_id.len == call_id.len &&
+					strncasecmp(d->aor.s,aor.s,aor.len)==0 &&
+					strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
 					d_unlock(hash);
 					return 1;
 				}
@@ -850,7 +851,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	LOG(L_INFO,"DBG:"M_NAME":S_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
-	if (is_s_dialog(call_id,aor)){
+	if (is_s_dialog(call_id,aor,dir)){
 		LOG(L_ERR,"ERR:"M_NAME":S_save_dialog: dialog already exists!\n");	
 		return CSCF_RETURN_TRUE;
 	}
@@ -1289,7 +1290,8 @@ int S_drop_all_dialogs(str aor)
 			d = s_dialogs[i].head;
 			while(d){
 				dn = d->next;
-				if (d->aor.len == aor.len &&
+				if (d->direction == DLG_MOBILE_ORIGINATING &&
+					d->aor.len == aor.len &&
 					strncasecmp(d->aor.s,aor.s,aor.len)==0) {
 					if (!terminate_s_dialog(d)) del_s_dialog(d);
 					cnt++;
