@@ -138,7 +138,7 @@ inline void d_unlock(unsigned int hash);
 
 s_dialog* new_s_dialog(str call_id,str aor,enum s_dialog_direction dir);
 s_dialog* add_s_dialog(str call_id,str aor,enum s_dialog_direction dir);
-int is_s_dialog(str call_id,str aor);
+int is_s_dialog(str call_id,str aor,enum s_dialog_direction dir);
 int is_s_dialog_dir(str call_id,enum s_dialog_direction dir);
 s_dialog* get_s_dialog(str call_id,str aor);
 s_dialog* get_s_dialog_dir(str call_id,enum s_dialog_direction dir);
