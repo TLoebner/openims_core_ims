@@ -550,10 +550,16 @@ void print_s_dialogs(int log_level)
 		d_lock(i);
 			d = s_dialogs[i].head;
 			while(d){
-				LOG(log_level,"INF:"M_NAME":[%4d] Call-ID:<%.*s>\t DIR[%d] AOR:<%.*s>\n",i,				
-					d->call_id.len,d->call_id.s,d->direction,
+				LOG(log_level,"INF:"M_NAME":[%4d] Dir["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] Call-ID:<"ANSI_BLUE"%.*s"ANSI_GREEN
+					"> AOR:<"ANSI_RED"%.*s"ANSI_GREEN
+					">\n",i,				
+					d->direction,
+					d->call_id.len,d->call_id.s,
 					d->aor.len,d->aor.s);
-				LOG(log_level,"INF:"M_NAME":\t\tMethod:[%d]\tState:[%d] Exp:[%4d] Ref:[%.*s] Event:[%.*s]\n",				
+				LOG(log_level,"INF:"M_NAME":\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] State:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN"] Ref:["ANSI_MAGENTA"%.*s"ANSI_GREEN"] Event:["ANSI_MAGENTA"%.*s"ANSI_GREEN"]\n",				
 					d->method,
 					d->state,
 					(int)(d->expires - d_time_now),
@@ -904,7 +910,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	d_unlock(d->hash);
 	
-//	print_s_dialogs(L_INFO);
+	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
 out_of_memory:
@@ -1208,7 +1214,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	
 	d_unlock(d->hash);
 	
-//	print_s_dialogs(L_INFO);
+	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
 out_of_memory:
@@ -1267,7 +1273,7 @@ int S_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 		
 	d_unlock(hash);
 	
-//	print_s_dialogs(L_INFO);
+	print_s_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
 }
