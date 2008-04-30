@@ -525,9 +525,6 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	
  	
  	
- 	
- 	
- 	
  	/*codec-data*/
  	 	
  	
@@ -1168,7 +1165,7 @@ int extract_bandwidth(bandwidth *bw,str sdp,char *start)
 
 /*
  * 
- * could return somthing like 
+ * could return something like 
  * 
  * <tel:+1-234-1234-2134>  and 0
  * <sip:elbueno@estatriste.com> and 3

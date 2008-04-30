@@ -463,7 +463,15 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 	return s;
 }
 
-
+/**
+ * Sends a Service terminated event to the session
+ */
+void AAATerminateAuthSession(AAASession *s)
+{
+	if (s->type==AUTH_CLIENT_STATEFULL) {
+		auth_client_statefull_sm_process(s,AUTH_EV_SERVICE_TERMINATED,0);
+	}
+}
 
 /**
  * Deallocates the memory taken by a Authorization Session

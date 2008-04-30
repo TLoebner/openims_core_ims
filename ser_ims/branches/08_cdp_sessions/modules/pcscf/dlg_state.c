@@ -62,6 +62,7 @@
 #include "sip.h"
 #include "release_call.h"
 #include "ims_pm.h"
+#include "pcc.h"
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -610,7 +611,7 @@ void print_p_dialogs(int log_level)
  * @param transport - transport to fill with the results
  * @returns 1 if found, 0 if not
  */
-static inline int find_dialog_contact(struct sip_msg *msg,char *direction,str *host,int *port,int *transport)
+inline int find_dialog_contact(struct sip_msg *msg,char *direction,str *host,int *port,int *transport)
 {
 	if (!direction) return 0;
 	switch(direction[0]){
@@ -1297,6 +1298,11 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}
 
 	hash = d->hash;
+	
+	if (d->pcc_session)
+	{
+		terminate_pcc_session(d->pcc_session);
+	}
 	
 	del_p_dialog(d);
 		

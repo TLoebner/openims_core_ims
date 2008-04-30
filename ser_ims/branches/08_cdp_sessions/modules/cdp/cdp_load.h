@@ -76,6 +76,7 @@ typedef void (*AAADropSession_f)(AAASession *s);
 
 typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
 typedef void (*AAADropAuthSession_f)(AAASession *s);
+typedef void (*AAATerminateAuthSession_f)(AAASession *s);
 
 typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
 typedef int (*AAADropTransaction_f)(AAATransaction *trans);
@@ -163,6 +164,7 @@ struct cdp_binds {
 
 	AAACreateAuthSession_f AAACreateAuthSession;
 	AAADropAuthSession_f AAADropAuthSession;
+	AAATerminateAuthSession_f AAATerminateAuthSession;
 
 	AAACreateTransaction_f AAACreateTransaction;
 	AAADropTransaction_f AAADropTransaction;

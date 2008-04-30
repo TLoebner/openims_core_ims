@@ -118,7 +118,7 @@ static cmd_export_t cdp_cmds[] = {
 	{"AAADropSession",				(cmd_function)AAADropSession, 			NO_SCRIPT, 0, 0},
 	{"AAACreateAuthSession",		(cmd_function)AAACreateAuthSession,		NO_SCRIPT, 0, 0},
 	{"AAADropAuthSession",			(cmd_function)AAADropAuthSession, 		NO_SCRIPT, 0, 0},
-
+	{"AAATerminateAuthSession",		(cmd_function)AAATerminateAuthSession, 		NO_SCRIPT, 0, 0},	
 	{"AAACreateTransaction",		(cmd_function)AAACreateTransaction,		NO_SCRIPT, 0, 0},
 	{"AAADropTransaction",			(cmd_function)AAADropTransaction, 		NO_SCRIPT, 0, 0},
 

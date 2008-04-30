@@ -202,7 +202,7 @@ int * callback_singleton;				/**< Callback singleton 								*/
 char* pcscf_forced_qos_peer = "pdf.open-ims.test"; /**< FQDN of Policy Dicision Function (PDF) for policy control */
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 					/**< weather to use Gq or Rx >**/
-                        
+int pcscf_qos_side =0; /**< 0 means caller, 1 means callee , 2 means caller and callee **>/                        
 
 
 /** 
@@ -325,7 +325,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
 	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
 	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_generates_aar",				P_generates_aar,			0, 0, ONREPLY_ROUTE},
+	{"P_generates_aar",				P_generates_aar,			1, 0, ONREPLY_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -441,7 +441,7 @@ static param_export_t pcscf_params[]={
     /* address of pdf or pcrf if  "release7" is set to 1 */
     {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
-	
+	{"qos_side",					INT_PARAM,		&pcscf_qos_side},
 	{0,0,0} 
 };
 
