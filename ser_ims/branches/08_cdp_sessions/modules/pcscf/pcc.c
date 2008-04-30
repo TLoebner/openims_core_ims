@@ -70,7 +70,9 @@ extern struct cdp_binds cdpb;
 extern str forced_qos_peer; /*its the PCRF in this case*/
 
 extern int pcscf_qos_release7;
-
+extern int pcscf_qos_side;
+extern str pcscf_record_route_mo_uri;
+extern str pcscf_record_route_mt_uri;
 str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
 
 inline str pcc_get_destination_realm(str s)
@@ -80,10 +82,40 @@ inline str pcc_get_destination_realm(str s)
 	p.len = s.len - (p.s - s.s);
 	return p;
 }
+/*
+ * Auxiliary function that gives if the first route header is mt or mo
+ * if reply is -1 you should use what the config file gave you
+ * @param msg - SIP message to check, if reply will get response from it
+ * @returns -1 on error, 0 on mo , 1 mt
+*/
+int cscf_get_mobile_side(struct sip_msg *msg)
+{
 
+	str first_route={0,0};
+	if ( msg->first_line.type==SIP_REPLY ) {
+		msg= cscf_get_request_from_reply(msg);
+	}
+	
+	if (!msg) return -1;
+	
+	first_route=cscf_get_first_route(msg,0);
+	first_route.len-=3; /* forget ;lr*/
+	LOG(L_DBG,"cscf_get_mobile_side : first route is %.*s comparing with %.*s\n",first_route.len,first_route.s,pcscf_record_route_mt_uri.len,pcscf_record_route_mt_uri.s);
+	if (first_route.len == pcscf_record_route_mt_uri.len && strncmp(first_route.s,pcscf_record_route_mt_uri.s,first_route.len)==0)
+		return 1;
+	else  if (first_route.len == pcscf_record_route_mo_uri.len && strncmp(first_route.s,pcscf_record_route_mo_uri.s,first_route.len)==0)
+		return 0;
+	else {
+		//it could be the first INVITE so here i can rely in what the config file gave me
+		LOG(L_DBG,"cscf_get_mobile_side : returning -1\n");	
+		return -1;
+	}
+
+}
+/*
 static str s_orig={";orig",5};
 static str s_term={";term",5};
-
+*/
 /**
  * Modifies the call id by adding at the end orig or term
  * \note results is in shm, needs to be freed!
@@ -91,7 +123,7 @@ static str s_term={";term",5};
  * @param tag - 0 for orig, 1 for term
  * @returns the new shm string
  */
-str pcc_modify_call_id(str call_id, int tag)
+/*str pcc_modify_call_id(str call_id, int tag)
 {
 	str t;
 	t.len = call_id.len + (tag?s_orig.len:s_term.len);
@@ -110,7 +142,7 @@ str pcc_modify_call_id(str call_id, int tag)
 		STR_APPEND(t,s_term);
 	}
 	return t;
-}
+}*/
 
 
 
@@ -166,11 +198,11 @@ void callback_for_pccsession(int event,void *param,void *session)
  * Sends the Authorization Authentication Request.
  * @param req - SIP request  
  * @param res - SIP response
- * @param tag - 0 for originating side, 1 for terminating side
+ * @param str1 - 0 for originating side, 1 for terminating side
  * 
  * @returns AAA message or NULL on error  
  */
-AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
+AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
@@ -181,25 +213,28 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 	str sdpbodyinvite,sdpbody200;
 	char *mline;
 	int i=0;
-	
+	str host;
+	int port,transport;
+	int tag=cscf_get_mobile_side(req);
+	if (tag==-1) tag=atoi(str1);
+		
 	if (tag) 
 		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
 	else 
 		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
 
-	
-	
+		
 	/* Check for the existence of an auth session for this dialog */							
 	/* if not, create an authorization session */
-
 	
+	find_dialog_contact(res,str1,&host,&port,&transport);
 	str call_id = cscf_get_call_id(req, 0);
-		
-	if (!tag)
-		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
-	else 
-		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
+	dlg = get_p_dialog(call_id,host,port,transport);
 	
+	if (!dlg) {
+		find_dialog_contact(req,str1,&host,&port,&transport);
+		dlg = get_p_dialog(call_id,host,port,transport);
+	}
 	
 	if (!dlg) goto error;
 	
@@ -211,6 +246,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag)
 		 generic->callid.s=0; generic->callid.len=0;
 		 STR_SHM_DUP(generic->callid,call_id,"shm");
 		 generic->direction=tag;
+		 generic->host.s=0; generic->host.len=0;
+		 STR_SHM_DUP(generic->host,host,"shm");
+		 generic->port=port;
+		 generic->transport=transport;
 		 // i should set a callback for the expiration of the session
 		 auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
 		 //cdpb.sessions_lock(auth->hash);
@@ -342,6 +381,7 @@ error:
 	if (generic)
 	{
 		if (generic->callid.s) shm_free(generic->callid.s);
+		if (generic->host.s) shm_free(generic->host.s);
 		shm_free(generic);
 	}
 	return NULL;
@@ -365,26 +405,28 @@ int PCC_AAA(AAAMessage *dia_msg)
  * 
  * @returns AAA message or NULL on error
  */
-AAAMessage* PCC_STR(struct sip_msg* msg, int tag)
+AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 {
 	AAAMessage* dia_str = NULL;
 	//AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
 	p_dialog *dlg;
 	char x[4];
-	
+	int tag = atoi(str1);
+	str host;
+	int port,transport;
+	struct sip_msg *req;
 	
 /** get Diameter session based on sip call_id */
 	str call_id = cscf_get_call_id(msg, 0);
-	
-	
-	
-	if (!tag)
-		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_ORIGINATING);
-	else 
-		dlg = get_p_dialog_dir(call_id,DLG_MOBILE_TERMINATING);
-		
-		
+	find_dialog_contact(msg,str1,&host,&port,&transport);
+	dlg=get_p_dialog(call_id,host,port,transport);
+	if (!dlg && msg->first_line.type==SIP_REPLY) {
+		req = cscf_get_request_from_reply(msg);
+		find_dialog_contact(req,str1,&host,&port,&transport);
+		dlg=get_p_dialog(call_id,host,port,transport);
+	}
+			
 	if (!dlg)	{
 		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,tag);
 		goto end;
@@ -512,12 +554,16 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 		
 	if (data->callid.s)
 	{
-		p=get_p_dialog_dir(data->callid,data->direction);
-		release_call_p(p,503,reason_terminate_dialog_s);
-		//of course it would be nice to first have a look on the Abort-Cause AVP
-		p->pcc_session=0; // this is because if i deleted the dialog already 
+		p=get_p_dialog(data->callid,data->host,data->port,data->transport);
+		if (p) {
+			release_call_p(p,503,reason_terminate_dialog_s);
+			//of course it would be nice to first have a look on the Abort-Cause AVP
+			p->pcc_session=0; // this is because if i deleted the dialog already 
 							//i want the callback of the pccsession to know it
-		d_unlock(p->hash);
+			d_unlock(p->hash);
+		} else {
+			LOG(L_ERR,"PCC_ASA: got and Diameter ASR and I dont have the dialog with callid %.*s\n",data->callid.len,data->callid.s);
+		}
 	}
 	//LOG(L_DBG,"before unlocking in PCC_ASA\n");
 	cdpb.sessions_unlock(hash);
@@ -566,5 +612,12 @@ AAAMessage* PCCRequestHandler(AAAMessage *request,void *param)
 	return 0;		
 }
 
-
+void terminate_pcc_session(cdp_session_t *s)
+{
+	if (s)
+	{
+		LOG(L_INFO,"calling AAATerminateAuthSession\n");
+		cdpb.AAATerminateAuthSession(s);
+	}
+}
 

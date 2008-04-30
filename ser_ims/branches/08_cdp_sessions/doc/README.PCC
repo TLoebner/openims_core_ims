@@ -1,7 +1,7 @@
 This is the README file for usage of P-CSCF with the Policy and Charging interfaces enabled.
 
 Written in Dezember 2007  by Alberto Diez Albaladejo    (Alberto.Diez.Albaladejo at FOKUS)
-
+Some changes in April 2008
 
 
 As for now two versions are supported Gq (Release 6 interface to the PDF) and Rx (release 7 to the PCRF).
@@ -25,7 +25,13 @@ That would set Rx.
 Another parameter is used to set the FQDN of the PCRF or PDF in case needed (see C Diameter Peer README)
 	
 	modparam("pcscf","forced_qos_peer","pcrf.open-ims.test")
- 
+
+Another parameter has been defined that specifies which side (caller or callee or both)
+is the one to reserve resources (this is needed if testing with only one P-CSCF in order not to 
+reserve twice for the same connections)
+
+	modparam("pcscf","qos_side",2)
+0 caller , 1 callee 2 both
 
 
 After that you have to set in which circunstances you want to do the authorization proccess...
@@ -44,6 +50,7 @@ P_STR :
 	
 P_generates_aar:
 	This function helps to see if the reply that it has been recovered is one that should generate an AAR.
+	It also does some checkings concerning the side of the transaction.
    	(I should include here some checking of the SDP but i didnt have the time yet, please contribute with your code)
 	
 P_release_call_onreply:
@@ -74,7 +81,8 @@ TGPPGq.xml
 TGPPRx.xml 
 
 Put them in the wireshark diameter directory with other dictionarys 
-and load them writting at the end of dictionary.xml
+and load them writting their entity description at the begining of 
+dictionary.xml and the loading command at the end 
 
 &TGPPRx;
 &TGPPGq;

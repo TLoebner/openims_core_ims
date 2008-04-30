@@ -63,6 +63,11 @@ extern struct tm_binds tmb;            /**< Structure with pointers to tm funcs 
 extern struct cdp_binds cdpb;          /**< Structure with pointers to cdp funcs 		*/
 
 extern int pcscf_qos_release7;
+extern int pcscf_qos_side;
+
+
+
+
 
 int P_local_policy(struct sip_msg* msg, char* str1, char* str2) 
 {
@@ -72,12 +77,10 @@ int P_local_policy(struct sip_msg* msg, char* str1, char* str2)
 }
 
 
-
-
 /**
  * Checks if this reply is one that is suitable of generating an AAR message...
  * @param msg - SIP response to check
- * @param str1 - not used
+ * @param str1 - Orig or Term , 0 or 1
  * @param str2 - not used
  * 
  * @returns 0 if this reply is not AAR suitable, or 1 if yes
@@ -86,13 +89,28 @@ int P_local_policy(struct sip_msg* msg, char* str1, char* str2)
 
 int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 {
+	int tag;
 	struct cell *t;
+	
+	LOG(L_DBG,"P_generates_aar(): starting\n");
 	t=tmb.t_gett();
 	if (!t) {
 		LOG(L_ERR,"P_generates_aar(): unable to get transaction\n");
 		return 0;
 	}
-	
+	if (pcscf_qos_side!=2) {
+		tag = cscf_get_mobile_side(msg);
+		if (tag==-1) {
+			tag=atoi(str1);
+		}
+		LOG(L_DBG,"P_generates_aar(): decided on side %i\n",tag);
+		if (pcscf_qos_side!=tag)
+		{
+			LOG(L_ERR,"P_generates_aar(): not on the right side\n");
+			return CSCF_RETURN_FALSE;
+		}
+		
+	}
 	if ((t->method.len==5 && memcmp(t->method.s,"PRACK",5)==0)||(t->method.len==6 && (memcmp(t->method.s,"INVITE",6)==0||memcmp(t->method.s,"UPDATE",6)==0)))
 	{
 		if (cscf_get_content_len(msg)!=0 && cscf_get_content_len(t->uas.request)!=0)
@@ -143,7 +161,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	}
 
 	/* Create an AAR based on request and reply and send it to PDF */
-	aaa = PCC_AAR(t->uas.request, msg, atoi(str1));
+	aaa = PCC_AAR(t->uas.request, msg, str1);
 	//cdpb.AAAPrintMessage(aaa);
 	
 	if (!aaa) goto error;
@@ -179,7 +197,7 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	// Gq_STR(session_id) terminate the session
 	AAAMessage* sta;
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
-	sta = PCC_STR(msg, atoi(str1));
+	sta = PCC_STR(msg,str1);
 	// if you really want the STA just declare a ResponseHandler for it because its never going
 	// to arrive here.. or never again
 	

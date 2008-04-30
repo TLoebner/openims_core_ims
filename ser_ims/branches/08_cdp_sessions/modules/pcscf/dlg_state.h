@@ -136,7 +136,7 @@ void p_dialogs_destroy();
 inline void d_lock(unsigned int hash);
 inline void d_unlock(unsigned int hash);
 
-
+inline int find_dialog_contact(struct sip_msg *msg,char *direction,str *host,int *port,int *transport);
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
 int is_p_dialog(str call_id,str host,int port, int transport);

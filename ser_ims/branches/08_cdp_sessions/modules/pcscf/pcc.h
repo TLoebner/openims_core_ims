@@ -60,11 +60,18 @@
 
 typedef struct authdata {
 	str callid;
+	str host;
+	int port,transport;
 	unsigned int direction; // 0 ORIGINATING  1 TERMINATING
 } t_authdata;
 
-AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, int tag);
-AAAMessage* PCC_STR(struct sip_msg *msg, int tag);
+
+int cscf_get_mobile_side(struct sip_msg *msg);
+void terminate_pcc_session(cdp_session_t *);
+
+
+AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1);
+AAAMessage* PCC_STR(struct sip_msg *msg, char *str1);
 AAAMessage* PCC_ASA(AAAMessage *request);
 int PCC_AAA(AAAMessage *msg);
 
