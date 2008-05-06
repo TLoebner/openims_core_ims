@@ -113,10 +113,10 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
 	((unsigned int*)p)[0] = htonl(msg->applicationId);
 	p += APPLICATION_ID_SIZE;
 	/* hop by hop id */
-	((unsigned int*)p)[0] = msg->hopbyhopId;
+	((unsigned int*)p)[0] = htonl(msg->hopbyhopId);
 	p += HOP_BY_HOP_IDENTIFIER_SIZE;
 	/* end to end id */
-	((unsigned int*)p)[0] = msg->endtoendId;
+	((unsigned int*)p)[0] = htonl(msg->endtoendId);
 	p += END_TO_END_IDENTIFIER_SIZE;
 
 	/* AVPS */
@@ -489,11 +489,11 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 	ptr += APPLICATION_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
-	msg->hopbyhopId = *((unsigned int*)ptr);
+	msg->hopbyhopId = ntohl(*((unsigned int*)ptr));
 	ptr += HOP_BY_HOP_IDENTIFIER_SIZE;
 
 	/* End-to-End-Id */
-	msg->endtoendId = *((unsigned int*)ptr);
+	msg->endtoendId = ntohl(*((unsigned int*)ptr));
 	ptr += END_TO_END_IDENTIFIER_SIZE;
 
 	/* start decoding the AVPS */
