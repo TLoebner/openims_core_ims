@@ -409,9 +409,10 @@ r_contact* get_r_contact(r_public *p, str uri)
  * @param expires - the time of expiration
  * @param ua - the useragent string
  * @param path - Path header received at registration
+ * @param qvalue - Q-value of the contact
  * @returns the new r_contact or NULL on error
  */
-r_contact* new_r_contact(str uri,int expires,str ua,str path)
+r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue)
 {
 	r_contact *c;
 	
@@ -453,6 +454,8 @@ r_contact* new_r_contact(str uri,int expires,str ua,str path)
 		c->path.len = path.len;
 		memcpy(c->path.s,path.s,path.len);	
 	}
+
+	c->qvalue = qvalue;
 		
 	return c;
 error:
@@ -473,13 +476,14 @@ error:
  * @param expires - the expiration time
  * @param ua - the user agent string
  * @param path - Path header received at registration
+ * @param qvalue - Q-value of the contact
  * @returns the newly added r_contact or NULL on error
  */
-r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path)
+r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue)
 {
 	r_contact *c;
 	if (!p) return 0;
-	c = new_r_contact(uri,expires,ua,path);
+	c = new_r_contact(uri,expires,ua,path,qvalue);
 	if (!c) return 0;
 	c->next=0;
 	c->prev=p->tail;
@@ -502,9 +506,10 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path)
  * @param expires - new expires value, NULL if not necessary
  * @param ua - new user agent string, NULL if no update necessary
  * @param path - Path header received at registration
+ * @param qvalue - Q-value of the contact
  * @returns the updated r_contact or NULL on error
  */
-r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path)
+r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue)
 {
 	r_contact *c;
 	
@@ -512,7 +517,7 @@ r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path)
 	c = get_r_contact(p,uri);
 	if (!c){
 		if (expires && ua && path)
-			return add_r_contact(p,uri,*expires,*ua,*path);
+			return add_r_contact(p,uri,*expires,*ua,*path,qvalue);
 		else return 0;
 	}else{
 		if (expires) c->expires = *expires;
@@ -540,6 +545,7 @@ r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path)
 			c->path.len = path->len;
 			memcpy(c->path.s,path->s,path->len);
 		}
+		c->qvalue = qvalue;
 		return c;
 	}
 }
