@@ -585,6 +585,7 @@ static str r_probation={"probation",9};
 static str r_unregistered={"unregistered",12};
 static str r_rejected={"rejected",8};
 static str contact_s={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\">\n",59};
+static str contact_s_q={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\" q=\"%.3f\">\n",69};
 static str contact_e={"\t\t</contact>\n",13};
 
 static str uri_s={"\t\t\t<uri>",8};
@@ -640,7 +641,12 @@ str r_get_reginfo_full(void *pv,int event_type,long *subsExpires)
 						STR_APPEND(buf,pad);
 						c = p2->head;
 						while(c){
-							sprintf(pad.s,contact_s.s,c,r_active.len,r_active.s,r_registered.len,r_registered.s,c->expires-time_now);
+							if(c->qvalue != -1) {
+								float q = (float)c->qvalue/1000;
+								sprintf(pad.s,contact_s_q.s,c,r_active.len,r_active.s,r_registered.len,r_registered.s,c->expires-time_now, q);
+							}
+							else
+								sprintf(pad.s,contact_s.s,c,r_active.len,r_active.s,r_registered.len,r_registered.s,c->expires-time_now);
 							pad.len = strlen(pad.s);
 							STR_APPEND(buf,pad);							
 							STR_APPEND(buf,uri_s);
@@ -758,7 +764,12 @@ str r_get_reginfo_partial( void *pv,void *pc,int event_type,long *subsExpires)
 					state = r_active;
 					event = r_registered;
 			}
-			sprintf(pad.s,contact_s.s,c,state.len,state.s,event.len,event.s,expires);
+			if(c->qvalue != -1) {
+                        	float q = (float)c->qvalue/1000;
+                                sprintf(pad.s,contact_s_q.s,c,r_active.len,r_active.s,r_registered.len,r_registered.s,c->expires-time_now, q);
+                        }
+			else
+				sprintf(pad.s,contact_s.s,c,state.len,state.s,event.len,event.s,expires);
 			pad.len = strlen(pad.s);
 			STR_APPEND(buf,pad);							
 			STR_APPEND(buf,uri_s);
