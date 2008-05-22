@@ -69,6 +69,7 @@
 enum {
 	IMS_REGISTRAR_NONE,					/**< no event - donothing 							*/	
 	IMS_REGISTRAR_SUBSCRIBE,			/**< Initial SUBSCRIBE - just send all data - this should not be treated though */
+	IMS_REGISTRAR_UNSUBSCRIBE,			/**< Final UnSUBSCRIBE - just send a NOTIFY which will probably fail */
 	IMS_REGISTRAR_SUBSCRIBE_EXPIRED,	/**< The subscribe has expired 						*/
 	
 	IMS_REGISTRAR_CONTACT_REGISTERED, 	/**< Registered with REGISTER						*/

@@ -381,8 +381,13 @@ int S_subscribe(struct sip_msg *msg,char *str1,char *str2)
 	}else{
 		/* Unsubscribe */
 		/* get the old subscriber - if any */
+		r_act_time();
 		s = get_r_subscriber(p,subscriber,event_i);	
-		if (s) del_r_subscriber(p,s);
+		if (s) {
+			s->expires = time_now;
+			S_event_reg(p,0,s,IMS_REGISTRAR_UNSUBSCRIBE,1);
+			del_r_subscriber(p,s);
+		}
 		ret = CSCF_RETURN_TRUE;
 	}
 done:	
@@ -493,7 +498,7 @@ static void r_create_notifications(void *pv,void *cv,void *ps,str content,long e
 		memcpy(req_uri.s,s->subscriber.s,s->subscriber.len);
 		memcpy(req_uri.s+s->subscriber.len,ruri_lr.s,ruri_lr.len);
 		//route = s->path;
-		if (s->expires>=time_now) {
+		if (s->expires>time_now) {
 			subscription_state.s = pkg_malloc(32);
 			subscription_state.len=0;
 			if (subscription_state.s){
@@ -796,7 +801,7 @@ int S_event_reg(void *pv,void *c,void *ps,int event_type,int send_now)
 	r_public *p=(r_public*)pv;
 	r_subscriber *s=(r_subscriber*)ps;
 	str content={0,0};
-	long subsExpires;
+	long subsExpires=-1;
 
 	r_act_time();
 	switch (event_type){
@@ -806,6 +811,13 @@ int S_event_reg(void *pv,void *c,void *ps,int event_type,int send_now)
 			break;
 		case IMS_REGISTRAR_SUBSCRIBE:
 			content = r_get_reginfo_full(p,event_type,&subsExpires);
+			r_create_notifications(p,0,s,content,subsExpires);			
+			if (content.s) pkg_free(content.s);
+			if (send_now) notification_timer(0,0);
+			return 1;
+			break;
+		case IMS_REGISTRAR_UNSUBSCRIBE:
+			subsExpires=0;
 			r_create_notifications(p,0,s,content,subsExpires);			
 			if (content.s) pkg_free(content.s);
 			if (send_now) notification_timer(0,0);
