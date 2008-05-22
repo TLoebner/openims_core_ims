@@ -80,6 +80,14 @@ cdp_cb_list_t *callbacks;		/**< list of callbacks for message processing */
 struct sembuf cdp_sem_lock=  { 0, -1, 0};	/**< sembuf structure to lock a semaphore */
 struct sembuf cdp_sem_unlock={ 0, +1, 0};	/**< sembuf structure to unlock a semaphore */
 
+union semun {int val;struct semid_ds *buf;ushort *array;} 
+	cdp_semun_lock   = {0}, 
+	cdp_semun_unlock = {1},
+	cdp_semun_init   = {0666|IPC_CREAT},
+	cdp_semun_destroy= {0};
+	
+	
+	
 /**
  * Gets the lock on a semaphore and blocks until it is available.
  * This procedures does not consume CPU cycles as a busy-waiting would and it is used for
@@ -102,7 +110,7 @@ static inline void cdp_lock_get(int sid)
  */
 static inline void cdp_lock_release(int sid)
 {
-	if( semctl(sid, 0, SETVAL, 1) == -1
+	if( semctl(sid, 0, SETVAL, cdp_semun_unlock) == -1
 	/*semop(sid, &cdp_sem_unlock, 1) == -1*/)
 	{
 		if (shutdownx&&(*shutdownx)) return;
@@ -126,12 +134,12 @@ void worker_init()
 	if (tasks->empty==-1){
 		LOG(L_ERR,"ERROR:worker_init(): Error creating semaphore for empty queue > %s\n",strerror(errno));
 	}else
-		semctl(tasks->empty, 0, SETVAL, 0666 | IPC_CREAT );
+		semctl(tasks->empty, 0, SETVAL, cdp_semun_init );
 	tasks->full = semget(IPC_PRIVATE,1, 0666 | IPC_CREAT );
 	if (tasks->full==-1){
 		LOG(L_ERR,"ERROR:worker_init(): Error creating semaphore for full queue > %s\n",strerror(errno));
 	}else
-		semctl(tasks->full, 0, SETVAL, 0666 | IPC_CREAT);
+		semctl(tasks->full, 0, SETVAL, cdp_semun_init);
 	
 	tasks->start = 0;
 	tasks->end = 0;
@@ -166,10 +174,10 @@ void worker_destroy()
 //	LOG(L_CRIT,"-3-\n");	
 	
 	//lock_release(tasks->empty);
-	semctl(tasks->empty, 0, IPC_RMID, 0);
+	semctl(tasks->empty, 0, IPC_RMID, cdp_semun_destroy);
 //	LOG(L_CRIT,"-4-\n");	
 	
-	semctl(tasks->full, 0, IPC_RMID, 0);
+	semctl(tasks->full, 0, IPC_RMID, cdp_semun_destroy);
 	
 	shm_free(tasks);
 	
