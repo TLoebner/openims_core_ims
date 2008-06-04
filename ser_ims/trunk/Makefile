@@ -11,7 +11,7 @@
 #              created by andrei
 #  2003-02-24  make install no longer overwrites ser.cfg  - patch provided
 #               by Maxim Sobolev   <sobomax@FreeBSD.org> and 
-#                  Tomas Björklund <tomas@webservices.se>
+#                  Tomas Bj??rklund <tomas@webservices.se>
 #  2003-03-11  PREFIX & LOCALBASE must also be exported (andrei)
 #  2003-04-07  hacked to work with solaris install (andrei)
 #  2003-04-17  exclude modules overwritable from env. or cmd. line,
@@ -374,10 +374,14 @@ bin:
 .PHONY: deb
 deb:
 	-@if [ -d debian ]; then \
-		dpkg-buildpackage -rfakeroot -tc; \
+		make -f debian/rules install; \
+		make -f debian/rules binary-common; \
+		make -f debian/rules clean; \
 	else \
 		ln -s pkg/debian debian; \
-		dpkg-buildpackage -rfakeroot -tc; \
+		make -f debian/rules install; \
+		make -f debian/rules binary-common; \
+		make -f debian/rules clean; \
 		rm debian; \
 	fi
 
@@ -456,6 +460,88 @@ install-cfg: $(cfg-prefix)/$(cfg-dir)
 		$(INSTALL-CFG) etc/dictionary.ser $(cfg-prefix)/$(cfg-dir)
 #		$(INSTALL-CFG) etc/ser.cfg $(cfg-prefix)/$(cfg-dir)
 
+install-cfg-pcscf: $(cfg-prefix)/$(cfg-dir)
+		@echo "installing configuration of pcscf" ; \
+		sed -s -e "s#/opt/OpenIMSCore/ser_ims/modules/.*/#$(modules-target)#g" \
+			-e "s#/opt/OpenIMSCore/pcscf.xml#/$(cfg-dir)pcscf.xml#" \
+			-e "s#log_stderror=yes#log_stderror=no#" \
+			-e "s#debug=3#debug=1#" \
+			< cfg/pcscf.cfg > $(cfg-prefix)/$(cfg-dir)pcscf.cfg.sample ; \
+		chmod 644 $(cfg-prefix)/$(cfg-dir)pcscf.cfg.sample ; \
+		if [ -z "${skip_cfg_install}" -a \
+				! -f $(cfg-prefix)/$(cfg-dir)pcscf.cfg ]; then \
+			mv -f $(cfg-prefix)/$(cfg-dir)pcscf.cfg.sample \
+				$(cfg-prefix)/$(cfg-dir)pcscf.cfg; \
+		fi ; \
+		cp cfg/pcscf.xml $(cfg-prefix)/$(cfg-dir)pcscf.xml.sample ; \
+		chmod 644 $(cfg-prefix)/$(cfg-dir)pcscf.xml.sample ; \
+		if [ -z "${skip_cfg_install}" -a \
+				! -f $(cfg-prefix)/$(cfg-dir)pcscf.xml ]; then \
+			mv -f $(cfg-prefix)/$(cfg-dir)pcscf.xml.sample \
+				$(cfg-prefix)/$(cfg-dir)pcscf.xml; \
+		fi ; \
+		cp modules/pcscf/reginfo.dtd $(modules-target) ; \
+		chmod 644 $(modules-target)/reginfo.dtd ; \
+		for s in ipsec_E_Drop.sh ipsec_E_Inc_Req.sh ipsec_E_Inc_Rpl.sh ipsec_E_Out_Req.sh \
+			ipsec_E_Out_Rpl.sh ipsec_P_Drop.sh ipsec_P_Inc_Req.sh ipsec_P_Inc_Rpl.sh \
+			ipsec_P_Out_Req.sh ipsec_P_Out_Rpl.sh ; do \
+			cp modules/pcscf/$$s $(modules-target) ; \
+			chmod 755 $(modules-target)/$$s ; \
+		done ; \
+
+install-cfg-icscf: $(cfg-prefix)/$(cfg-dir)
+		@echo "installing configuration of icscf" ; \
+		sed -s -e "s#/opt/OpenIMSCore/ser_ims/modules/.*/#$(modules-target)#g" \
+			-e "s#/opt/OpenIMSCore/icscf.xml#/$(cfg-dir)icscf.xml#" \
+			-e "s#log_stderror=yes#log_stderror=no#" \
+			-e "s#debug=3#debug=1#" \
+			< cfg/icscf.cfg > $(cfg-prefix)/$(cfg-dir)icscf.cfg.sample ; \
+		chmod 644 $(cfg-prefix)/$(cfg-dir)icscf.cfg.sample ; \
+		if [ -z "${skip_cfg_install}" -a \
+				! -f $(cfg-prefix)/$(cfg-dir)icscf.cfg ]; then \
+			mv -f $(cfg-prefix)/$(cfg-dir)icscf.cfg.sample \
+				$(cfg-prefix)/$(cfg-dir)icscf.cfg; \
+		fi ; \
+		cp cfg/icscf.xml $(cfg-prefix)/$(cfg-dir)icscf.xml.sample ; \
+		chmod 644 $(cfg-prefix)/$(cfg-dir)icscf.xml.sample ; \
+		if [ -z "${skip_cfg_install}" -a \
+				! -f $(cfg-prefix)/$(cfg-dir)icscf.xml ]; then \
+			mv -f $(cfg-prefix)/$(cfg-dir)icscf.xml.sample \
+				$(cfg-prefix)/$(cfg-dir)icscf.xml; \
+		fi ; \
+
+install-cfg-scscf: $(cfg-prefix)/$(cfg-dir)
+		@echo "installing configuration of scscf" ; \
+		sed -s -e "s#/opt/OpenIMSCore/ser_ims/modules/.*/#$(modules-target)#g" \
+			-e "s#/opt/OpenIMSCore/scscf.xml#/$(cfg-dir)scscf.xml#" \
+			-e "s#log_stderror=yes#log_stderror=no#" \
+			-e "s#debug=3#debug=1#" \
+			< cfg/scscf.cfg > $(cfg-prefix)/$(cfg-dir)scscf.cfg.sample ; \
+		chmod 644 $(cfg-prefix)/$(cfg-dir)scscf.cfg.sample ; \
+		if [ -z "${skip_cfg_install}" -a \
+				! -f $(cfg-prefix)/$(cfg-dir)scscf.cfg ]; then \
+			mv -f $(cfg-prefix)/$(cfg-dir)scscf.cfg.sample \
+				$(cfg-prefix)/$(cfg-dir)scscf.cfg; \
+		fi ; \
+		cp cfg/scscf.xml $(cfg-prefix)/$(cfg-dir)scscf.xml.sample ; \
+		chmod 644 $(cfg-prefix)/$(cfg-dir)scscf.xml.sample ; \
+		if [ -z "${skip_cfg_install}" -a \
+				! -f $(cfg-prefix)/$(cfg-dir)scscf.xml ]; then \
+			mv -f $(cfg-prefix)/$(cfg-dir)scscf.xml.sample \
+				$(cfg-prefix)/$(cfg-dir)scscf.xml; \
+		fi ; \
+		for f in CxDataType.dtd CxDataType_Rel6.xsd CxDataType_Rel7.xsd; do \
+			cp modules/scscf/$$f $(modules-target) ; \
+			chmod 644 $(modules-target)/$$f ; \
+		done ; \
+
+install-cfg-cscf: 
+		@echo "installing common configuration of cscfs" ; \
+		for f in add-imscore-user_newdb.sh configurator.sh open-ims.dnszone; do \
+			cp cfg/$$f ${example-dir}; \
+			chmod 644 ${example-dir}/$$f; \
+		done; \
+
 install-bin: $(bin-prefix)/$(bin-dir) 
 		$(INSTALL-TOUCH) $(bin-prefix)/$(bin-dir)/ser 
 		$(INSTALL-BIN) ser $(bin-prefix)/$(bin-dir)
@@ -496,6 +582,7 @@ install-utils: utils $(bin-prefix)/$(bin-dir)
 
 install-modules-all: install-modules install-modules-doc
 
+install-modules-cscf: install-modules install-cfg-cscf install-modules-doc 
 
 install-doc: $(doc-prefix)/$(doc-dir) install-modules-doc
 	$(INSTALL-TOUCH) $(doc-prefix)/$(doc-dir)/INSTALL 
