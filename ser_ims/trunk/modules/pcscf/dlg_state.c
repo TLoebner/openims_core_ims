@@ -567,7 +567,7 @@ void print_p_dialogs(int log_level)
 			while(d){
 				LOG(log_level,"INF:"M_NAME":[%4d] Dir:["ANSI_MAGENTA"%d"ANSI_GREEN
 					"]\tCall-ID:<"ANSI_BLUE"%.*s"ANSI_GREEN
-					">\t"ANSI_RED"%d://%.*s:%d"ANSI_GREEN"\n"
+					">\tAOR:"ANSI_RED"%d://%.*s:%d"ANSI_GREEN"\n"
 					,i,				
 					d->direction,
 					d->call_id.len,d->call_id.s,
