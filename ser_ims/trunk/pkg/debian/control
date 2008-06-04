@@ -9,7 +9,7 @@ Package: ser
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
 Suggests: ser-mysql-module, ser-jabber-module, ser-cpl-module, ser-pa-module, ser-radius-modules
-Conflicts: ser-mysql-module (<< ${Source-Version}), ser-jabber-module (<< ${Source-Version}), ser-radius-modules (<< ${Source-Version}), ser-cpl-module (<< ${Source-Version}), ser-pa-module (<< ${Source-Version}), ser-postgres-module (<< ${Source-Version}), ser-acc-db-module (<< ${Source-Version}), ser-acc-radius-module (<< ${Source-Version})
+Conflicts: ser-mysql-module (<< ${Source-Version}), ser-jabber-module (<< ${Source-Version}), ser-radius-modules (<< ${Source-Version}), ser-cpl-module (<< ${Source-Version}), ser-pa-module (<< ${Source-Version}), ser-postgres-module (<< ${Source-Version}), ser-acc-db-module (<< ${Source-Version}), ser-acc-radius-module (<< ${Source-Version}), ser-xmlrpc-module (<< ${Source-Version})
 Description: Sip Express Router, very fast and configurable SIP proxy
  ser or SIP Express Router is a very fast and flexible SIP (RFC3621)
  proxy server. Written entirely in C, ser can handle thousands calls
@@ -75,3 +75,28 @@ Description: contains the XML-RPC based interface to SER
  interface can be used to change various configuration options of
  SER at runtime. Other applications, such as serctl command line
  tools and SERWeb use XML-RPC interface to communicate with SER
+
+Package: ser-pcscf
+Architecture: any
+Depends: ${shlibs:Depends}, ser (= ${Source-Version}) 
+Description: Contains the P-CSCF specifc files
+ This modules provides the functionality of P-CSCF
+
+Package: ser-icscf
+Architecture: any
+Depends: ${shlibs:Depends}, ser (= ${Source-Version}), ser-mysql-module (= ${Source-Version}), ser-presence-module (= ${Source-Version}), ser-xmlrpc-module (= ${Source-Version})
+Description: Contains the I-CSCF specifc files
+ This modules provides the functionality of I-CSCF
+
+Package: ser-scscf
+Architecture: any
+Depends: ${shlibs:Depends}, ser (= ${Source-Version}), ser-mysql-module (= ${Source-Version}), ser-presence-module (= ${Source-Version}), ser-xmlrpc-module (= ${Source-Version})
+Description: Contains the S-CSCF specifc files
+ This modules provides the functionality of S-CSCF
+
+Package: ser-cscf
+Architecture: any
+Depends: ${shlibs:Depends}, ser-pcscf (= ${Source-Version}), ser-icscf (= ${Source-Version}), ser-scscf (= ${Source-Version})
+Description: Dummy package for P/I/S-CSCF of Open IMS Core CSCFs.
+ This package packs the P-CSCF, I-CSCF, and S-CSCF of the Open IMS Core from
+ FOKUS with additional helper scripts.

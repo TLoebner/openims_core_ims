@@ -6,6 +6,7 @@
 #
 # History:
 # --------
+#  2008-04-09  Added CSCF modules of open ims core (sebastian)
 #  2003-05-30  updated for the 0.8.11 release, changed modules list and
 #              some ser make options (andrei)
 #  2003-06-27  changed to DH_COMPAT 4 (debian/compat) + other filenames
@@ -29,15 +30,16 @@
 export DEB_BUILD_OPTIONS:="$(DEB_BUILD_OPTIONS) nostrip"
 
 # modules not in the "main" package or unstable 
-EXCLUDED_MODULES=	mysql jabber acc_radius xmlrpc auth_radius group_radius uri_radius \
-					avp_radius pa rls dialog presence_b2b xcap postgres snmp cpl cpl-c ext extcmd 
+EXCLUDED_MODULES=	mysql jabber acc_radius xmlrpc auth_radius uri_radius \
+					avp_radius pa rls dialog presence_b2b xcap postgres snmp cpl cpl-c ext extcmd \
+		pcscf icscf scscf
 
 # modules depending on mysql
 MYSQL_MODULES=mysql
 #jabber related modules
 JABBER_MODULES=jabber
 #module depending on radiusclient
-RADIUS_MODULES=acc_radius auth_radius group_radius uri_radius avp_radius
+RADIUS_MODULES=acc_radius auth_radius uri_radius avp_radius
 #cpl related modules
 CPL_MODULES=cpl-c
 # pa related modules
@@ -46,6 +48,10 @@ PA_MODULES=pa rls dialog presence_b2b xcap
 POSTGRES_MODULES=postgres
 # xmlrpc module
 XMLRPC_MODULES=xmlrpc
+# CSCF modules
+PCSCF_MODULES=pcscf
+ICSCF_MODULES=icscf
+SCSCF_MODULES=scscf
 
 # the same but with path prepended (needed for modules="...")
 MYSQL_MOD_PATH=$(addprefix modules/, $(MYSQL_MODULES))
@@ -55,6 +61,9 @@ CPL_MOD_PATH=$(addprefix modules/, $(CPL_MODULES))
 PA_MOD_PATH=$(addprefix modules/, $(PA_MODULES))
 POSTGRES_MOD_PATH=$(addprefix modules/, $(POSTGRES_MODULES))
 XMLRPC_MOD_PATH=$(addprefix modules/, $(XMLRPC_MODULES))
+PCSCF_MOD_PATH=$(addprefix modules/, $(PCSCF_MODULES))
+ICSCF_MOD_PATH=$(addprefix modules/, $(ICSCF_MODULES))
+SCSCF_MOD_PATH=$(addprefix modules/, $(SCSCF_MODULES))
 
 SERCTL_PATH=tools/serctl
 
@@ -78,6 +87,9 @@ build: build-stamp
 build-stamp: configure-stamp 
 	dh_testdir
 
+	@REVISION=`svn info|grep Revision|awk '{print $$2}'`; \
+	echo "svn:Revision=$$REVISION" > $(CURDIR)/debian/substvars
+
 	# Add here commands to compile the package.
 	$(MAKE) all  skip_modules="$(EXCLUDED_MODULES)" cfg-target=/etc/ser/
 	$(MAKE) modules modules="$(MYSQL_MOD_PATH)" cfg-target=/etc/ser/
@@ -91,6 +103,9 @@ build-stamp: configure-stamp
 	
 	$(MAKE) modules modules="$(POSTGRES_MOD_PATH)" cfg-target=/etc/ser/
 	$(MAKE) modules modules="$(XMLRPC_MOD_PATH)" cfg-target=/etc/ser/
+	$(MAKE) modules modules="$(PCSCF_MOD_PATH)" cfg-target=/etc/ser/
+	$(MAKE) modules modules="$(ICSCF_MOD_PATH)" cfg-target=/etc/ser/
+	$(MAKE) modules modules="$(SCSCF_MOD_PATH)" cfg-target=/etc/ser/
 	#/usr/bin/docbook-to-man debian/ser.sgml > ser.1
 
 	touch build-stamp
@@ -103,9 +118,11 @@ clean:
 	# Add here commands to clean up after the build process.
 	-$(MAKE) -C lib -f Makefile.ser proper
 	-$(MAKE) \
-		include_modules="$(MYSQL_MODULES) $(JABBER_MODULES) $(RADIUS_MODULES)\
-							$(CPL_MODULES) $(PA_MODULES) $(POSTGRES_MODULES) $(XMLRPC_MODULES)"\
+		include_modules="$(MYSQL_MODULES) \
+							$(CPL_MODULES) $(PA_MODULES) $(POSTGRES_MODULES) $(XMLRPC_MODULES) ${CSCF_MODULES}"\
 							proper
+
+	@rm -f $(CURDIR)/debian/substvars
 
 	dh_clean
 
@@ -172,6 +189,27 @@ install: build
 		cfg-prefix=$(CURDIR)/debian/ser-xmlrpc-module \
 		cfg-target=/etc/ser/ \
 		doc-dir=share/doc/ser-xmlrpc-module
+	#install only the P-CSCF module
+	$(MAKE) install-modules-all install-cfg-pcscf modules="$(PCSCF_MOD_PATH)"  \
+		basedir=$(CURDIR)/debian/ser-pcscf \
+		prefix=/usr \
+		cfg-prefix=$(CURDIR)/debian/ser-pcscf \
+		cfg-target=/etc/ser/ \
+		doc-dir=share/doc/ser-pcscf
+	#install only the I-CSCF module
+	$(MAKE) install-modules-all install-cfg-icscf modules="$(ICSCF_MOD_PATH)"  \
+		basedir=$(CURDIR)/debian/ser-icscf \
+		prefix=/usr \
+		cfg-prefix=$(CURDIR)/debian/ser-icscf \
+		cfg-target=/etc/ser/ \
+		doc-dir=share/doc/ser-icscf
+	#install only the S-CSCF module
+	$(MAKE) install-modules-all install-cfg-scscf modules="$(SCSCF_MOD_PATH)"  \
+		basedir=$(CURDIR)/debian/ser-scscf \
+		prefix=/usr \
+		cfg-prefix=$(CURDIR)/debian/ser-scscf \
+		cfg-target=/etc/ser/ \
+		doc-dir=share/doc/ser-scscf
 	
 	#dh_movefiles
 
@@ -184,7 +222,7 @@ install: build
 binary-common: 
 	dh_testdir
 	dh_testroot
-#	dh_installdebconf	
+	dh_installdebconf	
 	dh_installdocs
 	dh_installexamples
 	dh_installmenu
@@ -206,7 +244,7 @@ binary-common:
 	dh_installdeb
 #	dh_perl
 	dh_shlibdeps
-	dh_gencontrol
+	dh_gencontrol  -- -Tdebian/substvars
 	dh_md5sums
 	dh_builddeb
 

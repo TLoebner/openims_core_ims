@@ -1,3 +1,9 @@
+ser (0.9.4-0.2-svn${svn:Revision}) unstable; urgency=low
+
+  * add open ims cscf modules
+
+ -- Sebastian Felis <felis@nw.neclab.eu>  Thu, 10 Apr 2008 09:11:33 +0200
+
 ser (0.9.4-0.2) unstable; urgency=low
 
   * minor debian rules clean target fix 

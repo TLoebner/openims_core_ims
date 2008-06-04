@@ -241,6 +241,7 @@ static int load_user_attrs(struct sip_msg* msg, unsigned long flags, fparam_t* f
 }
 
 
+/* already defined in ../../parser/parser_uri.c
 static void uri_type_to_str(uri_type type, str *s) {
     static str	s_sip  = STR_STATIC_INIT("sip");
     static str	s_sips = STR_STATIC_INIT("sips");
@@ -257,6 +258,7 @@ static void uri_type_to_str(uri_type type, str *s) {
     default:		*s = s_null;
     }
 }
+*/
 
 
 static int load_uri_attrs(struct sip_msg* msg, unsigned long flags, fparam_t* fp)
