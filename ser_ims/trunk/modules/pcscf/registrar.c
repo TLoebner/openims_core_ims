@@ -204,11 +204,11 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
  * @param public_id_cnt - size of the public_id array
  * @param service_route - array of Service-Routes
  * @param service_route_cnt - size of the service_route array
- * @param pinhole - NAT pinhole 
+ * @param requires_nat - if to create pinholes 
  * @returns the maximum expiration time, -1 on error
  */
 static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int expires_hdr,
-	str *public_id,int public_id_cnt,str *service_route,int service_route_cnt, r_nat_dest ** pinhole)
+	str *public_id,int public_id_cnt,str *service_route,int service_route_cnt, int requires_nat)
 {
 	r_contact *rc;
 	enum Reg_States reg_state=REGISTERED;
@@ -219,6 +219,7 @@ static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int 
 	int local_time_now;
 	struct hdr_field *h;
 	contact_t *c;
+	r_nat_dest *pinhole;
 	
 	
 	r_act_time();
@@ -243,9 +244,15 @@ static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int 
 			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
 			
-			if (expires>local_time_now) {		
-				rc = update_r_contact(puri.host,puri.port_no,puri.proto,
-					&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, pinhole);
+			if (expires>local_time_now) {
+				if (requires_nat) {		
+					pinhole = nat_msg_origin(msg);
+					rc = update_r_contact(puri.host,puri.port_no,puri.proto,
+						&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, &pinhole);
+				}else{
+					rc = update_r_contact(puri.host,puri.port_no,puri.proto,
+						&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, 0);
+				}
 				if (expires-time_now>max_expires) max_expires=expires-time_now;
 			}
 			else {
@@ -294,8 +301,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	int expires;
 	str *service_route=0;
 	int service_route_cnt;
-	r_nat_dest * pinhole=0;
-	
+		
 	req = cscf_get_request_from_reply(rpl);
 	if (!req){
 		LOG(L_ERR,"ERR:"M_NAME":P_save_location: No transactional request found.\n");
@@ -324,16 +330,8 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	cscf_get_p_associated_uri(rpl,&public_id,&public_id_cnt);
 	
 	service_route = cscf_get_service_route(rpl,&service_route_cnt);
-	
-	if(pcscf_nat_enable && nat_msg_origin(req, &pinhole) < 0) {
-		LOG(L_ERR,"ERR:"M_NAME":P_save_location: error on determining nat pinhole\n");
-	}
-	
-//	if(pinhole != NULL)
-//		LOG(L_ERR, "**************************\n");
-//	else LOG(L_ERR, "***************************%d**********************\n",pcscf_nat_pingall); 
-		
-	if ((expires=update_contacts(rpl,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,&pinhole))<0) 
+			
+	if ((expires=update_contacts(rpl,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,requires_nat(req)))<0) 
 		goto error;
 
 	//print_r(L_ERR);
