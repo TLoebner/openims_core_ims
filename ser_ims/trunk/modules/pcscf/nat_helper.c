@@ -435,24 +435,31 @@ int nat_uac_test(struct sip_msg * msg) {
  * @param pinhole - where to save to
  * @returns 1 on success, -1 on error
  */
-int nat_msg_origin(struct sip_msg * msg, r_nat_dest ** pinhole) {
-	if (!pcscf_nat_enable) {
-		*pinhole = NULL;
-		return -1;
-	}
+r_nat_dest* nat_msg_origin(struct sip_msg * msg) {
+	r_nat_dest *pinhole=NULL;
+	if (!pcscf_nat_enable) return NULL;
 	if(pcscf_nat_pingall || nat_uac_test(msg)) {
-		* pinhole = shm_malloc(sizeof(r_nat_dest));
-		if(* pinhole == NULL) {
-			LOG(L_ERR,"ERR:"M_NAME"nat_msg_origin:no memory\n");
-			return -1;
+		pinhole = shm_malloc(sizeof(r_nat_dest));
+		if (pinhole == NULL) {
+			LOG(L_ERR,"ERR:"M_NAME":nat_msg_origin:no memory\n");
+			return NULL;
 		}
-		memcpy(&(*pinhole)->nat_addr, &msg->rcv.src_ip, sizeof(struct ip_addr));
-		(*pinhole) -> nat_port = msg -> rcv.src_port;
-	} else {
-		*pinhole = NULL;
+		memcpy(&pinhole->nat_addr, &msg->rcv.src_ip, sizeof(struct ip_addr));
+		pinhole -> nat_port = msg -> rcv.src_port;
 	}
-	return 1;
+	return pinhole;
 }
+
+/**
+ * Finds if a NAT pinhole would be required to reach this user.
+ * @param msg - the SIP message
+ * @returns 1 if yes, 0 if not
+ */
+int requires_nat(struct sip_msg * msg) 
+{
+	return pcscf_nat_enable && (pcscf_nat_pingall || nat_uac_test(msg));
+}
+
 
 /**
  * Pings a contact to keep the NAT pinhole alive.

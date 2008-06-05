@@ -112,7 +112,8 @@ int is1918addr(str *saddr);
 int nat_send_ping(r_contact *c);
 int nat_uac_test(struct sip_msg * msg);
 int nat_prepare_1918addr();
-int nat_msg_origin(struct sip_msg * msg, r_nat_dest ** pinhole);
+r_nat_dest* nat_msg_origin(struct sip_msg * msg);
+int requires_nat(struct sip_msg * msg);
 
 
 #endif
