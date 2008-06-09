@@ -799,9 +799,9 @@ abort:
 
 
 str S_WWW_Authorization_AKA={"WWW-Authenticate: Digest realm=\"%.*s\","
-	" nonce=\"%.*s\", algorithm=%.*s, ck=\"%.*s\", ik=\"%.*s\"\r\n",106};
+	" nonce=\"%.*s\", qop=\"auth\", algorithm=%.*s, ck=\"%.*s\", ik=\"%.*s\"\r\n",118};
 str S_WWW_Authorization_MD5={"WWW-Authenticate: Digest realm=\"%.*s\","
-	" nonce=\"%.*s\", algorithm=%.*s\r\n",101};
+	" nonce=\"%.*s\", qop=\"auth\", algorithm=%.*s\r\n",113};
 /**
  * Adds the WWW-Authenticate header for challenge, based on the authentication vector.
  * @param msg - SIP message to add the header to
