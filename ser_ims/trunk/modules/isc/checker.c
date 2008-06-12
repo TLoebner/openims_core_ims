@@ -181,7 +181,7 @@ static int isc_check_session_desc(ims_spt *spt, struct sip_msg *msg)
 		len = (long)msg->content_length->parsed;
 	c = body[len];
 	body[len]=0;
-	x = pkg_malloc(spt->session_desc.line.len+2+spt->session_desc.line.len);
+	x = pkg_malloc(spt->session_desc.line.len+2+spt->session_desc.content.len);
 	sprintf(x,"%.*s=%.*s",
 		spt->session_desc.line.len,spt->session_desc.line.s,
 		spt->session_desc.content.len,spt->session_desc.content.s);
