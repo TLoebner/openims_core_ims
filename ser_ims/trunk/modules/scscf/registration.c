@@ -158,7 +158,6 @@ unsigned char get_auth_scheme_type(str scheme)
 
 
 
-static str scscf_allow={"Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, MESSAGE, INFO\r\n",83};
 /**
  * Copies the Path header from REGISTER request to reply, inserts the Service-Route.
  * @param msg - the SIP message to operator on
@@ -171,7 +170,7 @@ int S_add_path_service_routes(struct sip_msg *msg,char *str1,char *str2 )
 	struct hdr_field *h;
 	str t={0,0};
 	if (parse_headers(msg,HDR_EOH_F,0)<0){
-		LOG(L_ERR,"ERR:"M_NAME":S_REGISTER_reply: Error parsing headers\n");
+		LOG(L_ERR,"ERR:"M_NAME":S_add_path_service_routes: Error parsing headers\n");
 		return CSCF_RETURN_FALSE;
 	}
 	h = msg->headers;
@@ -187,18 +186,52 @@ int S_add_path_service_routes(struct sip_msg *msg,char *str1,char *str2 )
 	}
 	
 	if (!cscf_add_header_rpl(msg,&scscf_service_route)) return CSCF_RETURN_FALSE;
-	
-	if (!cscf_add_header_rpl(msg,&scscf_allow)) return CSCF_RETURN_FALSE;
 
+	return CSCF_RETURN_TRUE;
+}
+
+static str s_allow_s={"Allow: ",7};
+static str s_allow_e={"\r\n",2};
+/**
+ * Inserts an Allow header with the given value
+ * @param msg - the SIP message to operator on
+ * @param str1 - the value to be inserted
+ * @param str2 - no used
+ * @returns #CSCF_RETURN_TRUE on success or #CSCF_RETURN_FALSE if not added
+ */
+int S_add_allow(struct sip_msg *msg,char *str1,char *str2 )
+{
+	str hdr={0,0};
+	str allow;
+	allow.s = str1;
+	allow.len = strlen(str1);
+	
+	hdr.len = s_allow_s.len+allow.len+s_allow_e.len;
+	hdr.s = pkg_malloc(hdr.len);
+	if (!hdr.s){
+		LOG(L_ERR,"ERR:"M_NAME":S_add_allow: Error allocating %d bytes\n",hdr.len);
+		return CSCF_RETURN_FALSE;
+	}		
+	hdr.len = 0;
+	STR_APPEND(hdr,s_allow_s);
+	STR_APPEND(hdr,allow);
+	STR_APPEND(hdr,s_allow_e);
+	
+	if (!cscf_add_header_rpl(msg,&hdr)) {
+		if (hdr.s) pkg_free(hdr.s);
+		return CSCF_RETURN_FALSE;
+	}
+	
+	if (hdr.s) pkg_free(hdr.s);
 	return CSCF_RETURN_TRUE;
 }
 
 static str s_service_route_s = {"Service-Route: <",16};
 static str s_service_route_e = {";lr>\r\n",6};
 /**
- * Copies the Path header from REGISTER request to reply, inserts the Service-Route.
+ * Inserts a Service-Route header with the given value
  * @param msg - the SIP message to operator on
- * @param str1 - no used
+ * @param str1 - the value to be inserted
  * @param str2 - no used
  * @returns #CSCF_RETURN_TRUE on success or #CSCF_RETURN_FALSE if not added
  */
