@@ -67,6 +67,8 @@ unsigned char get_auth_scheme_type(str algorithm);
 
 int S_add_path_service_routes(struct sip_msg *msg,char *str1,char *str2 );
 
+int S_add_allow(struct sip_msg *msg,char *str1,char *str2 );
+
 int S_add_service_route(struct sip_msg *msg,char *str1,char *str2 );
 
 int S_add_p_charging_function_addresses(struct sip_msg *msg,char *str1,char *str2 );

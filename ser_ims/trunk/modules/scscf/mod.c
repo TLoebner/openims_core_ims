@@ -174,6 +174,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - S_challenge() - challenge a REGISTER
  * - S_is_authorized() - check if the Authorization header is correct in a REGISTER
  * - S_add_path_service_routes() - Add Path, Service-Route to a REGISTER response
+ * - S_add_allow() - Add Allow to a REGISTER response
  * - S_add_service_route() - Add Service-Route to a REGISTER response
  * - S_check_visited_network_id() - check if the P-Visited-Network-Id header matches a regexp
  * <p>
@@ -218,6 +219,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_challenge",					S_challenge,				1,0,REQUEST_ROUTE},
 	{"S_is_authorized",				S_is_authorized,			1,0,REQUEST_ROUTE},
 	{"S_add_path_service_routes",	S_add_path_service_routes,	0,0,REQUEST_ROUTE},
+	{"S_add_allow",					S_add_allow,				1,0,REQUEST_ROUTE},
 	{"S_add_service_route",			S_add_service_route,		1,0,REQUEST_ROUTE},
 	{"S_check_visited_network_id",	S_check_visited_network_id,	1, fixup_regex_1 ,REQUEST_ROUTE},
 	{"S_add_p_charging_function_addresses", S_add_p_charging_function_addresses, 0, 0, REQUEST_ROUTE},
