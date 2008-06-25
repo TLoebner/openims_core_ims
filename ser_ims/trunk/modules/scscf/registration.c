@@ -501,7 +501,8 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	unsigned int aud_hash=0;
 	str realm;
 	str private_identity,public_identity;
-	str nonce,response16;
+	str nonce,response16,nc,cnonce,qop_str,body;
+	enum qop_type qop;
 	str uri={0,0};
 	HASHHEX expected,ha1,hbody;
 	int expected_len=32;
@@ -650,16 +651,28 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 		}
 	}
 	
-	if (!cscf_get_nonce_response(msg,realm,&nonce,&response16)||
+	if (!cscf_get_nonce_response(msg,realm,&nonce,&response16,&qop,&qop_str,&nc,&cnonce,&uri)||
 		!nonce.len || !response16.len)
 	{
 		LOG(L_DBG,"DBG:"M_NAME":S_is_authorized: Nonce or reponse missing\n");
 		return ret;
 	}	
 	
-	uri = cscf_get_digest_uri(msg,realm);
-	
+	if (qop==QOP_AUTHINT){
+		body = cscf_get_body(msg);
+		calc_H(&body,hbody);
+	}
+		
 	av = get_auth_vector(private_identity,public_identity,AUTH_VECTOR_SENT,&nonce,&aud_hash);
+
+	LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: uri=%.*s nonce=%.*s response=%.*s qop=%.*s nc=%.*s cnonce=%.*s hbody=%.*s\n",
+		uri.len,uri.s,
+		nonce.len,nonce.s,
+		response16.len,response16.s,
+		qop_str.len,qop_str.s,
+		nc.len,nc.s,
+		cnonce.len,cnonce.s,
+		32,hbody);
 	
 	if (!av) {
 		LOG(L_ERR,"ERR:"M_NAME":S_is_authorized: no matching auth vector found - maybe timer expired\n");		
@@ -672,9 +685,12 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 //			LOG(L_CRIT,"A1: %.*s:%.*s:%.*s\n",private_identity.len,private_identity.s,
 //				realm.len,realm.s,av->authorization.len,av->authorization.s);
 			
-			calc_HA1(HA_MD5,&private_identity,&realm,&(av->authorization),&(av->authenticate),0,ha1);
+			calc_HA1(HA_MD5,&private_identity,&realm,&(av->authorization),&(av->authenticate),&cnonce,ha1);
 			calc_response(ha1,&(av->authenticate),
-				&empty_s,&empty_s,&empty_s,0,
+				&nc,
+				&cnonce,
+				&qop_str,
+				qop==QOP_AUTHINT,
 				&msg->first_line.u.request.method,&uri,hbody,expected);
 			LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s and we  expect %.*s ha1 %.*s\n",
 				response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);
@@ -686,7 +702,10 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 			
 			memcpy(ha1,av->authorization.s,HASHHEXLEN);					
 			calc_response(ha1,&(av->authenticate),
-				&empty_s,&empty_s,&empty_s,0,
+				&nc,
+				&cnonce,
+				&qop_str,
+				qop==QOP_AUTHINT,
 				&msg->first_line.u.request.method,&uri,hbody,expected);
 			LOG(L_INFO,"DBG:"M_NAME":S_is_authorized: UE said: %.*s and we  expect %.*s ha1 %.*s\n",
 				response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);
@@ -832,9 +851,9 @@ abort:
 
 
 str S_WWW_Authorization_AKA={"WWW-Authenticate: Digest realm=\"%.*s\","
-	" nonce=\"%.*s\", qop=\"auth\", algorithm=%.*s, ck=\"%.*s\", ik=\"%.*s\"\r\n",118};
+	" nonce=\"%.*s\", qop=\"auth,auth-int\", algorithm=%.*s, ck=\"%.*s\", ik=\"%.*s\"\r\n",127};
 str S_WWW_Authorization_MD5={"WWW-Authenticate: Digest realm=\"%.*s\","
-	" nonce=\"%.*s\", qop=\"auth\", algorithm=%.*s\r\n",113};
+	" nonce=\"%.*s\", qop=\"auth,auth-int\", algorithm=%.*s\r\n",122};
 /**
  * Adds the WWW-Authenticate header for challenge, based on the authentication vector.
  * @param msg - SIP message to add the header to
