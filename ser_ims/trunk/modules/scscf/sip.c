@@ -66,7 +66,6 @@
 #include "../../parser/parse_via.h"
 #include "../../parser/parse_content.h"
 #include "../../parser/parse_nameaddr.h"
-#include "../../parser/digest/digest.h"
 #include "../../parser/contact/contact.h"
 #include "../../parser/contact/parse_contact.h"
 
@@ -667,7 +666,8 @@ str cscf_get_digest_uri(struct sip_msg *msg, str realm)
  * @param response - param to fill with the response
  * @returns 1 if found, 0 if not
  */
-int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *response)
+int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *response,
+	enum qop_type *qop,str *qop_str,str *nc,str *cnonce,str *uri)
 {
 	struct hdr_field* h=0;
 	int ret;
@@ -695,6 +695,11 @@ int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *respo
 	if (h&&h->parsed) {
 		if (nonce) *nonce = ((auth_body_t*)h->parsed)->digest.nonce;
 		if (response) *response = ((auth_body_t*)h->parsed)->digest.response;
+		if (qop) *qop = ((auth_body_t*)h->parsed)->digest.qop.qop_parsed;
+		if (qop_str) *qop_str = ((auth_body_t*)h->parsed)->digest.qop.qop_str;
+		if (nc) *nc = ((auth_body_t*)h->parsed)->digest.nc;
+		if (cnonce) *cnonce = ((auth_body_t*)h->parsed)->digest.cnonce;
+		if (uri) *uri = ((auth_body_t*)h->parsed)->digest.uri;
 	}
 	
 	return 1;	
@@ -1806,6 +1811,31 @@ struct hdr_field* cscf_get_next_header_type(struct sip_msg * msg ,
 	return h;
 }
 
+
+/**
+ * Returns the first header structure for a given header name. 
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @returns the hdr_field on success or NULL if not found  
+ */
+str cscf_get_body(struct sip_msg * msg)
+{		
+	str x={0,0};
+	x.s = get_body(msg);	
+	if (x.s==0) return x;
+	if (parse_headers(msg,HDR_CONTENTLENGTH_F,0)!=0) {
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_body: Error parsing until header Content-Length: \n");
+		return x;
+	}
+	if  (msg->content_length->parsed==NULL) {
+		LOG(L_ERR," body <%.*s>\n",msg->content_length->body.len,msg->content_length->body.s);
+		parse_content_length(msg->content_length->body.s,
+			msg->content_length->body.s+msg->content_length->body.len,&(x.len));
+		msg->content_length->parsed=(void*)(long)(x.len);
+	}else 
+		x.len = (long)msg->content_length->parsed;
+	return x;
+}
 
 str cscf_p_access_network_info={"P-Access-Network-Info",21};
 /**

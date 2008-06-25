@@ -58,6 +58,7 @@
 
 #include "../../sr_module.h"
 #include "../../parser/contact/parse_contact.h"
+#include "../../parser/digest/digest.h"
 #include "../../parser/parse_rr.h"
 
 int cscf_add_header_first(struct sip_msg *msg, str *hdr,int type);
@@ -80,7 +81,8 @@ str cscf_get_auts(struct sip_msg *msg, str realm);
 str cscf_get_nonce(struct sip_msg *msg, str realm);
 str cscf_get_algorithm(struct sip_msg *msg, str realm);
 str cscf_get_digest_uri(struct sip_msg *msg, str realm);
-int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *response);
+int cscf_get_nonce_response(struct sip_msg *msg, str realm,str *nonce,str *response,
+	enum qop_type *qop,str *qop_str,str *nc,str *cnonce,str *uri);
 str cscf_get_user_agent(struct sip_msg *msg);
 contact_body_t *cscf_parse_contacts(struct sip_msg *msg);
 str cscf_get_path(struct sip_msg *msg);
@@ -129,6 +131,7 @@ struct hdr_field* cscf_get_next_header_type(struct sip_msg * msg ,
 
 str cscf_get_headers_content(struct sip_msg * msg , str header_name);
 
+str cscf_get_body(struct sip_msg * msg);
 
 // from pcscf
 

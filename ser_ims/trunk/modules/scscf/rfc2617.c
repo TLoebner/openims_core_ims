@@ -89,6 +89,15 @@ void calc_HA1(ha_alg_t _alg, str* _username, str* _realm, str* _password,
 	cvt_hex(HA1, _sess_key);
 }
 
+void calc_H(str *ent, HASHHEX hash)
+{
+	MD5_CTX Md5Ctx;
+	HASH HA1;
+	MD5Init(&Md5Ctx);
+	MD5Update(&Md5Ctx, ent->s, ent->len);
+	MD5Final(HA1, &Md5Ctx);
+	cvt_hex(HA1, hash);
+}
 
 /* 
  * calculate request-digest/response-digest as per HTTP Digest spec 

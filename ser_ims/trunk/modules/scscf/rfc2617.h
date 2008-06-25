@@ -76,6 +76,7 @@ void calc_HA1(ha_alg_t _alg,      /* Type of algorithm */
 	      str* _cnonce,       /* cnonce */
 	      HASHHEX _sess_key); /* Result will be stored here */
 
+void calc_H(str *ent, HASHHEX hash);
 
 /* calculate request-digest/response-digest as per HTTP Digest spec */
 void calc_response(HASHHEX _ha1,       /* H(A1) */
