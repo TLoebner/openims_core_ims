@@ -118,6 +118,7 @@ struct scscf_binds isc_scscfb;      /**< Structure with pointers to S-CSCF funcs
  * - ISC_match_filter() - check if a message matches any IFC and forward to AS if it does.
  * 	Params (char *direction) "orig"/"term" 
  * - ISC_match_filter_reg() - check if a message matches any IFC for REGISTER and do 3rd party registration
+ *  Parms (char *is_registered) "0"/"1" 
  * - ISC_from_AS() - Finds if the message returns from the AS.
  * - ISC_is_session_continued() - Finds if the failed fwd should be continued or session should be broken 
  */
@@ -125,7 +126,7 @@ static cmd_export_t isc_cmds[] = {
 	{"isc_appserver_forward", 	isc_appserver_forward, 		2, 0, REQUEST_ROUTE},	
 	
 	{"ISC_match_filter", 		ISC_match_filter, 			1, 0, REQUEST_ROUTE|FAILURE_ROUTE},
-	{"ISC_match_filter_reg", 	ISC_match_filter_reg, 		0, 0, REQUEST_ROUTE},
+	{"ISC_match_filter_reg", 	ISC_match_filter_reg, 		1, 0, REQUEST_ROUTE},
 	{"ISC_from_AS", 			ISC_from_AS, 				1, 0, REQUEST_ROUTE|FAILURE_ROUTE},
 	{"ISC_is_session_continued",ISC_is_session_continued, 	0, 0, FAILURE_ROUTE},
 	
@@ -459,7 +460,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_CRIT,"SKIP: %d\n",old_mark.skip);
 		int index = old_mark.skip;
 		for (k=0;k<t->nr_of_outgoings;k++) {
-			m = isc_checker_find(s,new_mark.direction,index,msg);
+			m = isc_checker_find(s,new_mark.direction,index,msg,isc_is_registered(&s));
 			if (m) {
 				index = m->index;
 				if (k < t->nr_of_outgoings - 1) isc_free_match(m);
@@ -499,7 +500,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			
 			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Orig User <%.*s> [%d]\n",str1,
 				s.len,s.s,k);
-			m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
+			m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg,isc_is_registered(&s));
 			if (m){
 				new_mark.direction = IFC_ORIGINATING_SESSION;
 				new_mark.skip = m->index+1;
@@ -526,7 +527,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Term User <%.*s> [%d]\n",str1,
 				s.len,s.s,k);
 			
-			m = isc_checker_find(s,new_mark.direction,old_mark.skip,msg);
+			m = isc_checker_find(s,new_mark.direction,old_mark.skip,msg,isc_is_registered(&s));
 			if (m){
 				new_mark.skip = m->index+1;
 				new_mark.handling = m->default_handling;
@@ -548,7 +549,7 @@ done:
  * Checks if there is a match on REGISTER.
  * Inserts route headers and set the dst_uri
  * @param msg - the message to check
- * @param str1 - the direction of the request orig/term
+ * @param str1 - if the user was previously registered 0 - for initial registration, 1 for re/de-registration
  * @param str2 - not used
  * @returns #ISC_RETURN_TRUE if found, #ISC_RETURN_FALSE if not
  */
@@ -575,16 +576,21 @@ int ISC_match_filter_reg(struct sip_msg *msg,char *str1,char *str2)
 	if (dir==DLG_MOBILE_ORIGINATING){
 		k = isc_get_originating_user(msg,&old_mark,&s);
 		if (k){
-			k = isc_is_registered(&s);
-			
+			if (str1==0||strlen(str1)!=1){
+				LOG(L_ERR,"ERR:"M_NAME":ISC_match_filter_reg(): wrong parameter - must be \"0\" (initial registration) or \"1\"(previously registered) \n");
+				return ret;
+			}else
+			if (str1[0]=='0') k = 0;
+			else k=1;				
+				
 			LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): Orig User <%.*s> [%d]\n",s.len,s.s,k);
-			m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
+			m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg,k);
 			while (m){ 
 				LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter_reg(): REGISTER match found in filter criteria\n");
 				ret = isc_third_party_reg(msg,m,&old_mark);
 				old_mark.skip = m->index+1;
 				isc_free_match(m);
-				m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg);
+				m = isc_checker_find(s,old_mark.direction,old_mark.skip,msg,k);
 			}
 
 			if(ret == ISC_RETURN_FALSE)

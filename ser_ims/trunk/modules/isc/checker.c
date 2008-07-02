@@ -392,9 +392,9 @@ void isc_free_match(isc_match *m)
  * @param msg - the SIP initial request to check on 
  * @return - TRUE if found, FALSE if none found, end of search space 
  */
-isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
+isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg,int registered)
 {
-	int registered,expires;
+	int expires;
 	char registration_type;
 	str domain={0,0};
 	int i,j,k,cnt,si,sj,next;
@@ -407,7 +407,6 @@ isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg)
 	if (skip==0) LOG(L_INFO,"INFO:"M_NAME":isc_checker_find: starting search\n");
 	else LOG(L_INFO,"INFO:"M_NAME":isc_checker_find: resuming search from %d\n",skip);
 
-	registered = isc_is_registered(&uri);			
 	expires = isc_get_expires(msg);
 	if (!registered) registration_type = IFC_INITIAL_REGISTRATION;
 	else if (expires>0) registration_type = IFC_RE_REGISTRATION;
