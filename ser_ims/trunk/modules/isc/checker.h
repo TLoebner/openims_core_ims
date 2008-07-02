@@ -76,7 +76,7 @@ typedef struct {
 
 void isc_free_match(isc_match *m);
 
-isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg);
+isc_match* isc_checker_find(str uri,char direction,int skip,struct sip_msg *msg, int registered);
 
 
 
