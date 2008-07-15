@@ -197,7 +197,8 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
 
 /**
  * Updates the registrar with the new values
- * @param c - contact to update
+ * @param req - the REGISTER request - to extract NAT info 
+ * @param rpl - the REGISTER reply - to extract contact info 
  * @param is_star - whether this was a STAR contact header
  * @param expires_hdr - value of the Expires header
  * @param public_id - array of public identities attached to this contact
@@ -207,7 +208,7 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
  * @param requires_nat - if to create pinholes 
  * @returns the maximum expiration time, -1 on error
  */
-static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int expires_hdr,
+static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsigned char is_star,int expires_hdr,
 	str *public_id,int public_id_cnt,str *service_route,int service_route_cnt, int requires_nat)
 {
 	r_contact *rc;
@@ -229,7 +230,7 @@ static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int 
 		 * then, we will update on NOTIFY */
 		return 0;
 	}	
-	for(h=msg->contact;h;h=h->next)
+	for(h=rpl->contact;h;h=h->next)
 		if (h->type==HDR_CONTACT_T && h->parsed)
 		 for(c=((contact_body_t*)h->parsed)->contacts;c;c=c->next){
 			LOG(L_DBG,"DBG:"M_NAME":update_contact: <%.*s>\n",c->uri.len,c->uri.s);
@@ -246,7 +247,7 @@ static inline int update_contacts(struct sip_msg *msg,unsigned char is_star,int 
 			
 			if (expires>local_time_now) {
 				if (requires_nat) {		
-					pinhole = nat_msg_origin(msg);
+					pinhole = nat_msg_origin(req);
 					rc = update_r_contact(puri.host,puri.port_no,puri.proto,
 						&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, &pinhole);
 				}else{
@@ -331,7 +332,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	
 	service_route = cscf_get_service_route(rpl,&service_route_cnt);
 			
-	if ((expires=update_contacts(rpl,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,requires_nat(req)))<0) 
+	if ((expires=update_contacts(req,rpl,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,requires_nat(req)))<0) 
 		goto error;
 
 	//print_r(L_ERR);
