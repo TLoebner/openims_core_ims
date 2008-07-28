@@ -549,7 +549,7 @@ void I_Snd_CER(peer *p)
 				break;
 			case AF_INET6:
 				set_2bytes(x,2);
-				memcpy(x+2,addr.sin6_addr.in6_u.u6_addr8,16);
+				memcpy(x+2,addr.sin6_addr.s6_addr,16);
 				AAACreateAndAddAVPToMessage(cer,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,18);
 				break;
 			default:
@@ -920,7 +920,7 @@ void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 				break;
 			case AF_INET6:
 				set_2bytes(x,2);
-				memcpy(x+2,addr.sin6_addr.in6_u.u6_addr8,16);
+				memcpy(x+2,addr.sin6_addr.s6_addr,16);
 				AAACreateAndAddAVPToMessage(cea,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,18);
 				break;
 			default:
