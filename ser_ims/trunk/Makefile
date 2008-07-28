@@ -466,6 +466,7 @@ install-cfg-pcscf: $(cfg-prefix)/$(cfg-dir)
 			-e "s#/opt/OpenIMSCore/pcscf.xml#/$(cfg-dir)pcscf.xml#" \
 			-e "s#log_stderror=yes#log_stderror=no#" \
 			-e "s#debug=3#debug=1#" \
+			-e "s#/opt/OpenIMSCore#/var/lib/cscf#" \
 			< cfg/pcscf.cfg > $(cfg-prefix)/$(cfg-dir)pcscf.cfg.sample ; \
 		chmod 644 $(cfg-prefix)/$(cfg-dir)pcscf.cfg.sample ; \
 		if [ -z "${skip_cfg_install}" -a \
@@ -480,35 +481,41 @@ install-cfg-pcscf: $(cfg-prefix)/$(cfg-dir)
 			mv -f $(cfg-prefix)/$(cfg-dir)pcscf.xml.sample \
 				$(cfg-prefix)/$(cfg-dir)pcscf.xml; \
 		fi ; \
-		cp modules/pcscf/reginfo.dtd $(modules-target) ; \
-		chmod 644 $(modules-target)/reginfo.dtd ; \
+		echo "Module Target is: $(basedir)$(modules-target)"; \
+		mkdir -p $(basedir)$(modules-target); \
+		chmod 755 $(basedir)$(modules-targetr); \
+		cp modules/pcscf/reginfo.dtd $(basedir)$(modules-target) ; \
+		chmod 644 $(basedir)$(modules-target)reginfo.dtd ; \
 		for s in ipsec_E_Drop.sh ipsec_E_Inc_Req.sh ipsec_E_Inc_Rpl.sh ipsec_E_Out_Req.sh \
 			ipsec_E_Out_Rpl.sh ipsec_P_Drop.sh ipsec_P_Inc_Req.sh ipsec_P_Inc_Rpl.sh \
 			ipsec_P_Out_Req.sh ipsec_P_Out_Rpl.sh ; do \
-			cp modules/pcscf/$$s $(modules-target) ; \
-			chmod 755 $(modules-target)/$$s ; \
+			cp modules/pcscf/$$s $(basedir)$(modules-target) ; \
+			chmod 755 $(basedir)$(modules-target)$$s ; \
 		done ; \
 
 install-cfg-icscf: $(cfg-prefix)/$(cfg-dir)
 		@echo "installing configuration of icscf" ; \
-		sed -s -e "s#/opt/OpenIMSCore/ser_ims/modules/.*/#$(modules-target)#g" \
-			-e "s#/opt/OpenIMSCore/icscf.xml#/$(cfg-dir)icscf.xml#" \
-			-e "s#log_stderror=yes#log_stderror=no#" \
-			-e "s#debug=3#debug=1#" \
-			< cfg/icscf.cfg > $(cfg-prefix)/$(cfg-dir)icscf.cfg.sample ; \
-		chmod 644 $(cfg-prefix)/$(cfg-dir)icscf.cfg.sample ; \
-		if [ -z "${skip_cfg_install}" -a \
-				! -f $(cfg-prefix)/$(cfg-dir)icscf.cfg ]; then \
-			mv -f $(cfg-prefix)/$(cfg-dir)icscf.cfg.sample \
-				$(cfg-prefix)/$(cfg-dir)icscf.cfg; \
-		fi ; \
-		cp cfg/icscf.xml $(cfg-prefix)/$(cfg-dir)icscf.xml.sample ; \
-		chmod 644 $(cfg-prefix)/$(cfg-dir)icscf.xml.sample ; \
-		if [ -z "${skip_cfg_install}" -a \
-				! -f $(cfg-prefix)/$(cfg-dir)icscf.xml ]; then \
-			mv -f $(cfg-prefix)/$(cfg-dir)icscf.xml.sample \
-				$(cfg-prefix)/$(cfg-dir)icscf.xml; \
-		fi ; \
+		for mod in icscf icscf.thig ; do \
+		  sed -s -e "s#/opt/OpenIMSCore/ser_ims/modules/.*/#$(modules-target)#g" \
+		  	-e "s#/opt/OpenIMSCore/$$mod.xml#/$(cfg-dir)$$mod.xml#" \
+			 	-e "s#log_stderror=yes#log_stderror=no#" \
+				-e "s#debug=3#debug=1#" \
+				-e "s#/opt/OpenIMSCore#/var/lib/cscf#" \
+				< cfg/$$mod.cfg > $(cfg-prefix)/$(cfg-dir)$$mod.cfg.sample ; \
+			chmod 644 $(cfg-prefix)/$(cfg-dir)$$mod.cfg.sample ; \
+			if [ -z "${skip_cfg_install}" -a \
+					! -f $(cfg-prefix)/$(cfg-dir)$$mod.cfg ]; then \
+				mv -f $(cfg-prefix)/$(cfg-dir)$$mod.cfg.sample \
+					$(cfg-prefix)/$(cfg-dir)$$mod.cfg; \
+			fi ; \
+			cp cfg/icscf.xml $(cfg-prefix)/$(cfg-dir)$$mod.xml.sample ; \
+			chmod 644 $(cfg-prefix)/$(cfg-dir)$$mod.xml.sample ; \
+			if [ -z "${skip_cfg_install}" -a \
+					! -f $(cfg-prefix)/$(cfg-dir)$$mod.xml ]; then \
+				mv -f $(cfg-prefix)/$(cfg-dir)$$mod.xml.sample \
+					$(cfg-prefix)/$(cfg-dir)$$mod.xml; \
+			fi ; \
+		done ; \
 
 install-cfg-scscf: $(cfg-prefix)/$(cfg-dir)
 		@echo "installing configuration of scscf" ; \
@@ -516,6 +523,7 @@ install-cfg-scscf: $(cfg-prefix)/$(cfg-dir)
 			-e "s#/opt/OpenIMSCore/scscf.xml#/$(cfg-dir)scscf.xml#" \
 			-e "s#log_stderror=yes#log_stderror=no#" \
 			-e "s#debug=3#debug=1#" \
+			-e "s#/opt/OpenIMSCore#/var/lib/cscf#" \
 			< cfg/scscf.cfg > $(cfg-prefix)/$(cfg-dir)scscf.cfg.sample ; \
 		chmod 644 $(cfg-prefix)/$(cfg-dir)scscf.cfg.sample ; \
 		if [ -z "${skip_cfg_install}" -a \
@@ -530,9 +538,11 @@ install-cfg-scscf: $(cfg-prefix)/$(cfg-dir)
 			mv -f $(cfg-prefix)/$(cfg-dir)scscf.xml.sample \
 				$(cfg-prefix)/$(cfg-dir)scscf.xml; \
 		fi ; \
+		mkdir -p $(basedir)$(modules-target); \
+		chmod 755 $(basedir)$(modules-target); \
 		for f in CxDataType.dtd CxDataType_Rel6.xsd CxDataType_Rel7.xsd; do \
-			cp modules/scscf/$$f $(modules-target) ; \
-			chmod 644 $(modules-target)/$$f ; \
+			cp modules/scscf/$$f $(basedir)$(modules-target) ; \
+			chmod 644 $(basedir)$(modules-target)/$$f ; \
 		done ; \
 
 install-cfg-cscf: 

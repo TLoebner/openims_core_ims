@@ -19,7 +19,7 @@ export INSTALL INSTALL-CFG INSTALL-BIN INSTALL-MODULES INSTALL-DOC INSTALL-MAN
 export INSTALL-TOUCH
 export modules-prefix 
 
-lib-dir     = lib/ser
+lib-dir    ?= lib/ser
 INSTALL-LIB = $(INSTALL-BIN)
 LIBDIR      = $(modules-prefix)/$(lib-dir)
 
