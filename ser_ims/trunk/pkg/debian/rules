@@ -67,6 +67,9 @@ SCSCF_MOD_PATH=$(addprefix modules/, $(SCSCF_MODULES))
 
 SERCTL_PATH=tools/serctl
 
+# Set extra library dir to standard /usr/lib directory
+export lib-dir=lib
+
 ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -g
 endif
@@ -167,8 +170,6 @@ install: build
 		cfg-target=/etc/ser/ \
 		doc-dir=share/doc/ser-cpl-module
 	#install only the pa module
-	$(MAKE) -C lib -f Makefile.ser install \
-	        prefix=$(CURDIR)/debian/ser-presence-module/usr/
 	$(MAKE) install-modules-all modules="$(PA_MOD_PATH)"  \
 		basedir=$(CURDIR)/debian/ser-presence-module \
 		prefix=/usr \
