@@ -84,6 +84,7 @@ extern int auth_data_timeout;					/**< timeout for a hash entry to expire when e
 extern int av_request_at_once;					/**< how many auth vectors to request in a MAR 				*/
 extern int av_request_at_sync;					/**< how many auth vectors to request in a sync MAR 		*/	
 
+extern str registration_qop_str;						/**< the qop options to put in the authorization challenges */
 
 str algorithm_types[] = {
 	{"unknown",7},
@@ -501,8 +502,8 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 	unsigned int aud_hash=0;
 	str realm;
 	str private_identity,public_identity;
-	str nonce,response16,nc,cnonce,qop_str,body;
-	enum qop_type qop;
+	str nonce,response16,nc,cnonce,qop_str={0,0},body;
+	enum qop_type qop=QOP_UNSPEC;
 	str uri={0,0};
 	HASHHEX expected,ha1,hbody;
 	int expected_len=32;
@@ -851,9 +852,10 @@ abort:
 
 
 str S_WWW_Authorization_AKA={"WWW-Authenticate: Digest realm=\"%.*s\","
-	" nonce=\"%.*s\", qop=\"auth,auth-int\", algorithm=%.*s, ck=\"%.*s\", ik=\"%.*s\"\r\n",127};
+	" nonce=\"%.*s\", algorithm=%.*s, ck=\"%.*s\", ik=\"%.*s\"%.*s\r\n",106};
 str S_WWW_Authorization_MD5={"WWW-Authenticate: Digest realm=\"%.*s\","
-	" nonce=\"%.*s\", qop=\"auth,auth-int\", algorithm=%.*s\r\n",122};
+	" nonce=\"%.*s\", algorithm=%.*s%.*s\r\n",101};
+
 /**
  * Adds the WWW-Authenticate header for challenge, based on the authentication vector.
  * @param msg - SIP message to add the header to
@@ -877,7 +879,8 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 				av->authenticate.len+
 				algorithm_types[av->type].len+
 				ck_len+
-				ik_len;		
+				ik_len+
+				registration_qop_str.len;		
 			x.s = pkg_malloc(x.len);
 			if (!x.s) {
 				LOG(L_ERR,"ERR:"M_NAME":pack_challenge: Error allocating %d bytes\n",
@@ -889,7 +892,8 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 				av->authenticate.len,av->authenticate.s,
 				algorithm_types[av->type].len,algorithm_types[av->type].s,
 				ck_len,ck,
-				ik_len,ik);
+				ik_len,ik,
+				registration_qop_str.len,registration_qop_str.s);
 			x.len = strlen(x.s);
 			break;
 
@@ -904,7 +908,8 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 			x.len = S_WWW_Authorization_MD5.len +
 				realm.len+
 				av->authenticate.len+
-				algorithm_types[av->type].len;
+				algorithm_types[av->type].len+
+				registration_qop_str.len;
 			x.s = pkg_malloc(x.len);
 			if (!x.s) {
 				LOG(L_ERR,"ERR:"M_NAME":pack_challenge: Error allocating %d bytes\n",
@@ -914,7 +919,8 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 			sprintf(x.s,S_WWW_Authorization_MD5.s,
 				realm.len,realm.s,
 				av->authenticate.len,av->authenticate.s,
-				algorithm_types[AUTH_MD5].len,algorithm_types[AUTH_MD5].s);
+				algorithm_types[AUTH_MD5].len,algorithm_types[AUTH_MD5].s,
+				registration_qop_str.len,registration_qop_str.s);
 			x.len = strlen(x.s);
 			break;
 		default:

@@ -368,7 +368,7 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 		goto done; 
 	}
 	
-	LOG(L_DBG,"DBG::"M_NAME":P_remove_ck_ik: Original: <%.*s>\n",
+	LOG(L_DBG,"DBG:"M_NAME":P_remove_ck_ik: Original: <%.*s>\n",
 		auth.len,auth.s);
 		
 	x.s = pkg_malloc(authenticate_s.len+auth.len+authenticate_e.len);
@@ -390,9 +390,6 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 			inString = !inString;
 
 		if (!inString && i<mlen && strncasecmp(auth.s+i,ck.s,ck.len)==0){
-			while(x.len>0 && (x.s[x.len-1]==' '||x.s[x.len-1]==','||x.s[x.len-1]=='\t')){
-				x.len--;
-			}
 			i+=ck.len;
 			while(i<auth.len && auth.s[i]!='\"')
 			 i++;
@@ -402,9 +399,6 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 			continue;  
 		}	
 		if (!inString && i<mlen && strncasecmp(auth.s+i,ik.s,ik.len)==0){
-			while(x.len>0 && (x.s[x.len-1]==' '||x.s[x.len-1]==','||x.s[x.len-1]=='\t')){
-				x.len--;
-			}
 			i+=ik.len;
 			while(i<auth.len && auth.s[i]!='\"')
 			 i++;
@@ -415,6 +409,8 @@ int P_remove_ck_ik(struct sip_msg *msg,char *str1,char*str2)
 		}	
 		x.s[x.len++]=auth.s[i++];	
 	}		
+	while(x.len>0 && (x.s[x.len-1]==' '||x.s[x.len-1]==','||x.s[x.len-1]=='\t'))
+		x.len--;
 	STR_APPEND(x,authenticate_e);		
 
 	LOG(L_DBG,"DBG:"M_NAME":P_remove_ck_ik: Changed: <%.*s>\n",

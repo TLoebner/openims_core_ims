@@ -99,12 +99,16 @@ int auth_data_timeout=60;				/**< timeout for a hash entry to expire when empty 
 int av_request_at_once=1;				/**< how many auth vectors to request in a MAR 				*/
 int av_request_at_sync=1;				/**< how many auth vectors to request in a sync MAR 		*/	
 
+
 int server_assignment_store_data=0; 	/**< whether to ask to keep the data in SAR 	*/
 
 int registrar_hash_size=1024;			/**< the size of the hash table					*/
 int registration_default_expires=3600;	/**< the default value for expires if none found*/
 int registration_min_expires=10;		/**< minimum registration expiration time 		*/
 int registration_max_expires=1000000;	/**< maximum registration expiration time 		*/
+char *registration_qop="auth,auth-int";	/**< the qop options to put in the authorization challenges */
+str registration_qop_str={0,0};			/**< the qop options to put in the authorization challenges */
+
 char* registration_default_algorithm="AKAv1-MD5";	/**< default algorithm for registration (if none present)*/
 unsigned char registration_default_algorithm_type=1;	/**< fixed default algorithm for registration (if none present)	 */
 int registration_disable_early_ims=1;	/**< if to disable the Early-IMS checks			*/
@@ -287,6 +291,8 @@ static cmd_export_t scscf_cmds[]={
  * - registration_default_expires - default expires interval for registration, if not specified
  * - registration_min_expires - minimum expires interval
  * - registration_max_expires - maximim expires interval
+ * - registration_qop - the qop part of the authorization header for challenging the clients. Default value is 'auth,auth-int'. 
+ * Supported by the challenge verification algorithms are: no qop, "auth" or "auth-int".
  * - registration_default_algorithm - default algorithm to use for authentication. Can be AKAv1-MD5, AKAv2-MD5, MD5 (Early-IMS
  *  doesn't make sense as this value applies for S_challenge and EarlyIMS does not imply a challenge). 
  * - registration_disable_early_ims	- if to disable the checks and MAR for Early-IMS - because if enabled clients can 
@@ -332,6 +338,7 @@ static param_export_t scscf_params[]={
 	{"registration_default_expires", 	INT_PARAM, &registration_default_expires},
 	{"registration_min_expires", 		INT_PARAM, &registration_min_expires},
 	{"registration_max_expires", 		INT_PARAM, &registration_max_expires},
+	{"registration_qop",						STR_PARAM, &registration_qop},
 	{"registration_default_algorithm",	STR_PARAM, &registration_default_algorithm},
 	{"registration_disable_early_ims",	INT_PARAM, &registration_disable_early_ims},
 	{"registration_disable_nass_bundled",INT_PARAM, &registration_disable_nass_bundled},
@@ -396,6 +403,8 @@ extern s_dialog_hash_slot *s_dialogs;			/**< the dialogs hash table								*/
 db_con_t* scscf_db = NULL; /**< Database connection handle */
 db_func_t scscf_dbf;	/**< Structure with pointers to db functions */
 
+static str s_qop_s={", qop=\"",7};
+static str s_qop_e={"\"",1};
 static str s_service_route = {"Service-Route: <",16};
 static str s_orig = {"sip:orig@",9};
 static str s_sr_end = {";lr>\r\n",6};
@@ -429,6 +438,25 @@ static inline int build_record_service_route()
 			s_min_expires_s.len+10+s_min_expires_e.len);
 		return 0;
 	}
+	
+	if (registration_qop && strlen(registration_qop)>0) {
+		registration_qop_str.len = s_qop_s.len+strlen(registration_qop)+s_qop_e.len;
+		registration_qop_str.s = pkg_malloc(registration_qop_str.len);
+		if (!registration_qop_str.s){
+			LOG(L_ERR, "ERR"M_NAME":mod_init: Error allocating %d bytes\n",registration_qop_str.len);
+			registration_qop_str.len = 0;
+			return 0;
+		}
+		registration_qop_str.len = 0;
+		STR_APPEND(registration_qop_str,s_qop_s);
+		memcpy(registration_qop_str.s+registration_qop_str.len,registration_qop,strlen(registration_qop));
+		registration_qop_str.len += strlen(registration_qop);
+		STR_APPEND(registration_qop_str,s_qop_e);		
+	}else{
+		registration_qop_str.len=0;
+		registration_qop_str.s=0;
+	}
+	
 	scscf_record_route_mo.s = pkg_malloc(s_record_route_s.len+s_mo.len+scscf_name_str.len+s_record_route_e.len);
 	if (!scscf_record_route_mo.s){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error allocating %d bytes\n",
