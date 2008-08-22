@@ -14,12 +14,13 @@ pcscf                   1D IN A         127.0.0.1
 
 open-ims.test.       	1D IN A         127.0.0.1
 icscf                   1D IN A         127.0.0.1
-sip                     1D SRV 0 0 5060 icscf
-sip.udp                 1D SRV 0 0 5060 icscf
-sip.tcp                 1D SRV 0 0 5060 icscf
 
-open-ims.test.		1D IN NAPTR 10 50 "s" "SIP+D2U"	""	sip.udp.open-ims.test.
-open-ims.test.		1D IN NAPTR 20 50 "s" "SIP+D2T"	""	sip.tcp.open-ims.test.
+_sip                    1D SRV 0 0 5060 icscf
+_sip._udp               1D SRV 0 0 5060 icscf
+_sip._tcp               1D SRV 0 0 5060 icscf
+
+open-ims.test.		1D IN NAPTR 10 50 "s" "SIP+D2U"	""	_sip._udp
+open-ims.test.		1D IN NAPTR 20 50 "s" "SIP+D2T"	""	_sip._tcp
 
 
 scscf                   1D IN A         127.0.0.1
