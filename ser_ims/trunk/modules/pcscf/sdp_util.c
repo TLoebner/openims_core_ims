@@ -913,7 +913,7 @@ found:
 
 
 static int
-force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2)
+force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_invite)
 {
 	str body, body1, oldport, oldip, newport, newip;
 	str callid, from_tag, to_tag, tmp;
@@ -1013,6 +1013,10 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2)
 	    msg->first_line.u.request.method_value == METHOD_INVITE) {
 		create = 1;
 	} else if (msg->first_line.type == SIP_REPLY) {
+		if (had_sdp_in_invite) create = 0;
+		else create = 1; // this was actually the first SDP, so we need to create it;
+	} else if (msg->first_line.type == SIP_REQUEST &&
+	    msg->first_line.u.request.method_value == METHOD_ACK) {
 		create = 0;
 	} else {
 		return -1;
@@ -1438,33 +1442,40 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 {
 	int response = CSCF_RETURN_FALSE ;
 	int method;
+	int had_sdp_in_invite = 0;
+	str body;
 	struct sip_msg *req=0;
 
 	if (!pcscf_nat_enable || !rtpproxy_enable) return CSCF_RETURN_FALSE;
 	
     if( check_content_type(msg) ) 
     {
-	    if (msg->first_line.type == SIP_REQUEST) method = msg->first_line.u.request.method_value;
-	    else {
+	    if (msg->first_line.type == SIP_REQUEST) 
+	    	req = msg;
+	    else 
 	    	req = cscf_get_request_from_reply(msg);
-	    	if (req){
-	    		method = req->first_line.u.request.method_value;
-	    	}else method=METHOD_UNDEF;
-	    }
+	    	
+    	if (req) 
+    		method = req->first_line.u.request.method_value;
+    	else 
+    		method=METHOD_UNDEF;
+    	
 		switch(method)
 		{	
 		    case METHOD_INVITE:
+		    	if (extract_body(req,&body)<0) had_sdp_in_invite = 0;
+				else had_sdp_in_invite = 1; 
 		    	if (msg->first_line.type == SIP_REQUEST){
 			 		/* on INVITE */
 					/* check the sdp if it has a 1918 */
 					if(1)
 					{
 					/* get rtp_proxy/nathelper to open ports - get a iovec*/
-						response = force_rtp_proxy2_f(msg,"","") ;
-						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... rtp proxy done\n");			    	
+						response = force_rtp_proxy2_f(msg,"","",had_sdp_in_invite) ;
+						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: INVITE ... rtp proxy done\n");			    	
 				    } else {			
 						/* using public ip */
-						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... found public network in SDP.\n");
+						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: INVITE ... found public network in SDP.\n");
 				    	response = CSCF_RETURN_FALSE ;
 				    }
 		    	}else{
@@ -1475,16 +1486,34 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 					    {
 						/* sdp_1918(msg) */
 						/* str1 & str2 must be something */
-						    response = force_rtp_proxy2_f(msg, "", "") ;						
-							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ... rtp proxy done\n");			    	
+						    response = force_rtp_proxy2_f(msg, "", "",had_sdp_in_invite) ;						
+							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: 183,2xx... rtp proxy done\n");			    	
 						} else {
 							/* public ip found */
 							response = CSCF_RETURN_FALSE ;						
 						}
 						break;
-			    	}
+			    	} else if ( msg->first_line.u.reply.statuscode >=300){
+						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on %d ...\n",msg->first_line.u.reply.statuscode);
+					    response = unforce_rtp_proxy_f(msg,-1) ;
+				    }
+			    	
 		    	}
 			    break ;
+			
+			case METHOD_ACK:
+			    if(1)
+			    {
+				/* sdp_1918(msg) */
+				/* str1 & str2 must be something */
+				    response = force_rtp_proxy2_f(msg, "", "",0) ;						
+					LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ACK ... rtp proxy done\n");			    	
+				} else {
+					/* public ip found */
+					response = CSCF_RETURN_FALSE ;						
+				}
+				break;
+				
 		    case METHOD_BYE:
 		    case METHOD_CANCEL:
 				LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on BYE/CANCEL...\n");
