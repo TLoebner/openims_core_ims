@@ -50,5 +50,11 @@ int is_e164(struct sip_msg* msg, char* p1, char* p2);
  */
 int enum_query(struct sip_msg* msg, char* p1, char* p2);
 
+/*
+ * Make enum query on the user in P-Asserted-Identity, with fallback to from.
+ * does not replace the Request-URI, only adds a Route header with an orig parameter
+ */
+int enum_query_orig(struct sip_msg* msg, char* p1, char* p2);
+
 
 #endif /* ENUM_H */

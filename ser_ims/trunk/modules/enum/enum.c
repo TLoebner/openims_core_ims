@@ -32,6 +32,10 @@
 #include "enum.h"
 #include "../../parser/parse_uri.h"
 #include "../../parser/parse_from.h"
+#include "../../parser/parse_nameaddr.h"
+#include "../../parser/parse_rr.h"
+#include "../../lump_struct.h"
+#include "../../data_lump.h"
 #include "../../ut.h"
 #include "../../resolve.h"
 #include "../../mem/mem.h"
@@ -474,3 +478,290 @@ done:
 	free_rdata_list(head);
 	return first ? -1 : 1;
 }
+
+str s_asserted_identity={"P-Asserted-Identity",19};
+/**
+ * Looks for the P-Asserted-Identity header and extracts its content
+ * @param msg - the sip message
+ * @returns the asserted identity
+ */
+str get_asserted_identity(struct sip_msg *msg)
+{
+	name_addr_t id;
+	struct hdr_field *h;
+	rr_t *r;
+	memset(&id,0,sizeof(name_addr_t));
+	if (!msg) return id.uri;
+	if (parse_headers(msg, HDR_EOH_F, 0)<0) {
+		return id.uri;
+	}
+	h = msg->headers;
+	while(h)
+	{
+		if (h->name.len == s_asserted_identity.len  &&
+			strncasecmp(h->name.s,s_asserted_identity.s,s_asserted_identity.len)==0)
+		{
+			if (parse_rr(h)<0){
+				//This might be an old client
+				LOG(L_CRIT,"WARN:enum:get_asserted_identity: P-Asserted-Identity header must contain a Nameaddr!!! Fix the client!\n");
+				id.name.s = h->body.s;
+				id.name.len = 0;
+				id.len = h->body.len;
+				id.uri = h->body;
+				while(id.uri.len && (id.uri.s[0]==' ' || id.uri.s[0]=='\t' || id.uri.s[0]=='<')){
+					id.uri.s = id.uri.s+1;
+					id.uri.len --;
+				}
+				while(id.uri.len && (id.uri.s[id.uri.len-1]==' ' || id.uri.s[id.uri.len-1]=='\t' || id.uri.s[id.uri.len-1]=='>')){
+					id.uri.len--;
+				}
+				return id.uri;	
+			}
+			r = (rr_t*) h->parsed;
+			id = r->nameaddr;			
+			free_rr(&r);
+			h->parsed=r;
+			//LOG(L_RIT,"%.*s",id.uri.len,id.uri.s);
+			return id.uri;
+		}
+		h = h->next;
+	}
+	return id.uri;
+}
+
+/**
+ *	Get the public identity from P-Asserted-Identity, or From if asserted not found.
+ * @param msg - the SIP message
+ * @param uri - uri to fill into
+ * @returns 1 if found, 0 if not
+ */
+int get_originating_user( struct sip_msg * msg, str *uri )
+{
+	struct to_body * from;
+	*uri = get_asserted_identity(msg);
+	if (!uri->len) {		
+		/* Fallback to From header */
+		if ( parse_from_header( msg ) == -1 ) {
+			LOG(L_ERR,"ERROR:enum:get_originating_user: unable to extract URI from FROM header\n" );
+			return 0;
+		}
+		if (!msg->from) return 0;
+		from = (struct to_body*) msg->from->parsed;
+		*uri = from->uri;
+		//isc_strip_uri(uri);
+	}
+	DBG("DEBUG:enum:get_originating_user: From %.*s\n", uri->len,uri->s );
+	return 1;
+}
+
+int set_dst_uri(struct sip_msg* msg, str* uri)
+{
+		/* change destination so it forwards to the app server */
+	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+	msg->dst_uri.s = pkg_malloc(uri->len);
+	if (!msg->dst_uri.s) {
+		LOG(L_ERR,"ERR:enum:set_dst_uri(): error allocating %d bytes\n",uri->len);
+		return -1;
+	}
+	msg->dst_uri.len = uri->len;
+	memcpy(msg->dst_uri.s,uri->s,uri->len);
+	return 0;
+}
+
+inline int add_route(struct sip_msg *msg,str *uri)
+{
+	struct hdr_field *first;
+	struct lump* anchor;
+	str route;
+	if (!uri || !uri->len) return -1;
+	
+	parse_headers(msg,HDR_EOH_F,0);			
+	first = msg->headers;	
+	route.s = pkg_malloc(21+uri->len);
+	if (!route.s){
+		LOG(L_ERR,"ERR:enum:add_route(): error allocating %d bytes\n",14+uri->len);
+		return -1;
+	}
+	sprintf(route.s,"Route: <%.*s;lr>\r\n",uri->len,uri->s);
+	
+	route.len =strlen(route.s);
+	LOG(L_DBG,"DEBUG:enum:add_route: <%.*s>\n",route.len,route.s);
+	
+	anchor = anchor_lump(msg, first->name.s - msg->buf, 0 , HDR_ROUTE_T);
+	if (anchor == NULL) {
+		LOG(L_ERR, "ERROR:enum:add_route: anchor_lump failed\n");
+		if (route.s) pkg_free(route.s);
+		return -1;
+	}
+	if (!insert_new_lump_before(anchor, route.s,route.len,HDR_ROUTE_T)){
+		LOG( L_ERR, "ERROR:enum:add_route: error creating lump for Route header\n" );
+		if (route.s) pkg_free(route.s);
+		return -1;
+	}	
+	return 0;
+}
+int enum_query_orig(struct sip_msg* msg, char* p1, char* p2)
+{
+	char *user_s;
+	int user_len, i, j, first;
+	char name[MAX_DOMAIN_SIZE];
+	char uri[MAX_URI_SIZE];
+	char new_uri[MAX_URI_SIZE];
+	unsigned int priority, curr_prio;
+	qvalue_t q;
+	str user={0,0};
+
+	struct rdata* head;
+	struct rdata* l;
+	struct naptr_rdata* naptr;
+
+	str pattern, replacement, result, new_result;
+
+	char string[17];
+
+	str suffix, service;
+
+	if (p1) {
+	    if (get_str_fparam(&suffix, msg, (fparam_t*)p1) < 0) {
+		ERR("Unable to get suffix value\n");
+		return -1;
+	    }
+	} else {
+	    suffix = domain_suffix;
+	}
+
+	if (p2) {
+	    if (get_str_fparam(&service, msg, (fparam_t*)p2) < 0) {
+		ERR("Unable to get service value\n");
+		return -1;
+	    }
+	} else {
+	    service = default_service;
+	}
+	
+	if (!get_originating_user(msg,&user)){
+		LOG(L_ERR, "enum_query_orig(): originating uri extraction failed\n");
+		return -1;
+	}
+
+	if (test_e164(&user) == -1) {
+		LOG(L_ERR, "enum_query_orig(): uri user is not an E164 number\n");
+		return -1;
+	}
+
+	user_s = user.s;
+	user_len = user.len;
+
+	memcpy(&(string[0]), user_s, user_len);
+	string[user_len] = (char)0;
+
+	j = 0;
+	for (i = user_len - 1; i > 0; i--) {
+		name[j] = user_s[i];
+		name[j + 1] = '.';
+		j = j + 2;
+	}
+
+	memcpy(name + j, suffix.s, suffix.len + 1);
+
+	head = get_record(name, T_NAPTR, RES_ONLY_TYPE);
+
+	if (head == 0) {
+		DBG("enum_query_orig(): No NAPTR record found for %s.\n", name);
+		return -1;
+	}
+
+	naptr_sort(&head);
+
+	q = MAX_Q - 10;
+	curr_prio = 0;
+	first = 1;
+
+	for (l = head; l; l = l->next) {
+
+		if (l->type != T_NAPTR) continue; /*should never happen*/
+		naptr = (struct naptr_rdata*)l->rdata;
+		if (naptr == 0) {
+			LOG(L_CRIT, "enum_query_orig: BUG: null rdata\n");
+			continue;
+		}
+
+		DBG("enum_query_orig(): order %u, pref %u, flen %u, flags '%.*s', slen %u, "
+		    "services '%.*s', rlen %u, regexp '%.*s'\n", naptr->order, naptr->pref,
+		    naptr->flags_len, (int)(naptr->flags_len), ZSW(naptr->flags),
+		    naptr->services_len,
+		    (int)(naptr->services_len), ZSW(naptr->services), naptr->regexp_len,
+		    (int)(naptr->regexp_len), ZSW(naptr->regexp));
+
+		if (sip_match(naptr, &service) == 0) continue;
+
+		if (parse_naptr_regexp(&(naptr->regexp[0]), naptr->regexp_len,
+				       &pattern, &replacement) < 0) {
+			LOG(L_ERR, "enum_query_orig(): parsing of NAPTR regexp failed\n");
+			continue;
+		}
+		result.s = &(uri[0]);
+		result.len = MAX_URI_SIZE;
+		/* Avoid making copies of pattern and replacement */
+		pattern.s[pattern.len] = (char)0;
+		replacement.s[replacement.len] = (char)0;
+		if (reg_replace(pattern.s, replacement.s, &(string[0]),
+				&result) < 0) {
+			pattern.s[pattern.len] = '!';
+			replacement.s[replacement.len] = '!';
+			LOG(L_ERR, "enum_query_orig(): regexp replace failed\n");
+			continue;
+		}
+		DBG("enum_query(): resulted in replacement: '%.*s'\n",
+		    result.len, ZSW(result.s));
+		pattern.s[pattern.len] = '!';
+		replacement.s[replacement.len] = '!';
+		
+		if (tel_uri_params_orig.len > 0) {
+			if (result.len + tel_uri_params_orig.len > MAX_URI_SIZE - 1) {
+				LOG(L_ERR, "ERROR: enum_query_orig(): URI is too long\n");
+				continue;
+			}
+			new_result.s = &(new_uri[0]);
+			new_result.len = MAX_URI_SIZE;
+			if (add_uri_param(&result, &tel_uri_params_orig, &new_result) == 0) {
+				LOG(L_ERR, "ERROR: enum_query_orig(): Parsing of URI failed\n");
+				continue;
+			}
+			if (new_result.len > 0) {
+				result = new_result;
+			}
+		}
+
+		if (first) {
+			if (set_dst_uri(msg, &result) == -1) {
+				goto done;
+			}
+			/*if (rewrite_uri(msg, &result) == -1) {
+				goto done;
+			}
+			set_ruri_q(q);
+			*/
+			first = 0;
+			curr_prio = ((naptr->order) << 16) + naptr->pref;
+			
+		} else {
+			// Not supported yet
+			priority = ((naptr->order) << 16) + naptr->pref;
+			if (priority > curr_prio) {
+				q = q - 10;
+				curr_prio = priority;
+			}
+			/*
+			if (append_branch(msg, result.s, result.len, 0, 0, q, 0) == -1) {
+				goto done;
+			}*/
+		}
+	}
+
+done:
+	free_rdata_list(head);
+	return first ? -1 : 1;
+}
+
+
