@@ -45,6 +45,7 @@ MODULE_VERSION
 
 str domain_suffix = STR_STATIC_INIT("e164.arpa.");
 str tel_uri_params = STR_STATIC_INIT("");
+str tel_uri_params_orig = STR_STATIC_INIT(";orig");
 str default_service = STR_NULL;
 
 
@@ -55,6 +56,9 @@ static cmd_export_t cmds[] = {
 	{"enum_query", enum_query, 0, 0,                REQUEST_ROUTE},
 	{"enum_query", enum_query, 1, fixup_var_str_1,  REQUEST_ROUTE},
 	{"enum_query", enum_query, 2, fixup_var_str_12, REQUEST_ROUTE},
+	{"enum_query_orig", enum_query_orig, 0, 0,                REQUEST_ROUTE},
+	{"enum_query_orig", enum_query_orig, 1, fixup_var_str_1,  REQUEST_ROUTE},
+	{"enum_query_orig", enum_query_orig, 2, fixup_var_str_12, REQUEST_ROUTE},
 	{"is_e164",    is_e164,    1, fixup_var_str_1,  REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 };
@@ -66,6 +70,7 @@ static cmd_export_t cmds[] = {
 static param_export_t params[] = {
         {"domain_suffix",   PARAM_STR, &domain_suffix },
         {"tel_uri_params",  PARAM_STR, &tel_uri_params},
+        {"tel_uri_params_orig",  PARAM_STR, &tel_uri_params_orig},
 	{"default_service", PARAM_STR, &default_service},
 	{0, 0, 0}
 };

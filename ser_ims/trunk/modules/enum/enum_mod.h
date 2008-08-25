@@ -36,6 +36,7 @@
 
 extern str domain_suffix;
 extern str tel_uri_params;
+extern str tel_uri_params_orig;
 extern str default_service;
 
 
