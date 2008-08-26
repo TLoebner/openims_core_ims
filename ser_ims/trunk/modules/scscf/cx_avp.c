@@ -981,7 +981,6 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	AAA_AVP *avp;
 	AAA_AVP *avp2;
 	str grp;
-	int ai_family;
 	ha1->s = 0; ha1->len = 0;
 	*auth_data = cdpb.AAAFindMatchingAVP(msg,*auth_data,AVP_IMS_SIP_Auth_Data_Item,
 		IMS_vendor_id_3GPP,0);
@@ -1003,31 +1002,25 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	else *auth_scheme = avp->data;
 
 	/* Early-IMS */
-	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Framed_IP_Address,0,0);
 	ip->s=0;ip->len=0;
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Framed_IP_Address,0,0);
 	if (avp && avp->data.s){
-		ai_family = get_2bytes(avp->data.s);
-		switch(ai_family){
-			case 1: /* IPv4 */
-				if (avp->data.len!=6){
-					LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): Invalid length of AVP Host-IP (should be 6 of IPv4) >%d.\n",
-						avp->data.len);
-				}
-				ip->len = 4;
-				ip->s = avp->data.s+2;
-				break;
-			case 2:
-				if (avp->data.len!=18){
-					LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): Invalid length of AVP Host-IP (should be 18 of IPv6) >%d.\n",
-						avp->data.len);
-				}
-				ip->len = 16;
-				ip->s = avp->data.s+2;
-				break;
-			default:
-				LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): Unknown ai_family in AVP Host-IP >%d.\n",
-					ai_family);
+		if (avp->data.len!=4){
+			LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): Invalid length of AVP Framed IP Address (should be 4 for AVP_Framed_IP_Address) >%d.\n",
+				avp->data.len);
 		}
+		ip->len = 4;
+		ip->s = avp->data.s;
+	} else { 
+		avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Framed_IPv6_Prefix,0,0);
+		if (avp && avp->data.s){
+			if (avp->data.len==0){
+				LOG(L_ERR,"ERROR:"M_NAME":Cx_get_capabilities(): Invalid length of AVP Framed IPv6 Prefix (should be >0 for AVP_Framed_IPv6_Prefix) >%d.\n",
+					avp->data.len);
+			}
+			ip->len = avp->data.len;
+			ip->s = avp->data.s;	
+		}	
 	}
 
 	/* Digest */
