@@ -574,10 +574,10 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 			switch (av->authorization.len){
 				case 4:
 					LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: IP address in MAA was <%d.%d.%d.%d>\n",
-						av->authorization.s[0],
-						av->authorization.s[1],
-						av->authorization.s[2],
-						av->authorization.s[3]);
+						(unsigned char)av->authorization.s[0],
+						(unsigned char)av->authorization.s[1],
+						(unsigned char)av->authorization.s[2],
+						(unsigned char)av->authorization.s[3]);
 					break;
 				case 16:
 					LOG(L_ERR,"DBG:"M_NAME":S_is_authorized: IP address in MAA was <%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x>\n",
