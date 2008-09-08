@@ -64,11 +64,14 @@
 #include "../../mem/shm_mem.h"
 
 #include "../../dset.h"
+#include "../tm/tm_load.h"
 
 #include "scscf_list.h"
 #include "db.h" 
 #include "sip.h"
 
+
+extern struct tm_binds tmb;                             /**< Structure with pointers to tm funcs                */
 
 scscf_capabilities *SCSCF_Capabilities=0;		/**< list of S-CSCFs and their capabilities */ 
 int SCSCF_Capabilities_cnt=0;					/**< size of list of S-CSCFs and their capabilities */
@@ -498,17 +501,10 @@ void print_scscf_list(int log_level)
 
 int I_trans_in_processing(struct sip_msg* msg, char* str1, char* str2)
 {
-	str call_id;
-	//print_scscf_list(L_ERR);
-
-	call_id = cscf_get_call_id(msg,0);
-	if (!call_id.len)
-		return CSCF_RETURN_FALSE;
-	
-	if (is_scscf_list(call_id))
-		return CSCF_RETURN_TRUE;
-	else 
-		return CSCF_RETURN_FALSE;
+        unsigned int hash, label;
+        if (tmb.t_get_trans_ident(msg,&hash,&label)<0)
+            return CSCF_RETURN_FALSE;
+        return CSCF_RETURN_TRUE;
 }
 
 static str route_hdr_s={"Route: <",8};
