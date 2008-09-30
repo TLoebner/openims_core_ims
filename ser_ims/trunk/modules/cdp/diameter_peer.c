@@ -218,14 +218,12 @@ int diameter_peer_init(char *cfg_filename)
 	/* init the session */
 	if (!session_init()) goto error;
 	
-#ifdef CDP_FOR_SER
+
 	/* init diameter transactions */
 	trans_init();
 	
 	/* add callback for messages - used to implement the API */
 	cb_add(api_callback,0);
-		
-#endif
 	
 	return 1;
 	
