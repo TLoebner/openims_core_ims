@@ -32,11 +32,10 @@ package de.fhg.fokus.diameter.DiameterPeer;
 
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -49,6 +48,7 @@ import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
@@ -167,11 +167,31 @@ public class DiameterPeer {
 	}
 	
 	/**
+	 * Construct a java bean friendly DiameterPeer (no args).
+	 */
+	public DiameterPeer()
+	{
+		LOGGER.info("Bean style constructor called, don't forget to configure!");
+	}
+	
+	/**
 	 * Construct a DiameterPeer based on a configuration file. 
 	 * 
 	 * @param xml Configuration file.
 	 */
 	public DiameterPeer(String xml)
+	{
+		configure(xml,false);
+	}
+	
+	/**
+	 * Configure a DiameterPeer based on a configuration file or string.
+	 * Path && isFile==true is equivalent to DiameterPeer(Path).
+	 * 
+	 * @param xml XML configuration payload.
+	 * @param isFile Set to true if string is a path/uri, false if raw xml.
+	 */
+	public void configure(String xml, boolean isFile)
 	{
 		Acceptor acc;
 		NodeList nl;
@@ -188,11 +208,21 @@ public class DiameterPeer {
 		endtoend_id = ((int) (System.currentTimeMillis()&0xFFF))<<20;
 		endtoend_id |= rand.nextInt() & 0xFFFFF;
 	
-		/* parse the config */
-		if (!readConfig(xml)) {
-			LOGGER.error("DiameterPeer: Error parsing config file");
-			return;
+		if (isFile){
+			/* parse the config */
+			if (!readConfigFile(xml)) {
+				LOGGER.error("DiameterPeer: Error parsing config file");
+				return;
+			}
 		}
+		else {
+			/* parse the config */
+			if (!readConfigString(xml)) {
+				LOGGER.error("DiameterPeer: Error parsing config String");
+				return;
+			}
+		}
+		
 		FQDN = config.getDocumentElement().getAttribute("FQDN");
 		LOGGER.info("FQDN: " + config.getDocumentElement().getAttribute("FQDN"));
 		Realm = config.getDocumentElement().getAttribute("Realm");
@@ -293,7 +323,7 @@ public class DiameterPeer {
 		
 	}
 	
-	private boolean readConfig(String cfgFile)
+	private boolean readConfigFile(String cfgFile)
 	{
 		DocumentBuilderFactory factory =
 			DocumentBuilderFactory.newInstance();
@@ -302,6 +332,34 @@ public class DiameterPeer {
 	    try {
 	       DocumentBuilder builder = factory.newDocumentBuilder();
 	       config = builder.parse( cfgFile );
+	    } catch (SAXException sxe) {
+	       // Error generated during parsing)
+	       Exception  x = sxe;
+	       if (sxe.getException() != null)
+	           x = sxe.getException();
+	       x.printStackTrace();
+	       return false;
+	    } catch (ParserConfigurationException pce) {
+	        // Parser with specified options can't be built
+	        pce.printStackTrace();
+	        return false;
+	    } catch (IOException ioe) {
+	       // I/O error
+	       ioe.printStackTrace();
+	       return false;
+	    }
+	    return true;
+	}
+	
+	private boolean readConfigString(String cfgString)
+	{
+		DocumentBuilderFactory factory =
+			DocumentBuilderFactory.newInstance();
+		//factory.setValidating(true);   
+		//factory.setNamespaceAware(true);
+	    try {
+	       DocumentBuilder builder = factory.newDocumentBuilder();
+	       config = builder.parse( new InputSource(new StringReader(cfgString)) );
 	    } catch (SAXException sxe) {
 	       // Error generated during parsing)
 	       Exception  x = sxe;
