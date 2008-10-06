@@ -391,7 +391,7 @@ inline int e2_add_destination_realm(AAAMessage *msg,str data)
 }
 
 /**
- * Creates and adds a AVP_Framed_IP_Address and a AVP_IMS_Address_Realm to a  AVP_IMS_Globally_Unique_Address group.
+ * Creates and adds a AVP_Framed_IP_Address and a AVP_ETSI_Address_Realm to a  AVP_ETSI_Globally_Unique_Address group.
  * @param msg - the Diameter message to add to.
  * @param ip - ue ip address
  * @param realm - realm
@@ -429,7 +429,7 @@ inline int e2_add_g_unique_address(AAAMessage *msg, str ip,str realm)
 	{
 		e2_add_avp_list(&list,
 			realm.s,realm.len,
-			AVP_IMS_Address_Realm,
+			AVP_ETSI_Address_Realm,
 			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 			IMS_vendor_id_ETSI,
 			AVP_DUPLICATE_DATA,
@@ -442,7 +442,7 @@ inline int e2_add_g_unique_address(AAAMessage *msg, str ip,str realm)
 	
 	return 
 	e2_add_avp(msg,group.s,group.len,
-		AVP_IMS_Globally_Unique_Address,
+		AVP_ETSI_Globally_Unique_Address,
 		AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 		IMS_vendor_id_ETSI,
 		AVP_FREE_DATA,
@@ -499,7 +499,7 @@ inline str e2_get_terminal_type(AAAMessage *msg)
 {
 	return 
 	e2_get_avp(msg,
-		AVP_IMS_Terminal_Type,
+		AVP_ETSI_Terminal_Type,
 		IMS_vendor_id_ETSI,
 		__FUNCTION__);
 }
@@ -511,7 +511,7 @@ int e2_get_access_net(AAAMessage *msg, int *data)
 	AAA_AVP *avp;
 	str grp;
 	grp = e2_get_avp(msg,
-		AVP_IMS_Access_Network_Type,
+		AVP_ETSI_Access_Network_Type,
 		IMS_vendor_id_ETSI,
 		__FUNCTION__);
 	
@@ -535,7 +535,7 @@ int e2_get_location_info(AAAMessage *msg, str *data)
 	str grp;
 	data->len = 0;
 	grp = e2_get_avp(msg,
-		 AVP_IMS_Location_Information,
+		 AVP_ETSI_Location_Information,
 		IMS_vendor_id_ETSI,
 		__FUNCTION__);
 	
