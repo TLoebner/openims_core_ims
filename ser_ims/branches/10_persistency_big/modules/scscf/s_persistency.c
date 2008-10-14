@@ -522,7 +522,14 @@ int load_snapshot_registrar()
 				if (registrar[p->hash].tail) registrar[p->hash].tail->next = p;
 				registrar[p->hash].tail = p;
 				if (!registrar[p->hash].head) registrar[p->hash].head = p;
-				r_unlock(p->hash);			
+				r_unlock(p->hash);	
+				
+				memmove(x.s,x.s+x.max,x.len-x.max);
+				x.len -= x.max;
+				x.max = max;
+				k=bin_load_from_file_read(f,&x);
+				max = x.max;
+				x.max = 0;				
 			}
 			bin_free(&x);
 			bin_load_from_file_close(f);
