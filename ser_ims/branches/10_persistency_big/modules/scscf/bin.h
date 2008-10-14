@@ -164,15 +164,6 @@ typedef enum {
 	WITH_DATABASE_CACHE=3
 } persistency_mode_t;
 
-/* Dumping functions */
-
-
-int bin_dump_to_file(bin_data *x,char *location,char *prepend_fname);
-int bin_load_from_file(bin_data *x,char *location,char *prepend_fname);
-
-int bin_dump(bin_data *x,int mode,char *location,char* prepend_fname);
-int bin_load(bin_data *x,int mode,char *location,char* prepend_fname);
-
 
 
 #endif

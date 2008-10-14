@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: bin_file.h 161 2007-03-01 14:06:01Z vingarzan $
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -46,7 +46,7 @@
 /**
  * \file
  *
- * Binary codec operations extension for the P-CSCF
+ * Binary codec operations - file dump/load
  *
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  *
@@ -54,32 +54,21 @@
 
 
 
-#ifndef _BIN_PCSCF_H
-#define _BIN_PCSCF_H
+#ifndef _BIN_FILE_H
+#define _BIN_FILE_H
+
 
 #include "bin.h"
-#include "bin_file.h"
-#include "registrar_storage.h"
-#include "dlg_state.h"
-#include "registrar_subscribe.h"
-#include "../tm/tm_load.h"
 
-#define BIN_INITIAL_ALLOC_SIZE 256
+FILE* bin_dump_to_file_create(char *location,char *prepend_fname,time_t unique);
+int bind_dump_to_file_append(FILE* file, bin_data *x);
+int bind_dump_to_file_close(FILE* file,char *location,char *prepend_fname,time_t unique);
 
-typedef enum {
-	P_REGISTRAR=1,
-	P_DIALOGS=2,
-	P_SUBSCRIPTIONS=3
-} data_type_t;
+FILE* bin_load_from_file_open(char *location,char *prepend_fname);
+int bin_load_from_file_read(FILE* f,bin_data *x);
+void bin_load_from_file_close(FILE* f);
 
 
-int bin_encode_r_contact(bin_data *x,r_contact *c);
-r_contact* bin_decode_r_contact(bin_data *x);
 
-int bin_encode_p_dialog(bin_data *x,p_dialog *d);
-p_dialog* bin_decode_p_dialog(bin_data *x);
-
-int bin_encode_r_subscription(bin_data *x,r_subscription *s);
-r_subscription* bin_decode_r_subscription(bin_data *x);
 
 #endif

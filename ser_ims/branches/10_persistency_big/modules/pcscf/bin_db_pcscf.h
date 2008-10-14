@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: bin_pcscf_db.h 236 2007-04-18 12:53:40 +0000 (Wed, 18 Apr 2007) vingarzan $
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -46,7 +46,7 @@
 /**
  * \file
  *
- * Binary codec operations extension for the P-CSCF
+ * P-CSCF persistency operations - db dump/load
  *
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  *
@@ -54,32 +54,33 @@
 
 
 
-#ifndef _BIN_PCSCF_H
-#define _BIN_PCSCF_H
+#ifndef _BIN_DB_PCSCF_H
+#define _BIN_DB_PCSCF_H
 
-#include "bin.h"
-#include "bin_file.h"
-#include "registrar_storage.h"
-#include "dlg_state.h"
-#include "registrar_subscribe.h"
-#include "../tm/tm_load.h"
-
-#define BIN_INITIAL_ALLOC_SIZE 256
-
-typedef enum {
-	P_REGISTRAR=1,
-	P_DIALOGS=2,
-	P_SUBSCRIPTIONS=3
-} data_type_t;
+#include "bin_pcscf.h"
 
 
-int bin_encode_r_contact(bin_data *x,r_contact *c);
-r_contact* bin_decode_r_contact(bin_data *x);
+int bin_dump_to_db(bin_data *x, data_type_t dt);
+int bin_dump_registrar_to_table(bin_data* x, int snapshot_version, int step_version);
+int bin_dump_dialogs_to_table(bin_data* x, int snapshot_version, int step_version);
+int bin_dump_subs_to_table(bin_data* x, int snapshot_version, int step_version);
+int bin_bulk_dump_to_table(data_type_t dt, int snapshot_version, int step_version, bin_data *x);
+int bin_cache_dump_registrar_to_table(int snapshot_version, int step_version);
+int bin_cache_dump_dialogs_to_table(int snapshot_version, int step_version);
+int bin_cache_dump_subs_to_table(int snapshot_version, int step_version);
+int delete_older_snapshots(char* table, char* node_id, data_type_t dt, int current_snapshot);
+ 
+int bin_load_from_db(bin_data *x, data_type_t dt);
+int bin_load_registrar_from_table(bin_data *x);
+int bin_load_dialogs_from_table(bin_data *x);
+int bin_load_subscriptions_from_table(bin_data *x);
+int bin_bulk_load_from_table(data_type_t dt, bin_data* x);
+int bin_cache_load_registrar_from_table();
+int bin_cache_load_dialogs_from_table();
+int bin_cache_load_subscriptions_from_table();
+int db_get_last_snapshot_version(char* table, char* node_id, data_type_t dt, int* version);
+int set_versions(data_type_t dt, int snapshot_version, int step_version);
 
-int bin_encode_p_dialog(bin_data *x,p_dialog *d);
-p_dialog* bin_decode_p_dialog(bin_data *x);
 
-int bin_encode_r_subscription(bin_data *x,r_subscription *s);
-r_subscription* bin_decode_r_subscription(bin_data *x);
 
 #endif
