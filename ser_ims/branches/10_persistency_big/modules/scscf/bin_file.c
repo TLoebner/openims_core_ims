@@ -107,8 +107,11 @@ FILE* bin_dump_to_file_create(char *location,char *prepend_fname,time_t unique)
  */
 int bind_dump_to_file_append(FILE* file, bin_data *x)
 {
-	int k;
-	k = fwrite(x->s,1,x->len,file);
+	int k=0,l;
+	do {
+		l = fwrite(x->s+k,1,x->len-k,file);
+		k += l;
+	} while(l!=0 && k<x->len);
 	LOG(L_INFO,"INFO:"M_NAME":bin_dump_to_file: Dumped %d bytes.\n",k);
 	fflush(file);
 	return k;			

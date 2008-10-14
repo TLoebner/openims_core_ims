@@ -84,7 +84,7 @@ extern int* subs_step_version;
  */
 int make_snapshot_dialogs()
 {
-	bin_data x;
+	bin_data x={0,0,0};
 	p_dialog *d;
 	int i,k;	
 	time_t unique = time(0);
@@ -107,6 +107,7 @@ int make_snapshot_dialogs()
 						if (!bin_encode_p_dialog(&x,d)) goto error;
 						d = d->next;
 					}
+					d_unlock(i);
 					k = bind_dump_to_file_append(f,&x);
 					if (k!=x.len) {
 						LOG(L_ERR,"ERR:"M_NAME":make_snapshot_registrar: error while dumping to file - only wrote %d bytes of %d \n",k,x.len);
@@ -115,7 +116,7 @@ int make_snapshot_dialogs()
 						return 0;
 					} 
 				}
-				d_unlock(i);
+				else d_unlock(i);
 				bin_free(&x);
 			}
 			return bind_dump_to_file_close(f,pcscf_persistency_location,"pdialogs",unique);
@@ -145,6 +146,7 @@ int make_snapshot_dialogs()
 	}
 
 error:
+	if (x.s) bin_free(&x);	
 	return 0;
 }  
 
@@ -252,7 +254,7 @@ void persistency_timer_dialogs(unsigned int ticks, void* param)
  */
 int make_snapshot_registrar()
 {
-	bin_data x;
+	bin_data x={0,0,0};
 	r_contact *c;
 	int i,k;	
 	time_t unique = time(0);
@@ -276,6 +278,7 @@ int make_snapshot_registrar()
 						if (!bin_encode_r_contact(&x,c)) goto error;
 						c = c->next;
 					}
+					r_unlock(i);
 					k = bind_dump_to_file_append(f,&x);
 					if (k!=x.len) {
 						LOG(L_ERR,"ERR:"M_NAME":make_snapshot_registrar: error while dumping to file - only wrote %d bytes of %d \n",k,x.len);
@@ -284,7 +287,7 @@ int make_snapshot_registrar()
 						return 0;
 					} 
 				}
-				r_unlock(i);
+				else r_unlock(i);
 				bin_free(&x);
 			}
 			return bind_dump_to_file_close(f,pcscf_persistency_location,"pregistrar",unique);
@@ -313,6 +316,7 @@ int make_snapshot_registrar()
 	}
 
 error:
+	if (x.s) bin_free(&x);	
 	return 0;
 }  
 
@@ -422,7 +426,7 @@ void persistency_timer_registrar(unsigned int ticks, void* param)
  */
 int make_snapshot_subscriptions()
 {
-	bin_data x;
+	bin_data x={0,0,0};
 	r_subscription *s;
 	int i,k;	
 	time_t unique = time(0);
@@ -446,15 +450,16 @@ int make_snapshot_subscriptions()
 						if (!bin_encode_r_subscription(&x,s)) goto error;
 						s = s->next;
 					}
+					subs_unlock(i);
 					k = bind_dump_to_file_append(f,&x);
 					if (k!=x.len) {
 						LOG(L_ERR,"ERR:"M_NAME":make_snapshot_registrar: error while dumping to file - only wrote %d bytes of %d \n",k,x.len);
-						r_unlock(i);
+						subs_unlock(i);
 						bin_free(&x);
 						return 0;
 					} 
 				}
-				subs_unlock(i);
+				else subs_unlock(i);
 				bin_free(&x);
 			}
 	
@@ -482,8 +487,9 @@ int make_snapshot_subscriptions()
 			return 0;
 		
 	}
-	
+
 error:
+	if (x.s) bin_free(&x);	
 	return 0;
 }  
 
