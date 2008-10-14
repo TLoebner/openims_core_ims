@@ -58,13 +58,7 @@
 #define _PCSCF_PERSITENCY_H
 
 #include "bin_pcscf.h"
-
-typedef enum {
-	P_REGISTRAR=1,
-	P_DIALOGS=2,
-	P_SUBSCRIPTIONS=3
-} data_type_t;
-
+#include "bin_db_pcscf.h"
 
 int make_snapshot_dialogs();
 int load_snapshot_dialogs();
@@ -77,5 +71,8 @@ void persistency_timer_registrar(unsigned int ticks, void* param);
 int make_snapshot_subscriptions();
 int load_snapshot_subscriptions();
 void persistency_timer_subscriptions(unsigned int ticks, void* param);
+
+
+
 
 #endif
