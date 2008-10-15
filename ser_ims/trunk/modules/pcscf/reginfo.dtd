@@ -26,6 +26,7 @@
 	retry-after	CDATA	#IMPLIED
 	callid	CDATA	#IMPLIED
 	cseq	CDATA	#IMPLIED
+	q	CDATA	#IMPLIED
 	>	
 
 <!ELEMENT uri (#PCDATA)>
