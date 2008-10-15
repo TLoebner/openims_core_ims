@@ -608,20 +608,44 @@ static inline int r_calc_expires(contact_t *c,unsigned int expires_hdr)
 	return time_now+r;
 }
 
+/*
+ * Calculate contact q value as follows:
+ * 1) If q parameter exists, use it
+ * 2) If the parameter doesn't exist, use the default value
+ */
+int r_calc_contact_q(param_t* _q, qvalue_t* _r)
+{
+        if (!_q || (_q->body.len == 0)) {
+                *_r = -1;
+        } else {
+                if (str2q(_r, _q->body.s, _q->body.len) < 0) {
+                        LOG(L_ERR, "r_calc_contact_q(): Invalid q parameter\n");
+                        return -1;
+                }
+        }
+        return 0;
+}
+
 /**
  * Adds a Contact header to the reply, containing the approved expires
  * @param msg - the SIP message to add contact header to its reply
  * @param uri - the contact uri
  * @param expires - the expiration time
+ * @param qvalue - q-value
  * @returns 1 if ok, 0 if not
  */
-static int r_add_contact(struct sip_msg *msg,str uri,int expires)
+static int r_add_contact(struct sip_msg *msg,str uri,int expires,qvalue_t qvalue)
 {
 	str hdr;
 	int r;
 	hdr.s = pkg_malloc(10+uri.len+10+12+3+1);
 	if (!hdr.s) return 0;
-	sprintf(hdr.s,"Contact: <%.*s>;expires=%d\r\n",uri.len,uri.s,expires);
+	if(qvalue != -1) {
+		float q = (float)qvalue/1000;
+		sprintf(hdr.s,"Contact: <%.*s>;expires=%d;q=%.3f\r\n",uri.len,uri.s,expires,q);
+	}		
+	else
+		sprintf(hdr.s,"Contact: <%.*s>;expires=%d\r\n",uri.len,uri.s,expires);
 	hdr.len = strlen(hdr.s);
 	r = cscf_add_header_rpl(msg,&hdr);
 	pkg_free(hdr.s);
@@ -654,6 +678,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	int reg_state,expires_hdr=-1,expires,hash,rpublic_hash;
 	str public_identity,sent_by={0,0};
 	int contacts_added=0;
+	qvalue_t qvalue;
 	
 //	if (!*s) return 1;
 	if (msg) {
@@ -695,8 +720,13 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							for(h=msg->contact;h;h=h->next)
 								if (h->type==HDR_CONTACT_T && h->parsed)
 								 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+									if(r_calc_contact_q(ci->q, &qvalue) != 0){
+										LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+                                                                                        ci->uri.len,ci->uri.s);
+                                                                                goto error;
+									}
 									expires = r_calc_expires(ci,expires_hdr);
-									if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
+									if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
 										LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
 											ci->uri.len,ci->uri.s);
 										goto error;
@@ -709,7 +739,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 								}
 							if (!contacts_added){
 								for(c=p->head;c;c=c->next)
-									r_add_contact(msg,c->uri,c->expires-time_now);
+									r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
 								contacts_added = 1;
 							}
 						}
@@ -742,8 +772,13 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                 for(h=msg->contact;h;h=h->next)
                     if (h->type==HDR_CONTACT_T && h->parsed)
                      for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+			if(r_calc_contact_q(ci->q, &qvalue) != 0){
+                        	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+                              	   ci->uri.len,ci->uri.s);
+                                goto error;
+                        }
                         expires = r_calc_expires(ci,expires_hdr);
-                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
+                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
                             LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
                                 ci->uri.len,ci->uri.s);
                             goto error;
@@ -754,7 +789,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                             S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);                        
                     }
 				for(c=p->head;c;c=c->next)
-					r_add_contact(msg,c->uri,c->expires-time_now);
+					r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
             }            
 
 			/* now update the implicit set */
@@ -782,8 +817,13 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 		                for(h=msg->contact;h;h=h->next)
     		                if (h->type==HDR_CONTACT_T && h->parsed)
                 		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+					if(r_calc_contact_q(ci->q, &qvalue) != 0){
+                                          	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+                                                	ci->uri.len,ci->uri.s);
+                                        	goto error;
+                                        }
                             		expires = r_calc_expires(ci,expires_hdr);
-                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path))){
+                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path,qvalue))){
                                         LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
                                             ci->uri.len,ci->uri.s);
 		                                goto error;
@@ -819,7 +859,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				while(c){
 					c->expires = time_now;
 					S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
-					r_add_contact(msg,c->uri,0);
+					r_add_contact(msg,c->uri,0,c->qvalue);
 					del_r_contact(p,c);
 					c = c->next;
 				}
@@ -831,12 +871,12 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							if (c) {
 								c->expires = time_now;
 								S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
-								r_add_contact(msg,c->uri,0);
+								r_add_contact(msg,c->uri,0,c->qvalue);
 								del_r_contact(p,c);
 							}
 						}
 				for(c=p->head;c;c=c->next)
-					r_add_contact(msg,c->uri,c->expires-time_now);						
+					r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);						
 			}
 
 			/* now update the implicit set */
@@ -1283,7 +1323,7 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 				if (*tmb.route_mode==MODE_ONFAILURE) {
 					LOG(L_DBG,"DEBUG:"M_NAME":S_lookup: MODE_ONFAILURE, appending branch\n");
 					/* need to append_branch for this first contact */
-					if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, 0, 0) == -1) {
+					if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {
 						LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
 							c->uri.len,c->uri.s);
 					}
@@ -1298,12 +1338,15 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 				}
 				memcpy(msg->dst_uri.s,dst.s,dst.len);
 				msg->dst_uri.len = dst.len;
+
+				set_ruri_q(c->qvalue);
+
 				ret = CSCF_RETURN_TRUE;	
 				if (append_branches){
 					c = c->next;
 					while(c){
 						if (r_valid_contact(c)) 														
-							if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, 0, 0) == -1) {
+							if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {
 								LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
 									c->uri.len,c->uri.s);
 							} 

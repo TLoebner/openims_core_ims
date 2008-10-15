@@ -255,7 +255,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_terminating_barred",		S_terminating_barred,		0,0,REQUEST_ROUTE},
 
 	{"S_is_in_dialog",				S_is_in_dialog,				1,0,REQUEST_ROUTE},
-	{"S_save_dialog",				S_save_dialog,				1,0,REQUEST_ROUTE},
+	{"S_save_dialog",				S_save_dialog,				1,0,REQUEST_ROUTE|FAILURE_ROUTE},
 	{"S_update_dialog",				S_update_dialog,			1,0,REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"S_record_route",				S_record_route,				1,0,REQUEST_ROUTE},	
 	{"S_is_record_routed",			S_is_record_routed,			1,0,REQUEST_ROUTE},	
