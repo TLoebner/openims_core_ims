@@ -141,20 +141,21 @@
 
 int S_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 
+/* changed! no need to use direct structs, standard using ptr's */ 
 #define STR_SHM_DUP(dest,src,txt)\
 {\
-	if ((src).len==0) {\
-		(dest).s=0;\
-		(dest).len=0;\
+	if ((src)->len==0) {\
+		(dest)->s=0;\
+		(dest)->len=0;\
 	}else {\
-		(dest).s = shm_malloc((src).len);\
-		if (!(dest).s){\
-			LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
-			(dest).len = 0;\
+		(dest)->s = shm_malloc((src)->len);\
+		if (!(dest)->s){\
+			LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src)->len);\
+			(dest)->len = 0;\
 			goto out_of_memory;\
 		}else{\
-			(dest).len = (src).len;\
-			memcpy((dest).s,(src).s,(src).len);\
+			(dest)->len = (src)->len;\
+			memcpy((dest)->s,(src)->s,(src)->len);\
 		}\
 	}\
 }

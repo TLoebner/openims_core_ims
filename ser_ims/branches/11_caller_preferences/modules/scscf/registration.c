@@ -603,7 +603,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 			if (av->authorization.len &&
 				matchesEarlyIMSIP(av->authorization,sent_by)){
 				ret = CSCF_RETURN_TRUE;
-				if (p) STR_SHM_DUP(p->early_ims_ip,av->authorization,"IP Early IMS");												
+				if (p) STR_SHM_DUP(&(p->early_ims_ip), &(av->authorization),"IP Early IMS");												
 			}else
 				ret = CSCF_RETURN_FALSE;
 		done_early_ims:					

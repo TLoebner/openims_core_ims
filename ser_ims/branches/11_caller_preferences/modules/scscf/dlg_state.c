@@ -298,8 +298,8 @@ s_dialog* new_s_dialog(str call_id,str aor, enum s_dialog_direction dir)
 	memset(d,0,sizeof(s_dialog));
 	
 	d->hash = get_s_dialog_hash(call_id);		
-	STR_SHM_DUP(d->call_id,call_id,"shm");
-	STR_SHM_DUP(d->aor,aor,"shm");	
+	STR_SHM_DUP( &(d->call_id), &(call_id),"shm");
+	STR_SHM_DUP(&(d->aor),&aor,"shm");	
 	d->direction = dir;
 	d->is_releasing = 0;
 	return d;
@@ -866,7 +866,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!d) return CSCF_RETURN_FALSE;
 
 	d->method = get_dialog_method(msg->first_line.u.request.method);
-	STR_SHM_DUP(d->method_str,msg->first_line.u.request.method,"shm");
+	STR_SHM_DUP( &(d->method_str),&(msg->first_line.u.request.method),"shm");
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
@@ -882,7 +882,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 		d->expires = d_act_time() + t_time;
 		d->lr_session_expires = t_time;
 		if (refresher.len)
-			STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
+			STR_SHM_DUP(&(d->refresher), &(refresher), "DIALOG_REFRESHER");
 	}
 	
 	cscf_get_from_tag(msg,&tag);
@@ -903,7 +903,7 @@ int S_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	
 	event = cscf_get_event(msg);
 	if (event.len){
-		STR_SHM_DUP(d->event,event,"shm");
+		STR_SHM_DUP(&(d->event),&(event),"shm");
 	}
 	else
 		d->event = event;
@@ -1104,7 +1104,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				d->expires = d_act_time() + t_time;
 				d->lr_session_expires = t_time;
 				if (refresher.len)
-					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
+					STR_SHM_DUP(&(d->refresher), &(refresher), "DIALOG_REFRESHER");
 			}
 		}
 		else if (d->method == DLG_METHOD_SUBSCRIBE &&
