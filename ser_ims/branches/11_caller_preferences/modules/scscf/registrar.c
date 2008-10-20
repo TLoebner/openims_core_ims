@@ -687,7 +687,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 						s_used++;
 						if (!registration_disable_early_ims && sent_by.len) {
 							if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
-							STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+							STR_SHM_DUP( &(p->early_ims_ip), &(sent_by),"IP Early IMS");
 						}
 						if (is_star){
 							LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Registration.\n");
@@ -696,7 +696,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 								if (h->type==HDR_CONTACT_T && h->parsed)
 								 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
 									expires = r_calc_expires(ci,expires_hdr);
-									if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
+									if (!(c=update_r_contact(msg, p,ci->uri,&expires,ua,path))){
 										LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
 											ci->uri.len,ci->uri.s);
 										goto error;
@@ -734,7 +734,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 
 			if (!registration_disable_early_ims && sent_by.len) {
 				if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
-				STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+				STR_SHM_DUP( &(p->early_ims_ip), &(sent_by),"IP Early IMS");
 			}
             if (is_star){
                 LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
@@ -743,7 +743,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                     if (h->type==HDR_CONTACT_T && h->parsed)
                      for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
                         expires = r_calc_expires(ci,expires_hdr);
-                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path))){
+                        if (!(c=update_r_contact(msg, p,ci->uri,&expires,ua,path))){
                             LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
                                 ci->uri.len,ci->uri.s);
                             goto error;
@@ -774,7 +774,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 
 		 			if (!registration_disable_early_ims && sent_by.len) {
 						if (rpublic->early_ims_ip.s) shm_free(rpublic->early_ims_ip.s);
-							STR_SHM_DUP(rpublic->early_ims_ip,sent_by,"IP Early IMS");
+							STR_SHM_DUP( &(rpublic->early_ims_ip), &(sent_by),"IP Early IMS");
                     }
     		        if (is_star){
                     		LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
@@ -783,7 +783,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
     		                if (h->type==HDR_CONTACT_T && h->parsed)
                 		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
                             		expires = r_calc_expires(ci,expires_hdr);
-                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path))){
+                                    if (!(c=update_r_contact(msg, rpublic,ci->uri,&expires,ua,path))){
                                         LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
                                             ci->uri.len,ci->uri.s);
 		                                goto error;

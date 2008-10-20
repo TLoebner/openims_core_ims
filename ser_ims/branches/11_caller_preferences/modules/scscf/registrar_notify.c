@@ -986,20 +986,20 @@ r_notification* new_r_notification(str req_uri,str uri,str subscription_state,st
 	}
 	memset(n,0,sizeof(r_notification));
 	
-	STR_SHM_DUP(n->req_uri,req_uri,"new_r_notification");
+	STR_SHM_DUP( &(n->req_uri), &(req_uri),"new_r_notification");
 	
-	STR_SHM_DUP(n->uri,uri,"new_r_notification");
+	STR_SHM_DUP( &(n->uri), &uri,"new_r_notification");
 	
-	STR_SHM_DUP(n->subscription_state,subscription_state,"new_r_notification");
+	STR_SHM_DUP( &(n->subscription_state), &(subscription_state),"new_r_notification");
 	
-	STR_SHM_DUP(n->event,event,"new_r_notification");
+	STR_SHM_DUP(&(n->event), &(event),"new_r_notification");
 	
-	STR_SHM_DUP(n->content_type,content_type,"new_r_notification");
+	STR_SHM_DUP(&(n->content_type),&(content_type),"new_r_notification");
 	
 	sprintf(bufc,content.s,version);
 	buf.s = bufc;
 	buf.len = strlen(bufc);
-	STR_SHM_DUP(n->content,buf,"new_r_notification");
+	STR_SHM_DUP(&(n->content), &buf,"new_r_notification");
 	
 	n->dialog = dialog;
 	

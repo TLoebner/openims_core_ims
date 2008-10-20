@@ -64,6 +64,7 @@
 
 #include "registrar_parser.h"
 #include "registrar_notify.h"
+#include "upref.h"
 
 
 /* REGISTRAR Structures */
@@ -95,6 +96,7 @@ typedef struct _r_contact {
 	time_t expires;				/**< time of expiration					*/
 	str ua;						/**< user agent string					*/
 	str path;					/**< path headers (P-CSCF to route to)	*/
+	struct _upref_struct* user_pref;		/**< user preferences for this contact */
 
 	struct _r_contact *next;	/**< the next contact in the list		*/
 	struct _r_contact *prev;	/**< the previous contact in the list	*/
@@ -176,8 +178,8 @@ void free_r_subscriber(r_subscriber *s);
 
 r_contact* new_r_contact(str uri,int expires,str ua,str path);
 r_contact* get_r_contact(r_public *p, str uri);
-r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path);
-r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path);
+r_contact* add_r_contact(struct sip_msg* msg, r_public *p,str uri,int expires,str ua,str path); /* sip_msg in */ 
+r_contact* update_r_contact(struct sip_msg* msg, r_public *p,str uri,int *expires, str *ua,str *path); /* sip_msg in */ 
 void del_r_contact(r_public *p,r_contact *c);
 void free_r_contact(r_contact *c);
 
