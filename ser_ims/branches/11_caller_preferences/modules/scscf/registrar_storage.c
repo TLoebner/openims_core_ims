@@ -1374,7 +1374,8 @@ void print_r(int log_level)
 				while(c){
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":         C: <"ANSI_RED"%.*s"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"]\n",
 						c->uri.len,c->uri.s,c->expires-time_now);					
-					LOG(log_level,ANSI_GREEN"INF:"M_NAME":         UP: {"ANSI_BLUE" text[%s], data[%s], audio[%s], video[%s], control[%s], isfocus[%s], automata[%s], application[%s]"ANSI_GREEN" }\n", 
+					LOG(log_level,ANSI_GREEN"INF:"M_NAME":         UP: {"ANSI_BLUE" iptv[%s], text[%s], data[%s], audio[%s], video[%s], control[%s], isfocus[%s], automata[%s], application[%s]\n          mobility[%s]"ANSI_GREEN" }\n", 
+						((c->user_pref->iptv == TRUE)?"yes":"no"),
 						((c->user_pref->text == TRUE)?"yes":"no"),
 						((c->user_pref->data == TRUE)?"yes":"no"),
 						((c->user_pref->audio == TRUE)?"yes":"no"),
@@ -1382,7 +1383,8 @@ void print_r(int log_level)
 						((c->user_pref->control == TRUE)?"yes":"no"),
 						((c->user_pref->isfocus == TRUE)?"yes":"no"),
 						((c->user_pref->automata == TRUE)?"yes":"no"),
-						((c->user_pref->application== TRUE)?"yes":"no")
+						((c->user_pref->application== TRUE)?"yes":"no"),
+						((c->user_pref->mobility.val_list[0] == MOBILE)?"mobile":"fixed")  
 						) ;
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           Path:"ANSI_YELLOW"%.*s"ANSI_GREEN"\n",c->path.len,c->path.s);
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           UA: <%.*s>\n",
