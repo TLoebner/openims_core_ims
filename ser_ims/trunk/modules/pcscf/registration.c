@@ -945,7 +945,12 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 			LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Cannot get request for the transaction\n");
 			if (c) r_unlock(c->hash);
 			return CSCF_RETURN_FALSE;
-		}		
+		}
+		if (req->rcv.proto!=PROTO_UDP){
+			LOG(L_ERR, "INFO:"M_NAME":P_NAT_relay: Non-UDP does not need NAT relay\n");
+			if (c) r_unlock(c->hash);
+			return CSCF_RETURN_TRUE;
+		}
 		ip = req->rcv.src_ip;
 		port = req->rcv.src_port;	
 	}
