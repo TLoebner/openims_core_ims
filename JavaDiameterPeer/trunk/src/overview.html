@@ -58,8 +58,8 @@ request.
 <p>
 In order to provide a convenient way to handle Diameter request and answer at 
 the client side, a TransactionWorker is defined. A TransactionWorker groups a 
-request with its corresponding answer. By using TransactionWorker, a user needs 
-not to take care of mapping requests with answers. 
+request with its corresponding answer. By using TransactionWorker, a user does not
+need to take care of mapping requests with answers. 
 
 <h1>Peer Configuration</h1>
 DiameterPeer.xml provides an example of how a Diameter peer is configured.
@@ -81,6 +81,17 @@ DiameterPeer.xml provides an example of how a Diameter peer is configured.
 	&lt;Auth id="16777216" vendor="10415"/&gt;
 	&lt;Auth id="16777216" vendor="0" /&gt;
 	&lt;Acct id="16777216" vendor="0" /&gt;
+	
+	&lt;Realm name="my.open-ims.test"&gt;
+	  &lt;Route FQDN="my1.open-ims.test" metric="2"/&gt;
+	  &lt;Route FQDN="my2.open-ims.test" metric="3"/&gt;
+    &lt;/Realm&gt;
+    &lt;Realm name="test.open-ims.test"&gt;
+  	  &lt;Route FQDN="test1.open-ims.test" metric="7"/&gt;
+    &lt;/Realm&gt;
+    &lt;DefaultRoute FQDN="default1.open-ims.test" metric="15"/&gt;
+    &lt;DefaultRoute FQDN="default2.open-ims.test" metric="13"/&gt;
+	
 &lt;/DiameterPeer&gt;
 </pre>
 
@@ -92,11 +103,13 @@ since Cx, Sh do not require user session support actually. However, auth and
 acct session support are needed to realize Ro interface (auth session) and Rf 
 (acct session) interface.
 
-Realm routing (because this is not yet supported, when using you will have to 
-specify each time the FQDN of the destination host. This is usually a 
-configuration parameter other the modules using this one). A Realm routing 
-process specified in the RFC 3588 section 2.7 is still in the development stage.
-
+Realm routing is supported. For each realm, a list of hosts to be contacted
+can be specified in the configuration file. Each host would have an attached
+metric, with lower values being the preferred ones. For a request without a 
+realm explicitly defined, the default routes will be used, also with multiple
+possible entries ordered by metrics. A message will be sent to a peer only if
+a connection is active and if that peer supports the required application 
+ids, as declared during capabilities exchange.
 
 <h1>The Open IMS Core</h1>
 The <b>Home-Page</b> of the Open Source IMS Core project is at 
