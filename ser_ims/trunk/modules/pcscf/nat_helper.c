@@ -239,6 +239,7 @@
 #include "nat_helper.h"
 
 static const char udp_ping[2] = { 10, 13};	/**< message to ping with - CRLF */
+static const char tcp_ping[2] = { 10, 13};	/**< message to ping with - CRLF */
 
 extern int pcscf_nat_enable; 				/**< whether to enable NAT */
 extern int pcscf_nat_ping; 					/**< whether to ping anything */
@@ -446,6 +447,9 @@ r_nat_dest* nat_msg_origin(struct sip_msg * msg) {
 		}
 		memcpy(&pinhole->nat_addr, &msg->rcv.src_ip, sizeof(struct ip_addr));
 		pinhole -> nat_port = msg -> rcv.src_port;
+		pinhole -> proto = msg -> rcv.proto;
+		pinhole -> proto_reserved1 = msg -> rcv.proto_reserved1;
+		pinhole -> bind_address = msg -> rcv.bind_address;
 	}
 	return pinhole;
 }
@@ -471,10 +475,14 @@ int nat_send_ping(r_contact *c) {
 	
 	if(c->pinhole == NULL)
 		return 1;
-	if(c->transport != PROTO_UDP && c->transport != PROTO_NONE)
+	if (c->transport != PROTO_UDP && 
+		c->transport != PROTO_TCP && 
+		c->transport != PROTO_NONE)
 		return 1;
 	init_dest_info(&dst);
-	dst.proto = PROTO_UDP;
+	dst.proto = c->pinhole->proto;
+	dst.send_sock=c->pinhole->bind_address;
+	dst.id=c->pinhole->proto_reserved1;
 	
 	memset(&(dst.to), 0, sizeof(union sockaddr_union));
 	dst.to.s.sa_family=c->pinhole->nat_addr.af;
@@ -498,6 +506,8 @@ int nat_send_ping(r_contact *c) {
 		LOG(L_ERR,"ERR:"M_NAME":nat_send_ping: cannot get sending socket\n");
 		return -1;
 	}
-	udp_send(&dst, (char *)udp_ping, sizeof(udp_ping));
+	if (dst.proto==PROTO_UDP) udp_send(&dst, (char *)udp_ping, sizeof(udp_ping));
+	else
+	if (dst.proto==PROTO_TCP) tcp_send(&dst, (char *)tcp_ping, sizeof(tcp_ping));
 	return 1; 
 }

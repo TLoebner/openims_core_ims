@@ -899,6 +899,55 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	
 }
 
+str get_NAT_dst_uri(struct ip_addr ip, int port,short proto)
+{
+	str dst={0,0};
+	int len;
+		
+	switch(ip.af){
+		case AF_INET:
+			if (ip.len<4) break;
+			len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */ + 14 /* ;transport=TCP */;
+			dst.s = pkg_malloc(len);
+			if (!dst.s){
+				LOG(L_ERR, "ERR:"M_NAME":get_NAT_dst_uri: Error allocating %d bytes\n", len);					
+				return dst;
+			}
+			dst.len = sprintf(dst.s, "sip:%d.%d.%d.%d:%d%s", 
+					ip.u.addr[0],ip.u.addr[1],ip.u.addr[2],ip.u.addr[3],port,
+					proto==PROTO_TCP?";transport=TCP":"");
+			break;
+		case AF_INET6:
+			if (ip.len<16) break;
+			len = 5 /* sip:[ */ + 2 * ip.len /* ip address */ + 7/*:*/ + 2/* ]: */ + 6 /* port */ + 14 /* ;transport=TCP */;
+			dst.s = pkg_malloc(len);
+			if (!dst.s){
+				LOG(L_ERR, "ERR:"M_NAME":get_NAT_dst_uri: Error allocating %d bytes\n", len);					
+				return dst;
+			}
+			dst.len = sprintf(dst.s, "sip:[%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x]:%d%s", 
+				ip.u.addr[0],
+				ip.u.addr[1],
+				ip.u.addr[2],
+				ip.u.addr[3],
+				ip.u.addr[4],
+				ip.u.addr[5],
+				ip.u.addr[6],
+				ip.u.addr[7],
+				ip.u.addr[8],
+				ip.u.addr[9],
+				ip.u.addr[10],
+				ip.u.addr[11],
+				ip.u.addr[12],
+				ip.u.addr[13],
+				ip.u.addr[14],
+				ip.u.addr[15],
+				port,
+				proto==PROTO_TCP?";transport=TCP":"");			
+			break;
+	}
+	return dst;	
+}
 
 /**
  * Forward a message through the NAT pinhole
@@ -910,9 +959,6 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2) 
 {
 	str dst={0,0};
-	int len;
-	struct ip_addr ip;
-	unsigned short int port;
 	r_contact *c=0;
 	struct dest_info dst_info;
 	struct cell *t=0;	
@@ -935,75 +981,24 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 			if (c) r_unlock(c->hash);
 			return CSCF_RETURN_FALSE;
 		}	
-		ip = c->pinhole->nat_addr;
-		port = c->pinhole->nat_port;
+		dst = get_NAT_dst_uri(c->pinhole->nat_addr,c->pinhole->nat_port,c->pinhole->proto);		
+		r_unlock(c->hash);
+		
+		if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+		msg -> dst_uri = dst;
+		msg -> force_send_socket = c->pinhole->bind_address;
 	} else {
 		/* on response get the destination from the received addr for the corresponding request */
 		struct sip_msg *req;
 		req = cscf_get_request_from_reply(msg);
 		if(req == NULL) {
 			LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Cannot get request for the transaction\n");
-			if (c) r_unlock(c->hash);
 			return CSCF_RETURN_FALSE;
 		}
-		if (req->rcv.proto!=PROTO_UDP){
-			LOG(L_ERR, "INFO:"M_NAME":P_NAT_relay: Non-UDP does not need NAT relay\n");
-			if (c) r_unlock(c->hash);
-			return CSCF_RETURN_TRUE;
-		}
-		ip = req->rcv.src_ip;
-		port = req->rcv.src_port;	
-	}
-
-	switch(ip.af){
-		case AF_INET:
-			if (ip.len<4) break;
-			len = 4 /* sip: */ + 4 * ip.len /* ip address */ + 1 /* : */ + 6 /* port */;
-			dst.s = pkg_malloc(len);
-			if (!dst.s){
-				LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
-				if (c) r_unlock(c->hash);
-				return CSCF_RETURN_FALSE;
-			}
-			dst.len = sprintf(dst.s, "sip:%d.%d.%d.%d:%d", ip.u.addr[0],ip.u.addr[1],ip.u.addr[2],ip.u.addr[3],port);		
-			break;
-		case AF_INET6:
-			if (ip.len<16) break;
-			len = 5 /* sip:[ */ + 2 * ip.len /* ip address */ + 7/*:*/ + 2/* ]: */ + 6 /* port */;
-			dst.s = pkg_malloc(len);
-			if (!dst.s){
-				LOG(L_ERR, "ERR:"M_NAME":P_NAT_relay: Error allocating %d bytes\n", len);					
-				if (c) r_unlock(c->hash);
-				return CSCF_RETURN_FALSE;
-			}
-			dst.len = sprintf(dst.s, "sip:[%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x:%.02x%.02x]:%d", 
-				ip.u.addr[0],
-				ip.u.addr[1],
-				ip.u.addr[2],
-				ip.u.addr[3],
-				ip.u.addr[4],
-				ip.u.addr[5],
-				ip.u.addr[6],
-				ip.u.addr[7],
-				ip.u.addr[8],
-				ip.u.addr[9],
-				ip.u.addr[10],
-				ip.u.addr[11],
-				ip.u.addr[12],
-				ip.u.addr[13],
-				ip.u.addr[14],
-				ip.u.addr[15],
-				port);			
-			break;
-	}
-			
-
-	if (c) r_unlock(c->hash);
-	
-	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
-	msg -> dst_uri = dst;
-
-	if (msg -> first_line.type == SIP_REPLY) {
+		dst = get_NAT_dst_uri(req->rcv.src_ip,req->rcv.src_port,req->rcv.proto);		
+		
+		if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+		msg -> dst_uri = dst;
 		/* on reply we have to modify the t->uas->response->dst.to.sin.sin_port/sin_addr */
 		t = tmb.t_gett();
 		if (!t){
@@ -1011,13 +1006,15 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 			return CSCF_RETURN_FALSE;	/* error */
 		}
 #ifdef USE_DNS_FAILOVER
-		if (!uri2dst(0,&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+		if (!uri2dst(0,&dst_info, msg, &msg->dst_uri, req->rcv.proto)) {
 #else
-		if (!uri2dst(&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+		if (!uri2dst(&dst_info, msg, &msg->dst_uri,  req->rcv.proto)) {
 #endif
 			LOG(L_INFO, "INFO:"M_NAME":P_NAT_relay: Error setting uri as dst <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);		
 			return CSCF_RETURN_FALSE;	/* error */
 		}
+		dst_info.send_sock = req->rcv.bind_address;
+		dst_info.id = req->rcv.proto_reserved1;
 		t->uas.response.dst = dst_info;
 	}	
 		

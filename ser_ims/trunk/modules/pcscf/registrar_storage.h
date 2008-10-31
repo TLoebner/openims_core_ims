@@ -60,8 +60,11 @@
 
 /** NAT address */
 typedef struct _r_nat_dest{
+	short proto;
 	struct ip_addr nat_addr;	/**< address of the pin hole in the NAT	*/
 	unsigned short nat_port;	/**< port of the pin hole in the NAT 	*/
+	int proto_reserved1;		/**< id of the TCP connection 			*/
+	struct socket_info* bind_address; /**< local address to send from	*/
 }r_nat_dest;
 
 /** Registrar Public Identity Structure */

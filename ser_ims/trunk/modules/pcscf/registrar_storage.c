@@ -812,7 +812,8 @@ void print_r(int log_level)
 				LOG(log_level,ANSI_GREEN"INF:"M_NAME":         SR: <"ANSI_YELLOW"%.*s"ANSI_GREEN">\n",c->service_route[j].len,c->service_route[j].s);
 			if(c->pinhole) {
 				if (c->pinhole->nat_addr.len>=4)
-					LOG(log_level,ANSI_GREEN"INF:"M_NAME":        NAT:<"ANSI_CYAN"%d.%d.%d.%d:%d"ANSI_GREEN">\n",
+					LOG(log_level,ANSI_GREEN"INF:"M_NAME":        NAT:<"ANSI_CYAN"%d://%d.%d.%d.%d:%d"ANSI_GREEN">\n",
+						c->pinhole->proto,
 						c->pinhole->nat_addr.u.addr[0],
 						c->pinhole->nat_addr.u.addr[1],
 						c->pinhole->nat_addr.u.addr[2],
