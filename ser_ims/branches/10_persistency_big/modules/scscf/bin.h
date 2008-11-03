@@ -118,9 +118,9 @@ typedef struct _bin_data {
  *		Binary encoding functions
  */
 /* memory allocation and initialization macros */
-#define BIN_ALLOC_METHOD    pkg_malloc
-#define BIN_REALLOC_METHOD  pkg_realloc
-#define BIN_FREE_METHOD     pkg_free
+#define BIN_ALLOC_METHOD    shm_malloc
+#define BIN_REALLOC_METHOD  shm_realloc
+#define BIN_FREE_METHOD     shm_free
 
 inline int bin_alloc(bin_data *x, int max_len);
 inline int bin_realloc(bin_data *x, int delta);

@@ -439,24 +439,28 @@ int make_snapshot_registrar()
 			if (!f) return 0;
 			
 			for(i=0;i<r_hash_size;i++){
-				if (!bin_alloc(&x,1024)) goto error;		
 				r_lock(i);
-				p = registrar[i].head;
-				if (p){
-					while(p){
-						if (!bin_encode_r_public(&x,p)) goto error;
-						p = p->next;
-					}
+				p = registrar[i].head;				
+				if (!p){
 					r_unlock(i);
-					k = bind_dump_to_file_append(f,&x);
-					if (k!=x.len) {
-						LOG(L_ERR,"ERR:"M_NAME":make_snapshot_registrar: error while dumping to file - only wrote %d bytes of %d \n",k,x.len);
-						r_unlock(i);
-						bin_free(&x);
-						return 0;
-					} 					
+					continue;
 				}
-				else r_unlock(i);				
+				if (!bin_alloc(&x,1024)) goto error;		
+				while(p){
+					if (!bin_encode_r_public(&x,p)) {
+						r_unlock(i);
+						goto error;
+					}
+					p = p->next;
+				}
+				r_unlock(i);
+				k = bind_dump_to_file_append(f,&x);
+				if (k!=x.len) {
+					LOG(L_ERR,"ERR:"M_NAME":make_snapshot_registrar: error while dumping to file - only wrote %d bytes of %d \n",k,x.len);
+					r_unlock(i);
+					bin_free(&x);
+					return 0;
+				} 					
 				bin_free(&x);
 			}
 			return bind_dump_to_file_close(f,scscf_persistency_location,"sregistrar",unique);
