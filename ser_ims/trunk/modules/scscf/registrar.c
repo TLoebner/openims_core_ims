@@ -703,56 +703,55 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 			for(i=0;i<(*s)->service_profiles_cnt;i++)
 				for(j=0;j<(*s)->service_profiles[i].public_identities_cnt;j++){
 					pi = &((*s)->service_profiles[i].public_identities[j]);
-					if (!pi->barring){
-						if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
-							LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-								pi->public_identity.len,pi->public_identity.s);
-							goto error;
-						}
-						s_used++;
-						if (!registration_disable_early_ims && sent_by.len) {
-							if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
-							STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
-						}
-						if (is_star){
-							LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Registration.\n");
-						}else{
-							for(h=msg->contact;h;h=h->next)
-								if (h->type==HDR_CONTACT_T && h->parsed)
-								 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-									if(r_calc_contact_q(ci->q, &qvalue) != 0){
-										LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                                                                        ci->uri.len,ci->uri.s);
-                                                                                goto error;
-									}
-									expires = r_calc_expires(ci,expires_hdr);
-									if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
-										LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-											ci->uri.len,ci->uri.s);
-										goto error;
-									}
-									if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-										S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-									else 
-										S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-									
-								}
-							if (!contacts_added){
-								for(c=p->head;c;c=c->next)
-									r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
-								contacts_added = 1;
-							}
-						}
-						r_unlock(p->hash);
+					if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
+						LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+							pi->public_identity.len,pi->public_identity.s);
+						goto error;
 					}
+					p->barring=pi->barring;
+					s_used++;
+					if (!registration_disable_early_ims && sent_by.len) {
+						if (p->early_ims_ip.s) shm_free(p->early_ims_ip.s);
+						STR_SHM_DUP(p->early_ims_ip,sent_by,"IP Early IMS");
+					}
+					if (is_star){
+						LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Registration.\n");
+					}else{
+						for(h=msg->contact;h;h=h->next)
+							if (h->type==HDR_CONTACT_T && h->parsed)
+							 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+								if(r_calc_contact_q(ci->q, &qvalue) != 0){
+									LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+										ci->uri.len,ci->uri.s);
+									goto error;
+								}
+								expires = r_calc_expires(ci,expires_hdr);
+								if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
+									LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+										ci->uri.len,ci->uri.s);
+									goto error;
+								}
+								if (assignment_type == AVP_IMS_SAR_REGISTRATION)
+									S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
+								else 
+									S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
+								
+							}
+						if (!contacts_added){
+							for(c=p->head;c;c=c->next)
+								r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
+							contacts_added = 1;
+						}
+					}
+					r_unlock(p->hash);
 				}
 			break;
 		case AVP_IMS_SAR_RE_REGISTRATION:
 			reg_state = IMS_USER_REGISTERED;
 			public_identity = cscf_get_public_identity(msg);
             if (!public_identity.len) {
-                    LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
-                    goto error;
+				LOG(L_ERR,"ERR:"M_NAME":update_contacts: message contains no public identity\n");
+				goto error;
             }
 
             p = get_r_public(public_identity);
@@ -772,10 +771,10 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                 for(h=msg->contact;h;h=h->next)
                     if (h->type==HDR_CONTACT_T && h->parsed)
                      for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-			if(r_calc_contact_q(ci->q, &qvalue) != 0){
+						if(r_calc_contact_q(ci->q, &qvalue) != 0){
                         	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                              	   ci->uri.len,ci->uri.s);
-                                goto error;
+								ci->uri.len,ci->uri.s);
+							goto error;
                         }
                         expires = r_calc_expires(ci,expires_hdr);
                         if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
@@ -791,7 +790,6 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				for(c=p->head;c;c=c->next)
 					r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
             }            
-
 			/* now update the implicit set */
 			if (p->s)
             for(i=0;i<p->s->service_profiles_cnt;i++)
@@ -817,11 +815,10 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 		                for(h=msg->contact;h;h=h->next)
     		                if (h->type==HDR_CONTACT_T && h->parsed)
                 		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-					if(r_calc_contact_q(ci->q, &qvalue) != 0){
-                                          	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                                	ci->uri.len,ci->uri.s);
-                                        	goto error;
-                                        }
+									if(r_calc_contact_q(ci->q, &qvalue) != 0){
+                                    	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",ci->uri.len,ci->uri.s);
+                                        goto error;
+									}
                             		expires = r_calc_expires(ci,expires_hdr);
                                     if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path,qvalue))){
                                         LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
@@ -934,15 +931,13 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 			for(i=0;i<(*s)->service_profiles_cnt;i++)
 				for(j=0;j<(*s)->service_profiles[i].public_identities_cnt;j++){
 					pi = &((*s)->service_profiles[i].public_identities[j]);
-					if (!pi->barring){
-						if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
-							LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-								pi->public_identity.len,pi->public_identity.s);
-							goto error;
-						}
-						s_used++;
-						r_unlock(p->hash);
+					if (!(p=update_r_public(pi->public_identity,&reg_state,s,ccf1,ccf2,ecf1,ecf2))){
+						LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+							pi->public_identity.len,pi->public_identity.s);
+						goto error;
 					}
+					s_used++;
+					r_unlock(p->hash);
 				}
 			break;			
 			
@@ -961,9 +956,9 @@ out_of_memory:
 }
 
 
-str hdr_p_associated_uri1={"P-Associated-URI: <",19};
+str hdr_p_associated_uri1={"P-Associated-URI: ",18};
 str hdr_p_associated_uri2={">, <",4};
-str hdr_p_associated_uri3={">\r\n",3};
+str hdr_p_associated_uri3={"\r\n",2};
 
 /**
  * Adds to the response the P-Associated-URI header.
@@ -976,24 +971,20 @@ int insert_p_associated_uri(struct sip_msg *msg,ims_subscription *s)
 	str public_identity;
 	str hdr={0,0};
 	ims_public_identity *id;
-	int i,j;
+	int i,j,cnt=0;
 	
 	public_identity = cscf_get_public_identity(msg);
 	if (!public_identity.len){
 		LOG(L_ERR,"ERR:"M_NAME":insert_p_associated_uri: error getting public id\n");
 		goto error;
 	}
-	hdr.len=hdr_p_associated_uri1.len+public_identity.len+hdr_p_associated_uri3.len;
+	hdr.len=hdr_p_associated_uri1.len+2+hdr_p_associated_uri3.len;
 	if (s){
 		for(i=0;i<s->service_profiles_cnt;i++)
 		 for(j=0;j<s->service_profiles[i].public_identities_cnt;j++){
 		 	id = &(s->service_profiles[i].public_identities[j]);
-		 	if (!id->barring&&
-		 		(id->public_identity.len != public_identity.len ||
-		 		 memcmp(id->public_identity.s,public_identity.s,public_identity.len) != 0
-		 		)
-		 	   )	
-		 		   hdr.len += id->public_identity.len+hdr_p_associated_uri2.len;	 
+		 	if (!id->barring)
+	 		   hdr.len += hdr_p_associated_uri2.len+id->public_identity.len;	 
 		 }
 	}
 	hdr.s = pkg_malloc(hdr.len);
@@ -1006,28 +997,26 @@ int insert_p_associated_uri(struct sip_msg *msg,ims_subscription *s)
 	memcpy(hdr.s+hdr.len,hdr_p_associated_uri1.s,hdr_p_associated_uri1.len);
 	hdr.len+=hdr_p_associated_uri1.len;
 
-	memcpy(hdr.s+hdr.len,public_identity.s,public_identity.len);
-	hdr.len+=public_identity.len;
-
 	if (s){
 		for(i=0;i<s->service_profiles_cnt;i++)
 		 for(j=0;j<s->service_profiles[i].public_identities_cnt;j++){
 		 	id = &(s->service_profiles[i].public_identities[j]);
-		 	if (!id->barring&&
-		 		(id->public_identity.len != public_identity.len ||
-		 		 memcmp(id->public_identity.s,public_identity.s,public_identity.len) != 0
-		 		)
-		 	   )	
-		 	{
-				memcpy(hdr.s+hdr.len,hdr_p_associated_uri2.s,hdr_p_associated_uri2.len);
-				hdr.len+=hdr_p_associated_uri2.len;
+		 	if (!id->barring) {
+				if (cnt==0)
+					hdr.s[hdr.len++]='<';
+				else{
+					memcpy(hdr.s+hdr.len,hdr_p_associated_uri2.s,hdr_p_associated_uri2.len);
+					hdr.len+=hdr_p_associated_uri2.len;
+				}
 				
 				memcpy(hdr.s+hdr.len,id->public_identity.s,id->public_identity.len);
 				hdr.len+=id->public_identity.len;
+				cnt++;
 		 	}
 		 }
 	}
-
+	
+	if (cnt) hdr.s[hdr.len++]='>';
 
 	memcpy(hdr.s+hdr.len,hdr_p_associated_uri3.s,hdr_p_associated_uri3.len);
 	hdr.len+=hdr_p_associated_uri3.len;
@@ -1955,7 +1944,7 @@ int S_mobile_originating(struct sip_msg *msg,char *str1,char *str2)
  */
 int S_is_barred(str public_identity)
 {
-	int ret=0,i,j;
+	int ret=0;
 	r_public *p;
 
 	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered_id: Looking if NOT registered\n");
@@ -1966,14 +1955,8 @@ int S_is_barred(str public_identity)
 	if (!p) return 0;
 	if (!p->s) return 0;
 	
-	for(i=0;i<p->s->service_profiles_cnt;i++)
-		for(j=0;j<p->s->service_profiles[i].public_identities_cnt;j++)
-			if (p->s->service_profiles[i].public_identities[j].barring &&
-				p->s->service_profiles[i].public_identities[j].public_identity.len == public_identity.len &&
-				strncasecmp(p->s->service_profiles[i].public_identities[j].public_identity.s,public_identity.s,public_identity.len)==0){
-					r_unlock(p->hash);					
-					return 1;
-				}
+	if (p->barring) ret = 1;
+	
 	r_unlock(p->hash);
 	return ret;
 }

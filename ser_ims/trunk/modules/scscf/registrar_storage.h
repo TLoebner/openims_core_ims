@@ -126,6 +126,7 @@ typedef struct _r_public {
 	unsigned int hash;			/**< the hash value 						*/
 	str aor;					/**< the public identity 					*/
 	str early_ims_ip;			/**< IP Address for Early-IMS Auth			*/
+	int barring;				/**< Whether this public id is barred		*/
 	enum Reg_States reg_state;	/**< registration state						*/
 	ims_subscription *s;		/**< subscription to which it belongs 		*/
 	t_regexp_list *regexp;		/**< regular expresion in case of wild PSI 	*/

@@ -680,6 +680,8 @@ int bin_encode_r_public(bin_data *x,r_public *p)
 	
 	if (!bin_encode_str(x,&(p->aor))) goto error;
 	if (!bin_encode_str(x,&(p->early_ims_ip))) goto error;	
+	ch = p->barring;
+	if (!bin_encode_char(x,ch)) goto error;
 	ch = p->reg_state;
 	if (!bin_encode_char(x,ch)) goto error;
 	if (!bin_encode_ims_subscription(x,p->s)) goto error;
@@ -734,6 +736,8 @@ r_public* bin_decode_r_public(bin_data *x)
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->aor),&st)) goto error;
 	if (!bin_decode_str(x,&st)||!str_shm_dup(&(p->early_ims_ip),&st)) goto error;
 	p->hash = get_aor_hash(p->aor,r_hash_size);
+	if (!bin_decode_char(x,&ch)) goto error;
+	p->barring = ch;
 	if (!bin_decode_char(x,&ch)) goto error;
 	p->reg_state = ch;
 	
