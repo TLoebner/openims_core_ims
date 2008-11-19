@@ -1363,8 +1363,9 @@ void print_r(int log_level)
 		r_lock(i);
 			p = registrar[i].head;
 			while(p){
-				LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] P: <"ANSI_BLUE"%.*s"ANSI_GREEN"> R["ANSI_MAGENTA"%2d"ANSI_GREEN"] Early-IMS: <"ANSI_YELLOW"%.*s"ANSI_GREEN"> \n",i,
-					p->aor.len,p->aor.s,p->reg_state,p->early_ims_ip.len,p->early_ims_ip.s);
+				LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] P: <"ANSI_BLUE"%.*s"ANSI_GREEN"> R["ANSI_MAGENTA"%2d"ANSI_GREEN"] Early-IMS: <"ANSI_YELLOW"%.*s"ANSI_GREEN"> Barred: [%c] \n",i,
+					p->aor.len,p->aor.s,p->reg_state,p->early_ims_ip.len,p->early_ims_ip.s,
+					p->barring?'X':' ');
 				
 				if (p->ccf1.len) LOG(log_level,ANSI_GREEN"INF:"M_NAME":         CCF1: <"ANSI_MAGENTA"%.*s"ANSI_GREEN"> CCF2: <"ANSI_MAGENTA"%.*s"ANSI_GREEN"> \n",
 					p->ccf1.len,p->ccf1.s,p->ccf2.len,p->ccf2.s);
