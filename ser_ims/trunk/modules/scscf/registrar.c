@@ -638,7 +638,7 @@ static int r_add_contact(struct sip_msg *msg,str uri,int expires,qvalue_t qvalue
 {
 	str hdr;
 	int r;
-	hdr.s = pkg_malloc(10+uri.len+10+12+3+1);
+	hdr.s = pkg_malloc(10+uri.len+10+12+12+1);
 	if (!hdr.s) return 0;
 	if(qvalue != -1) {
 		float q = (float)qvalue/1000;
