@@ -1114,26 +1114,18 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			// Subscription-State header is mandatory for NOTIFY. See RFC 3265, Section 7.2
 			expires = cscf_get_subscription_state(msg);
 			if (expires >= 0)
-			{
 				d->expires = d_act_time()+expires;
-			}
 			else
-			{
 				d->expires = d_act_time()+scscf_dialogs_expiration_time;
-			}
 		}
 		else
 		{
-                        expires = cscf_get_expires_hdr(msg);
-                        if (expires >= 0)
-                        {
-                                d->expires = d_act_time()+expires;
-                        }
-                        else
-                        {
-				d->expires = d_act_time()+scscf_dialogs_expiration_time;
-                        }
-
+			expires = cscf_get_expires_hdr(msg);
+			if (expires >= 0)
+			        d->expires = d_act_time()+expires;
+			else
+					d->expires = d_act_time()+scscf_dialogs_expiration_time;
+	
 			d->lr_session_expires = 0;		
 		}
 	}else{
@@ -1206,6 +1198,14 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 							d->expires = d_act_time() + expires;
 						}
 					}
+					else if (req && req->first_line.u.request.method.len==9 &&
+						strncasecmp(req->first_line.u.request.method.s,"SUBSCRIBE",9)==0){
+						expires = cscf_get_expires_hdr(msg);
+						if (expires >= 0)
+							d->expires = d_act_time()+expires;
+						else
+							d->expires = d_act_time()+scscf_dialogs_expiration_time;
+					}					
 					break;
 			}
 			if (cseq>d->last_cseq) d->last_cseq = cseq;						
