@@ -128,6 +128,11 @@ int registrar_hash_size=1024;				/**< the size of the hash table for registrar		
 char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/pcscf/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
 int pcscf_subscribe_retries = 1;			/**< times to retry subscribe to reg on failure 	*/
 
+int pcscf_assert_fallback = 0;				/**< whether to fallback and use the From header on 
+												 identity assertion when P-Preferred-Identity is
+												 missing 										*/ 
+
+
 int subscriptions_hash_size=1024;			/**< the size of the hash table for subscriptions	*/
 
 int pcscf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
@@ -365,6 +370,8 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - subscribe_retries - how many times to attempt SUBSCRIBE to reg on failure
  * <p>
+ * - assert_fallback - whether to fallback and use the From header on identity assertion when P-Preferred-Identity is missing 										
+ * <p>
  * - icid_value_prefix - prefix for the ICID in the P-Charging-Vector header
  * - icid_gen_addr - ICID Gen Addr. in the P-Charging-Vector header
  * - orig_ioi - Originating IOI in the P-Charging-Vector header
@@ -419,6 +426,8 @@ static param_export_t pcscf_params[]={
 	{"rtpproxy_tout",         	PARAM_INT,		&rtpproxy_tout         },
 	
 	{"subscribe_retries",		INT_PARAM,		&pcscf_subscribe_retries},
+
+	{"assert_fallback",			INT_PARAM,		&pcscf_assert_fallback},
 	
 	{"icid_value_prefix",		STR_PARAM,		&cscf_icid_value_prefix},
 	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
