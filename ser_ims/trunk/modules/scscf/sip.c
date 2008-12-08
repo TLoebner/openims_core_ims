@@ -2486,6 +2486,32 @@ name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h
 	return id;
 }
 
+/**
+ * Looks for the P-Preferred-Identity header and extracts its content
+ * @param msg - the SIP message to look into
+ * @param hr - the header ptr to be filled with the result
+ * @returns the preferred identity string or an empty string if none found
+ */
+name_addr_t cscf_get_preferred_identity_from_from(struct sip_msg *msg,struct hdr_field **hr)
+{
+	name_addr_t id;
+	struct to_body *to;
+	
+	*hr=0;
+	memset(&id,0,sizeof(name_addr_t));
+	if (!msg) return id;
+	if (parse_from_header(msg)<0){			
+		LOG(L_CRIT,"WARN:"M_NAME":cscf_get_preferred_identity_from_from: Error parsing From header!\n");			
+		if (hr) *hr = 0;			
+		return id;	
+	}
+		
+	to = get_from(msg);
+	id.name = to->display;
+	id.uri = to->uri;
+	if (hr) *hr = msg->from;			
+	return id;
+}
 
 /**
  * Returns the next route.

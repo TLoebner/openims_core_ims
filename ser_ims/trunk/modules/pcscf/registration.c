@@ -84,6 +84,10 @@ extern gen_lock_t* pcscf_icid_value_count_lock;		/**< to lock acces on the above
 extern r_hash_slot *registrar;						/**< the contacts 									*/
 extern int r_hash_size;								/**< records tables parameters 						*/
 
+extern int pcscf_assert_fallback;					/**< whether to fallback and use the From header on 
+												 		 identity assertion when P-Preferred-Identity is
+												 		 missing 										*/ 
+
 
 extern int pcscf_nat_enable;	 					/**< whether to enable NAT							*/
 extern int pcscf_use_ipsec;							/**< whether to use or not ipsec 					*/
@@ -493,16 +497,22 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	vb = cscf_get_ue_via(msg);
 	
 	preferred = cscf_get_preferred_identity(msg,&h);
+	if (preferred.uri.len==0 && pcscf_assert_fallback) {
+		/* Fallback to From header */
+		preferred = cscf_get_preferred_identity_from_from(msg,&h);
+		/* but don't remove it */
+		h=0;
+	}
 	
 	LOG(L_INFO,"DBG:"M_NAME":P_assert_identity: Looking for <%d://%.*s:%d> Pref: %.*s\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port,
-		preferred.len,preferred.name.s);
+		preferred.uri.len,preferred.uri.s);
 
 	asserted = r_assert_identity(vb->host,vb->port,vb->proto,preferred);
 	if (!asserted.uri.len){
 		ret = CSCF_RETURN_FALSE;	
 	}else{
-		cscf_del_header(msg,h);
+		if (h) cscf_del_header(msg,h);
 		x.len = p_asserted_identity_s.len+asserted.name.len+p_asserted_identity_m.len + 
 			asserted.uri.len+p_asserted_identity_e.len;
 		x.s = pkg_malloc(x.len);
