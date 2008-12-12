@@ -1,5 +1,5 @@
 /**
- * $Id: gq.c,v 1.10 2007/03/14 16:18:28 Alberto Exp $
+ * $Id: pcc.c,v 1.10 2007/03/14 16:18:28 Alberto Exp $
  *   
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -162,10 +162,11 @@ void callback_for_pccsession(int event,void *param,void *session)
 			
 			g=(t_authdata *)x->u.auth.generic_data;
 			if (g) {
-				if (g->callid.s)
+				if (g->callid.s && g->host.s)
 				{	
 					
-					dlg=get_p_dialog_dir(g->callid,g->direction);
+					//dlg=get_p_dialog_dir(g->callid,g->direction);
+					dlg=get_p_dialog(g->callid,g->host,g->port,g->transport);
 					
 					if (dlg) { 
 					if (dlg->pcc_session)
@@ -180,6 +181,7 @@ void callback_for_pccsession(int event,void *param,void *session)
 				}
 					
 				if (g->callid.s) shm_free(g->callid.s);
+				if (g->host.s) shm_free(g->host.s);
 				shm_free(g);
 				x->u.auth.generic_data=0;
 			}
@@ -231,9 +233,13 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	str call_id = cscf_get_call_id(req, 0);
 	dlg = get_p_dialog(call_id,host,port,transport);
 	
+	LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
+	
 	if (!dlg) {
+		LOG(L_INFO,"not much success\n");
 		find_dialog_contact(req,str1,&host,&port,&transport);
 		dlg = get_p_dialog(call_id,host,port,transport);
+		LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 	}
 	
 	if (!dlg) goto error;
@@ -257,10 +263,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		 {
 		 	LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
 		 }		 
-		 LOG(L_DBG,"PCC_AAR(): creating PCC Session\n");
+		 LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
 		 dlg->pcc_session = auth;
 	}else{ 
-		LOG(L_DBG,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
+		LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
 		auth = dlg->pcc_session;
 	}
 	
@@ -367,11 +373,21 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	//cdpb.AAAPrintMessage(dia_aaa);
 
 	//cdpb.sessions_unlock(auth->hash);
+	if (!aaa)
+	{
+		//in the case of AAA message not recovered, then the PCRF is not connected
+		//so do not even store the session
+		LOG(L_ERR,"PCC_AAR(): freeing generic\n");
+		goto error1;
+		
+	}
 	return aaa;
 out_of_memory:
 	LOG(L_CRIT,"PCC_AAR():out of memory\n");
 error:
 	LOG(L_ERR,"PCC_AAR(): unexpected ERROR!!\n");
+	if (aar) cdpb.AAAFreeMessage(&aar);
+error1:
 	if (auth) {
 		hash=auth->hash;
 		cdpb.sessions_lock(hash);
@@ -403,7 +419,7 @@ int PCC_AAA(AAAMessage *dia_msg)
  * @param msg - SIP request  
  * @param tag - 0 for originating side, 1 for terminating side
  * 
- * @returns AAA message or NULL on error
+ * @returns STA message or NULL on error
  */
 AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 {
@@ -417,6 +433,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	int port,transport;
 	struct sip_msg *req;
 	
+	LOG(L_DBG,"PCC_STR()\n");
 /** get Diameter session based on sip call_id */
 	str call_id = cscf_get_call_id(msg, 0);
 	find_dialog_contact(msg,str1,&host,&port,&transport);
@@ -438,19 +455,16 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	
 		auth=dlg->pcc_session;
 	}
-
+	dlg->pcc_session=0; // done here , so that the callback doesnt call release_call
+	d_unlock(dlg->hash);	
 	if (auth->u.auth.state==AUTH_ST_DISCON)
 	{
 		// If we are in DISCON is because an STR was already sent
 		// so just wait for STA or for Grace Timout to happen
-		dlg->pcc_session=0;
-		goto error_dlg;
+		goto end;
 	} 
-	
-	
-	
-	dlg->pcc_session=0; // done here , so that the callback doesnt call release_call	
-	d_unlock(dlg->hash);
+
+
 	//cdpb.sessions_lock(auth->hash);	
 	
 	LOG(L_INFO,"PCC_STR() : terminating auth session\n");
@@ -514,11 +528,11 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	
 	return NULL;
 	//return dia_sta;
+error_dlg:
+		d_unlock(dlg->hash);
 error:
 	//cdpb.sessions_unlock(auth->hash);
 	//cdpb.AAADropAuthSession(auth);
-error_dlg:
-	d_unlock(dlg->hash);
 end:
 	return NULL;
 }
@@ -598,14 +612,17 @@ AAAMessage* PCCRequestHandler(AAAMessage *request,void *param)
 						return PCC_ASA(request);
 						break;
 					default :
-						LOG(L_ERR,"ERR:"M_NAME":PCCRequestHandler(): - Received unknown request for Rx  or Gq command %d\n",request->commandCode);
-						break;	
+						LOG(L_ERR,"ERR:"M_NAME":PCCRequestHandler(): - Received unknown request for Rx  or Gq command %d, flags %#1x endtoend %u hopbyhop %u\n",request->commandCode,request->flags, request->endtoendId, request->hopbyhopId);
+						return 0;
+						break;
+							
 				}
 				break;
 			default:
 				LOG(L_ERR,"ERR:"M_NAME":PCCRequestHandler(): - Received unknown request for app %d command %d\n",
 					request->applicationId,
 					request->commandCode);
+					return 0;
 				break;				
 		}					
 	}
@@ -616,7 +633,7 @@ void terminate_pcc_session(cdp_session_t *s)
 {
 	if (s)
 	{
-		LOG(L_INFO,"calling AAATerminateAuthSession\n");
+		LOG(L_DBG,"terminate_pcc_session calling AAATerminateAuthSession\n");
 		cdpb.AAATerminateAuthSession(s);
 	}
 }

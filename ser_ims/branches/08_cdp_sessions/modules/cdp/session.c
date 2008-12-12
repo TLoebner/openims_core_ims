@@ -150,7 +150,6 @@ int sessions_init(int hash_size)
 		LOG_NO_MEM("lock",sizeof(gen_lock_t));
 		goto error;
 	}
-	
 	session_lock = lock_init(session_lock);
 	sessions_hash_size=hash_size;
 	
@@ -175,13 +174,11 @@ int sessions_init(int hash_size)
 		LOG_NO_MEM("shm",sizeof(unsigned int));
 		goto error;
 	}
-	
 	session_id2 = shm_malloc(sizeof(unsigned int));
 	if (!session_id2){
 		LOG_NO_MEM("shm",sizeof(unsigned int));
 		goto error;
 	}
-	
 	srand((unsigned int)time(0));	
 	*session_id1 = rand();
 	*session_id1 <<= 16;

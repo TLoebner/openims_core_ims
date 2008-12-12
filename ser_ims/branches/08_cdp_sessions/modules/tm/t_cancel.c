@@ -86,9 +86,6 @@ int cancel_uacs( struct cell *t, branch_bm_t cancel_bm, int flags)
 
 	ret=0;
 	/* cancel pending client transactions, if any */
-	
-	
-	
 	for( i=0 ; i<t->nr_of_outgoings ; i++ ) 
 		if (cancel_bm & (1<<i)){
 			r=cancel_branch(t, i, flags);
@@ -135,7 +132,6 @@ int cancel_branch( struct cell *t, int branch, int flags )
 	irb=&t->uac[branch].request;
 	ret=1;
 
-
 #	ifdef EXTRA_DEBUG
 	if (crb->buffer!=0 && crb->buffer!=BUSY_BUFFER) {
 		LOG(L_CRIT, "ERROR: attempt to rewrite cancel buffer\n");
@@ -161,7 +157,6 @@ int cancel_branch( struct cell *t, int branch, int flags )
 		}
 	}else{
 		stop_rb_retr(irb); /* stop retransmissions */
-		//LOG(L_INFO,"t_uac_branch.last_received is %u\n",t->uac[branch].last_received);
 		if (t->uac[branch].last_received < 100) {
 			/* no response received => don't send a cancel on this branch,
 			 *  just drop it */
@@ -199,7 +194,6 @@ int cancel_branch( struct cell *t, int branch, int flags )
 	if (start_retr( crb )!=0)
 		LOG(L_CRIT, "BUG: cancel_branch: failed to start retransmission"
 					" for %p\n", crb);
-								
 	return ret;
 }
 

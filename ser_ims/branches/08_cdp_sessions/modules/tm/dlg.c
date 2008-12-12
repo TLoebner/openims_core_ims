@@ -349,9 +349,9 @@ static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _o
 {
 	struct hdr_field* ptr;
 	rr_t* last, *p, *t;
-	rr_t* r;
 	
 	last = 0;
+
 	ptr = _m->record_route;
 	while(ptr) {
 		if (ptr->type == HDR_RECORDROUTE_T) {
@@ -378,7 +378,6 @@ static inline int get_route_set(struct sip_msg* _m, rr_t** _rs, unsigned char _o
 		*_rs = revert_route(*_rs);
 	}
 	
-
 	return 0;
 
  error:
@@ -442,6 +441,7 @@ static inline int refresh_dialog_req(struct sip_msg* _m, target_refresh_t is_tar
 static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 {
 	str contact, rtag;
+	rtag.s=0;
 
 	     /* Parse the whole message, we will need all Record-Route headers */
 	if (parse_headers(_m, HDR_EOH_F, 0) == -1) {
@@ -463,8 +463,12 @@ static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 	if (contact.len && str_duplicate(&_d->rem_target, &contact) < 0) return -3;
 	
 	if (get_to_tag(_m, &rtag) < 0) goto err1;
+	//Its unlikely needed to update the tag with responses but for some reason i do it
+	if (_d->id.rem_tag.s) shm_free(_d->id.rem_tag.s); 
+	
 	if (rtag.len && str_duplicate(&_d->id.rem_tag, &rtag) < 0) goto err1;
 	
+	if (_d->route_set) shm_free_rr(&_d->route_set);
 	if (get_route_set(_m, &_d->route_set, REVERSE_ORDER) < 0) goto err2;
 
 	return 0;
@@ -904,7 +908,7 @@ int update_dlg_uas(dlg_t *_d, int _code, str* _tag)
 			&& (!memcmp(_tag->s, _d->id.loc_tag.s, _tag->len))) {
 				LOG(L_DBG, "update_dlg_uas(): Local tag is already set\n");
 			} else {
-				LOG(L_ERR, "update_dlg_uas(): ERROR: trying to rewrite local tag it was %.*s and you want to write %.*s\n",_d->id.loc_tag.len,_d->id.loc_tag.s,_tag->len,_tag->s);
+				LOG(L_ERR, "update_dlg_uas(): ERROR: trying to rewrite local tag\n");
 				return -3;
 			}
 		} else {

@@ -92,7 +92,7 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 	int tag;
 	struct cell *t;
 	
-	LOG(L_DBG,"P_generates_aar(): starting\n");
+	LOG(L_INFO,"P_generates_aar(): starting qos side is %i and str1 %s\n",pcscf_qos_side,str1);
 	t=tmb.t_gett();
 	if (!t) {
 		LOG(L_ERR,"P_generates_aar(): unable to get transaction\n");
@@ -103,10 +103,10 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 		if (tag==-1) {
 			tag=atoi(str1);
 		}
-		LOG(L_DBG,"P_generates_aar(): decided on side %i\n",tag);
+		LOG(L_INFO,"P_generates_aar(): decided on side %i\n",tag);
 		if (pcscf_qos_side!=tag)
 		{
-			LOG(L_ERR,"P_generates_aar(): not on the right side\n");
+			LOG(L_DBG,"P_generates_aar(): not on the right side\n");
 			return CSCF_RETURN_FALSE;
 		}
 		
@@ -167,7 +167,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	if (!aaa) goto error;
 	result = PCC_AAA(aaa);
 	LOG(L_INFO,"recieved an AAA with result code %i\n",result);
-	cdpb.AAAFreeMessage(&aaa);
+	if (aaa) cdpb.AAAFreeMessage(&aaa); // if frequency
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
 	if (result >= 2000 && result < 3000 ) {
 		return CSCF_RETURN_TRUE;
@@ -195,7 +195,7 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 {
 	// get session id from sip msg   
 	// Gq_STR(session_id) terminate the session
-	AAAMessage* sta;
+	AAAMessage* sta=0;
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
 	sta = PCC_STR(msg,str1);
 	// if you really want the STA just declare a ResponseHandler for it because its never going

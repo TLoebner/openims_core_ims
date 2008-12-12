@@ -129,7 +129,7 @@ int get_auth_session_state(AAAMessage* msg)
         return get_4bytes(rc->data.s);
 
 error:
-        LOG(L_ERR, "ERR:get_auth_session_state(): no AAAMessage or Auth Session State not found\n");
+        LOG(L_DBG, "ERR:get_auth_session_state(): no AAAMessage or Auth Session State not found\n");
         return STATE_MAINTAINED;
 }
 
@@ -139,12 +139,13 @@ error:
  * @param auth - AAAAuthSession which uses this state machine
  * @param ev   - Event
  * @param msg  - AAAMessage
+ * @returns 0 if msg should be given to the upper layer 1 if not
  */
-inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
+inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
 	cdp_auth_session_t *x;
 	int rc;	
-	
+	int rv=0; //return value
 	
 	if (!s) {
 		switch (event) {
@@ -155,7 +156,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d with no session!\n",
 				event);				
 		}
-		return;
+		return rv;
 	}
 	x = &(s->u.auth);
 	
@@ -163,6 +164,8 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	x->timeout+=config->tc*30;
 	x->lifetime=x->timeout+config->tc*32;
 	
+	//if (x && x->state && msg) LOG(L_ERR,"auth_client_statefull_sm_process [event %i] [state %i] endtoend %u hopbyhop %u\n",event,x->state,msg->endtoendId,msg->hopbyhopId);
+
 	switch(x->state){
 		case AUTH_ST_IDLE:
 			switch (event) {
@@ -172,8 +175,8 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					//LOG(L_INFO,"state machine: i was in idle and i am going to pending\n");
 					break;				
 				default:
-					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
-						event,auth_states[x->state]);				
+					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!(data %p)\n",
+						event,auth_states[x->state],x->generic_data);				
 			}
 			break;
 		
@@ -276,13 +279,12 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				// thats the addition
 				case AUTH_EV_RECV_STA:
 					x->state = AUTH_ST_IDLE;
-					//LOG(L_INFO,"state machine: about to clean up\n");
-					AAAFreeMessage(&msg);
+					LOG(L_INFO,"state machine: AUTH_EV_RECV_STA about to clean up\n");
+					if (msg) AAAFreeMessage(&msg); // if might be needed in frequency
 					// If I register a ResponseHandler then i Free the STA there not here..
-					// but i dont have interest in that now..
-					
-					// I dont know if putting this here or in Session_Cleanup!!! has to be decided
+					// but i dont have interest in that now..				
 					Session_Cleanup(s,NULL);
+					rv=1;
 					break; 	
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -293,6 +295,7 @@ inline void auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}
+	return rv;
 }
 
 
@@ -528,7 +531,7 @@ void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 			p = get_peer_by_fqdn(&avp->data);
 			if (!peer_send_msg(p,asa))
 			{
-				AAAFreeMessage(&asa);	
+				if (asa) AAAFreeMessage(&asa);	//needed in frequency
 			} else { 
 				LOG(L_INFO,"success sending ASA\n");
 			}
@@ -546,7 +549,8 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	AAAMessage *str=0;
 	AAA_AVP *avp=0;
 	char x[4];
-	LOG(L_DBG,"Send_STR() : sending STR\n");
+	//if (msg) LOG(L_DBG,"Send_STR() : sending STR for %d, flags %#1x endtoend %u hopbyhop %u\n",msg->commandCode,msg->flags,msg->endtoendId,msg->hopbyhopId);
+	//else LOG(L_DBG,"Send_STR() called from AAATerminateAuthSession or some other event\n");
 	str = AAACreateRequest(s->application_id,IMS_STR,Flag_Proxyable,s);
 	
 	if (!str) {
@@ -567,15 +571,16 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 			p = get_routing_peer(str);
 			if (!p) {
 				LOG(L_ERR,"unable to get routing peer in Send_STR \n");
-				AAAFreeMessage(&str);
+				if (str) AAAFreeMessage(&str); //needed in frequency
 				return;
 			}
-			
+			//if (str) LOG(L_CRIT,"Send_STR() : sending STR  %d, flags %#1x endtoend %u hopbyhop %u\n",str->commandCode,str->flags,str->endtoendId,str->hopbyhopId);
 			if (!peer_send_msg(p,str))
 			{
-				AAAFreeMessage(&str);	
+				LOG(L_DBG,"Send_STR peer_send_msg return error!\n");
+				if (str) AAAFreeMessage(&str); //needed in frequency	
 			} else { 
-				LOG(L_DBG,"success sending STR\n");
+				
 			}
 	 
 }
@@ -606,12 +611,12 @@ void Send_ASR(cdp_session_t* s, AAAMessage* msg)
 			p = get_routing_peer(asr);
 			if (!p) {
 				LOG(L_ERR,"unable to get routing peer in Send_ASR \n");
-				AAAFreeMessage(&asr);
+				if (asr) AAAFreeMessage(&asr); //needed in frequency
 			}
 			
 			if (!peer_send_msg(p,asr))
 			{
-				AAAFreeMessage(&asr);	
+				if (asr) AAAFreeMessage(&asr); //needed in frequency	
 			} else { 
 				LOG(L_DBG,"success sending ASR\n");
 			}

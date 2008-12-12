@@ -113,10 +113,10 @@ AAAReturnCode AAABuildMsgBuffer( AAAMessage *msg )
 	((unsigned int*)p)[0] = htonl(msg->applicationId);
 	p += APPLICATION_ID_SIZE;
 	/* hop by hop id */
-	((unsigned int*)p)[0] = msg->hopbyhopId;
+	((unsigned int*)p)[0] = htonl(msg->hopbyhopId);
 	p += HOP_BY_HOP_IDENTIFIER_SIZE;
 	/* end to end id */
-	((unsigned int*)p)[0] = msg->endtoendId;
+	((unsigned int*)p)[0] = htonl(msg->endtoendId);
 	p += END_TO_END_IDENTIFIER_SIZE;
 
 	/* AVPS */
@@ -290,6 +290,7 @@ AAAMessage *AAANewMessage(
 		}		
 
 
+
 		msg->res_code=0;
 		/* mirror all the proxy-info avp in the same order */
 		avp_t = request->avpList.head;
@@ -304,7 +305,7 @@ AAAMessage *AAANewMessage(
 	return msg;
 error:
 	LOG(L_ERR,"ERROR:AAANewMessage: failed to create a new AAA message!\n");
-	AAAFreeMessage(&msg);
+	if (msg) AAAFreeMessage(&msg); 
 	return 0;
 }
 
@@ -373,7 +374,7 @@ AAAReturnCode  AAAFreeAVPList(AAA_AVP_LIST *avpList)
  */
 AAAReturnCode  AAAFreeMessage(AAAMessage **msg)
 {
-	
+	LOG(L_DBG,"DBG:AAAFreeMessage: Freeing message (%p) %d\n",*msg,(*msg)->commandCode);
 	/* param check */
 	if (!msg || !(*msg))
 		goto done;
@@ -448,6 +449,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 
 	/* alloc a new message structure */
 	msg = (AAAMessage*)shm_malloc(sizeof(AAAMessage));
+	
 	if (!msg) {
 		LOG(L_ERR,"ERROR:AAATranslateMessage: no more free memory!!\n");
 		goto error;
@@ -485,11 +487,11 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 	ptr += APPLICATION_ID_SIZE;
 
 	/* Hop-by-Hop-Id */
-	msg->hopbyhopId = *((unsigned int*)ptr);
+	msg->hopbyhopId = ntohl(*((unsigned int*)ptr));
 	ptr += HOP_BY_HOP_IDENTIFIER_SIZE;
 
 	/* End-to-End-Id */
-	msg->endtoendId = *((unsigned int*)ptr);
+	msg->endtoendId = ntohl(*((unsigned int*)ptr));
 	ptr += END_TO_END_IDENTIFIER_SIZE;
 
 	/* start decoding the AVPS */
@@ -553,7 +555,7 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 	return  msg;
 error:
 	LOG(L_ERR,"ERROR:AAATranslateMessage: message conversion droped!!\n");
-	AAAFreeMessage(&msg);
+	if (msg) AAAFreeMessage(&msg); //if frequency
 	return 0;
 }
 

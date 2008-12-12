@@ -198,9 +198,9 @@ void p_dialogs_destroy()
  */
 inline void d_lock(unsigned int hash)
 {
-	//LOG(L_CRIT,"GET %d\n",hash);
+//	LOG(L_CRIT,"GET %d\n",hash);
 	lock_get(p_dialogs[(hash)].lock);
-	//LOG(L_CRIT,"GOT %d\n",hash);	
+//	LOG(L_CRIT,"GOT %d\n",hash);	
 }
 
 /**
@@ -210,7 +210,7 @@ inline void d_lock(unsigned int hash)
  inline void d_unlock(unsigned int hash)
 {
 	lock_release(p_dialogs[(hash)].lock);
-	//LOG(L_CRIT,"RELEASED %d\n",hash);	
+//	LOG(L_CRIT,"RELEASED %d\n",hash);	
 }
 
 /**
@@ -516,7 +516,7 @@ str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
  */
 int terminate_p_dialog(p_dialog *d)
 {
-	LOG(L_INFO,"terminate_p_dialog(): called for dialog %.*s and direction %u\n",d->call_id.len,d->call_id.s,d->direction);
+	LOG(L_DBG,"terminate_p_dialog(): called for dialog %.*s and direction %u\n",d->call_id.len,d->call_id.s,d->direction);
 	if (!pcscf_dialogs_enable_release) return 0;
 	switch (d->method){
 		case DLG_METHOD_INVITE:
@@ -1111,7 +1111,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}
 	if (!d){
 		
-		LOG(L_CRIT,"ERR:"M_NAME":P_update_dialog: dialog does not exists!\n");	
+		LOG(L_ERR,"ERR:"M_NAME":P_update_dialog: dialog does not exists!%.*s\n %s\n",call_id.len,call_id.s,msg->buf );	
 		return CSCF_RETURN_FALSE;
 	}
 
@@ -1125,7 +1125,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		{	
 			d->last_cseq = cseq;
 			d->dialog_c->loc_seq.value=cseq;
-			//This is a shit but is going to work
+			//This is not optimal but is going to work
 			// because d->last_cseq is actually the last one we saw... then if its bigger..
 			// soo..
 			//d->dialog_s->loc_seq.is_set=1;
@@ -1146,8 +1146,6 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				if (refresher.len)
 					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
 			}
-		
-		
 		}
 		else
 		{
@@ -1302,6 +1300,7 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (d->pcc_session)
 	{
 		terminate_pcc_session(d->pcc_session);
+		d->pcc_session=0;
 	}
 	
 	del_p_dialog(d);
@@ -1620,7 +1619,6 @@ void dialog_timer(unsigned int ticks, void* param)
 			d = p_dialogs[i].head;
 			while(d){
 				dn = d->next;
-				/*Why are we only terminating dialogs on  MOBILE_ORIGINATING side???*/
 				if ((int)(d->expires-(int)d_time_now)<=0) {						
 						if (!terminate_p_dialog(d)) 
 							del_p_dialog(d);					

@@ -66,7 +66,6 @@
 #include "worker.h"
 #include "authstatemachine.h"
 
-
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
 /** Strings for the peer states */
@@ -77,13 +76,6 @@ char *dp_events[]={"Start","Stop","Timeout","Win_Election","R_Conn_CER","I_Rcv_C
 	"I_Rcv_DPR","I_Rcv_DPA","R_Rcv_DPR","R_Rcv_DPA",
 	"I_Rcv_DWR","I_Rcv_DWA","R_Rcv_DWR","R_Rcv_DWA",
 	"Send_Message","I_Rcv_Message","R_Rcv_Message","I_Peer_Disc","R_Peer_Disc"};
-
-
-
-
-
-
-
 
 /**
  * Diameter base protocol state-machine processing.
@@ -103,7 +95,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 	int msg_received=0;
 		
 	if (!peer_locked) lock_get(p->lock);
-	LOG(L_INFO,"DBG:sm_process(): Peer %.*s \tState %s \tEvent %s\n",
+	LOG(L_DBG,"DBG:sm_process(): Peer %.*s \tState %s \tEvent %s\n",
 		p->fqdn.len,p->fqdn.s,dp_states[p->state],dp_events[event-101]);
 
 	switch (p->state){
@@ -1045,8 +1037,9 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 	AAASession *session=0;
 	unsigned int hash; // we need this here because after the sm_processing , we might end up
 					   // with no session any more
+	int nput=0;
 	if (msg->sessionId) session = get_session(msg->sessionId->data);
-	
+
 	if (session){
 		hash=session->hash;
 		switch (session->type){
@@ -1058,7 +1051,7 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
 				}else {
 					if (msg->commandCode==IMS_STA)
-						auth_client_statefull_sm_process(session,AUTH_EV_RECV_STA,msg);
+						nput=auth_client_statefull_sm_process(session,AUTH_EV_RECV_STA,msg);
 					else
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
 				}
@@ -1093,12 +1086,11 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 		} 
 				 
 	}
-
-	if (!put_task(p,msg)){
+	if (!nput && !put_task(p,msg)){
 		LOG(L_ERR,"ERROR:Rcv_Process(): Queue refused task\n");
-		AAAFreeMessage(&msg);
+		if (msg) AAAFreeMessage(&msg); 
 	}
-	LOG(L_DBG,"DBG:Rcv_Process(): task added to queue\n");
+	//if (msg) LOG(L_ERR,"DBG:Rcv_Process(): task added to queue command %d, flags %#1x endtoend %u hopbyhop %u\n",msg->commandCode,msg->flags,msg->endtoendId,msg->hopbyhopId);
 	
 //	AAAPrintMessage(msg);
 	

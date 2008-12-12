@@ -52,6 +52,8 @@
  * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
  * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
+ * 
  * 
  */
 #ifndef __DIAMETER_SESSION_H

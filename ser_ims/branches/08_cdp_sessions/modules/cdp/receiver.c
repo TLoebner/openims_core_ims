@@ -208,7 +208,7 @@ static inline int select_recv(int s,void * buf,int len,int opt)
 		tv.tv_sec=1;
 		tv.tv_usec=0;
 
-//		LOG(L_CRIT,"ERROR:select_recv(): HERE\n");
+	//LOG(L_CRIT,"ERROR:select_recv(): HERE\n");
 		
 		n = select(max+1,&rfds,0,&efds,&tv);
 		if (n==-1){
@@ -221,7 +221,7 @@ static inline int select_recv(int s,void * buf,int len,int opt)
 				if (FD_ISSET(pipe_fd,&rfds)) {					
 					LOG(L_DBG,"DBG:select_recv(): There is something on the pipe\n");
 					cnt = read(pipe_fd,&msg,sizeof(AAAMessage *));
-					LOG(L_DBG,"DBG:select_recv(): Pipe says [%p] %d\n",msg,cnt);
+					LOG(L_CRIT,"DBG:select_recv(): Pipe says [%p] %d %u %#1x\n",msg,cnt,msg->hopbyhopId,msg->flags);
 					if (cnt==0){
 						//This is very stupid and might not work well - droped messages... to be fixed
 						LOG(L_INFO,"INFO:select_recv(): ReOpening pipe for read. This should not happen...\n");
@@ -241,7 +241,7 @@ static inline int select_recv(int s,void * buf,int len,int opt)
 						LOG(L_ERR,"ERROR:select_recv(): write returned error> %s\n",
 							strerror(errno));
 						close(s);
-						AAAFreeMessage(&msg);		
+						if (msg && msg->buf.s && msg->buf.len) AAAFreeMessage(&msg); 
 						r = -1;
 						return r;
 					}
@@ -249,11 +249,12 @@ static inline int select_recv(int s,void * buf,int len,int opt)
 					if (cnt!=msg->buf.len){
 						LOG(L_ERR,"ERROR:select_recv(): only wrote %d/%d bytes\n",cnt,msg->buf.len);
 						close(s);
-						AAAFreeMessage(&msg);		
+						if (msg) AAAFreeMessage(&msg);
 						r = -1;
 						return r;
 					}
-					AAAFreeMessage(&msg);
+					
+					if (msg) AAAFreeMessage(&msg); 
 					//don't return, maybe there is something to read
 				}
 receive:
@@ -451,7 +452,6 @@ int peer_send_msg(peer *p,AAAMessage *msg)
 		return 0;
 	}
 	close(fd);
-	
 	return 1;
 }
 
@@ -484,18 +484,18 @@ int peer_send(peer *p,int sock,AAAMessage *msg,int locked)
 		if (p->I_sock==sock) sm_process(p,I_Peer_Disc,0,1,p->I_sock);
 		if (p->R_sock==sock) sm_process(p,R_Peer_Disc,0,1,p->R_sock);
 		if (!locked) lock_release(p->lock);
-		AAAFreeMessage(&msg);		
+		if (msg) AAAFreeMessage(&msg);		
 		return 0;
 	}
 
 	if (n!=msg->buf.len){
 		LOG(L_ERR,"ERROR:peer_send(): only wrote %d/%d bytes\n",n,msg->buf.len);
 		if (!locked) lock_release(p->lock);
-		AAAFreeMessage(&msg);		
+		if (msg) AAAFreeMessage(&msg);
 		return 0;
 	}
 	if (!locked) lock_release(p->lock);
-	AAAFreeMessage(&msg);			
+	if (msg) AAAFreeMessage(&msg);			
 	return 1;	
 }
 
@@ -528,7 +528,7 @@ void receive_message(AAAMessage *msg,int sock)
 					if (!this_peer) {
 						LOG(L_ERR,"ERROR:receive_msg(): Received CER from unknown peer (accept unknown=%d) -ignored\n",
 							config->accept_unknown_peers);
-						AAAFreeMessage(&msg);
+						if (msg) AAAFreeMessage(&msg);
 					}else{
 						set_peer_pipe();						
 						sm_process(this_peer,R_Conn_CER,msg,0,sock);
@@ -536,12 +536,12 @@ void receive_message(AAAMessage *msg,int sock)
 				}
 				else{
 					LOG(L_ERR,"ERROR:receive_msg(): Received CEA from an unknown peer -ignored\n");
-					AAAFreeMessage(&msg);
+					if (msg) AAAFreeMessage(&msg);
 				}
 				break;
 			default:
 				LOG(L_ERR,"ERROR:receive_msg(): Received non-CE from an unknown peer -ignored\n");
-				AAAFreeMessage(&msg);				
+				if (msg) AAAFreeMessage(&msg);				
 		}
 	}else{
 		touch_peer(this_peer);
@@ -590,7 +590,7 @@ void receive_message(AAAMessage *msg,int sock)
 				break;				
 			default:
 				LOG(L_ERR,"ERROR:receive_msg(): Received msg while peer in state %d -ignored\n",this_peer->state);
-				AAAFreeMessage(&msg);								
+				if (msg) AAAFreeMessage(&msg);								
 		}
 	}
 }

@@ -62,7 +62,7 @@
 #include "session.h"
 #include "config.h"
 
-inline void auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
+inline int auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 inline void auth_server_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 
 void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg);

@@ -201,7 +201,7 @@ AAAReturnCode AAASendMessage(
 		
 	return 1;
 error:	
-	AAAFreeMessage(&message);
+	if (message) AAAFreeMessage(&message);
 	return 0;
 }
 
@@ -245,7 +245,7 @@ AAAReturnCode AAASendMessageToPeer(
 		
 	return 1;
 error:	
-	AAAFreeMessage(&message);
+	if (message) AAAFreeMessage(&message);
 	return 0;
 }
 
@@ -322,7 +322,7 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 
 		
 error:	
-	AAAFreeMessage(&message);
+	if (message) AAAFreeMessage(&message);
 	return 0;
 }
 
@@ -382,7 +382,7 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 
 		
 error:	
-	AAAFreeMessage(&message);
+	if (message) AAAFreeMessage(&message);
 	return 0;
 }
 
