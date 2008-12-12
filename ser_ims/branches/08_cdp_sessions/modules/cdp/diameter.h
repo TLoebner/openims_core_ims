@@ -295,6 +295,7 @@ typedef enum {
 } AAA_AVP_Auth_Session_State;
 
 
+
 /**   The following type allows the client to specify which direction to
  *   search for an AVP in the AVP list: */
 typedef enum {
@@ -363,6 +364,8 @@ typedef struct _message_t {
 
 
 /**************************** AAA MESSAGE FUNCTIONS **************************/
+
+/* MESSAGES */
 
 /** if the message is a request */
 #define is_req(_msg_) \

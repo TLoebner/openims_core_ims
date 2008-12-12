@@ -58,6 +58,7 @@
 extern struct tm_binds tmb; 
 extern dlg_func_t dialogb;	
 
+
 extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
 
@@ -299,7 +300,6 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 		
 		o->is_releasing = 1;
 		// Addition from Alberto Diez the 2nd November 2007
-		// I am going to have this dialog deleted yes or yes
 		// the idea is to put the other one to expire in TIME_TO_EXPIRE 
 		// just in case no reply is received
 		if (o->expires>time_now+TIME_TO_EXPIRE) {
@@ -460,8 +460,7 @@ int release_call_early200(p_dialog *d,int reason_code,str reason_text)
   * matter because both do the same at that point!
   */
 int release_call_p(p_dialog *d,int reason_code,str reason_text)
-{	
-		
+{		
 	if (d->state>=DLG_STATE_CONFIRMED)
 			return(release_call_confirmed(d,reason_code,reason_text));
 	 else  
@@ -676,12 +675,10 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 				r->next=NULL;
 				shm_free_rr(&d->route_set);
 				d->route_set = r_new;
-  	            return;
-  	            
-  	          	
-  	            	
+  	            return;	
 			}
-				
-	}
-		
+					
+	}	
 }		
+
+

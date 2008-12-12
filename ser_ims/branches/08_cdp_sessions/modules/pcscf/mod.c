@@ -317,7 +317,6 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_check_via_sent_by",			P_check_via_sent_by, 		0, 0, REQUEST_ROUTE},
 	{"P_add_via_received",			P_add_via_received, 		0, 0, REQUEST_ROUTE},
 	
-	
 	{"P_follows_via_list",			P_follows_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 
@@ -420,6 +419,7 @@ static param_export_t pcscf_params[]={
 	{"rtpproxy_tout",         	PARAM_INT,		&rtpproxy_tout         },
 	
 	{"subscribe_retries",		INT_PARAM,		&pcscf_subscribe_retries},
+	
 	{"icid_value_prefix",		STR_PARAM,		&cscf_icid_value_prefix},
 	{"icid_gen_addr",			STR_PARAM,		&cscf_icid_gen_addr},
 	{"orig_ioi",				STR_PARAM,		&cscf_orig_ioi},
@@ -430,9 +430,8 @@ static param_export_t pcscf_params[]={
 	{"persistency_timer_dialogs",		INT_PARAM, &pcscf_persistency_timer_dialogs},
 	{"persistency_timer_registrar",		INT_PARAM, &pcscf_persistency_timer_registrar},
 	{"persistency_timer_subscriptions",	INT_PARAM, &pcscf_persistency_timer_subscriptions},
-	
 	{"pcscf_db_url",					STR_PARAM, &pcscf_db_url},
-
+	
 #ifdef WITH_IMS_PM
 	{"ims_pm_node_type",				STR_PARAM, &ims_pm_node_type},
 	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
@@ -616,9 +615,10 @@ static int mod_init(void)
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
 	
+	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
-	
+
 	#ifdef WITH_IMS_PM
 		ims_pm_init(pcscf_name_str,ims_pm_node_type, ims_pm_logfile);
 		ims_pm_init_pcscf();

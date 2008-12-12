@@ -316,7 +316,6 @@ static inline int do_duplicate_rr(rr_t** _new, rr_t* _r, int _shm)
 		prev = res;
 		it = it->next;
 	}
-	
 	return 0;
 }
 

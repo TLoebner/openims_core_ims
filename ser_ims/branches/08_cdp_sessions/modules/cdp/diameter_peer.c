@@ -223,7 +223,8 @@ int diameter_peer_init(char *cfg_filename)
 	
 #ifdef CDP_FOR_SER	
 	/* add callback for messages - used to implement the API */
-	cb_add(api_callback,0);	
+	cb_add(api_callback,0);
+		
 #endif
 	
 	return 1;

@@ -65,12 +65,11 @@
 #include "utils.h"
 #include "session.h"
 
-
-
 				/* TRANSACTIONS */
 				
 /** Timeout for Diameter transactions (this is quite big, 
  * but increase in case that you have a slow peer) */ 				
+
 
 
 

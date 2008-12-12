@@ -150,7 +150,6 @@ void log_peer_list(int level)
 	int i;
 	LOG(level,"--- Peer List: ---\n");
 	for(p = peer_list->head;p;p = p->next){
-		//LOG(level,ANSI_GREEN" S["ANSI_YELLOW"Some State"ANSI_GREEN"] "ANSI_BLUE"%.*s:%d"ANSI_GREEN" D["ANSI_RED"%c"ANSI_GREEN"]\n",p->fqdn.len,p->fqdn.s,p->port,p->is_dynamic?'X':' ');
 		LOG(level,ANSI_GREEN" S["ANSI_YELLOW"%s"ANSI_GREEN"] "ANSI_BLUE"%.*s:%d"ANSI_GREEN" D["ANSI_RED"%c"ANSI_GREEN"]\n",dp_states[p->state],p->fqdn.len,p->fqdn.s,p->port,p->is_dynamic?'X':' ');
 		for(i=0;i<p->applications_cnt;i++)
 			LOG(level,ANSI_YELLOW"\t [%d,%d]\n",p->applications[i].id,p->applications[i].vendor);

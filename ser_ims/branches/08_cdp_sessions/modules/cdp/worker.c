@@ -227,7 +227,7 @@ void cb_remove(cdp_cb_t *cb)
  */ 
 int put_task(peer *p,AAAMessage *msg)
 {
-//	LOG(L_CRIT,"+1+\n");
+	//LOG(L_CRIT,"put_task : adding a task to the queue; message is command %d, flags %#1x endtoend %u hopbyhop %u\n",msg->commandCode,msg->flags, msg->endtoendId, msg->hopbyhopId);
 	lock_get(tasks->lock);
 //	LOG(L_CRIT,"+2+\n");
 	while ((tasks->end+1)%tasks->max == tasks->start){
@@ -282,7 +282,7 @@ task_t take_task()
 	t = tasks->queue[tasks->start];
 	tasks->queue[tasks->start].msg = 0;
 	tasks->start = (tasks->start+1) % tasks->max;
-	cdp_lock_release(tasks->full);
+	cdp_lock_release(tasks->full);	
 	lock_release(tasks->lock);
 	return t;
 }
@@ -319,14 +319,14 @@ void worker_process(int id)
 			if (shutdownx&&(*shutdownx)) break;
 			LOG(L_INFO,"INFO:worker_process(): [%d] got empty task Q(%d/%d)\n",id,tasks->start,tasks->end);
 			continue;
-		}		
-		LOG(L_DBG,"DBG:worker_process(): [%d] got task Q(%d/%d)\n",id,tasks->start,tasks->end);
-		r = is_req(t.msg);
-		for(cb = callbacks->head;cb;cb = cb->next)
-			(*(cb->cb))(t.p,t.msg,*(cb->ptr));
+		}
 		
+		r = is_req(t.msg);
+		for(cb = callbacks->head;cb;cb = cb->next) {
+			(*(cb->cb))(t.p,t.msg,*(cb->ptr));
+		}
 		if (r){
-			AAAFreeMessage(&(t.msg));
+			if (t.msg) AAAFreeMessage(&(t.msg));
 		}else{
 			/* will be freed by the user in upper api */
 			/*AAAFreeMessage(&(t.msg));*/
