@@ -214,7 +214,6 @@ public class IFC_DAO {
      * @param list_ifc	lisf of IFCs
      * @return List of IFCs
      */
-
 	public static List get_all_by_Same_AS_ID(Session session, List list_ifc){
 
 		List list_as= new ArrayList();
@@ -254,7 +253,6 @@ public class IFC_DAO {
      * @param id_dsai	DSAI identifier
      * @return List of IFCs
      */
-
 	public static List get_all_by_AS_ID_and_IMPU_ID_and_DSAI_ID(Session session, int id_as, int id_impu, int id_dsai){
 		Query query;
 		query = session.createSQLQuery("select ifc.* from ifc ifc, impu impu, sp_ifc sp_ifc, dsai_ifc dsai_ifc where ifc.id_application_server=? and impu.id=? and dsai_ifc.id_dsai=? and sp_ifc.id_sp=impu.id_sp and ifc.id=sp_ifc.id_ifc;")
@@ -275,7 +273,6 @@ public class IFC_DAO {
      * @param id_impu impu identifier
      * @return List of IFC
      */
-
 	public static List get_all_IFCs_by_IMPU_ID_and_DSAI_Value_Active(Session session, int id_impu){
 
 		//we get all associated IFCs to the IMPU.

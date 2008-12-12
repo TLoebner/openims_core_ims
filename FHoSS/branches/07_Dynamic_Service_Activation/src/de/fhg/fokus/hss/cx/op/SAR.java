@@ -33,12 +33,12 @@
   * fact and have to agree to check out carefully before installing,
   * using and extending the Open Source IMS Core System, if related
   * patents and licenses may become applicable to the intended usage
-  * context.
+  * context. 
   *
   * You should have received a copy of the GNU General Public License
   * along with this program; if not, write to the Free Software
-  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-  *
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  * 
   */
 package de.fhg.fokus.hss.cx.op;
 
@@ -651,48 +651,6 @@ public class SAR {
 
 	public static String downloadUserData(String privateIdentity, int id_implicit_set){
 		Session session = HibernateUtil.getCurrentSession();
-/*		List<IMPU> [] impu_array;
-		SP[] sp_array;
-
-		int sp_cnt = 0;
-		List queryResult = IMPU_DAO.get_all_sp_for_set(session, id_implicit_set);
-
-		Iterator it = queryResult.iterator();
-		int last_id_sp = -1;
-		while (it.hasNext()){
-			SP sp = null;
-			Object [] row = (Object[]) it.next();
-			sp = (SP) row[0];
-			int current_id_sp = sp.getId();
-			if (current_id_sp != last_id_sp){
-				sp_cnt++;
-				last_id_sp = current_id_sp;
-			}
-		}
-
-		sp_array = new SP[sp_cnt];
-		impu_array = new ArrayList[sp_cnt];
-		it = queryResult.iterator();
-		last_id_sp = -1;
-		int idx = -1;
-		while (it.hasNext()){
-			Object [] row = (Object []) it.next();
-			SP sp = (SP)row[0];
-			IMPU impu = (IMPU) row[1];
-
-			int current_id_sp = sp.getId();
-			if (current_id_sp != last_id_sp){
-				last_id_sp = current_id_sp;
-				idx++;
-				sp_array[idx] = sp;
-				impu_array[idx] = new ArrayList();
-			}
-			impu_array[idx].add(impu);
-		}
-
-		*/
-
-		//
 		List initial_impus_list = IMPU_DAO.get_all_from_set(session, id_implicit_set); //List of IMPUs that belong to the same implicit set
 		Iterator iter = initial_impus_list.iterator();
 		List ifcs_list = new ArrayList();    // List of list of iFCs associated to each IMPU

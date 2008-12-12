@@ -155,7 +155,6 @@ public class CxEvents_DAO {
      * @params impu_id IMPU Identifier
      * @return void
      */
-
 	public static void insert_CxEvent (Session session, int impu_id){
 
 		int id_impi = IMPU_DAO.get_a_registered_IMPI_ID(session, impu_id);

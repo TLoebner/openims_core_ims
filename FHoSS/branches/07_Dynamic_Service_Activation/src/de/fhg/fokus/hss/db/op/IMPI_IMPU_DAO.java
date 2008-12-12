@@ -59,7 +59,7 @@ import de.fhg.fokus.hss.db.model.IMPI_IMPU;
 import de.fhg.fokus.hss.db.model.IMPU;
 
 /**
- * This class has been modified by Instrumentacion y Componentes S.A (ims�at inycom dot es)
+ * This class has been modified by Instrumentacion y Componentes S.A (ims at inycom dot es)
  * to support the DSAI Information Element according to Release 7.
  *
  * @author adp dot fokus dot fraunhofer dot de
