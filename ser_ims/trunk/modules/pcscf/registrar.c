@@ -194,6 +194,24 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
 	return local_time_now+r;
 }
 
+static inline int contact_was_in_req(contact_t *c,struct sip_msg *req)
+{
+	struct hdr_field* h;
+	contact_t *x;
+	for(h=cscf_get_next_header_type(req,HDR_CONTACT_T,0);h;h=cscf_get_next_header_type(req,HDR_CONTACT_T,h)){
+		if (parse_contact(h)<0||h->parsed==0) continue;
+		for(x=((contact_body_t*)h->parsed)->contacts;x;x=x->next){
+			if (c->uri.len == x->uri.len &&
+				strncasecmp(c->uri.s,x->uri.s,x->uri.len)==0){
+				LOG(L_DBG,"DBG:contact_was_in_req(): Found the contact in the request: %.*s\n",x->uri.len,x->uri.s);
+				free_contact((contact_body_t**)&(h->parsed));
+				return 1;
+			}
+		}
+		free_contact((contact_body_t**)&(h->parsed));
+	}
+	return 0;
+}
 
 /**
  * Updates the registrar with the new values
@@ -246,7 +264,9 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
 			
 			if (expires>local_time_now) {
-				if (requires_nat) {		
+				if (requires_nat &&				/* only if NAT was enabled */ 
+					contact_was_in_req(c,req)	/* and the contact was refreshed, not just sent from the S-CSCF */
+					) {							
 					pinhole = nat_msg_origin(req);
 					rc = update_r_contact(puri.host,puri.port_no,puri.proto,
 						&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, &pinhole);
@@ -315,14 +335,14 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 //		expires_hdr = cscf_get_expires_hdr(req);
 	
 	if (parse_headers(rpl, HDR_EOH_F, 0) <0) {
-		LOG(L_ERR,"ERR:"M_NAME":r_save_location: error parsing headers\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_save_location: error parsing headers\n");
 		return CSCF_RETURN_ERROR;
 	}	
 	
 	b = cscf_parse_contacts(rpl);
 	
 	if (!b||(!b->contacts && !b->star)) {
-		LOG(L_DBG,"DBG:"M_NAME":r_save_location: No contacts found\n");
+		LOG(L_ERR,"DBG:"M_NAME":P_save_location: No contacts found\n");
 		return 0;
 	}
 	
