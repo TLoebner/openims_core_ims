@@ -247,6 +247,9 @@ int bin_encode_ipsec(bin_data *x,r_ipsec *ipsec)
 	if (!bin_encode_str(x,&(ipsec->alg))) goto error;
 	if (!bin_encode_str(x,&(ipsec->r_alg))) goto error;
 	if (!bin_encode_str(x,&(ipsec->ik))) goto error;
+
+	if (!bin_encode_str(x,&(ipsec->prot))) goto error;
+	if (!bin_encode_str(x,&(ipsec->mod))) goto error;
 	
 	return 1;
 error:
@@ -294,6 +297,9 @@ int bin_decode_ipsec(bin_data *x,r_ipsec **ipsec)
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->alg),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->r_alg),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->ik),&s)) goto error;
+
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->prot),&s)) goto error;
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&((*ipsec)->mod),&s)) goto error;
 	
 	return 1;
 error:
