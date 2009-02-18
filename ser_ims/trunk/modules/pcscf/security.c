@@ -162,6 +162,16 @@ static str s_spi_s={"spi-s=",6};
 static str s_port_c={"port-c=",7};
 static str s_port_s={"port-s=",7};
 
+static str s_prot={"prot=",5};
+static str s_mod={"mod=",4};
+
+static str s_ah_inout={"ah",2};
+static str s_esp_inout={"esp",3};
+static str s_trans_in={"trans",5};
+static str s_trans_out={"transport",9};
+static str s_tun_in={"tun",3};
+static str s_tun_out={"tunnel",6};
+
 static str s_des_in={"des-ede3-cbc",12};
 static str s_des_out={"3des-cbc",8};
 static str s_aes_in={"aes-cbc",7};
@@ -368,13 +378,32 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 			{
 				/* then parse the parameters */
 				r_ipsec *ipsec;	
+				str prot, mod, prot_set, mod_set;
 				str ck,ik,ealg,alg,tmp;
 				str alg_setkey,ealg_setkey;
 				unsigned int spi_uc,spi_us;
-        		unsigned int spi_pc,spi_ps;
+				unsigned int spi_pc,spi_ps;
 				int port_uc,port_us;
 				char ck_c[64],ik_c[64];
 				str ck_esp={ck_c,0},ik_esp={ik_c,0};
+
+				get_param(sec_hdr,s_prot,prot);
+				get_param(sec_hdr,s_mod,mod);
+
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot.len,prot.s);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod.len,mod.s);
+				if (prot.len == s_esp_inout.len && strncasecmp(prot.s,s_esp_inout.s,prot.len)==0) {
+					prot_set = s_esp_inout;
+				} else {
+					prot_set = s_ah_inout;
+				}
+				if (mod.len == s_tun_in.len && strncasecmp(mod.s,s_tun_in.s,mod.len)==0) {
+					mod_set = s_tun_out;
+				} else {
+					mod_set = s_trans_out;
+				}
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot_set.len,prot_set.s);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod_set.len,mod_set.s);
 									
 				get_qparam(auth,s_ck,ck);
 				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: CK: <%.*s>\n",
@@ -444,7 +473,8 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 				spi_ps=get_next_spi();	
 
 				ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
-					ealg_setkey,ealg, ck_esp,alg_setkey,alg, ik_esp);
+					ealg_setkey,ealg, ck_esp,alg_setkey,alg, ik_esp, prot_set, mod_set);
+
 				if (!ipsec) goto error;
 				s->data.ipsec = ipsec;
 				
@@ -514,6 +544,7 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 	r_security_type sec_type;
 	float sec_q;
 	
+	str prot, mod;
 	str ealg,alg,tmp;
 	unsigned int spi_pc,spi_ps;;
 	int port_pc,port_ps;
@@ -562,6 +593,8 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 			r_unlock(c->hash);
 			goto error;
 		}
+		get_param(sec_hdr,s_prot,prot);
+		get_param(sec_hdr,s_mod,mod);
 		get_param(sec_hdr,s_ealg,ealg);
 		get_param(sec_hdr,s_alg,alg);
 		/* and for spis */
@@ -579,7 +612,9 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 				(s->data.ipsec->spi_pc != spi_pc) ||
 				(s->data.ipsec->spi_ps != spi_ps) ||
 				(pcscf_ipsec_port_c != port_pc) ||
-				(pcscf_ipsec_port_s != port_ps))
+				(pcscf_ipsec_port_s != port_ps) ||
+				(s->data.ipsec->prot.len != prot.len || strncasecmp(s->data.ipsec->prot.s, prot.s, prot.len)) ||
+				(s->data.ipsec->mod.len != mod.len || strncasecmp(s->data.ipsec->mod.s, mod.s, mod.len)))
 		{		
 			LOG(L_INFO,"DBG:"M_NAME":P_verify_security: No valid Security-Verify header!.\n");
 			r_unlock(c->hash);
@@ -662,13 +697,19 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 			}
 			break;
 		case SEC_IPSEC:
+			/*
+			 * Note for the reader:
+			 * The security server header must not be build from the security client header, but from a list of proposals
+			 */
 			ipsec = c->security_temp->data.ipsec;
 			/* try to add the Security-Server header */
-			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; q=0.1\r\n",
+			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; prot=%.*s; mod=%.*s; q=0.1\r\n",
 				ipsec->r_ealg.len,ipsec->r_ealg.s,
 				ipsec->r_alg.len,ipsec->r_alg.s,
 				ipsec->spi_pc,ipsec->spi_ps,
-				pcscf_ipsec_port_c,pcscf_ipsec_port_s);
+				pcscf_ipsec_port_c,pcscf_ipsec_port_s,
+				ipsec->prot.len,ipsec->prot.s,
+				ipsec->mod.len,ipsec->mod.s);
 			
 			sec_srv.len = strlen(cmd);
 			sec_srv.s = pkg_malloc(sec_srv.len);
@@ -685,7 +726,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 	
 			/* run the IPSec script */	
 			/* P_Inc_Req */
-			sprintf(cmd,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+			sprintf(cmd,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Inc_Req,
 				c->host.len,c->host.s,
 				ipsec->port_uc,
@@ -695,7 +736,9 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 				ipsec->ealg.len,ipsec->ealg.s,
 				ipsec->ck.len,ipsec->ck.s,
 				ipsec->alg.len,ipsec->alg.s,
-				ipsec->ik.len,ipsec->ik.s);
+				ipsec->ik.len,ipsec->ik.s,
+				ipsec->prot.len,ipsec->prot.s,
+				ipsec->mod.len,ipsec->mod.s);
 
 			r_unlock(c->hash);
 				
@@ -815,7 +858,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 			i = c->security->data.ipsec;
 			
 			/* P_Out_Rpl */
-			sprintf(out_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+			sprintf(out_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Out_Rpl,
 				c->host.len,c->host.s,
 				i->port_uc,
@@ -825,10 +868,12 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->ealg.len,i->ealg.s,
 				i->ck.len,i->ck.s,
 				i->alg.len,i->alg.s,
-				i->ik.len,i->ik.s	);					
+				i->ik.len,i->ik.s,
+				i->prot.len,i->prot.s,
+				i->mod.len,i->mod.s);					
 	
 			/* P_Out_Req */
-			sprintf(out_req,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+			sprintf(out_req,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Out_Req,
 				c->host.len,c->host.s,
 				i->port_us,
@@ -838,9 +883,12 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->ealg.len,i->ealg.s,
 				i->ck.len,i->ck.s,
 				i->alg.len,i->alg.s,
-				i->ik.len,i->ik.s	);								
+				i->ik.len,i->ik.s,
+				i->prot.len,i->prot.s,
+				i->mod.len,i->mod.s);								
+
 			/* P_Out_Inc_Rpl */
-			sprintf(inc_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s",
+			sprintf(inc_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Inc_Rpl,
 				c->host.len,c->host.s,
 				i->port_us,
@@ -850,7 +898,9 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->ealg.len,i->ealg.s,
 				i->ck.len,i->ck.s,
 				i->alg.len,i->alg.s,
-				i->ik.len,i->ik.s	);								
+				i->ik.len,i->ik.s,
+				i->prot.len,i->prot.s,
+				i->mod.len,i->mod.s);								
 				
 			if (expires<=0) {
 				/* Deregister */
@@ -899,7 +949,7 @@ void P_security_drop(r_contact *c,r_security *s)
 		case SEC_IPSEC:
 			i = s->data.ipsec;
 			if (!i) return;
-			sprintf(drop,"%s %.*s %d %d %s %d %d %d %d %d %d",
+			sprintf(drop,"%s %.*s %d %d %s %d %d %d %d %d %d %.*s",
 				pcscf_ipsec_P_Drop,
 				c->host.len,c->host.s,
 				i->port_uc,
@@ -910,7 +960,8 @@ void P_security_drop(r_contact *c,r_security *s)
 				i->spi_uc,
 				i->spi_us,
 				i->spi_pc,
-				i->spi_ps);		
+				i->spi_ps,
+				i->prot.len,i->prot.s);
 			execute_cmd(drop);
 			break;
 	}

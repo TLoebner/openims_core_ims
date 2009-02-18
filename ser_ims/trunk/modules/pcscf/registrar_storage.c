@@ -365,10 +365,12 @@ void free_r_public(r_public *p)
  * @param ck_esp - Cypher Key
  * @param r_alg - received Integrity Algorithm
  * @param ik_esp - Integrity Key
+ * @param prot - The IPSec protocol (either 'ah' or 'esp')
+ * @param mod - The IPSec mode (either 'transport' or 'tunnel')
  * @returns the new r_ipsec* container or NULL on error
  */
 r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp)
+	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp, str prot, str mod)
 {
 	r_ipsec *ipsec;
 	
@@ -394,6 +396,8 @@ r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int
 	STR_SHM_DUP(ipsec->r_alg,r_alg,"new_r_ipsec");
 	STR_SHM_DUP(ipsec->ck,ck_esp,"new_r_ipsec");
 	STR_SHM_DUP(ipsec->ik,ik_esp,"new_r_ipsec");
+	STR_SHM_DUP(ipsec->prot,prot,"new_r_ipsec");
+	STR_SHM_DUP(ipsec->mod,mod,"new_r_ipsec");
 			
 	return ipsec;
 out_of_memory:
@@ -415,6 +419,9 @@ void free_r_ipsec(r_ipsec *ipsec)
 	if (ipsec->r_alg.s) shm_free(ipsec->r_alg.s);
 	if (ipsec->ck.s) shm_free(ipsec->ck.s);	
 	if (ipsec->ik.s) shm_free(ipsec->ik.s);	
+	if (ipsec->prot.s) shm_free(ipsec->prot.s);	
+	if (ipsec->mod.s) shm_free(ipsec->mod.s);	
+
 	shm_free(ipsec);
 }
 
