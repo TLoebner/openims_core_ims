@@ -3,11 +3,15 @@
 # Proxy-CSCF SA for Incoming Requests ( US -> PC )
 #
 # \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+# \author Laurent Etiemble laurent.etiemble -at- inexbee -dot- com
+# \author Mamadou Diop mamadou.diop -at- inexbee -dot- com
 #
 
-ue=$1
+# Strip unwanted characters that surrounds IPv6 addresses
+ue=`echo $1 | tr -d "'[]"`
 port_us=$2
-pcscf=$3
+# Strip unwanted characters that surrounds IPv6 addresses
+pcscf=`echo $3 | tr -d "'[]"`
 port_pc=$4
 
 spi_pc=$5
@@ -17,14 +21,21 @@ ck=$7
 alg=$8
 ik=$9
 
+prot=${10}
+mod=${11}
+
 if [ "$6" = "null" ] 
 then
 	ck=""
 fi
 
-setkey -c << EOF
-spdadd $ue/32[$port_us] $pcscf/32[$port_pc] tcp -P in ipsec esp/transport//require ;
-spdadd $ue/32[$port_us] $pcscf/32[$port_pc] udp -P in ipsec esp/transport//require ;
-add $ue $pcscf esp $spi_pc -m transport -E $ealg $ck -A $alg $ik ;
-EOF
+if [ "$mod" = "tunnel" ]
+then
+	tunnel=$ue-$pcscf
+fi
 
+setkey -c << EOF
+spdadd $ue[$port_us] $pcscf[$port_pc] tcp -P in ipsec $prot/$mod/$tunnel/require ;
+spdadd $ue[$port_us] $pcscf[$port_pc] udp -P in ipsec $prot/$mod/$tunnel/require ;
+add $ue $pcscf $prot $spi_pc -m $mod -E $ealg $ck -A $alg $ik ;
+EOF

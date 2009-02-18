@@ -3,11 +3,15 @@
 # Proxy-CSCF SA for Outgoing Replies ( US <- PC )
 #
 # \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+# \author Laurent Etiemble laurent.etiemble -at- inexbee -dot- com
+# \author Mamadou Diop mamadou.diop -at- inexbee -dot- com
 #
 
-ue=$1
+# Strip unwanted characters that surrounds IPv6 addresses
+ue=`echo $1 | tr -d "'[]"`
 port_us=$2
-pcscf=$3
+# Strip unwanted characters that surrounds IPv6 addresses
+pcscf=`echo $3 | tr -d "'[]"`
 port_pc=$4
 
 spi_us=$5
@@ -17,13 +21,21 @@ ck=$7
 alg=$8
 ik=$9
 
+prot=${10}
+mod=${11}
+
 if [ "$6" = "null" ] 
 then
 	ck=""
 fi
 
+if [ "$mod" = "tunnel" ]
+then
+	tunnel=$pcscf-$ue
+fi
+
 setkey -c << EOF
-spdadd $pcscf/32[$port_pc] $ue/32[$port_us] tcp -P out ipsec esp/transport//unique:3 ;
-spdadd $pcscf/32[$port_pc] $ue/32[$port_us] udp -P out ipsec esp/transport//unique:3 ;
-add $pcscf $ue esp $spi_us -m transport -u 3 -E $ealg $ck -A  $alg $ik ;
+spdadd $pcscf[$port_pc] $ue[$port_us] tcp -P out ipsec $prot/$mod/$tunnel/unique:3 ;
+spdadd $pcscf[$port_pc] $ue[$port_us] udp -P out ipsec $prot/$mod/$tunnel/unique:3 ;
+add $pcscf $ue $prot $spi_us -m $mod -u 3 -E $ealg $ck -A  $alg $ik ;
 EOF

@@ -99,6 +99,8 @@ typedef struct _r_ipsec {
 	str alg;					/**< Integrity Algorithm - AH			*/
 	str r_alg;				/**<received Integrity Algorithm - AH			*/
 	str ik;						/**< Integrity Key						*/
+	str prot;						/**< Protocol (ah/esp) */
+	str mod;						/**< Mode (transport/tunnel) */
 } r_ipsec;
 
 /** TLS SA Information */
@@ -180,7 +182,7 @@ void del_r_public(r_contact *c,r_public *p);
 void free_r_public(r_public *p);
 
 r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp);
+	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp, str prot, str mod);
 void free_r_ipsec(r_ipsec *ipsec);
 
 r_tls* new_r_tls(int port_tls, unsigned long session_hash);
