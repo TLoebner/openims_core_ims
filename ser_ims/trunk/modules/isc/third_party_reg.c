@@ -150,8 +150,6 @@ static str expires_s={"Expires: ",9};
 static str expires_e={"\r\n",2};
 static str contact_s={"Contact: <",10};
 static str contact_e={">\r\n",3};
-static str path_s={"Path: <",7};
-static str path_e={">\r\n",3};
 
 static str p_visited_network_id_s={"P-Visited-Network-ID: ",22};
 static str p_visited_network_id_e={"\r\n",2};
@@ -186,8 +184,7 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
         h.len = event_hdr.len+max_fwds_hdr.len;
         h.len += expires_s.len + 12 + expires_e.len;
 
-        h.len += contact_s.len + r->to.len + contact_e.len;
-        h.len += path_s.len + isc_my_uri_sip.len + path_e.len;
+        h.len += contact_s.len + isc_my_uri_sip.len + contact_e.len;
 
         if (r->pvni.len) h.len += p_visited_network_id_s.len +
                 p_visited_network_id_e.len + r->pvni.len;
@@ -216,12 +213,8 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
         STR_APPEND(h,expires_e);
 
         STR_APPEND(h,contact_s);
-        STR_APPEND(h,r->to);
-        STR_APPEND(h,contact_e);
-
-        STR_APPEND(h,path_s);
         STR_APPEND(h,isc_my_uri_sip);
-        STR_APPEND(h,path_e);
+        STR_APPEND(h,contact_e);
 
         if (r->pvni.len) {
                 STR_APPEND(h,p_visited_network_id_s);
