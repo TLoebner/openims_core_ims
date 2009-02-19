@@ -50,42 +50,6 @@
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
- * \code  
-<?xml version="1.0" encoding="UTF-8"?>
-<!ELEMENT DiameterPeer (Peer*, Acceptor*, Auth*, Acct*)>
-<!ATTLIST DiameterPeer 
-	FQDN		CDATA				#REQUIRED
-	Realm		CDATA				#REQUIRED
-	Vendor_Id	CDATA				#REQUIRED
-	Product_Name CDATA				#REQUIRED
-	AcceptUnknownPeers CDATA		#REQUIRED
-	DropUnknownOnDisconnect CDATA	#REQUIRED
-	Tc			CDATA				#REQUIRED
-	Workers		CDATA				#REQUIRED
-	QueueLength	CDATA				#REQUIRED
->
-<!ELEMENT Peer (#PCDATA)>
-<!ATTLIST Peer
-	FQDN		CDATA				#REQUIRED
-	realm		CDATA				#REQUIRED
-	port		CDATA				#REQUIRED
->
-<!ELEMENT Acceptor (#PCDATA)>
-<!ATTLIST Peer
-	port		CDATA				#REQUIRED
-	bind		CDATA				#IMPLIED
->
-<!ELEMENT Auth (#PCDATA)>
-<!ATTLIST Peer
-	id			CDATA				#REQUIRED
-	vendor		CDATA				#REQUIRED
->
-<!ELEMENT Acct (#PCDATA)>
-<!ATTLIST Peer
-	id			CDATA				#REQUIRED
-	vendor		CDATA				#REQUIRED
->
- * \endcode
  */
  
 #define DP_CONFIG_DTD "\
@@ -109,17 +73,17 @@
 	port		CDATA				#REQUIRED\
 >\
 <!ELEMENT Acceptor (#PCDATA)>\
-<!ATTLIST Peer\
+<!ATTLIST Acceptor\
 	port		CDATA				#REQUIRED\
 	bind		CDATA				#IMPLIED\
 >\
 <!ELEMENT Auth (#PCDATA)>\
-<!ATTLIST Peer\
+<!ATTLIST Auth\
 	id			CDATA				#REQUIRED\
 	vendor		CDATA				#REQUIRED\
 >\
 <!ELEMENT Acct (#PCDATA)>\
-<!ATTLIST Peer\
+<!ATTLIST Acct\
 	id			CDATA				#REQUIRED\
 	vendor		CDATA				#REQUIRED\
 >\
