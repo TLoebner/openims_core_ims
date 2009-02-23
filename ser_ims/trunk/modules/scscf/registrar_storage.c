@@ -384,6 +384,140 @@ void free_r_subscriber(r_subscriber *s)
 
 
 /**
+ * Creates a registrar contact parameter 
+ * This does not insert it in the registrar
+ * @param name - the name of the parameter
+ * @param value - the value of the parameter
+ * @returns the r_contact_param created, NULL on error
+ */
+r_contact_param* new_r_contact_param(str name, str value)
+{
+	r_contact_param *cp;
+	
+	cp = shm_malloc(sizeof(r_contact_param));
+	if (!cp) {
+		LOG(L_ERR,"ERR:"M_NAME":new_r_contact_param(): Unable to alloc %d bytes\n",
+			sizeof(r_contact_param));
+		goto error;
+	}
+	memset(cp,0,sizeof(r_contact_param));
+	
+	STR_SHM_DUP(cp->name,name,"new_r_contact_param");
+	STR_SHM_DUP(cp->value,value,"new_r_contact_param");
+		
+	return cp;
+error:
+out_of_memory:
+	if (cp){
+		if (cp->name.s) shm_free(cp->name.s);
+		if (cp->value.s) shm_free(cp->value.s);
+		shm_free(cp);		
+	}
+	return 0;
+}
+
+/**
+ * Looks for the parameter with the given name and returns it if found 
+ * @param c - the r_contact to look at
+ * @param name - the name of the parameter
+ * @returns the r_contact_param* found or NULL if not found
+ */
+r_contact_param* get_r_contact_param(r_contact *c,str name)
+{
+	r_contact_param *cp;
+	if (!c) return 0;
+	for(cp=c->parameters;cp;cp=cp->next)
+		if (cp->name.len == name.len &&
+			strncasecmp(cp->name.s,name.s,name.len)==0)
+				return cp;				
+	return cp;
+}
+
+/**
+ * Creates and Adds a new r_contact_param
+ * \note - to prevent duplicates, use update_r_contact instead, which does a previous search 
+ * @param c - the r_contact to add to
+ * @param name - the name of the parameter
+ * @param value - the value of the parameter - should be 
+ * @returns the newly created and added r_contact_param or NULL on error
+ */
+r_contact_param* add_r_contact_param(r_contact *c,str name, str value)
+{
+	r_contact_param *p,*x;
+	if (!c) return 0;
+	p = new_r_contact_param(name,value);
+	if (!p) return 0;
+	p->next=0;
+	if (!c->parameters) c->parameters = p;
+	else{
+		for(x=c->parameters;x->next!=0;x=x->next);
+		x->next = p;	
+	}	
+	return p;
+}
+
+/**
+ * Looks for the parameter with the given name and updates if found or create/add if not 
+ * @param c - the r_contact to add to
+ * @param name - the name of the parameter
+ * @param value - the value of the parameter - should be 
+ * @returns the newly created and added r_contact_param or NULL on error
+ */
+r_contact_param* update_r_contact_param(r_contact *c,str name, str value)
+{
+	r_contact_param *cp;
+	if (!c) return 0;
+	cp = get_r_contact_param(c,name);
+	if (cp){
+		if (cp->value.s) shm_free(cp->value.s);
+		STR_SHM_DUP(cp->value,value,"update_r_contact_param");
+	}else
+		cp = add_r_contact_param(c,name,value);
+	return cp;
+out_of_memory:
+	cp->value.s=0;cp->value.len=0;
+	return 0;			
+}
+
+/**
+ * Deletes and deallocates a r_contact_param
+ * \note When calling be sure that get_r_contact_param(c,name) returns cp, to avoid a bogus removal.
+ * @param c - the r_contact record to look into
+ * @param s - the r_subscriber to remove
+ */
+void del_r_contact_param(r_contact *c,r_contact_param *cp)
+{
+	r_contact_param *x,*y;
+	if (c->parameters==cp) c->parameters = c->parameters->next;
+	else{
+		x = c->parameters;
+		do{
+			y = x->next;
+			if (y==cp) {
+				x->next = y->next;
+				break;
+			}
+			x = y;
+		} while(x);				
+	}	
+	free_r_contact_param(cp);
+}
+
+/**
+ * Frees memory taken by a r_contact_param structure
+ * @param cp - the r_contact_param to be deallocated
+ */
+void free_r_contact_param(r_contact_param *cp)
+{
+	if (!cp) return;
+	if (cp->name.s) shm_free(cp->name.s);
+	if (cp->value.s) shm_free(cp->value.s);
+	shm_free(cp);
+}
+
+
+
+/**
  * Searches for a r_contact contact and returns it.
  * @param p - the r_public record to look into
  * @param uri - the uri of the contact
@@ -412,9 +546,10 @@ r_contact* get_r_contact(r_public *p, str uri)
  * @param qvalue - Q-value of the contact
  * @returns the new r_contact or NULL on error
  */
-r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue)
+r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp)
 {
 	r_contact *c;
+	param_t *px;
 	
 	c = shm_malloc(sizeof(r_contact));
 	if (!c) {
@@ -456,7 +591,10 @@ r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue)
 	}
 
 	c->qvalue = qvalue;
-		
+
+	for(px=cp;px;px=px->next)
+		update_r_contact_param(c,px->name,px->body);		
+				
 	return c;
 error:
 	if (c){
@@ -479,11 +617,11 @@ error:
  * @param qvalue - Q-value of the contact
  * @returns the newly added r_contact or NULL on error
  */
-r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue)
+r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp)
 {
 	r_contact *c;
 	if (!p) return 0;
-	c = new_r_contact(uri,expires,ua,path,qvalue);
+	c = new_r_contact(uri,expires,ua,path,qvalue,cp);
 	if (!c) return 0;
 	c->next=0;
 	c->prev=p->tail;
@@ -497,6 +635,7 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_
 	return c;
 }
 
+
 /**
  * Updates the r_contact with the new expires, ua valu, path value.
  * \note If not found it is added
@@ -509,15 +648,16 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_
  * @param qvalue - Q-value of the contact
  * @returns the updated r_contact or NULL on error
  */
-r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue)
+r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp)
 {
 	r_contact *c;
+	param_t *px;
 	
 	if (!p) return 0;
 	c = get_r_contact(p,uri);
 	if (!c){
 		if (expires && ua && path)
-			return add_r_contact(p,uri,*expires,*ua,*path,qvalue);
+			return add_r_contact(p,uri,*expires,*ua,*path,qvalue,(cp?*cp:0));
 		else return 0;
 	}else{
 		if (expires) c->expires = *expires;
@@ -546,6 +686,10 @@ r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,
 			memcpy(c->path.s,path->s,path->len);
 		}
 		c->qvalue = qvalue;
+		if (cp){
+			for(px=*cp;px;px=px->next)
+				update_r_contact_param(c,px->name,px->body);		
+		}
 		return c;
 	}
 }
@@ -564,16 +708,23 @@ void del_r_contact(r_public *p,r_contact *c)
 	else c->next->prev = c->prev;
 	free_r_contact(c);
 }
+
 /**
  * Frees memory taken by a r_contact structure
  * @param c - the r_contact to be deallocated
  */
 void free_r_contact(r_contact *c)
 {
+	r_contact_param *cp;
 	if (!c) return;
 	if (c->uri.s) shm_free(c->uri.s);
 	if (c->ua.s) shm_free(c->ua.s);
 	if (c->path.s) shm_free(c->path.s);
+	while (c->parameters){
+		cp = c->parameters->next;
+		free_r_contact_param(c->parameters);
+		c->parameters = cp;
+	}
 	shm_free(c);
 }
 
@@ -1354,6 +1505,7 @@ void print_r(int log_level)
 {
 	r_public *p;
 	r_contact *c;
+	r_contact_param *cp;
 	r_subscriber *s;
 	int i;
 	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
@@ -1379,6 +1531,12 @@ void print_r(int log_level)
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           Path:"ANSI_YELLOW"%.*s"ANSI_GREEN"\n",c->path.len,c->path.s);
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           UA: <%.*s>\n",
 						c->ua.len,c->ua.s);
+					cp = c->parameters;
+					while(cp){
+						LOG(log_level,ANSI_GREEN"INF:"M_NAME":           Param: <%.*s=%.*s>\n",
+							cp->name.len,cp->name.s,cp->value.len,cp->value.s);
+						cp = cp->next;
+					}	
 					c = c->next;
 				}
 				s = p->shead;

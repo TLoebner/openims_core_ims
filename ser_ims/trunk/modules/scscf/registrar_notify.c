@@ -592,6 +592,9 @@ static str r_rejected={"rejected",8};
 static str contact_s={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\">\n",59};
 static str contact_s_q={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\" q=\"%.3f\">\n",69};
 static str contact_e={"\t\t</contact>\n",13};
+static str unknown_param_s={"\t\t\t<unknown-param name=\"%.*s\">",30};
+static str unknown_param_e={"</unknown-param>",16};
+
 
 static str uri_s={"\t\t\t<uri>",8};
 static str uri_e={"</uri>\n",7};
@@ -610,6 +613,7 @@ str r_get_reginfo_full(void *pv,int event_type,long *subsExpires)
 
 	r_public *p=(r_public*)pv,*p2;
 	r_contact *c;
+	r_contact_param *cp;
 	ims_public_identity *pi;
 	int i,j;
 	unsigned int hash;
@@ -657,6 +661,13 @@ str r_get_reginfo_full(void *pv,int event_type,long *subsExpires)
 							STR_APPEND(buf,uri_s);
 							STR_APPEND(buf,c->uri);
 							STR_APPEND(buf,uri_e);
+							for(cp=c->parameters;cp;cp=cp->next){
+								sprintf(pad.s,unknown_param_s.s,cp->name.len,cp->name.s);
+								pad.len = strlen(pad.s);
+								STR_APPEND(buf,pad);
+								STR_APPEND(buf,cp->value);
+								STR_APPEND(buf,unknown_param_e);
+							}
 							STR_APPEND(buf,contact_e);
 							c = c->next;
 						}
@@ -697,6 +708,7 @@ str r_get_reginfo_partial( void *pv,void *pc,int event_type,long *subsExpires)
 
 	r_public *p=(r_public*)pv;
 	r_contact *c=(r_contact*)pc;
+	r_contact_param *cp;
 	str state,event;
 	
 	buf.s = bufc;
@@ -780,6 +792,13 @@ str r_get_reginfo_partial( void *pv,void *pc,int event_type,long *subsExpires)
 			STR_APPEND(buf,uri_s);
 			STR_APPEND(buf,c->uri);
 			STR_APPEND(buf,uri_e);
+			for(cp=c->parameters;cp;cp=cp->next){
+				sprintf(pad.s,unknown_param_s.s,cp->name.len,cp->name.s);
+				pad.len = strlen(pad.s);
+				STR_APPEND(buf,pad);
+				STR_APPEND(buf,cp->value);
+				STR_APPEND(buf,unknown_param_e);
+			}			
 			STR_APPEND(buf,contact_e);
 			STR_APPEND(buf,registration_e);
 		}
