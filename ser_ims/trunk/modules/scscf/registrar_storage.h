@@ -90,13 +90,23 @@ typedef struct _r_subscriber {
 	struct _r_subscriber *prev;/**< the previous subscriber in the list	*/
 } r_subscriber;
 
+
+/** registrar contact header paramter structure */
+typedef struct _r_contact_param {
+	str name;
+	str value;
+	struct _r_contact_param *next;
+} r_contact_param;
+
 /** registrar contact structure */
 typedef struct _r_contact {
 	str uri;					/**< uri of contact						*/	
 	time_t expires;				/**< time of expiration					*/
 	str ua;						/**< user agent string					*/
 	str path;					/**< path headers (P-CSCF to route to)	*/
-	qvalue_t qvalue;				/**< q-value of contact	*/
+	qvalue_t qvalue;			/**< q-value of contact					*/
+	
+	r_contact_param *parameters;	/**< header parameters (not in the uri!)*/
 
 	struct _r_contact *next;	/**< the next contact in the list		*/
 	struct _r_contact *prev;	/**< the previous contact in the list	*/
@@ -177,10 +187,17 @@ r_subscriber* update_r_subscriber(r_public *p,str subscriber,int event,int* expi
 void del_r_subscriber(r_public *p,r_subscriber *s);
 void free_r_subscriber(r_subscriber *s);
 
-r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue);
+r_contact_param* new_r_contact_param(str name, str value);
+r_contact_param* get_r_contact_param(r_contact *c,str name);
+r_contact_param* add_r_contact_param(r_contact *c,str name, str value);
+r_contact_param* update_r_contact_param(r_contact *c,str name, str value);
+void del_r_contact_param(r_contact *c,r_contact_param *cp);
+void free_r_contact_param(r_contact_param *cp);
+
+r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp);
 r_contact* get_r_contact(r_public *p, str uri);
-r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue);
-r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue);
+r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp);
+r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp);
 void del_r_contact(r_public *p,r_contact *c);
 void free_r_contact(r_contact *c);
 

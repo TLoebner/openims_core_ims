@@ -726,7 +726,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 									goto error;
 								}
 								expires = r_calc_expires(ci,expires_hdr);
-								if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
+								if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue,&(ci->params)))){
 									LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
 										ci->uri.len,ci->uri.s);
 									goto error;
@@ -777,7 +777,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							goto error;
                         }
                         expires = r_calc_expires(ci,expires_hdr);
-                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue))){
+                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue,&(ci->params)))){
                             LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
                                 ci->uri.len,ci->uri.s);
                             goto error;
@@ -820,7 +820,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
                                         goto error;
 									}
                             		expires = r_calc_expires(ci,expires_hdr);
-                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path,qvalue))){
+                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path,qvalue,&(ci->params)))){
                                         LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
                                             ci->uri.len,ci->uri.s);
 		                                goto error;

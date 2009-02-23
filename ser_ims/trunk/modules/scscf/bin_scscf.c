@@ -558,11 +558,22 @@ error:
  */
 int bin_encode_r_contact(bin_data *x,r_contact *c)
 {
+	unsigned short cpn=0;
+	r_contact_param *cp;
+	
 	if (!bin_encode_str(x,&(c->uri))) goto error;
 	if (!bin_encode_time_t(x,c->expires)) goto error;
 	if (!bin_encode_str(x,&(c->ua))) goto error;
 	if (!bin_encode_str(x,&(c->path))) goto error;
 
+	for(cp=c->parameters;cp;cp=cp->next)
+		cpn++;
+	if (!bin_encode_ushort(x,cpn)) goto error;
+	for(cp=c->parameters;cp;cp=cp->next){
+		if (!bin_encode_str(x,&(cp->name))) goto error;
+		if (!bin_encode_str(x,&(cp->value))) goto error;
+	}
+	
 	return 1;
 error:
 	LOG(L_ERR,"ERR:"M_NAME":bin_encode_r_contact: Error while encoding.\n");
@@ -577,8 +588,10 @@ error:
 r_contact* bin_decode_r_contact(bin_data *x)
 {
 	r_contact *c=0;
+	unsigned short cpn=0;
+	r_contact_param *cp;
 	int len;
-	str s;
+	str s,name,value;
 	
 	len = sizeof(r_contact);
 	c = (r_contact*) shm_malloc(len);
@@ -592,6 +605,14 @@ r_contact* bin_decode_r_contact(bin_data *x)
 	if (!bin_decode_time_t(x,&c->expires)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->ua),&s)) goto error;
 	if (!bin_decode_str(x,&s)||!str_shm_dup(&(c->path),&s)) goto error;
+
+	if (!bin_decode_ushort(x,&(cpn))) goto error;
+	while(cpn){
+		if (!bin_decode_str(x,&name)) goto error;
+		if (!bin_decode_str(x,&value)) goto error;
+		if (!add_r_contact_param(c,name,value)) goto error;
+		cpn--;
+	}
 	
 	return c;
 error:
@@ -599,7 +620,12 @@ error:
 	if (c) {
 		if (c->uri.s) shm_free(c->uri.s);
 		if (c->ua.s) shm_free(c->ua.s);
-		if (c->path.s) shm_free(c->path.s);
+		if (c->path.s) shm_free(c->path.s);		
+		while(c->parameters){
+			cp = c->parameters->next;
+			free_r_contact_param(cp);
+			c->parameters = cp;
+		}
 		
 		shm_free(c);
 	}
