@@ -401,6 +401,7 @@ int S_check_visited_network_id(struct sip_msg *msg,char *str1,char *str2 )
 	regmatch_t pmatch;
 	struct hdr_field *hdr;
 	v = cscf_get_visited_network_id(msg,&hdr);
+	if (!v.s||!v.len) return CSCF_RETURN_FALSE;
 	c = v.s[v.len];
 	v.s[v.len] = 0;
 	if (regexec(((fparam_t*)str1)->v.regex, v.s, 1, &pmatch, 0)==0) ret = CSCF_RETURN_TRUE;
