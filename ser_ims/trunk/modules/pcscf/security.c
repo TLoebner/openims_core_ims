@@ -167,10 +167,8 @@ static str s_mod={"mod=",4};
 
 static str s_ah_inout={"ah",2};
 static str s_esp_inout={"esp",3};
-static str s_trans_in={"trans",5};
-static str s_trans_out={"transport",9};
-static str s_tun_in={"tun",3};
-static str s_tun_out={"tunnel",6};
+static str s_trans_inout={"trans",5};
+static str s_tun_inout={"tun",3};
 
 static str s_des_in={"des-ede3-cbc",12};
 static str s_des_out={"3des-cbc",8};
@@ -397,10 +395,10 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 				} else {
 					prot_set = s_ah_inout;
 				}
-				if (mod.len == s_tun_in.len && strncasecmp(mod.s,s_tun_in.s,mod.len)==0) {
-					mod_set = s_tun_out;
+				if (mod.len == s_tun_inout.len && strncasecmp(mod.s,s_tun_inout.s,mod.len)==0) {
+					mod_set = s_tun_inout;
 				} else {
-					mod_set = s_trans_out;
+					mod_set = s_trans_inout;
 				}
 				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot_set.len,prot_set.s);
 				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod_set.len,mod_set.s);

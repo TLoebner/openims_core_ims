@@ -29,9 +29,13 @@ then
 	ck=""
 fi
 
-if [ "$mod" = "tunnel" ]
+if [ "$mod" = "tun" ]
 then
+	mod="tunnel"
 	tunnel=$pcscf-$ue
+else
+	mod="transport"
+	tunnel=""
 fi
 
 setkey -c << EOF
