@@ -83,6 +83,7 @@ int Cx_add_vendor_specific_appid(AAAMessage *msg,unsigned int vendor_id,
 	unsigned int auth_id,unsigned int acct_id);
 int Cx_add_auth_session_state(AAAMessage *msg,unsigned int data);	
 int Cx_add_destination_realm(AAAMessage *msg,str data);
+int Cx_add_UAR_flags(AAAMessage *msg, unsigned int data);
 
 /* GET AVPS */
 

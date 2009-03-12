@@ -50,6 +50,7 @@
  * 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  * 
  */
   
@@ -58,6 +59,9 @@
 
 
 #define MSG_200_SAR_OK					"OK - SAR succesful and registrar saved"
+
+#define MSG_400_BAD_REQUEST				"Bad Request"
+#define MSG_400_BAD_Contact 			"Bad Request - Error parsing Contact header" 
 
 #define MSG_401_CHALLENGE				"Unauthorized - Challenging the UE"
 

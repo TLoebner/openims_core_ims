@@ -117,6 +117,7 @@
  * 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  * 
  */
 
@@ -137,6 +138,8 @@
 #define CSCF_RETURN_FALSE -1
 /** Return error in the routing script */
 #define CSCF_RETURN_ERROR -2
+/** Return 501 error in the routing script*/
+#define CSCF_NOT_IMPLEMENTED	501
 
 
 int S_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);

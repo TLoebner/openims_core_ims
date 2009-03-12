@@ -53,6 +53,8 @@
  *   
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei   andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
+ *  				added the UAR_FLAGS_AVP
  *
  * Copyright (C) 2005 FhG Fokus
  * 
@@ -206,6 +208,31 @@ inline int Cx_add_visited_network_id(AAAMessage *msg,str data)
 		IMS_vendor_id_3GPP,
 		AVP_DUPLICATE_DATA,
 		__FUNCTION__);
+}
+
+
+/**
+ * Creates and adds a UAR-Flags AVP.
+ * @param msg - the Diameter message to add to.
+ * @param data - the value for the AVP payload
+ * @returns 1 on success or 0 on error
+ */
+inline int Cx_add_UAR_flags(AAAMessage *msg, unsigned int sos_reg){
+
+	char x[4];
+	/* optional AVP*/
+	if(!sos_reg)
+		return 1;
+	
+	set_4bytes(x, AVP_IMS_UAR_Flags_Emergency_Registration);
+	return 
+	Cx_add_avp(msg,x,4,
+		AVP_IMS_UAR_Flags,
+		AAA_AVP_FLAG_VENDOR_SPECIFIC,
+		IMS_vendor_id_3GPP,
+		AVP_DUPLICATE_DATA,
+		__FUNCTION__);
+
 }
 
 /**

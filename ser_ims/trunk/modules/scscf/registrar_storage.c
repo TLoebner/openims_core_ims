@@ -615,9 +615,10 @@ error:
  * @param ua - the user agent string
  * @param path - Path header received at registration
  * @param qvalue - Q-value of the contact
+ * @param sos_flag - if the contact is for an Emergency Registration
  * @returns the newly added r_contact or NULL on error
  */
-r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp)
+r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp, int sos_flag)
 {
 	r_contact *c;
 	if (!p) return 0;
@@ -631,7 +632,7 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_
 	}
 	else p->tail = c;
 	if (!p->head) p->head=c;
-	
+	c->sos_flag = sos_flag;
 	return c;
 }
 
@@ -646,9 +647,10 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_
  * @param ua - new user agent string, NULL if no update necessary
  * @param path - Path header received at registration
  * @param qvalue - Q-value of the contact
+ * @param sos_flag - if the contact is for an Emergency Registration
  * @returns the updated r_contact or NULL on error
  */
-r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp)
+r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp,int *sos_flag)
 {
 	r_contact *c;
 	param_t *px;
@@ -657,7 +659,7 @@ r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,
 	c = get_r_contact(p,uri);
 	if (!c){
 		if (expires && ua && path)
-			return add_r_contact(p,uri,*expires,*ua,*path,qvalue,(cp?*cp:0));
+			return add_r_contact(p,uri,*expires,*ua,*path,qvalue,(cp?*cp:0),(sos_flag?*sos_flag:0));
 		else return 0;
 	}else{
 		if (expires) c->expires = *expires;
@@ -690,6 +692,8 @@ r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,
 			for(px=*cp;px;px=px->next)
 				update_r_contact_param(c,px->name,px->body);		
 		}
+		if (sos_flag)
+			c->sos_flag = *sos_flag;
 		return c;
 	}
 }
@@ -1526,8 +1530,9 @@ void print_r(int log_level)
 					
 				c = p->head;
 				while(c){
-					LOG(log_level,ANSI_GREEN"INF:"M_NAME":         C: <"ANSI_RED"%.*s"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"]\n",
-						c->uri.len,c->uri.s,c->expires-time_now);					
+					LOG(log_level,ANSI_GREEN"INF:"M_NAME":         C: <"ANSI_RED"%.*s"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"] SOS:["ANSI_MAGENTA"%c"ANSI_GREEN"]\n",
+						c->uri.len,c->uri.s,c->expires-time_now,
+						c->sos_flag?'X':' ');					
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           Path:"ANSI_YELLOW"%.*s"ANSI_GREEN"\n",c->path.len,c->path.s);
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           UA: <%.*s>\n",
 						c->ua.len,c->ua.s);

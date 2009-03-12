@@ -50,7 +50,7 @@
  * 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Ancuta Onofrei  	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
  
 #include <time.h>
@@ -89,6 +89,11 @@ extern int server_assignment_store_data;/**< whether to ask to keep the data in 
 extern int registration_default_expires;/**< the default value for expires if none found*/
 extern int registration_min_expires;	/**< minimum registration expiration time 		*/
 extern int registration_max_expires;	/**< maximum registration expiration time 		*/
+
+extern int em_registration_default_expires;	/**< emergency registration: the default value for expires if none found*/
+extern int em_registration_min_expires;		/**< emergency registration: minimum registration expiration time 		*/
+extern int em_registration_max_expires;	/**< emergency registration: maximum registration expiration time 		*/
+
 extern int registration_disable_early_ims;	/**< if to disable the Early-IMS checks			*/
 
 extern time_t time_now;					/**< Current time of the S-CSCF registrar 		*/
@@ -313,6 +318,7 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 	contact_t *ci=0;
 	r_contact *c=0;
 	int n_contacts=0,contacts_reg=0;
+	int sos_reg;
 
 	LOG(L_DBG,"DBG:"M_NAME":S_assign_server: Assigning server...\n");
 	
@@ -368,8 +374,18 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 			for(h=msg->contact;h;h=h->next){
 				if (h->type==HDR_CONTACT_T && h->parsed){
 					for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-						if (get_r_contact(p,ci->uri))
+						if (get_r_contact(p,ci->uri)){
 							n_contacts++;
+							sos_reg = cscf_get_sos_uri_param(ci);
+				     		if(sos_reg<0)
+					     		goto error;
+							if(sos_reg>0){
+								LOG(L_ERR, "ERR:"M_NAME":S_assign_server: the user cannot deregister "
+										"an emergency contact\n");
+								r_unlock(p->hash);
+								return CSCF_NOT_IMPLEMENTED;
+							}
+						}
 					}
 				}
 			}
@@ -596,15 +612,36 @@ error:
  * @param expires_hdr - value of expires hdr if present, if not -1
  * @returns the time of expiration
  */
-static inline int r_calc_expires(contact_t *c,unsigned int expires_hdr)
+static inline int r_calc_expires(contact_t *c,unsigned int expires_hdr, int sos_reg)
 {
 	unsigned int r;
-	if (expires_hdr>=0) r = expires_hdr;
-	else r = registration_default_expires;
+	if (expires_hdr>=0) 
+		r = expires_hdr;
+	else {
+		r = (sos_reg>0)?
+			em_registration_default_expires:
+			registration_default_expires;
+		goto end;
+	}
 	if (c && c->expires)
 		str2int(&(c->expires->body), (unsigned int*)&r); 
-	if (r>0 && r<registration_min_expires) r = registration_min_expires;
-	if (r>registration_max_expires) r = registration_max_expires;
+	if (r>0){
+		if(!sos_reg && r<registration_min_expires) {
+			r = registration_min_expires;
+			goto end;
+		}
+		if(sos_reg && r<em_registration_min_expires){
+			r = em_registration_min_expires;
+			goto end;
+		}
+	}
+	if(!sos_reg && r>registration_max_expires){
+		r = registration_max_expires;
+		goto end;
+	}
+	if (sos_reg && r>em_registration_max_expires) 
+		r = em_registration_max_expires;
+end:
 	return time_now+r;
 }
 
@@ -652,6 +689,86 @@ static int r_add_contact(struct sip_msg *msg,str uri,int expires,qvalue_t qvalue
 	return r;
 }
 
+/**
+ * Deletes all the emergency contacts of a public identity different from a given one
+ * @msg - register message of the IMS Emergency Registration
+ * @p - the public identity
+ * @uri - the uri of the given contact
+ */
+static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri,qvalue_t q){
+
+	r_contact * c= 0;
+
+	for(c = p->head;c; c=c->next){
+		
+		if(!c->sos_flag)	
+			continue;
+		if((c->uri.len == uri.len) && (strncmp(c->uri.s, uri.s, uri.len) == 0))
+			continue;
+
+		c->expires = time_now;
+		r_add_contact(msg,c->uri,0,q);
+		del_r_contact(p,c);
+	}
+
+}
+
+/**
+ * Update the contacts from the Register request for a public identity
+ * used only for registration and reregistration
+ */
+static int update_contacts_help(struct sip_msg* msg, int _expires_hdr, 
+					r_public* _p, str* _ua, str * _path, 
+					int assignment_type){
+
+   	int sos_reg, expires;
+   	contact_t * ci;
+	struct hdr_field *h;
+	r_contact *c=0;
+	int has_emerg = 0;
+	qvalue_t qvalue;
+
+	for(h=msg->contact;h;h=h->next)
+		if (h->type==HDR_CONTACT_T && h->parsed)
+			for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
+
+				if(r_calc_contact_q(ci->q, &qvalue) != 0){
+					LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+					ci->uri.len,ci->uri.s);
+					goto error;
+				}
+				sos_reg = cscf_get_sos_uri_param(ci);
+				if(sos_reg<0) goto error;
+				
+				/*if it is the second contact for emergency registration, 
+				from the same REGISTER ignore it*/
+				if(has_emerg && sos_reg) continue;
+				
+				if(sos_reg){
+					/*delete the previous contacts for emergency registration 
+					for the same public identity, different from the current contact*/
+					has_emerg = 1;
+					delete_emerg_contacts(msg, _p, ci->uri,qvalue);			     
+				}
+				
+				
+				expires = r_calc_expires(ci,_expires_hdr, sos_reg);
+				LOG(L_DBG, "DBG:"M_NAME":update_contacts_help:expires interval is %i\n",_expires_hdr);
+				if (!(c=update_r_contact(_p,ci->uri,&expires,_ua,_path,qvalue,&(ci->params), &sos_reg))){
+					LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
+							ci->uri.len,ci->uri.s);
+					goto error;
+				}
+				
+				if (assignment_type == AVP_IMS_SAR_REGISTRATION)
+					S_event_reg(_p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
+				else
+					S_event_reg(_p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);                        
+			}
+	return 0;
+error:
+	return -1;
+}
 
 
 /**
@@ -664,6 +781,7 @@ static int r_add_contact(struct sip_msg *msg,str uri,int expires,qvalue_t qvalue
  * @param s - the ims_subscription received in the SAA
  * @param ua - the user agent string
  * @param path - the path to save
+ * @param sos_reg - flag for Emergency Registration
  * @returns CSCF_RETURN_TRUE if ok, CSCF_RETURN_FALSE on error or CSCF_RETURN_BREAK on response sent out
  */
 static inline int update_contacts(struct sip_msg* msg, int assignment_type,
@@ -675,10 +793,9 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 	ims_public_identity *pi=0;
 	struct hdr_field *h;
 	contact_t *ci;
-	int reg_state,expires_hdr=-1,expires,hash,rpublic_hash;
+	int reg_state,expires_hdr=-1,hash,rpublic_hash;
 	str public_identity,sent_by={0,0};
 	int contacts_added=0;
-	qvalue_t qvalue;
 	
 //	if (!*s) return 1;
 	if (msg) {
@@ -717,26 +834,9 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 					if (is_star){
 						LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Registration.\n");
 					}else{
-						for(h=msg->contact;h;h=h->next)
-							if (h->type==HDR_CONTACT_T && h->parsed)
-							 for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-								if(r_calc_contact_q(ci->q, &qvalue) != 0){
-									LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-										ci->uri.len,ci->uri.s);
-									goto error;
-								}
-								expires = r_calc_expires(ci,expires_hdr);
-								if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue,&(ci->params)))){
-									LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-										ci->uri.len,ci->uri.s);
-									goto error;
-								}
-								if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-									S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-								else 
-									S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-								
-							}
+						//copy the contacts from the REGISTER Request to the registrar
+						update_contacts_help(msg, expires_hdr, p, ua, path, assignment_type);
+						//copy the contacts from the registrar into the Register response
 						if (!contacts_added){
 							for(c=p->head;c;c=c->next)
 								r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
@@ -768,25 +868,8 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
             if (is_star){
                 LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
             }else{
-                for(h=msg->contact;h;h=h->next)
-                    if (h->type==HDR_CONTACT_T && h->parsed)
-                     for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-						if(r_calc_contact_q(ci->q, &qvalue) != 0){
-                        	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-								ci->uri.len,ci->uri.s);
-							goto error;
-                        }
-                        expires = r_calc_expires(ci,expires_hdr);
-                        if (!(c=update_r_contact(p,ci->uri,&expires,ua,path,qvalue,&(ci->params)))){
-                            LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",
-                                ci->uri.len,ci->uri.s);
-                            goto error;
-                        }
-                        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-                            S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-                        else
-                            S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);                        
-                    }
+	                	update_contacts_help(msg, expires_hdr, p, ua, path, assignment_type);
+			
 				for(c=p->head;c;c=c->next)
 					r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
             }            
@@ -812,24 +895,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
     		        if (is_star){
                     		LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
                     }else{
-		                for(h=msg->contact;h;h=h->next)
-    		                if (h->type==HDR_CONTACT_T && h->parsed)
-                		        for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
-									if(r_calc_contact_q(ci->q, &qvalue) != 0){
-                                    	LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s>\n",ci->uri.len,ci->uri.s);
-                                        goto error;
-									}
-                            		expires = r_calc_expires(ci,expires_hdr);
-                                    if (!(c=update_r_contact(rpublic,ci->uri,&expires,ua,path,qvalue,&(ci->params)))){
-                                        LOG(L_ERR,"ERR:"M_NAME":update_contacts: error on <%.*s> - implicit identity not found in registrar\n",
-                                            ci->uri.len,ci->uri.s);
-		                                goto error;
-            		                }
-                    		        if (assignment_type == AVP_IMS_SAR_REGISTRATION)
-                        		        S_event_reg(rpublic,c,0,IMS_REGISTRAR_CONTACT_REGISTERED,0);
-                                    else
-                                        S_event_reg(rpublic,c,0,IMS_REGISTRAR_CONTACT_REFRESHED,0);
-        		                }
+						update_contacts_help(msg, expires_hdr, rpublic, ua, path, assignment_type);
            			}
                     if (rpublic->hash!=p->hash) r_unlock(rpublic->hash);                            
 			}
@@ -1407,7 +1473,7 @@ int r_is_not_registered_id(str public_identity)
 	int ret=0;
 	r_public *p;
 
-	LOG(L_DBG,"DBG:"M_NAME":S_is_not_registered_id: Looking if NOT registered\n");
+	LOG(L_DBG,"DBG:"M_NAME":r_is_not_registered_id: Looking if NOT registered\n");
 //	print_r(L_INFO);
 	/* First check the parameters */
 	
