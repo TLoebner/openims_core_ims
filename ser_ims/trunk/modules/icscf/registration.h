@@ -49,7 +49,7 @@
  * Interrogating-CSCF - User-Authorization Operations
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Ancuta Onofrei 	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
 
@@ -65,6 +65,7 @@
 #define MSG_400 "Bad Request" 
 #define MSG_400_NO_PRIVATE "Bad Request - Private ID in Authorization / username token missing" 
 #define MSG_400_NO_PUBLIC "Bad Request - Public ID in To header missing" 
+#define MSG_400_MALFORMED_CONTACT "Bad Request - Error parsing Contact parameters" 
 #define MSG_400_NO_VISITED "Bad Request - P-Visited-Network-ID header missing" 
 
 #define MSG_403_UNKOWN_RC "Forbidden - HSS responded with unknown Result Code"
@@ -74,13 +75,14 @@
 #define MSG_403_AUTHORIZATION_REJECTED "Forbidden - HSS Authorization Rejected"
 #define MSG_403_ROAMING_NOT_ALLOWED "Forbidden - HSS Roaming not allowed"
 #define MSG_403_IDENTITY_NOT_REGISTERED "Forbidden - HSS Identity not registered"
-#define MSG_403_UNABLE_TO_COMPLY "Forbiddent - Hss Unable to comply"
+#define MSG_403_UNABLE_TO_COMPLY "Forbidden - HSS Unable to comply"
 
 #define MSG_480_DIAMETER_ERROR "Temporarily Unavailable - Diameter Cx interface failed"
 #define MSG_480_DIAMETER_TIMEOUT "Temporarily unavailable - TimeOut in UAR/A HSS"
 #define MSG_480_DIAMETER_MISSING_AVP "Temporarily unavailable - Missing AVP in UAA from HSS"
 
 #define MSG_500_ERROR_SAVING_LIST "Server Error while saving S-CSCF list on I-CSCF"
+#define MSG_500_SERVER_ERROR_OUT_OF_MEMORY "Server Error - Out of memory" 
 
 #define MSG_600_FORWARDING_FAILED "Busy everywhere - Forwarding to S-CSCF failed"
 

@@ -40,12 +40,12 @@ int request_outside(str* method, str* headers, str* body, dlg_t* dialog, transac
 int request_inside(str* method, str* headers, str* body, dlg_t* dialog, transaction_cb completion_cb, void* cbp)
 {
 	if (!method || !dialog) {
-		LOG(L_ERR, "req_within: Invalid parameter value\n");
+		LOG(L_ERR, "req_inside: Invalid parameter value\n");
 		goto err;
 	}
 
 	if (dialog->state != DLG_CONFIRMED) {
-		LOG(L_ERR, "req_within: Dialog is not confirmed yet\n");
+		LOG(L_ERR, "req_inside: Dialog is not confirmed yet\n");
 		goto err;
 	}
 
