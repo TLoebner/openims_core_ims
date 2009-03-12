@@ -141,7 +141,8 @@ struct sip_uri {
 };
 #endif
 
-enum _uri_type{ERROR_URI_T=0, SIP_URI_T, SIPS_URI_T, TEL_URI_T, TELS_URI_T};
+//types of URIs : error at parsing, SIP, SIPS, TEL, TELS, URN and CID
+enum _uri_type{ERROR_URI_T=0, SIP_URI_T, SIPS_URI_T, TEL_URI_T, TELS_URI_T, URN_T, CID_T};
 typedef enum _uri_type uri_type;
 enum _uri_flags{
 	URI_USER_NORMALIZE=1,
