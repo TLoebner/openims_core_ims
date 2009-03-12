@@ -50,10 +50,12 @@
  * 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de : changes for E-CSCF support
  * 
  */
 
 #include <time.h>
+#include <string.h>
 
 #include "../../parser/contact/contact.h"
 #include "../../parser/contact/parse_contact.h"
@@ -239,6 +241,7 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 	struct hdr_field *h;
 	contact_t *c;
 	r_nat_dest *pinhole;
+	int sos_reg;
 	
 	
 	r_act_time();
@@ -263,16 +266,25 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
 			
+			sos_reg = cscf_get_sos_uri_param(c);
+			if(sos_reg < 0)
+				return 0;
+
+			if(sos_reg>0)
+				LOG(L_DBG,"DBG:"M_NAME":with sos uri param\n");
+			
 			if (expires>local_time_now) {
 				if (requires_nat &&				/* only if NAT was enabled */ 
 					contact_was_in_req(c,req)	/* and the contact was refreshed, not just sent from the S-CSCF */
 					) {							
 					pinhole = nat_msg_origin(req);
 					rc = update_r_contact(puri.host,puri.port_no,puri.proto,
-						&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, &pinhole);
+								&(c->uri),&reg_state,&expires,&service_route,
+								&service_route_cnt, &pinhole, &sos_reg);
 				}else{
 					rc = update_r_contact(puri.host,puri.port_no,puri.proto,
-						&(c->uri),&reg_state,&expires,&service_route,&service_route_cnt, 0);
+								&(c->uri),&reg_state,&expires,&service_route,
+								&service_route_cnt, 0, &sos_reg);
 				}
 				if (expires-time_now>max_expires) max_expires=expires-time_now;
 			}
@@ -280,7 +292,7 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				reg_state = DEREGISTERED;
 				expires = local_time_now+30;
 				rc = update_r_contact(puri.host,puri.port_no,puri.proto,
-						0,&reg_state,&expires,0,0,0);
+						0,&reg_state,&expires,0,0,0, &sos_reg);
 				if (rc) r_unlock(rc->hash);
 				if (0>max_expires) max_expires = 0;
 				rc = 0;
@@ -342,7 +354,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	b = cscf_parse_contacts(rpl);
 	
 	if (!b||(!b->contacts && !b->star)) {
-		LOG(L_ERR,"DBG:"M_NAME":P_save_location: No contacts found\n");
+		LOG(L_DBG,"DBG:"M_NAME":P_save_location: No contacts found\n");
 		return 0;
 	}
 	
@@ -352,7 +364,9 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	
 	service_route = cscf_get_service_route(rpl,&service_route_cnt);
 			
-	if ((expires=update_contacts(req,rpl,b->star,expires_hdr,public_id,public_id_cnt,service_route,service_route_cnt,requires_nat(req)))<0) 
+	if ((expires=update_contacts(req,rpl,b->star,expires_hdr,
+			public_id,public_id_cnt,service_route,service_route_cnt,
+			requires_nat(req)))<0) 
 		goto error;
 
 	//print_r(L_ERR);
