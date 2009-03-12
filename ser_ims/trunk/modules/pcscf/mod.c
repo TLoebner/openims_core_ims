@@ -220,6 +220,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_remove_security_client() - remove the Security-Client header
  * - P_remove_security_verify() - remove the Security-Verify header
  * - P_remove_security_headers() - remove the Security- headers header
+ * - P_remove_header_tag(hdr_name,tag) - Removes tags from headers (for example sec-agree from Require).
  * <p>
  * - P_verify_security() - Verify Register Security-Verify
  * - P_security_401() - create IPSec Security Associations for the 401 Unauthorized response to REGISTER
@@ -265,7 +266,11 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * <p>
  * - P_follows_via_list() - checks if a response coming from a UE contains the same Via headers sent in the corresponding request
  * - P_enforce_via_list() - enforce a response coming from a UE to contain the same Via headers sent in the corresponding request
- * - P_remove_header_tag(hdr_name,tag) - Removes tags from headers (for example sec-agree from Require).
+ * <p>
+ * - P_follows_record_routes() - checks if a response coming from a UE on the MT side contains the same Record-Routes as the request
+ * - P_enforce_record_route() - enforce a response coming from a UE on the MT side to contain the same Record-Routes as the request
+ * <p>
+ * - P_release_call_on_reply() - destroy a call on a reply
  * <p>
  * - P_access_network_info() - modify the P_Access_Network_Info header with e2 information from CLF
  */
@@ -323,9 +328,13 @@ static cmd_export_t pcscf_cmds[]={
 	
 	{"P_follows_via_list",			P_follows_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_enforce_via_list",			P_enforce_via_list, 		0, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
-	{"P_release_call_onreply",		P_release_call_onreply,		1, 0,  ONREPLY_ROUTE},
+
+	{"P_follows_record_routes",		P_follows_record_routes, 	0, 0, ONREPLY_ROUTE},
+	{"P_enforce_record_routes",		P_enforce_record_routes, 	0, 0, ONREPLY_ROUTE},
+
+	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE},
 	
-	{"P_access_network_info",	P_access_network_info, 			1, 0, REQUEST_ROUTE},
+	{"P_access_network_info",		P_access_network_info, 		1, 0, REQUEST_ROUTE},
 	
 	{0, 0, 0, 0, 0}
 }; 
@@ -490,7 +499,8 @@ static str path_str_e={";lr>\r\n",6};
 static str s_record_route_s={"Record-Route: <",15};
 static str s_mo = {"sip:mo@",7};
 static str s_mt = {"sip:mt@",7};
-static str s_record_route_e={";lr>\r\n",6};
+static str s_record_route_lr={";lr",3};
+static str s_record_route_e={">\r\n",3};
 
 /**
  * Fix the configuration parameters.
@@ -548,16 +558,16 @@ int fix_parameters()
 
 
 	/* Record-routes */
-	pcscf_record_route_mo.s = pkg_malloc(s_record_route_s.len+s_mo.len+pcscf_name_str.len+s_record_route_e.len);
+	pcscf_record_route_mo.s = pkg_malloc(s_record_route_s.len+s_mo.len+pcscf_name_str.len+s_record_route_lr.len+s_record_route_e.len);
 	if (!pcscf_record_route_mo.s){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error allocating %d bytes\n",
-			s_record_route_s.len+s_mo.len+pcscf_name_str.len+s_record_route_e.len);
+			s_record_route_s.len+s_mo.len+pcscf_name_str.len+s_record_route_lr.len+s_record_route_e.len);
 		return 0;
 	}
-	pcscf_record_route_mt.s = pkg_malloc(s_record_route_s.len+s_mt.len+pcscf_name_str.len+s_record_route_e.len);
+	pcscf_record_route_mt.s = pkg_malloc(s_record_route_s.len+s_mt.len+pcscf_name_str.len+s_record_route_lr.len+s_record_route_e.len);
 	if (!pcscf_record_route_mt.s){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error allocating %d bytes\n",
-			s_record_route_s.len+s_mt.len+pcscf_name_str.len+s_record_route_e.len);
+			s_record_route_s.len+s_mt.len+pcscf_name_str.len+s_record_route_lr.len+s_record_route_e.len);
 		return 0;
 	}
 	
@@ -572,6 +582,7 @@ int fix_parameters()
 		STR_APPEND(pcscf_record_route_mo,s_mo);
 		STR_APPEND(pcscf_record_route_mo,pcscf_name_str);
 	}
+	STR_APPEND(pcscf_record_route_mo,s_record_route_lr);
 	STR_APPEND(pcscf_record_route_mo,s_record_route_e);
 	pcscf_record_route_mo_uri.s = pcscf_record_route_mo.s + s_record_route_s.len;
 	pcscf_record_route_mo_uri.len = pcscf_record_route_mo.len - s_record_route_s.len - s_record_route_e.len;
@@ -587,6 +598,7 @@ int fix_parameters()
 		STR_APPEND(pcscf_record_route_mt,s_mt);
 		STR_APPEND(pcscf_record_route_mt,pcscf_name_str);
 	}
+	STR_APPEND(pcscf_record_route_mt,s_record_route_lr);
 	STR_APPEND(pcscf_record_route_mt,s_record_route_e);
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;

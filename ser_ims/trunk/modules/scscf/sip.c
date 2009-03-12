@@ -1110,15 +1110,22 @@ str cscf_get_record_routes(struct sip_msg *msg)
 			LOG(L_DBG,"DBG:"M_NAME":cscf_get_record_routes: RR %.*s\n",h->body.len,h->body.s);
 			if (route.s){
 				route.s = pkg_realloc(route.s,route.len+1+h->body.len);
+				if (!route.s) goto nomem;
 				route.s[route.len++]=',';
 			}else{
 				route.s = pkg_malloc(h->body.len);			
+				if (!route.s) goto nomem;
 			}
 			memcpy(route.s+route.len,h->body.s,h->body.len);
 			route.len+=h->body.len;
 		}
 		h = h->next;
 	}	
+	return route;
+nomem:
+	LOG(L_ERR,"ERR:"M_NAME":cscf_get_record_routes(): Out of memory reallocating %d bytes\n",
+			route.len+1+h->body.len);
+	route.len = 0;
 	return route;
 }
 

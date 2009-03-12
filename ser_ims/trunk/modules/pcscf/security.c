@@ -85,12 +85,15 @@ extern char* pcscf_ipsec_P_Out_Req;		/**< Req E<-P */
 extern char* pcscf_ipsec_P_Inc_Rpl;		/**< Rpl E->P */
 extern char* pcscf_ipsec_P_Drop;		/**< Drop */
 
+extern str pcscf_record_route_mt;		/**< Record-route for terminating case */
+extern str pcscf_record_route_mt_uri;	/**< URI for Record-route terminating */
+
 extern r_hash_slot *registrar;			/**< the contacts */
 extern int r_hash_size;					/**< records tables parameters 	*/
 
-int current_spi=5000;		/**< current SPI value */
-extern int pcscf_use_tls;					/**< whether to use or not tls 						*/
-extern int pcscf_tls_port;					/**< PORT for TLS server 						*/
+int current_spi=5000;					/**< current SPI value */
+extern int pcscf_use_tls;				/**< whether to use or not tls */
+extern int pcscf_tls_port;				/**< PORT for TLS server */
 extern int tls_disable;
 
 /**
@@ -1119,6 +1122,172 @@ int P_enforce_via_list(struct sip_msg *rpl,char *str1, char *str2)
 	
 	return CSCF_RETURN_TRUE;
 }
+
+/**
+ * Checks if a response on the MT side includes all the required Record Routes, as present in the request
+ * @param msg - the SIP reply to check
+ * @param str1 - not used
+ * @param str2 - not used
+ * @return #CSCF_RETURN_TRUE on match, #CSCF_RETURN_FALSE if not matching 
+ */
+int P_follows_record_routes(struct sip_msg *msg, char *str1, char *str2)
+{
+	struct hdr_field *temp_hdr_req = NULL,*temp_hdr_rpl = NULL;
+	struct sip_msg * req = NULL; 
+	rr_t * rr_req = NULL, *rr_req_i = NULL;
+	rr_t * rr_rpl = NULL;
+  
+	LOG(L_INFO,"INF:"M_NAME":P_follows_record_routes(): Checking if RR in %d reply match the request ones\n",
+			msg->first_line.u.reply.statuscode);
+	
+	// Get the first RR in reply
+	temp_hdr_rpl = cscf_get_next_record_route(msg,temp_hdr_rpl);	
+	if (!temp_hdr_rpl || !(rr_rpl = (rr_t*)temp_hdr_rpl->parsed)){
+		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): No RR's found in reply.\n");
+		goto nok;
+	}
+	
+	// Checking first RR - this is a special case because the saved request does not include it
+	if (pcscf_record_route_mt_uri.len != rr_rpl->nameaddr.uri.len || 
+		strncmp(pcscf_record_route_mt_uri.s,rr_rpl->nameaddr.uri.s,pcscf_record_route_mt_uri.len)!=0){
+		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): First RR did not match P-CSCF MT = %.*s , Rpl = %.*s \n",
+				pcscf_record_route_mt_uri.len,pcscf_record_route_mt_uri.s,rr_rpl->nameaddr.uri.len,rr_rpl->nameaddr.uri.s);
+		goto nok;
+	}	
+	rr_rpl = rr_rpl->next;
+	if (!rr_rpl){
+		temp_hdr_rpl = cscf_get_next_record_route(msg,temp_hdr_rpl);	
+		if (temp_hdr_rpl) 
+			rr_rpl = (rr_t*)temp_hdr_rpl->parsed;
+	}
+	
+	// Find the request
+	if(!(req = cscf_get_request_from_reply(msg))) {
+		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): No transactional request found.\n");
+		goto nok;
+	}	
+	temp_hdr_req = cscf_get_next_record_route(req,temp_hdr_req);	
+	if (temp_hdr_req) {
+		rr_req = (rr_t*)temp_hdr_req->parsed;
+		rr_req_i = rr_req;
+	}
+	
+	// Cycle through the request/reply headers and compare
+	while(rr_rpl && rr_req_i) {
+		
+		if(rr_req_i->nameaddr.uri.len != rr_rpl->nameaddr.uri.len ||
+				strncmp(rr_req_i->nameaddr.uri.s,rr_rpl->nameaddr.uri.s,rr_req_i->nameaddr.uri.len)!=0){
+			LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): Mismatch in RR URIs Req = %.*s , Rpl = %.*s \n",
+					rr_req_i->nameaddr.uri.len,rr_req_i->nameaddr.uri.s,rr_rpl->nameaddr.uri.len,rr_rpl->nameaddr.uri.s);
+			goto nok;
+		}
+		
+		rr_rpl = rr_rpl->next;
+		if (!rr_rpl){
+			temp_hdr_rpl = cscf_get_next_record_route(msg,temp_hdr_rpl);	
+			if (temp_hdr_rpl)
+				rr_rpl = (rr_t*)temp_hdr_rpl->parsed;
+		}
+
+		rr_req_i = rr_req_i->next;		
+		if (!rr_req_i){
+			if (rr_req){
+				free_rr(&rr_req);
+				temp_hdr_req->parsed = NULL;
+			}
+			temp_hdr_req = cscf_get_next_record_route(req,temp_hdr_req);	
+			if (temp_hdr_req) {
+				rr_req = (rr_t*)temp_hdr_req->parsed;
+				rr_req_i = rr_req;
+			}
+		}
+	}
+
+	if(rr_rpl){
+		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): More RR headers in reply than in request\n");
+		goto nok;
+	}
+
+	if(rr_req){
+		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): More RR headers in request than in reply\n");
+		goto nok;
+	}
+
+	if (rr_req){
+		free_rr(&rr_req);
+		temp_hdr_req->parsed = NULL;
+	}
+	return CSCF_RETURN_TRUE;
+	
+nok:
+	if (rr_req){
+		free_rr(&rr_req);
+		temp_hdr_req->parsed = NULL;
+	}
+	return CSCF_RETURN_FALSE;
+}
+
+
+static str s_record_route_s={"Record-Route: ",14};
+static str s_record_route_e={"\r\n",2};
+/**
+ * Enforce a response coming from a UE to contain the same Record Route headers sent in the
+ * corresponding request.
+ * @param msg - the SIP reply
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE on success, #CSCF_RETURN_ERROR on error
+ */
+int P_enforce_record_routes(struct sip_msg *msg,char *str1, char *str2)
+{
+	str hdr = {0,0};
+	str rr_req = {0,0};
+	struct sip_msg *req = cscf_get_request_from_reply(msg);
+
+	LOG(L_INFO,"INF:"M_NAME":P_enforce_record_routes(): Enforcing RR in %d reply with the request ones\n",
+			msg->first_line.u.reply.statuscode);
+
+	if (!req){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_record_routes(): No transactional request found.\n");
+		return CSCF_RETURN_ERROR;
+	}
+	
+	if(!cscf_del_all_headers(msg, HDR_RECORDROUTE_T)){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_record_routes(): error while deleting headers\n");
+		return CSCF_RETURN_ERROR;
+	}
+	
+	rr_req = cscf_get_record_routes(req);
+	if(rr_req.len){
+		hdr.len = pcscf_record_route_mt.len + s_record_route_s.len + rr_req.len+s_record_route_e.len;
+		if(!(hdr.s = pkg_malloc(hdr.len))){
+		    LOG(L_ERR,"ERR:"M_NAME":P_enforce_record_routes(): Unable to allocate memory for hdr\n");
+		    goto out_of_memory;
+		}
+		hdr.len = 0;
+		STR_APPEND(hdr,pcscf_record_route_mt);
+		STR_APPEND(hdr,s_record_route_s);
+		STR_APPEND(hdr,rr_req);
+		STR_APPEND(hdr,s_record_route_e);		
+	}else{		
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_record_routes(): Unable to get record routes - the RR should not be empty...\n");
+		// still, let it continue, maybe it was empty on purpose
+		//return CSCF_RETURN_ERROR;
+		STR_PKG_DUP(hdr,pcscf_record_route_mt,"pkg");
+	}
+	
+	if(!cscf_add_header_first(msg,&hdr,HDR_RECORDROUTE_T)){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_record_routes(): Unable to add header\n");
+		if (hdr.s) pkg_free(hdr.s);
+		return CSCF_RETURN_FALSE;
+	}
+
+	return CSCF_RETURN_TRUE;
+	
+out_of_memory:
+	return CSCF_RETURN_ERROR;
+}
+
 
 static str s_received={";received=",10};
 static str s_received2={"received",8};

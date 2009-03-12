@@ -1553,7 +1553,8 @@ int P_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 
 
 static str s_record_route_s={"Record-Route: <",15};
-static str s_record_route_e={";lr>\r\n",6};
+static str s_record_route_lr={";lr",3};
+static str s_record_route_e={">\r\n",3};
 /**
  * Record routes, with given user as parameter.
  * @param msg - the SIP message to add to
@@ -1590,7 +1591,7 @@ int P_record_route(struct sip_msg *msg,char *str1,char *str2)
 			pcscf.s = scheme.s+scheme.len;
 			pcscf.len = pcscf_name_str.len - scheme.len;
 			
-			rr.len = s_record_route_s.len+scheme.len+u.len+1+pcscf.len+s_record_route_e.len;
+			rr.len = s_record_route_s.len+scheme.len+u.len+1+pcscf.len+s_record_route_lr.len+s_record_route_e.len;
 			rr.s = pkg_malloc(rr.len);
 			if (!rr.s){
 				LOG(L_ERR,"ERR:"M_NAME":P_record_route: error allocating %d bytes!\n",rr.len);	
@@ -1602,6 +1603,7 @@ int P_record_route(struct sip_msg *msg,char *str1,char *str2)
 			STR_APPEND(rr,u);
 			rr.s[rr.len++]='@';
 			STR_APPEND(rr,pcscf);
+			STR_APPEND(rr,s_record_route_lr);
 			STR_APPEND(rr,s_record_route_e);					
 	}
 	
