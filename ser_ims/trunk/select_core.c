@@ -677,6 +677,8 @@ int select_uri_hostport(str* res, select_t* s, struct sip_msg* msg)
 			strncpy(p+uri.host.len, ":5060", 5);
 			break;
 		case ERROR_URI_T:
+		case URN_T:
+		case CID_T:
 			return -1;
 	}
 	res->s = p;
