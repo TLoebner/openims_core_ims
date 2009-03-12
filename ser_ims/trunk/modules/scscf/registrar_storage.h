@@ -105,6 +105,7 @@ typedef struct _r_contact {
 	str ua;						/**< user agent string					*/
 	str path;					/**< path headers (P-CSCF to route to)	*/
 	qvalue_t qvalue;			/**< q-value of contact					*/
+	int sos_flag;				/**< 1 if Emergency, 0 otherwise		*/
 	
 	r_contact_param *parameters;	/**< header parameters (not in the uri!)*/
 
@@ -196,8 +197,8 @@ void free_r_contact_param(r_contact_param *cp);
 
 r_contact* new_r_contact(str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp);
 r_contact* get_r_contact(r_public *p, str uri);
-r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp);
-r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp);
+r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_t qvalue,param_t* cp, int sos_flag);
+r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp, int *sos_flag);
 void del_r_contact(r_public *p,r_contact *c);
 void free_r_contact(r_contact *c);
 

@@ -53,7 +53,7 @@
  * - Initialization functions
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Ancuta Onofrei andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
 #include "mod.h"
@@ -77,6 +77,7 @@
 #include "s_persistency.h"
 #include "ims_pm_scscf.h"
 #include "privacy.h"
+#include "emerg.h"
 
 MODULE_VERSION
 
@@ -106,6 +107,11 @@ int registrar_hash_size=1024;			/**< the size of the hash table					*/
 int registration_default_expires=3600;	/**< the default value for expires if none found*/
 int registration_min_expires=10;		/**< minimum registration expiration time 		*/
 int registration_max_expires=1000000;	/**< maximum registration expiration time 		*/
+
+int em_registration_default_expires=3600;/**< emergency registration: the default value for expires if none found*/
+int em_registration_min_expires=10;		/**< emergency registration: minimum registration expiration time 		*/
+int em_registration_max_expires=1000000;/**< emergency registration: maximum registration expiration time 		*/
+
 char *registration_qop="auth,auth-int";	/**< the qop options to put in the authorization challenges */
 str registration_qop_str={0,0};			/**< the qop options to put in the authorization challenges */
 
@@ -212,6 +218,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - S_422_session_expires() - Return a 422 response with Min_SE set to local policy
  * - S_privacy_hook() - Registers callback to apply privacy to replies
  * - S_apply_privacy() - Applies Privacy (currently only for P-Asserted-Identity)
+ * - S_emergency_flag() - checks if the Registration is an Emergency Registration, like in the draft draft-patel-ecrit-sos-parameter
  */
 static cmd_export_t scscf_cmds[]={
 	{"load_scscf",					(cmd_function)load_scscf, 	NO_SCRIPT, 0, 0},
@@ -229,6 +236,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_add_p_charging_function_addresses", S_add_p_charging_function_addresses, 0, 0, REQUEST_ROUTE},
 
 	{"S_assign_server",				S_assign_server,			1,0,REQUEST_ROUTE},
+	{"S_emergency_flag",			S_emergency_flag,	    	0,0,REQUEST_ROUTE},
 	{"S_assign_server_unreg",		S_assign_server_unreg,		2,0,REQUEST_ROUTE},
 	{"S_update_contacts",			S_update_contacts,			0,0,REQUEST_ROUTE},
 	{"S_lookup",					S_lookup,					0,0,REQUEST_ROUTE|FAILURE_ROUTE},
@@ -255,7 +263,7 @@ static cmd_export_t scscf_cmds[]={
 	{"S_terminating_barred",		S_terminating_barred,		0,0,REQUEST_ROUTE},
 
 	{"S_is_in_dialog",				S_is_in_dialog,				1,0,REQUEST_ROUTE},
-	{"S_save_dialog",				S_save_dialog,				1,0,REQUEST_ROUTE|FAILURE_ROUTE},
+	{"S_save_dialog",				S_save_dialog,				1,0,REQUEST_ROUTE},
 	{"S_update_dialog",				S_update_dialog,			1,0,REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"S_record_route",				S_record_route,				1,0,REQUEST_ROUTE},	
 	{"S_is_record_routed",			S_is_record_routed,			1,0,REQUEST_ROUTE},	
@@ -290,7 +298,10 @@ static cmd_export_t scscf_cmds[]={
  * - registrar_hash_size - size of the registrar hash table
  * - registration_default_expires - default expires interval for registration, if not specified
  * - registration_min_expires - minimum expires interval
- * - registration_max_expires - maximim expires interval
+ * - registration_max_expires - maximum expires interval
+ * - em_registration_default_expires - default interval of expiration for Emergency Registrations  
+ * - em_registration_min_expires - minimum expires interval for Emergency Registrations  
+ * - em_registration_max_expires - maximum expires interval for Emergency Registrations  
  * - registration_qop - the qop part of the authorization header for challenging the clients. Default value is 'auth,auth-int'. 
  * Supported by the challenge verification algorithms are: no qop, "auth" or "auth-int".
  * - registration_default_algorithm - default algorithm to use for authentication. Can be AKAv1-MD5, AKAv2-MD5, MD5 (Early-IMS
@@ -302,7 +313,7 @@ static cmd_export_t scscf_cmds[]={
  * <p>
  * - subscription_default_expires - default expires interval for reg subscriptions, if not specified
  * - subscription_min_expires - minimum expires interval
- * - subscription_max_expires - maximim expires interval
+ * - subscription_max_expires - maximum expires interval
  * <p>
  * - append-branches - if to fork the requests on multiple contacts
  * <p>
@@ -338,6 +349,9 @@ static param_export_t scscf_params[]={
 	{"registration_default_expires", 	INT_PARAM, &registration_default_expires},
 	{"registration_min_expires", 		INT_PARAM, &registration_min_expires},
 	{"registration_max_expires", 		INT_PARAM, &registration_max_expires},
+	{"em_registration_default_expires", 	INT_PARAM, &em_registration_default_expires},
+	{"em_registration_min_expires", 	INT_PARAM, &em_registration_min_expires},
+	{"em_registration_max_expires", 	INT_PARAM, &em_registration_max_expires},
 	{"registration_qop",						STR_PARAM, &registration_qop},
 	{"registration_default_algorithm",	STR_PARAM, &registration_default_algorithm},
 	{"registration_disable_early_ims",	INT_PARAM, &registration_disable_early_ims},
