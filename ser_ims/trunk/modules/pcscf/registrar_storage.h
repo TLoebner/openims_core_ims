@@ -50,7 +50,7 @@
  * 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 #ifndef P_CSCF_REGISTRAR_STORAGE_H_
 #define P_CSCF_REGISTRAR_STORAGE_H_
@@ -145,6 +145,7 @@ typedef struct _r_contact {
 	str *service_route;			/**< service route entries				*/
 
 	r_nat_dest * pinhole;		/**< address of the receive				*/ 
+	int sos_flag;			/** address used to do an IMS Emergency Registration*/
 	
 	r_public *head;				/**< first (and default) public identity*/
 	r_public *tail;				/**< last public identity				*/
@@ -195,9 +196,10 @@ r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States
 	str *service_route,int service_route_cnt);	
 r_contact* get_r_contact(str host,int port,int transport);
 r_contact* add_r_contact(str host,int port,int transport,str uri,
-	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest * pinhole);
+	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest * pinhole, int sos_flag);
 r_contact* update_r_contact(str host,int port,int transport,
-	str *uri,enum Reg_States  *reg_state,int *expires,str **service_route,int *service_route_cnt, r_nat_dest ** pinhole);
+				str *uri,enum Reg_States  *reg_state,int *expires,str **service_route,
+				int *service_route_cnt, r_nat_dest ** pinhole, int *sos_flag);
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
 	r_security *s);

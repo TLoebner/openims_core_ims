@@ -53,6 +53,8 @@
  * - Initialization functions
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de 
+ *  				adapt P-CSCF to 3GPP TS 23.167, but also considering 24.229 and 23.003
  * 
  */
  
@@ -87,6 +89,7 @@
 #include "p_persistency.h"
 #include "release_call.h"
 #include "ims_pm_pcscf.h"
+#include "emerg.h"
 
 
 MODULE_VERSION
@@ -171,6 +174,11 @@ str pcscf_path_hdr_str;						/**< fixed Path header 								*/
 str pcscf_path_str;							/**< fixed Path URI  								*/
 
 str forced_clf_peer_str;					/**< fxied FQDN of the forced CLF DiameterPeer (CLF)*/
+
+/*Emergency Services variables/parameters*/
+char* ecscf_uri ="sip:ecscf.open-ims.test:7060";				/** the e-cscf uri*/
+str ecscf_uri_str;
+int emerg_support = 1;
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -273,6 +281,15 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_release_call_on_reply() - destroy a call on a reply
  * <p>
  * - P_access_network_info() - modify the P_Access_Network_Info header with e2 information from CLF
+ * <p>
+ * - P_is_anonymous_identity()- checks if the request came from an Anonymous User Identity, see 3GPP TS 23.003 : 13.6	
+ * - P_emergency_flag() - checks if the user made an Emergency Registration
+ * - P_enforce_sos_routes - deletes all Route headers and adds one with the URI of the selected E-CSCF
+ * - P_380_em_alternative_serv() - Create the body of a 380 Alternative Service reply for Emergency reasons (e.g. emergency Registration needed) 
+ * - P_emergency_ruri() - checks if the Request Uri is used for an Emergency Service (e.g. "urn:service:sos")
+ * - P_emergency_serv_enabled() - checks if the module has Emergency Services enabled 
+ * - P_enforce_sos_routes() - Inserts the Route header containing the ecscf selected to be enforced
+ * <p>
  */
 static cmd_export_t pcscf_cmds[]={
 	{"P_add_path",					P_add_path, 				0, 0, REQUEST_ROUTE},
@@ -312,7 +329,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_is_in_dialog",				P_is_in_dialog, 			1, 0, REQUEST_ROUTE},
 	{"P_save_dialog",				P_save_dialog, 				1, 0, REQUEST_ROUTE},
 	{"P_update_dialog",				P_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_drop_dialog",				P_drop_dialog, 				1, 0, ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"P_drop_dialog",				P_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_follows_dialog_routes",		P_follows_dialog_routes, 	1, 0, REQUEST_ROUTE},
 	{"P_enforce_dialog_routes",		P_enforce_dialog_routes, 	1, 0, REQUEST_ROUTE},
 	{"P_record_route",				P_record_route,				1, 0, REQUEST_ROUTE},		
@@ -336,6 +353,14 @@ static cmd_export_t pcscf_cmds[]={
 	
 	{"P_access_network_info",		P_access_network_info, 		1, 0, REQUEST_ROUTE},
 	
+	/*emergency services exported functions*/
+	{"P_is_anonymous_identity",		P_is_anonymous_identity, 	0, 0, REQUEST_ROUTE},
+	{"P_emergency_flag",			P_emergency_flag,			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
+	{"P_emergency_ruri",			P_emergency_ruri,			0, 0, REQUEST_ROUTE},
+	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
+	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
+
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -394,6 +419,9 @@ static cmd_export_t pcscf_cmds[]={
  * <p>
  * - forced_clf_peer - if you enable the use of the e2 interface, you can force the use of a certain CLF
  * - use_e2 - if to enable the usage of e2 interface with a CLF
+ *  <p>
+ *  - ecscf_uri - the E-CSCF URI to forward the Emergency calls
+ *  - emerg_support - if the P-CSCF has support for Emrgency Services or not
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -455,9 +483,12 @@ static param_export_t pcscf_params[]={
 	{"ims_pm_logfile",					STR_PARAM, &ims_pm_logfile},
 #endif /* WITH_IMS_PM */	
 	
-	
 	{"forced_clf_peer",					STR_PARAM, &forced_clf_peer},
 	{"use_e2",							INT_PARAM, &pcscf_use_e2},
+	
+	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
+	{"emerg_support",					INT_PARAM, &emerg_support},
+
 	{0,0,0} 
 };
 
@@ -606,6 +637,13 @@ int fix_parameters()
 	/* fix the parameters */
 	forced_clf_peer_str.s = forced_clf_peer;
 	forced_clf_peer_str.len = strlen(forced_clf_peer);
+	
+	if(emerg_support){
+		ecscf_uri_str.s = ecscf_uri;
+		ecscf_uri_str.len = strlen(ecscf_uri);
+		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
+	}
+
 	return 1;
 }
 
@@ -810,6 +848,13 @@ static int mod_init(void)
 			goto error;
 		}
 	}
+
+	/* initializing the variables needed for the Emergency Services support*/
+	if (init_emergency_cntxt()<0){
+		LOG(L_ERR,"ERR:"M_NAME":mod_init: error on init_emergency_cntxt()\n");
+		goto error;	
+	}
+	
 	return 0;
 error:
 	return -1;

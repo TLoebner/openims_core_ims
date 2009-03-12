@@ -925,7 +925,7 @@ int r_notification_process(r_notification *n,int expires)
 				reg_state = DEREGISTERED;
 				expires2 = time_now+30;
 				c = update_r_contact(puri.host,puri.port_no,puri.proto,
-					0,&reg_state,&expires2,0,0,0);
+					0,&reg_state,&expires2,0,0,0,0);
 				if (c) {
 					LOG(L_DBG,"DBG:"M_NAME":r_notification_process: expired contact <%.*s>\n",
 						c->uri.len,c->uri.s);
@@ -935,7 +935,7 @@ int r_notification_process(r_notification *n,int expires)
 				reg_state = REGISTERED;
 				expires2 = rc->expires+time_now;
 				c = update_r_contact(puri.host,puri.port_no,puri.proto,
-					0,&reg_state,&expires2,0,0,0);
+					0,&reg_state,&expires2,0,0,0,0);
 				if (c) {
 					LOG(L_DBG,"DBG:"M_NAME":r_notification_process: refreshing contact <%.*s> [%d]\n",
 						c->uri.len,c->uri.s,rc->expires);

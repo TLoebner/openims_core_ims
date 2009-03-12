@@ -57,6 +57,7 @@
  * its size for better search times.
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de : adapted for 3GPP TS 23.167 
  * 
  */
 #include <time.h>
@@ -597,10 +598,11 @@ out_of_memory:
  * @param service_route - array of service routes
  * @param service_route_cnt - the size of the array above
  * @param pinhole - NAT pin hole
+ * @param sos_flag - flag for Emergency Registration
  * @returns the newly added r_contact, 0 on error
  */
 r_contact* add_r_contact(str host,int port,int transport,str uri,
-	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest *pinhole)
+	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest *pinhole, int sos_flag)
 {
 	r_contact *c;
 
@@ -614,6 +616,7 @@ r_contact* add_r_contact(str host,int port,int transport,str uri,
 		registrar[c->hash].tail = c;
 		if (!registrar[c->hash].head) registrar[c->hash].head=c;
 		c->pinhole = pinhole;
+		c->sos_flag = sos_flag;
 	return c;
 }
 
@@ -630,10 +633,12 @@ r_contact* add_r_contact(str host,int port,int transport,str uri,
  * @param service_route - array of service routes
  * @param service_route_cnt - the size of the array above
  * @param pinhole - NAT pin hole
+ * @param sos_flag - flag for Emergency Registration
  * @returns the updated added r_contact, 0 on error
  */
 r_contact* update_r_contact(str host,int port,int transport,
-	str *uri,enum Reg_States *reg_state,int *expires,str **service_route,int *service_route_cnt, r_nat_dest **pinhole)
+	str *uri,enum Reg_States *reg_state,int *expires,str **service_route,
+	int *service_route_cnt, r_nat_dest **pinhole, int *sos_flag)
 {
 	r_contact *c=0;
 	int i;
@@ -642,8 +647,8 @@ r_contact* update_r_contact(str host,int port,int transport,
 	c = get_r_contact(host,port,transport);
 	if (!c){
 		if (uri&&reg_state && expires && service_route && service_route_cnt)
-			return pinhole?add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, *pinhole):
-						   add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, 0);
+			return pinhole?add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, *pinhole, (sos_flag?*sos_flag:0)):
+					   add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, 0,  (sos_flag?*sos_flag:0));
 		else return 0;
 	}else{
 		/* first drop the old temporary public ids */
@@ -672,6 +677,7 @@ r_contact* update_r_contact(str host,int port,int transport,
 				if (!c->service_route){
 					LOG(L_ERR,"ERR:"M_NAME":new_r_contact(): Unable to alloc %d bytes\n",
 						(*service_route_cnt)*sizeof(str));					
+					goto out_of_memory;					
 				}else{
 					for(i=0;i<*service_route_cnt;i++)
 						STR_SHM_DUP(c->service_route[i],(*service_route)[i],"new_r_contact");
@@ -680,6 +686,7 @@ r_contact* update_r_contact(str host,int port,int transport,
 			}
 		}
 		if (pinhole) c->pinhole = *pinhole;
+		if (sos_flag) c->sos_flag = *sos_flag;
 		return c;
 	}
 	
@@ -707,7 +714,7 @@ r_contact* update_r_contact_sec(str host,int port,int transport,
 	c = get_r_contact(host,port,transport);
 	if (!c){
 		if (uri&&reg_state){
-			c = add_r_contact(host,port,transport,*uri,*reg_state,*expires,(str*) 0,0,0);
+			c = add_r_contact(host,port,transport,*uri,*reg_state,*expires,(str*) 0,0,0,0);
 			c->security_temp = s;
 			r_unlock(c->hash);
 			return c;
@@ -811,9 +818,10 @@ void print_r(int log_level)
 		r_lock(i);
 		c = registrar[i].head;
 		while(c){
-			LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] C: <"ANSI_RED"%d://%.*s:%d"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"] R:["ANSI_MAGENTA"%2d"ANSI_GREEN"] <%.*s>\n",i,
+			LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] C: <"ANSI_RED"%d://%.*s:%d"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"] R:["ANSI_MAGENTA"%2d"ANSI_GREEN"] SOS:["ANSI_MAGENTA"%c"ANSI_GREEN"] <%.*s>\n",i,
 			c->transport,c->host.len,c->host.s,c->port,
 				c->expires-time_now,c->reg_state,
+				c->sos_flag?'X':' ',
 				c->uri.len,c->uri.s);					
 			for(j=0;j<c->service_route_cnt;j++)
 				LOG(log_level,ANSI_GREEN"INF:"M_NAME":         SR: <"ANSI_YELLOW"%.*s"ANSI_GREEN">\n",c->service_route[j].len,c->service_route[j].s);
