@@ -50,6 +50,7 @@
  * 
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  * 
  */
 
@@ -147,7 +148,7 @@ AAAMessage* CxRequestHandler(AAAMessage *request,void *param)
  * @returns the UAA message received or NULL on error
  */
 AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity, str visited_network_id,
-			int authorization_type,str realm)
+			int authorization_type,str realm, int sos_reg)
 {
 	AAAMessage *uar=0;
 	AAASessionId sessId={0,0};
@@ -166,6 +167,7 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 	if (!Cx_add_user_name(uar,private_identity)) goto error;
 	if (!Cx_add_public_identity(uar,public_identity)) goto error;
 	if (!Cx_add_visited_network_id(uar,visited_network_id)) goto error;
+	if (!Cx_add_UAR_flags(uar,sos_reg)) goto error;
 	if (authorization_type!=AVP_IMS_UAR_REGISTRATION)
 		if (!Cx_add_authorization_type(uar,authorization_type)) goto error;
 

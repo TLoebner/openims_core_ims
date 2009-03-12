@@ -49,7 +49,7 @@
  * Interrogating-CSCF - User-Authorization Operations
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
+ *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
 #include <stdlib.h>
@@ -58,6 +58,7 @@
 
 #include "../../mem/shm_mem.h"
 #include "../../dset.h"
+#include "../../parser/parse_uri.h"
 
 #include "mod.h"
 #include "sip.h"
@@ -86,6 +87,9 @@ int I_UAR(struct sip_msg* msg, char* str1, char* str2)
 	struct hdr_field *hdr ;
 	str realm;
 	AAAMessage* uaa;
+	contact_t *c;
+	int sos_reg=0;
+	contact_body_t *b = 0;
 	
 	realm = cscf_get_realm_from_ruri(msg);
 	
@@ -119,6 +123,28 @@ int I_UAR(struct sip_msg* msg, char* str1, char* str2)
 		goto done;		
 	}
 	
+	b = cscf_parse_contacts(msg);
+	
+	if (!b||(!b->contacts && !b->star)) {
+		LOG(L_DBG,"DBG:"M_NAME":I_UAR: No contacts found\n");
+		goto done;
+	}
+
+	for(c=b->contacts;c;c=c->next){
+	
+		sos_reg = cscf_get_sos_uri_param(c);
+		if(sos_reg == -1){
+			/*error case*/
+			cscf_reply_transactional(msg,400, MSG_400_MALFORMED_CONTACT);
+			result=CSCF_RETURN_BREAK;
+			goto done;		
+		}else if (sos_reg == -2){
+			cscf_reply_transactional(msg,500, MSG_500_SERVER_ERROR_OUT_OF_MEMORY);
+			result=CSCF_RETURN_BREAK;
+			goto done;		
+		}
+	 }
+	
 	visited_network_id=cscf_get_visited_network_id(msg , &hdr);
 	if (!visited_network_id.len) {
 		LOG(L_ERR,"ERR:"M_NAME":I_UAR: Visited Network Identity not found, responding with 400\n");
@@ -135,7 +161,7 @@ int I_UAR(struct sip_msg* msg, char* str1, char* str2)
 	}
 	
 	uaa = Cx_UAR(msg,private_identity,public_identity,visited_network_id, 
-				authorization_type,realm);
+				authorization_type,realm, sos_reg);
 	if (!uaa){
 		LOG(L_ERR,"ERR:"M_NAME":I_UAR: Error creating/sending UAR or UAR time-out\n");
 		cscf_reply_transactional(msg,480,MSG_480_DIAMETER_ERROR);

@@ -50,6 +50,7 @@
  * 
  * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * \author Alberto Diez - get_from_tag,get_to_tag,get_from_uri added
+ * \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  * 
  * Copyright (C) 2005 FhG Fokus
  * 		
@@ -66,6 +67,7 @@
 #include "../../parser/parse_via.h"
 #include "../../parser/parse_content.h"
 #include "../../parser/parse_nameaddr.h"
+#include "../../parser/parse_param.h"
 #include "../../parser/contact/contact.h"
 #include "../../parser/contact/parse_contact.h"
 
@@ -2952,4 +2954,57 @@ int cscf_get_to_uri(struct sip_msg* msg,str *local_uri)
 	
 }
 
+static str sos_uri_par={"sos", 3};
+/**
+ * Check if the contact has an URI parameter with the value "sos",
+ * used for detecting an Emergency Registration
+ * http://tools.ietf.org/html/draft-patel-ecrit-sos-parameter-0x
+ * @param contact - contact to be checked
+ * @return 1 if found, 0 if not, -1 on error
+ */
+int cscf_get_sos_uri_param(contact_t * contact)
+{
+	struct sip_uri puri;
+	param_hooks_t h;
+	param_t *p=0, *crt;
+	enum pclass p_class = CLASS_URI;
+	int ret;
+	
+	ret = 0;
+	p = NULL;
+	
+	if(parse_uri(contact->uri.s, contact->uri.len, &puri)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_sos_uri_param: failed to parse %.*s\n",
+				contact->uri.len, contact->uri.s);
+		return -1;
+	}
+	if(puri.params.len <= 0)
+		return 0;
+	
+	LOG(L_DBG, "DBG:"M_NAME":cscf_get_sos_uri_param: searching through the uri parameters:%.*s\n", 
+			puri.params.len, puri.params.s);        
+	if(puri.params.len == 0)
+		return 0;
+		
+	if(parse_params(&(puri.params), p_class, &h, &p)){
+		LOG(L_ERR, "ERR:"M_NAME":cscf_get_sos_uri_param:error while parsing uri parameters\n");
+		ret = -1;
+		goto end;
+	}
+	
+	for(crt = p ; crt ; crt=crt->next){
+		LOG(L_DBG, "DBG:"M_NAME":cscf_get_sos_uri_param:name: %.*s body: %.*s\n",
+				crt->name.len, crt->name.s,
+				crt->body.len, crt->body.s);
+		if((crt->name.len == sos_uri_par.len) &&
+				(strncmp(crt->name.s, sos_uri_par.s, sos_uri_par.len) == 0)){
+			ret =1;
+			goto end;
+		}	
+	}
+
+end:
+	if(p) free_params(p);
+    return ret;
+}
 

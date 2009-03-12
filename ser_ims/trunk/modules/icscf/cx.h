@@ -71,7 +71,7 @@ AAAMessage* CxRequestHandler(AAAMessage *request,void *param);
 
 
 AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity, str visited_network_id,
-			int authorization_type,str realm);
+			int authorization_type,str realm, int sos_reg);
 
 
 AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm);
