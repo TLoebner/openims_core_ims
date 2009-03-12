@@ -207,6 +207,7 @@ enum {
 	AVP_IMS_Supported_Applications						= 631,
 	AVP_IMS_Associated_Identities						= 632,
 	AVP_IMS_Originating_Request							= 633,
+	AVP_IMS_UAR_Flags									= 637,
 /** 700 to 799 reserved for TS29.329											*/
 	AVP_IMS_User_Identity								= 700,
 	AVP_IMS_MSISDN										= 701,
@@ -290,17 +291,17 @@ enum {
 enum {
 	
 	/*added from ETSI 283 034 */
-	AVP_ETSI_Globally_Unique_Address						=300,
+	AVP_ETSI_Globally_Unique_Address					=300,
 	AVP_ETSI_Address_Realm								=301,
 	AVP_ETSI_Logical_Access_Id							=302,
 	AVP_ETSI_Initial_Gate_Setting						=303, 
-	AVP_ETSI_QoS_Profile									=304,
+	AVP_ETSI_QoS_Profile								=304,
 	AVP_ETSI_IP_Connectivity_Status						=305,
-	AVP_ETSI_Access_Network_Type							=306,
+	AVP_ETSI_Access_Network_Type						=306,
 	AVP_ETSI_Aggregation_Network_Type					=307,
 	AVP_ETSI_Maximum_Allowed_Bandwidth_UL				=308,
 	AVP_ETSI_Maximum_Allowed_Bandwidth_DL				=309, 
-	AVP_ETSI_Transport_Class								=311,
+	AVP_ETSI_Transport_Class							=311,
 	AVP_ETSI_Application_Class_ID						=312,
 	AVP_ETSI_Physical_Access_ID							=313,
 	AVP_ETSI_Location_Information						=350,
@@ -405,6 +406,12 @@ enum {
 enum {
 	AVP_IMS_Requested_Domain_CS							= 0,
 	AVP_IMS_Requested_Domain_PS							= 1
+};
+
+/** UAR Flags	*/
+enum{
+	AVP_IMS_UAR_Flags_None								= 0,
+	AVP_IMS_UAR_Flags_Emergency_Registration			= 1
 };
 
 /** Current-Location AVP */
