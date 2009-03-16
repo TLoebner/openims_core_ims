@@ -284,7 +284,7 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * <p>
  * - P_is_anonymous_identity()- checks if the request came from an Anonymous User Identity, see 3GPP TS 23.003 : 13.6	
  * - P_emergency_flag() - checks if the user made an Emergency Registration
- * - P_enforce_sos_routes - deletes all Route headers and adds one with the URI of the selected E-CSCF
+ * - P_enforce_sos_routes() - deletes all Route headers and adds one with the URI of the selected E-CSCF
  * - P_380_em_alternative_serv() - Create the body of a 380 Alternative Service reply for Emergency reasons (e.g. emergency Registration needed) 
  * - P_emergency_ruri() - checks if the Request Uri is used for an Emergency Service (e.g. "urn:service:sos")
  * - P_emergency_serv_enabled() - checks if the module has Emergency Services enabled 
