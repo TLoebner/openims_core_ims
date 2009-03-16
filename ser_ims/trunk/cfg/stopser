@@ -2,4 +2,4 @@
 
 X=$1
 
-ps fax | grep "/ser -f " | grep $X | awk '{}{print $0; ;system( "kill SIGINT " $1);}'
+ps fax | grep "/ser -f " | grep $X | awk '{}{print $0; ;system( "kill -2 " $1);}'
