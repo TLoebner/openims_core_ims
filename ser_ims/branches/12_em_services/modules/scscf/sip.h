@@ -187,6 +187,6 @@ int cscf_get_to_tag(struct sip_msg* msg, str* tag);
 int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
 int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
 
-int cscf_get_sos_uri_param(contact_t * contact);
+int cscf_get_sos_uri_param(str contact_uri);
 
 #endif /* PIS_CSCF_SIP_H */

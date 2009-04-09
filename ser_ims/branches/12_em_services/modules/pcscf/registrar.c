@@ -266,12 +266,12 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
 			
-			sos_reg = cscf_get_sos_uri_param(c);
+			sos_reg = cscf_get_sos_uri_param(c->uri);
 			if(sos_reg < 0)
 				return 0;
 
 			if(sos_reg>0)
-				LOG(L_DBG,"DBG:"M_NAME":with sos uri param\n");
+				LOG(L_DBG,"DBG:"M_NAME":update_contact: with sos uri param\n");
 			
 			if (expires>local_time_now) {
 				if (requires_nat &&				/* only if NAT was enabled */ 
@@ -401,7 +401,7 @@ int r_is_integrity_protected(str host,int port,int r_port,int transport, unsigne
 //		transport,host.len,host.s,port);
 
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, ANY_REG);
 
 	if (!c) return 0;
 	
@@ -449,9 +449,10 @@ int r_is_integrity_protected(str host,int port,int r_port,int transport, unsigne
  * @param host - host of the UE
  * @param port - port of the UE
  * @param transport - transport of the UE
+ * @param sos_mask - type of registration
  * @returns 1 if registered, 0 if not or error
  */
-int r_is_registered(str host,int port,int transport)
+int r_is_registered(str host,int port,int transport, r_reg_type sos_mask)
 {
 	int ret=0;
 	r_contact *c;
@@ -461,7 +462,7 @@ int r_is_registered(str host,int port,int transport)
 //		transport,host.len,host.s,port);
 
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, sos_mask);
 
 	if (!c){		
 		return 0;
@@ -496,7 +497,7 @@ name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t prefer
 	LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Asserting preferred id <%.*s>\n",
 		preferred.uri.len,preferred.uri.s);
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, ANY_REG);
 
 	if (!c){
 		LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Contact not found\n");		

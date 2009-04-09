@@ -274,7 +274,7 @@ int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
 	for(c=contact_bd->contacts;c;c=c->next){
 		LOG(L_DBG,"DBG:"M_NAME":P_emergency_flag: contact <%.*s>\n",c->uri.len,c->uri.s);
 			
-		sos_reg += cscf_get_sos_uri_param(c);
+		sos_reg += cscf_get_sos_uri_param(c->uri);
 		if(sos_reg < 0)
 			return CSCF_RETURN_FALSE;
 	}
@@ -284,6 +284,37 @@ int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
 
 	return CSCF_RETURN_FALSE;
 }
+
+/**
+ * Finds if the message comes from an emergency registered UE at this P-CSCF
+ * @param msg - the SIP message
+ * @param str1 - the realm to look into
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if registered, #CSCF_RETURN_FALSE if not 
+ */
+int P_is_em_registered(struct sip_msg *msg,char *str1,char *str2)
+{
+	int ret=CSCF_RETURN_FALSE;
+	struct via_body *vb;
+
+	LOG(L_INFO,"DBG:"M_NAME":P_is_em_registered: Looking if it has emergency registered\n");
+//	print_r(L_INFO);
+
+	vb = cscf_get_ue_via(msg);
+
+	
+	if (vb->port==0) vb->port=5060;
+	LOG(L_INFO,"DBG:"M_NAME":P_is_em_registered: Looking for <%d://%.*s:%d>\n",
+		vb->proto,vb->host.len,vb->host.s,vb->port);
+	
+	if (r_is_registered(vb->host,vb->port,vb->proto, EMERG_REG)) 
+		ret = CSCF_RETURN_TRUE;
+	else 
+		ret = CSCF_RETURN_FALSE;	
+	
+	return ret;
+}
+
 
 int select_ECSCF(str * ecscf_used){
 

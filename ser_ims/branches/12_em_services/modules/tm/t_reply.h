@@ -74,6 +74,16 @@ typedef int (*treply_wb_f)( struct cell* trans,
 	unsigned int code, char * text, char * body, 
 	char * new_header, char * to_tag);
 
+typedef int (*tenter_ctx_f)(unsigned int new_hash_index, unsigned int new_label,
+		enum route_mode * crt_rmode, enum route_mode new_rmode, 
+		struct cell** crt_trans, struct cell ** new_trans);
+typedef int (*texit_ctx_f)(struct cell * new_trans, enum route_mode new_rmode);
+
+int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
+		enum route_mode * crt_rmode, enum route_mode new_rmode, 
+		struct cell** crt_trans, struct cell ** new_trans);
+int t_exit_ctx(struct cell * new_trans, enum route_mode new_rmode);
+
 /* wrapper function needed after changes in w_t_reply */
 int w_t_reply_wrp(struct sip_msg *m, unsigned int code, char *txt);
 

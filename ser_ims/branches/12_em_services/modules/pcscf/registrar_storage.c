@@ -68,6 +68,7 @@
 #include "nat_helper.h"
 #include "security.h"
 #include "dlg_state.h"
+#include "sip.h"
 
 time_t time_now;				/**< current time 							*/
 r_hash_slot *registrar=0;		/**< the actual registrar					*/
@@ -508,9 +509,10 @@ void free_r_security(r_security *s)
  * @param host - the IP in string format
  * @param port - the port number
  * @param transport - the transport type
+ * @param sos_mask - type of registration
  * @returns - the r_contact found, 0 if not found
  */
-r_contact* get_r_contact(str host,int port,int transport)
+r_contact* get_r_contact(str host,int port,int transport, r_reg_type sos_mask)
 {
 	r_contact *c=0;
 	unsigned int hash;
@@ -520,6 +522,7 @@ r_contact* get_r_contact(str host,int port,int transport)
 	c = registrar[hash].head;
 	while(c){
 		if (c->port == port &&
+			(c->sos_flag & sos_mask) &&
 //			c->transport == transport && /* because xten doesn't care about protocols */ 
 			c->host.len == host.len &&
 			strncasecmp(c->host.s,host.s,host.len)==0) return c;
@@ -543,7 +546,7 @@ r_contact* get_r_contact(str host,int port,int transport)
  * @returns the new r_contact* or NULL on error
  */
 r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States reg_state,int expires,
-	str *service_route,int service_route_cnt)
+	str *service_route,int service_route_cnt, r_reg_type sos_flag)
 {
 	r_contact *c;
 	int i;
@@ -563,6 +566,7 @@ r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States
 	STR_SHM_DUP(c->uri,uri,"new_r_contact");		
 	c->reg_state = reg_state;
 	c->expires = expires;	
+	c->sos_flag = sos_flag;	
 		
 	if (service_route_cnt && service_route){
 		c->service_route = shm_malloc(service_route_cnt*sizeof(str));
@@ -598,16 +602,16 @@ out_of_memory:
  * @param service_route - array of service routes
  * @param service_route_cnt - the size of the array above
  * @param pinhole - NAT pin hole
- * @param sos_flag - flag for Emergency Registration
+ * @param sos_flag - type of registration: Emergency or Normal 
  * @returns the newly added r_contact, 0 on error
  */
 r_contact* add_r_contact(str host,int port,int transport,str uri,
-	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest *pinhole, int sos_flag)
+	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest *pinhole, r_reg_type sos_flag)
 {
 	r_contact *c;
 
 	if (!registrar) return 0;
-	c = new_r_contact(host,port,transport,uri,reg_state, expires, service_route, service_route_cnt);
+	c = new_r_contact(host,port,transport,uri,reg_state, expires, service_route, service_route_cnt, sos_flag);
 	if (!c) return 0;
 	c->next=0;
 	r_lock(c->hash);
@@ -642,13 +646,17 @@ r_contact* update_r_contact(str host,int port,int transport,
 {
 	r_contact *c=0;
 	int i;
+	r_reg_type sos_mask;
+
+	if(sos_flag && (*sos_flag>0))
+		sos_mask = EMERG_REG;
+	else	sos_mask = NORMAL_REG;
 	
-	
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, sos_mask);
 	if (!c){
 		if (uri&&reg_state && expires && service_route && service_route_cnt)
-			return pinhole?add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, *pinhole, (sos_flag?*sos_flag:0)):
-					   add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, 0,  (sos_flag?*sos_flag:0));
+			return pinhole?add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, *pinhole, sos_mask):
+					   add_r_contact(host,port,transport,*uri,*reg_state,*expires,*service_route,*service_route_cnt, 0,  sos_mask);
 		else return 0;
 	}else{
 		/* first drop the old temporary public ids */
@@ -686,7 +694,7 @@ r_contact* update_r_contact(str host,int port,int transport,
 			}
 		}
 		if (pinhole) c->pinhole = *pinhole;
-		if (sos_flag) c->sos_flag = *sos_flag;
+		c->sos_flag = sos_mask;
 		return c;
 	}
 	
@@ -707,14 +715,20 @@ out_of_memory:
  */
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
-	r_security *s)
+	r_security *s, int * sos_reg)
 {
-	r_contact *c;
+	r_contact *c = NULL;
+	r_reg_type sos_mask =  NORMAL_REG;
 	
-	c = get_r_contact(host,port,transport);
+	if(sos_reg && (*sos_reg)>0){
+			LOG(L_DBG,"DBG:"M_NAME":update_r_contact_sec: with sos uri param\n");
+			sos_mask = EMERG_REG;
+	}
+	
+	c = get_r_contact(host,port,transport, sos_mask);
 	if (!c){
 		if (uri&&reg_state){
-			c = add_r_contact(host,port,transport,*uri,*reg_state,*expires,(str*) 0,0,0,0);
+			c = add_r_contact(host,port,transport,*uri,*reg_state,*expires,(str*) 0,0,0,sos_mask);
 			c->security_temp = s;
 			r_unlock(c->hash);
 			return c;
@@ -726,6 +740,7 @@ r_contact* update_r_contact_sec(str host,int port,int transport,
 			free_r_security(c->security_temp);
 		}		
 		c->security_temp = s;
+		c->sos_flag = sos_mask;
 		r_unlock(c->hash);
 		return c;
 	}
@@ -742,7 +757,7 @@ r_contact* update_r_contact_sec(str host,int port,int transport,
 r_nat_dest* get_r_nat_pinhole(str host, int port, int transport) {
 	r_contact * contact;
 	
-	contact = get_r_contact(host, port, transport);
+	contact = get_r_contact(host, port, transport, ANY_REG);
 	if(contact != NULL) {
 		return contact -> pinhole;
 	}
@@ -818,10 +833,11 @@ void print_r(int log_level)
 		r_lock(i);
 		c = registrar[i].head;
 		while(c){
+
 			LOG(log_level,ANSI_GREEN"INF:"M_NAME":[%4d] C: <"ANSI_RED"%d://%.*s:%d"ANSI_GREEN"> Exp:["ANSI_MAGENTA"%4ld"ANSI_GREEN"] R:["ANSI_MAGENTA"%2d"ANSI_GREEN"] SOS:["ANSI_MAGENTA"%c"ANSI_GREEN"] <%.*s>\n",i,
 			c->transport,c->host.len,c->host.s,c->port,
 				c->expires-time_now,c->reg_state,
-				c->sos_flag?'X':' ',
+				(c->sos_flag & EMERG_REG)?'X':' ',
 				c->uri.len,c->uri.s);					
 			for(j=0;j<c->service_route_cnt;j++)
 				LOG(log_level,ANSI_GREEN"INF:"M_NAME":         SR: <"ANSI_YELLOW"%.*s"ANSI_GREEN">\n",c->service_route[j].len,c->service_route[j].s);

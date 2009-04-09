@@ -100,6 +100,8 @@ enum _hdr_types_t {
 	HDR_REQUESTDISPOSITION_T	       /* Request-Disposition header */,
 	HDR_WWW_AUTHENTICATE_T		       /* WWW-Authenticate header field */,
 	HDR_PROXY_AUTHENTICATE_T	       /* Proxy-Authenticate header field */,
+	HDR_GEOLOCATION_T			/* Geolocation header field */,
+	HDR_ESQK_T				/* ESQK header field, for Emergency Services */,
 
 	HDR_EOH_T					       /* End of message header */
 };
@@ -163,6 +165,8 @@ typedef unsigned long long hdr_flags_t;
 #define HDR_REQUESTDISPOSITION_F	HDR_F_DEF(REQUESTDISPOSITION)
 #define HDR_WWW_AUTHENTICATE_F		HDR_F_DEF(WWW_AUTHENTICATE)
 #define HDR_PROXY_AUTHENTICATE_F	HDR_F_DEF(PROXY_AUTHENTICATE)
+#define HDR_GEOLOCATION_F		HDR_F_DEF(GEOLOCATION)
+#define HDR_ESQK_F			HDR_F_DEF(ESQK)
 
 #define HDR_OTHER_F					HDR_F_DEF(OTHER)
 
@@ -202,6 +206,8 @@ static inline int hdr_allocs_parse(struct hdr_field* hdr)
 		case HDR_RPID_T:
 		case HDR_REFER_TO_T:
 		case HDR_SUBSCRIPTION_STATE_T:
+		case HDR_GEOLOCATION_T:
+
 			return 1;
 		default:
 			return 0;

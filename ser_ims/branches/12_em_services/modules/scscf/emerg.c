@@ -97,7 +97,7 @@ int S_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
 		 for(c=((contact_body_t*)h->parsed)->contacts;c;c=c->next){
 			LOG(L_DBG,"DBG:"M_NAME":S_emergency_flag: contact <%.*s>\n",c->uri.len,c->uri.s);
 			
-			x = cscf_get_sos_uri_param(c);
+			x = cscf_get_sos_uri_param(c->uri);
 			if(x < 0)
 				return CSCF_RETURN_ERROR;
 			sos_reg += x;
