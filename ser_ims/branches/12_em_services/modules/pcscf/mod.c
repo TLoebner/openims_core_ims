@@ -360,6 +360,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_emergency_ruri",			P_emergency_ruri,			0, 0, REQUEST_ROUTE},
 	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
+	{"P_is_em_registered",			P_is_em_registered, 			0, 0, REQUEST_ROUTE},
 
 	{0, 0, 0, 0, 0}
 }; 

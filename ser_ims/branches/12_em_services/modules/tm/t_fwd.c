@@ -158,6 +158,8 @@ static char *print_uac_request( struct cell *t, struct sip_msg *i_req,
 	add_rm_backup = i_req->add_rm;
 	body_lumps_backup = i_req->body_lumps;
 	i_req->add_rm = dup_lump_list(i_req->add_rm);
+	LOG(L_DBG, "DBG:print_uac_request: after add_rm dup, add rum backup %p, dup rm %p\n",
+			add_rm_backup, i_req->add_rm);
 	i_req->body_lumps = dup_lump_list(i_req->body_lumps);
 
 	if (branch_route) {
@@ -759,6 +761,7 @@ int t_forward_nonack( struct cell *t, struct sip_msg* p_msg ,
 	*/
 	if (first_branch==0) {
 		try_new=1;
+		LOG(L_DBG, "DBG: before add_uac\n");
 		branch_ret=add_uac( t, p_msg, GET_RURI(p_msg), GET_NEXT_HOP(p_msg), proxy, proto );
 		if (branch_ret>=0) 
 			added_branches |= 1<<branch_ret;

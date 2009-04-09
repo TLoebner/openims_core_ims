@@ -464,7 +464,7 @@ int P_is_registered(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_INFO,"DBG:"M_NAME":P_is_registered: Looking for <%d://%.*s:%d>\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port);
 	
-	if (r_is_registered(vb->host,vb->port,vb->proto)) 
+	if (r_is_registered(vb->host,vb->port,vb->proto, NORMAL_REG)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;	
@@ -768,7 +768,7 @@ int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2)
 	vb = cscf_get_ue_via(msg);
 	
 	if (vb->port==0) vb->port=5060;
-	c = get_r_contact(vb->host,vb->port,vb->proto);
+	c = get_r_contact(vb->host,vb->port,vb->proto, ANY_REG);
 	if (!c) return CSCF_RETURN_FALSE;
 
 	hdr = cscf_get_next_route(msg,0);
@@ -854,7 +854,7 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	
 	if (vb->port==0) vb->port=5060;
 	
-	c = get_r_contact(vb->host,vb->port,vb->proto);
+	c = get_r_contact(vb->host,vb->port,vb->proto, ANY_REG);
 	if (!c) return CSCF_RETURN_FALSE;
 	if (!c->service_route_cnt){
 		r_unlock(c->hash);
@@ -984,7 +984,7 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 		if(uri.port_no == 0)
 			uri.port_no=5060;
 		
-		c = get_r_contact(uri.host, uri.port_no, uri.proto);
+		c = get_r_contact(uri.host, uri.port_no, uri.proto, ANY_REG);
 		
 		if(c==NULL || c->pinhole == NULL) {
 			LOG(L_DBG, "ERR:"M_NAME":P_NAT_relay: we cannot find the pinhole for contact %.*s. Sorry\n", req_uri.len, req_uri.s);
@@ -1098,7 +1098,7 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 		dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", req->rcv.src_port);
 	}	
 	else {
-		c = get_r_contact(host,port,proto);
+		c = get_r_contact(host,port,proto, ANY_REG);
 		if (!c || !c->security || c->security->type==SEC_NONE) {
 			LOG(L_DBG, "ERR:"M_NAME":P_security_relay: we cannot find the contact or its IPSec/TLS SAs for <%d://%.*s:%d>.\n", 
 				proto,host.len,host.s,port);

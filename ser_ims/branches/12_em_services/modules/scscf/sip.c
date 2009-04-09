@@ -2962,7 +2962,7 @@ static str sos_uri_par={"sos", 3};
  * @param contact - contact to be checked
  * @return 1 if found, 0 if not, -1 on error
  */
-int cscf_get_sos_uri_param(contact_t * contact)
+int cscf_get_sos_uri_param(str contact_uri)
 {
 	struct sip_uri puri;
 	param_hooks_t h;
@@ -2973,9 +2973,9 @@ int cscf_get_sos_uri_param(contact_t * contact)
 	ret = 0;
 	p = NULL;
 	
-	if(parse_uri(contact->uri.s, contact->uri.len, &puri)<0){
+	if(parse_uri(contact_uri.s, contact_uri.len, &puri)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_sos_uri_param: failed to parse %.*s\n",
-				contact->uri.len, contact->uri.s);
+				contact_uri.len, contact_uri.s);
 		return -1;
 	}
 	if(puri.params.len <= 0)

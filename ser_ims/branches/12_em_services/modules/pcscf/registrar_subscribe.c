@@ -905,6 +905,7 @@ int r_notification_process(r_notification *n,int expires)
 	enum Reg_States reg_state;
 	int expires2;
 	r_subscription *s=0;
+	int sos_reg;
 	
 	r_notification_print(n);	
 	if (!n) return 0;
@@ -920,12 +921,20 @@ int r_notification_process(r_notification *n,int expires)
 					rc->uri.len,rc->uri.s);
 				goto next;
 			}
+			sos_reg = cscf_get_sos_uri_param(rc->uri);
+			if(sos_reg < 0)
+				return 0;
+
+			if(sos_reg>0)
+				LOG(L_DBG,"DBG:"M_NAME":update_contact: with sos uri param\n");
+
+		
 //			LOG(L_CRIT,"DBG:"M_NAME":r_notification_process: refreshing contacts <%.*s> [%d]\n",rc->uri.len,rc->uri.s,rc->expires);
 			if (rc->state==IMS_REGINFO_TERMINATED){
 				reg_state = DEREGISTERED;
 				expires2 = time_now+30;
 				c = update_r_contact(puri.host,puri.port_no,puri.proto,
-					0,&reg_state,&expires2,0,0,0,0);
+					0,&reg_state,&expires2,0,0,0,&sos_reg);
 				if (c) {
 					LOG(L_DBG,"DBG:"M_NAME":r_notification_process: expired contact <%.*s>\n",
 						c->uri.len,c->uri.s);
@@ -935,7 +944,7 @@ int r_notification_process(r_notification *n,int expires)
 				reg_state = REGISTERED;
 				expires2 = rc->expires+time_now;
 				c = update_r_contact(puri.host,puri.port_no,puri.proto,
-					0,&reg_state,&expires2,0,0,0,0);
+					0,&reg_state,&expires2,0,0,0,&sos_reg);
 				if (c) {
 					LOG(L_DBG,"DBG:"M_NAME":r_notification_process: refreshing contact <%.*s> [%d]\n",
 						c->uri.len,c->uri.s,rc->expires);

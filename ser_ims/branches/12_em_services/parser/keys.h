@@ -166,5 +166,8 @@
 #define _est__ 0x2d747365   /* "est-" */
 
 #define _min__ 0x2d6e696d   /* "min-" */
+#define _geol_ 0x6c6f6567   /* "geol" */
+#define _ocat_ 0x7461636f   /* "ocat" */
+
 
 #endif /* KEYS_H */

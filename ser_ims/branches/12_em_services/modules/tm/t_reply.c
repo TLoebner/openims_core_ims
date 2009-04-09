@@ -161,6 +161,14 @@ static unsigned short resp_class_prio[]={
    before t_relay is called
 */
 
+enum route_mode get_rmode(){
+	return rmode;
+}
+
+void set_rmode(enum route_mode crt_rmode){
+	
+	rmode = crt_rmode;
+}
 
 void t_on_negative( unsigned int go_to )
 {
@@ -655,6 +663,7 @@ void inline static free_faked_req(struct sip_msg *faked_req, struct cell *t)
 	}
 
 	/* free all types of lump that were added in failure handlers */
+	//TODO: Ancuta is this OK, they are not allocated in failure_handlers?
 	del_nonshm_lump( &(faked_req->add_rm) );
 	del_nonshm_lump( &(faked_req->body_lumps) );
 	del_nonshm_lump_rpl( &(faked_req->reply_lump) );
@@ -1961,3 +1970,52 @@ void rpc_reply(rpc_t* rpc, void* c)
 		return;
 	}
 }
+
+/* context of a transaction means transaction pointer and rmode
+ * Switch to the context of another transaction, but keep the current one referenced
+ * get the current Rmode as it will be used in the future in t_exit_ctx
+ * --used in the module ECSCF, similar to lock A lock B
+ * Ancuta Onofrei
+ */
+int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
+		enum route_mode * crt_rmode, enum route_mode new_rmode, 
+		struct cell** crt_trans, struct cell** new_trans){
+	
+	if(!crt_rmode || !crt_trans || !new_trans){
+		ERR("t_enter_ctx: NULL parameters\n");
+		return -1;
+	}
+	*crt_trans = get_t(); 
+	*crt_rmode = get_rmode();
+
+	if(t_lookup_ident(new_trans, new_hash_index, new_label) < 0 ) {
+		ERR("t_enter_ctx: transaction lookup failed\n");
+		return -1;
+	}
+
+	set_rmode(new_rmode);
+	
+	return 0;
+}
+/* switch to the context of the transaction that was processed before t_enter_ctx
+ * similar to unlock A unlock B
+ * -- use it after t_enter_exit, with appropriate parameters
+ * Ancuta Onofrei
+ */
+int t_exit_ctx(struct cell * new_trans, enum route_mode new_rmode){
+	
+	struct cell * crt_trans;
+
+	if(!new_trans){
+		ERR("t_exit_ctx: NULL trans parameter\n");
+		return -1;
+	}
+	crt_trans = get_t();
+	UNREF(crt_trans);
+
+	set_t(new_trans);
+	set_rmode(new_rmode);
+
+	return 0;
+}
+

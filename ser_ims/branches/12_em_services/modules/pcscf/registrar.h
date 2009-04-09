@@ -66,7 +66,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2);
 
 int r_is_integrity_protected(str host,int port,int r_port,int transport, unsigned long session_hash);
 
-int r_is_registered(str host,int port,int transport);
+int r_is_registered(str host,int port,int transport, r_reg_type sos_mask);
 
 name_addr_t r_assert_identity(str host, int port,int transport,name_addr_t preferred);
 
