@@ -1197,7 +1197,7 @@ struct hdr_field* cscf_get_next_via_hdr(struct sip_msg *msg,struct hdr_field *st
  * trims the str 
  * @param s - str param to trim
  */
-static int str_trim(str *s)
+int str_trim(str *s)
 {
 	int i;
 	for (i = 0;i < s->len; i++)

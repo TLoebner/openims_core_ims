@@ -101,7 +101,7 @@ struct module_exports exports = {
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 										/**< link to the stateless reply function in sl module */
 
-struct tm_binds tmb_lrf;            						/**< Structure with pointers to tm funcs 		*/
+struct tm_binds tmb;            						/**< Structure with pointers to tm funcs 		*/
 
 /**
  * Fix the configuration parameters.
@@ -188,7 +188,7 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR:"M_NAME":mod_init: Can not import load_tm. This module requires tm module\n");
 		goto error;
 	}
-	if (load_tm(&tmb_lrf) == -1)
+	if (load_tm(&tmb) == -1)
 		goto error;
 
 	/* register the user datas timer */
@@ -261,7 +261,7 @@ static void mod_destroy(void)
 int LRF_trans_in_processing(struct sip_msg* msg, char* str1, char* str2)
 {
 	unsigned int hash, label;
-	if (tmb_lrf.t_get_trans_ident(msg,&hash,&label)<0)
+	if (tmb.t_get_trans_ident(msg,&hash,&label)<0)
 		return CSCF_RETURN_FALSE;
 	return CSCF_RETURN_TRUE;	
 }
