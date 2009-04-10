@@ -26,7 +26,7 @@
 #include "user_data.h"
 
 extern str esqk_prefix_str;
-extern struct tm_binds tmb_lrf;    
+extern struct tm_binds tmb;    
 
 int user_data_hash_size;
 user_d_hash_slot * user_datas = 0;
@@ -498,13 +498,13 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 		goto error;
 	}
 
-	if(tmb_lrf.t_lookup_ident(&trans, hash_index, label)!=1){
+	if(tmb.t_lookup_ident(&trans, hash_index, label)!=1){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not get the trans from the hash and index\n");
 		goto error;
 	}
 
 
-	if(tmb_lrf.t_reply_with_body(trans, 200, "OK", resp_body.s, headers.s, "lrf" )!= 1){
+	if(tmb.t_reply_with_body(trans, 200, "OK", resp_body.s, headers.s, "lrf" )!= 1){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not send the response\n");
 		goto error2;
 	}
@@ -518,7 +518,7 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	return CSCF_RETURN_TRUE;
 
 error2:
-	tmb_lrf.t_unref_ident(trans->hash_index, trans->label);
+	tmb.t_unref_ident(trans->hash_index, trans->label);
 error:
 	if(d)
 		lrf_unlock(d->hash);
