@@ -408,11 +408,21 @@ int LRF_del_user_data(struct sip_msg* msg, char*str1, char*str2){
 
 int get_options_resp_body(str * body, user_d * d){
 	
-	str new_body;
+	body->s = NULL;
+	body->len = 0;
 
-	STR_PKG_DUP(new_body, d->psap_uri, "get_options_resp_body");
-	body->s = new_body.s;
-	body->len = new_body.len;
+	body->s = pkg_malloc(d->psap_uri.len+1);
+	if (!body->s){
+		LOG(L_ERR,"ERR:"M_NAME":get_options_resp_body: Error allocating %d bytes\n", d->psap_uri.len);
+		body->len = 0;
+		goto out_of_memory;
+	}else{
+		body->len = d->psap_uri.len;\
+		memcpy(body->s, d->psap_uri.s, d->psap_uri.len);
+		body->s[body->len] = '\0';
+	}
+	LOG(L_DBG, "DBG:"M_NAME":get_options_resp_body: body of the OPTIONS response is %.*s\n",
+			body->len, body->s);
 	return 0;
 out_of_memory:
 	return -1;

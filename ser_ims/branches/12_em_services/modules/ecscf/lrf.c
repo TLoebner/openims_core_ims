@@ -121,7 +121,6 @@ psap_set:
 		goto error;
 	}
 
-
 	LOG(L_DBG, "DBG:"M_NAME":E_set_em_info: psap_uri is %.*s and esqk value is %.*s\n",
 			psap_uri.len, psap_uri.s, esqk.len, esqk.s);
 
@@ -441,7 +440,7 @@ ret_false:
  * @param msg - the SIP request
  * @param str1 - not used
  * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_BREAK on error 
+ * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if no location-conveyance info is found or #CSCF_RETURN_ERROR on error 
  */
 int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	
@@ -458,12 +457,12 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	enum e_dialog_direction dir = get_dialog_direction(str1);
 	if(dir == DLG_MOBILE_UNKNOWN){
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location: error invalid argument str1\n");
-		return CSCF_RETURN_FALSE;
+		return CSCF_RETURN_ERROR;
 	}
 		
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len)
-		return CSCF_RETURN_FALSE;
+		return CSCF_RETURN_ERROR;
 
 	LOG(L_DBG,"DBG:"M_NAME":E_get_location: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
@@ -477,27 +476,27 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	if(parse_geoloc(msg)){
 		
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location: error while parsing the Geolocation header\n");
-		goto error;
+		goto error_loc;
 	}	
 
 	print_geoloc((struct geoloc_body*)msg->geolocation->parsed);
 	if(!((struct geoloc_body*)msg->geolocation)->retrans_par){
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location:the location does not support routing based on location\n");
-		goto error;
+		goto error_loc;
 	}
 
 	for(value = ((struct geoloc_body*)msg->geolocation->parsed)->loc_list;value!=NULL; value=value->next){
 	
 		if(value->locURI.type != CID_T){
-			LOG(L_ERR, "ERR:"M_NAME":E_get_location: location valid unsupported\n");
-			goto error;
+			LOG(L_ERR, "ERR:"M_NAME":E_get_location: geolocation uri type unsupported\n");
+			goto error_loc;
 		}
 	}
 
 	
 	if(get_pidf_body(msg, &pidf_body)){
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location:could not get the pidf+xml body, but with the Geolocation header set\\n");
-		goto error;
+		goto error_loc;
 	}
 	
 	//LOG(L_DBG, "DBG:"M_NAME":the pidf body to be parsed is %.*s\n",
@@ -505,7 +504,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	if(!(presence = xml_parse_string(pidf_body))){
 		LOG(L_ERR, "ERR:"M_NAME": E_get_location:invalid xml content\n");
-		goto error;
+		goto error_loc;
 	}
 
 	//print_element_names(presence);
@@ -514,7 +513,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location:could not find a valid location element, but with the Geolocation header set\n");
 		xmlFreeDoc(presence->doc);
-		goto error;
+		goto error_loc;
 	}
 
 	if((crt_loc_fmt == GEO_SHAPE_LOC) || (crt_loc_fmt == NEW_CIV_LOC) ||
@@ -525,11 +524,11 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	}else if(crt_loc_fmt == ERR_LOC){
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location:error while parsing the location information\n");
 		xmlFreeDoc(presence->doc);
-		goto error;
+		goto error_loc;
 	}else{
 		LOG(L_DBG, "DBG:"M_NAME":E_get_location:no LoST supported format\n");
 		xmlFreeDoc(presence->doc);
-		goto error;
+		goto error_loc;
 	}
 //	LOG(L_DBG, "DBG:"M_NAME":get_location:printing the location useful tree\n");
 //	print_element_names(loc);
@@ -541,10 +540,9 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	d_unlock(d->hash);
 	return CSCF_RETURN_TRUE;
-error:
+error_loc:
 	d_unlock(d->hash);
-	return CSCF_RETURN_ERROR;
-
+	return CSCF_RETURN_FALSE;
 }
 
 /* get the PIDF-LO body of a request
