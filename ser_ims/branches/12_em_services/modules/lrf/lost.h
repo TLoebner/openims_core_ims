@@ -1,5 +1,5 @@
-#ifndef ECSCF_LOST_H
-#define ECSCF_LOST_H
+#ifndef LRF_LOST_H
+#define LRF_LOST_H
 
 #include "../../str.h"
 

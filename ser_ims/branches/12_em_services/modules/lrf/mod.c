@@ -44,6 +44,7 @@ extern user_d_hash_slot * user_datas;
 /* parameters storage */
 int user_d_hash_size=1024;
 char* lrf_name="sip:lrf.open-ims.test:8060";	/**< SIP URI of this LRF */
+char* local_psap_uri="sip:bob@open-ims.test";	/**< SIP URI of the local default PSAP */
 char * lost_server_url= "http://lost.open-ims.test:8180/lost/LoSTServlet";
 str lrf_name_str={0,0};				
 lost_server_info lost_server;			/**< info from the http URL of the lost server>*/
@@ -51,6 +52,7 @@ lost_server_info lost_server;			/**< info from the http URL of the lost server>*
   to the appropriate LRF, using the ESQK including this prefix*/
 char * esqk_prefix = "123";
 str esqk_prefix_str = {0,0};
+str local_psap_uri_str = {0,0};
 int * shutdown_singleton;				/**< Shutdown singleton 	*/
 
 int LRF_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
@@ -80,6 +82,7 @@ static param_export_t lrf_params[]={
 	{"name", 			STR_PARAM, 		&lrf_name},
 	{"lost_server",			STR_PARAM, 		&lost_server_url},
 	{"esqk_prefix",			STR_PARAM, 		&esqk_prefix},
+	{"default_psap",		STR_PARAM, 		&local_psap_uri},
 	{0,0,0} 
 };
 
@@ -156,6 +159,9 @@ int fix_parameters()
 			lost_server.host.len, lost_server.host.s, lost_server.port);
 	esqk_prefix_str.s = esqk_prefix;
 	esqk_prefix_str.len = strlen(esqk_prefix);
+
+	local_psap_uri_str.s = local_psap_uri;
+	local_psap_uri_str.len = strlen(local_psap_uri);
 
 	return 1;
 }
