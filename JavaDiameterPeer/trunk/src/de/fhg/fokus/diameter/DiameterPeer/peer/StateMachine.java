@@ -537,7 +537,7 @@ public class StateMachine {
 			LOGGER.error("StateMachine: Peer "+p.FQDN+" can not be resolved.");
 			return StateMachine.I_Rcv_Conn_NAck;
 		} catch (IOException e1) {
-			LOGGER.error("StateMachine: Peer "+p.FQDN+" not responding to connection attempt ");
+			LOGGER.error("StateMachine: Peer "+p.FQDN+":"+p.port+" not responding to connection attempt ");
 			return StateMachine.I_Rcv_Conn_NAck;
 		}
 		Communicator r = new Communicator(s,p,Communicator.Initiator);

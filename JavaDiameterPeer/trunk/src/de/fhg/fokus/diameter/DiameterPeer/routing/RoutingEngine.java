@@ -78,7 +78,7 @@ public class RoutingEngine {
 		if (avp!=null) destinationHost = new String(avp.getData());
 		if (destinationHost!=null && destinationHost.length()>0){
 			p = peerManager.getPeerByFQDN(destinationHost);
-			if (p!=null && (p.state==StateMachine.I_Open || p.state!=StateMachine.R_Open))
+			if (p!=null && (p.state==StateMachine.I_Open || p.state==StateMachine.R_Open))
 				return p;
 		}
 		avp = msg.findAVP(AVP.Destination_Realm);
@@ -88,14 +88,14 @@ public class RoutingEngine {
 			if (rr!=null){
 				for (RoutingEntry i : rr.routes) {
 					p = peerManager.getPeerByFQDN(i.FQDN);
-					if (p!=null && (p.state==StateMachine.I_Open || p.state!=StateMachine.R_Open))
+					if (p!=null && (p.state==StateMachine.I_Open || p.state==StateMachine.R_Open))
 						return p;					
 				}
 			}
 		}
 		for (RoutingEntry i : defaultRoutes) {
 			p = peerManager.getPeerByFQDN(i.FQDN);
-			if (p!=null && (p.state==StateMachine.I_Open || p.state!=StateMachine.R_Open))
+			if (p!=null && (p.state==StateMachine.I_Open || p.state==StateMachine.R_Open))
 				return p;					
 		}
 		return null;
