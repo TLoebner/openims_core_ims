@@ -26,6 +26,7 @@
 
 extern lost_server_info lost_server;	
 extern str local_psap_uri_str;
+extern int using_lost_srv;
 
 static str service_hdr_name = {"Service",7};
 
@@ -73,6 +74,64 @@ error:
 
 int LRF_get_location(struct sip_msg* msg, loc_fmt *crt_loc_fmt, xmlNode** loc);
 
+/* Get the PSAP URI by interrogating the LoST server
+ * @param d - the user data for which the PSAP URI is searched
+ * @returns a null string if error, otherwise the PSAP URI
+ */
+str get_psap_by_LoST(user_d * d){
+
+	str reason, psap_uri = {NULL, 0}, result = {NULL, 0}, lost_req = {NULL, 0};
+	lost_resp_type resp_type;
+	xmlNode* location = NULL, *root= NULL;
+	loc_fmt d_loc_fmt;
+	struct sip_uri puri;
+	expire_type exp_type;
+       	time_t exp_timestamp;
+
+	location = d->loc;
+	d_loc_fmt = d->l_fmt;
+
+	if(create_lost_req(location, d_loc_fmt, &lost_req)){
+	
+		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap:could not create the LoST request\n");
+		goto end;
+	}
+	
+	if(snd_rcv_LoST(lost_req, &result)){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap:could not send the LoST request, setting the default PSAP URI\n");
+		goto end;
+	}
+	
+	//verify what kind of message we have received
+	root = get_LoST_resp_type(result, &resp_type, &reason);
+	if(resp_type != LOST_OK){
+		
+		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: LoST response type is not OK\n");
+		if(reason.s != NULL)
+			LOG(L_DBG, "DBG:"M_NAME": LRF_get_psap:reason: %s\n", reason.s);
+		
+		goto end;
+	}
+
+	//get the PSAP URI
+	psap_uri = get_mapped_psap(root, &exp_type, &exp_timestamp, &puri);
+	if(!psap_uri.s || !psap_uri.len){
+		LOG(L_ERR, "ERR:"M_NAME": LRF_get_psap:LoST response had no valid SIP uri\n");
+		goto end;
+	}
+
+	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:found psap uri is %.*s\n", psap_uri.len, psap_uri.s);
+	
+end:
+	if(result.s)
+		pkg_free(result.s);
+	if(lost_req.s)
+		pkg_free(lost_req.s);
+	if(root)
+		xmlFreeDoc(root->doc);
+	return psap_uri;
+}
+
 /* Find the appropriate psap uri that the request should be forwarded to
  * @param msg - the sip request from the ECSCF node
  * @param str1 
@@ -81,15 +140,7 @@ int LRF_get_location(struct sip_msg* msg, loc_fmt *crt_loc_fmt, xmlNode** loc);
  */
 int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 
-	str reason, result = {NULL, 0}, lost_req = {NULL, 0};
-	lost_resp_type resp_type;
 	str psap_uri = {NULL, 0};
-	xmlNode* location = NULL, *root= NULL;
-	loc_fmt d_loc_fmt;
-	struct sip_uri puri;
-	expire_type exp_type;
-       	time_t exp_timestamp;
-
 	str user_uri;
 	user_d * d=NULL;
 	str service;
@@ -108,69 +159,28 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 		return CSCF_RETURN_FALSE;
 	}
 
-	location = d->loc;
-	d_loc_fmt = d->l_fmt;
-
-	if(create_lost_req(location, d_loc_fmt, &lost_req)){
-	
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap:could not create the LoST request\n");
-		goto error;
-	}
-	
-	if(snd_rcv_LoST(lost_req, &result)){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap:could not send the LoST request, setting the default PSAP URI\n");
-		goto lost_srv_err;
-	}
-	
-	//verify what kind of message we have received
-	root = get_LoST_resp_type(result, &resp_type, &reason);
-	if(resp_type != LOST_OK){
-		
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: LoST response type is not OK\n");
-		if(reason.s != NULL)
-			LOG(L_DBG, "DBG:"M_NAME": LRF_get_psap:reason: %s\n", reason.s);
-		
-		goto error;
+	//if not using a LoST server
+	if(using_lost_srv){
+		psap_uri = get_psap_by_LoST(d);
+		if(!psap_uri.s || !psap_uri.len)
+			goto error;
+	}else{
+		//setting a local SIP URI
+		psap_uri.s = local_psap_uri_str.s;
+		psap_uri.len = local_psap_uri_str.len;
 	}
 
-	//get the PSAP URI
-	psap_uri = get_mapped_psap(root, &exp_type, &exp_timestamp, &puri);
-	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_ERR, "ERR:"M_NAME": LRF_get_psap:LoST response had no valid SIP uri\n");
-		goto error;
-	}
-
-	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:found psap uri is %.*s\n", psap_uri.len, psap_uri.s);
-lost_srv_err:
-	//!!!setting a local SIP URI...for testing purposes
-	psap_uri.s = local_psap_uri_str.s;
-	psap_uri.len = local_psap_uri_str.len;
-	
-	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:final psap uri is %.*s\n", psap_uri.len, psap_uri.s);
+	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:psap uri is %.*s\n", psap_uri.len, psap_uri.s);
 
 	STR_SHM_DUP(d->psap_uri, psap_uri, "LRF_get_psap");
 	
 	lrf_unlock(d->hash);
-
-	if(result.s)
-		pkg_free(result.s);
-	if(lost_req.s)
-		pkg_free(lost_req.s);
-	if(root)
-		xmlFreeDoc(root->doc);
-
 	return CSCF_RETURN_TRUE;
 
 error:	
 out_of_memory:
 	if(d)
 		lrf_unlock(d->hash);
-	if(root)
-		xmlFreeDoc(root->doc);
-	if(result.s)
-		pkg_free(result.s);
-	if(lost_req.s)
-		pkg_free(lost_req.s);
 	return CSCF_RETURN_FALSE;
 }
 

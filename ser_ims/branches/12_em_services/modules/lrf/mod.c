@@ -45,6 +45,7 @@ extern user_d_hash_slot * user_datas;
 int user_d_hash_size=1024;
 char* lrf_name="sip:lrf.open-ims.test:8060";	/**< SIP URI of this LRF */
 char* local_psap_uri="sip:bob@open-ims.test";	/**< SIP URI of the local default PSAP */
+int using_lost_srv = 1;				/* by default, a LoST server will be contacted*/
 char * lost_server_url= "http://lost.open-ims.test:8180/lost/LoSTServlet";
 str lrf_name_str={0,0};				
 lost_server_info lost_server;			/**< info from the http URL of the lost server>*/
@@ -83,6 +84,7 @@ static param_export_t lrf_params[]={
 	{"lost_server",			STR_PARAM, 		&lost_server_url},
 	{"esqk_prefix",			STR_PARAM, 		&esqk_prefix},
 	{"default_psap",		STR_PARAM, 		&local_psap_uri},
+	{"using_lost_srv",		INT_PARAM, 		&using_lost_srv},
 	{0,0,0} 
 };
 
@@ -117,6 +119,16 @@ int fix_parameters()
 	lrf_name_str.s = lrf_name;
 	lrf_name_str.len = strlen(lrf_name);
 
+	esqk_prefix_str.s = esqk_prefix;
+	esqk_prefix_str.len = strlen(esqk_prefix);
+
+	local_psap_uri_str.s = local_psap_uri;
+	local_psap_uri_str.len = strlen(local_psap_uri);
+
+
+	if(!using_lost_srv)
+		return 1;
+
 	if(strncmp(lost_server_url, "http://", 7) == 0){
 		lost_server.type   = HTTP_TYPE;
 		lost_server.host.s = lost_server_url;
@@ -134,7 +146,7 @@ int fix_parameters()
 				lost_server_url);
 		return 0;
 	}
-	
+			
 	car = strchr(car, ':');
 	if(car != NULL){
 		port.s = car+1;
@@ -145,7 +157,7 @@ int fix_parameters()
 			port.len = last_car - car-1;
 	
 		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: string of the lost server port: %.*s\n",port.len, port.s); 
-
+	
 		if(str2int(&port, &lost_server.port)){
 			LOG(L_ERR, "ERR:"M_NAME":fix_parameters: invalid port number for the lost server %s\n",
 					lost_server_url);
@@ -155,14 +167,7 @@ int fix_parameters()
 
 	LOG(L_DBG, "DBG:"M_NAME":fix_parameters: lost server host: %.*s port: %u\n", 
 			lost_server.host.len, lost_server.host.s, lost_server.port);
-	LOG(L_DBG, "DBG:"M_NAME":fix_parameters: lost server host: %.*s port: %u\n", 
-			lost_server.host.len, lost_server.host.s, lost_server.port);
-	esqk_prefix_str.s = esqk_prefix;
-	esqk_prefix_str.len = strlen(esqk_prefix);
-
-	local_psap_uri_str.s = local_psap_uri;
-	local_psap_uri_str.len = strlen(local_psap_uri);
-
+	
 	return 1;
 }
 
@@ -200,7 +205,7 @@ static int mod_init(void)
 	/* register the user datas timer */
 	if (register_timer(user_data_timer, user_datas,60)<0) goto error;
 
-	if (init_lost_lib()){
+	if (using_lost_srv && init_lost_lib()){
 		LOG(L_ERR, "ERR:"M_NAME":mod_init: Error initializing the LoST library\n");
 		goto error;
 	}
