@@ -63,11 +63,16 @@ The database will contain mapping information for the location from the generate
 Unfortunately the SIP URI that will be mapped to the location informations are from the domain irt.cs.columbia.edu. For example psap_nj@irt.cs.columbia.edu.
 This are bogus users. You can modify the scripts containing the data to use users from the open-ims.test domain, using the sed tool (see http://www.grymoire.com/Unix/Sed.html#uh-1).
 You must modify civic_us.sql and geo_us.sql
-sed s/"irt.cs.columbia.edu"/"open-ims.test"/ civic_us.sql > civic_us.sql
-sed s/"irt.cs.columbia.edu"/"open-ims.test"/ geo_us.sql > geo_us.sql
+sed s/"irt.cs.columbia.edu"/"open-ims.test"/ civic_us.sql > new_civic_us.sql
+sed s/"irt.cs.columbia.edu"/"open-ims.test"/ geo_us.sql > new_geo_us.sql
 
 Now you must use these files to create the databases.
-For the emergency call scripts here defined you will have to add another user psap_nj@open-ims.test in the IMS Core.
+
+$mv new_civic_us.sql civic_us.sql
+$mv new_geo_us.sql geo_us.sql
+
+Verify that the user and name of the database from the create_db.sh, create_as.sh and create_resoler.sh are the same you are using in the LoST server, or that the user from the LoST server has been granted SELECT access to the database.
+You can now run the scripts: create_db.sh, create_as.sh and create_resoler.sh to create the Postgres database for the LoST server.
 
 Configure the LoST server for the Postgres database link
 --------------------------------------------------------
@@ -85,9 +90,9 @@ How to create and end an emergency call
 
 Using sipp
 ******************
-a) 	download the sipp src 
+a) 	download the newest sipp stable version (http://sipp.sourceforge.net)
 	compile it with MD5 authentication support as in the guide: http://sipp.sourceforge.net/doc/reference.html#SIP+authentication
-	install sipp
+	install sipp (http://sipp.sourceforge.net/doc3.0/reference.html)
 
 b) Modify the scripts for the S-SCSCF (file cfg/scscf.cfg)
 set the default authentication algorithm to MD5
