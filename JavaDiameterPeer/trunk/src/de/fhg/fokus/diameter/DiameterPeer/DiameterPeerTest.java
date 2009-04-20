@@ -30,6 +30,9 @@
 
 package de.fhg.fokus.diameter.DiameterPeer;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+
 import org.apache.log4j.Logger;
 
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
@@ -60,9 +63,11 @@ public class DiameterPeerTest {
 		/*destination-host*/
 		a = new AVP(293,true,0);
 		a.setData("hss.open-ims.test");
+		uar.addAVP(a);
 		/*destination-realm*/
 		a = new AVP(283,true,0);
 		a.setData("open-ims.test");
+		uar.addAVP(a);
 		/*vendor-specific app id */
 		a = new AVP(260,true,0);
 			b = new AVP(266,true,0);
@@ -93,6 +98,22 @@ public class DiameterPeerTest {
 	}
 	
 	
+	public static String readConfigFile(String filename)
+	{
+		StringBuffer sb = new StringBuffer();
+	    try {
+	        BufferedReader in = new BufferedReader(new FileReader(filename));
+	        String str;
+	        while ((str = in.readLine()) != null) {
+	            sb.append(str);
+	        }
+	        in.close();
+	    } catch (Exception e1) {
+	    	e1.printStackTrace();
+			return "";
+	    }
+	    return sb.toString();
+	}
 	
 	public static void test(String[] args) throws InterruptedException {
 		
@@ -105,13 +126,16 @@ public class DiameterPeerTest {
 			// Create a Diameter client.
 			String filename = args[0];
 			LOGGER.debug("Opening Config file: "+filename);
-			DiameterPeer dp1 = new DiameterPeer(filename);
+			String xml = readConfigFile(filename);
+			
+			DiameterPeer dp1 = new DiameterPeer(xml);
 			dp1.enableTransactions(10,1);
 			
 			// Create a Diameter server.
 			String filename2 = args[1];
 			LOGGER.debug("Opening Config file: "+filename2);
-			DiameterPeer dp2 = new DiameterPeer(filename2);
+			xml = readConfigFile(filename2);
+			DiameterPeer dp2 = new DiameterPeer(xml);
 			TestEventListener eventlistener = new TestEventListener();
 			eventlistener.diameterPeer = dp2;
 			dp2.addEventListener(eventlistener);

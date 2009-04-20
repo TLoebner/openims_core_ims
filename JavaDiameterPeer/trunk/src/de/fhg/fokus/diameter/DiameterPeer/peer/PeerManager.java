@@ -160,7 +160,7 @@ public class PeerManager extends Thread {
 //			LOGGER.debug("-Peer list-");
 //			for(i=0;i<peers.size();i++){
 //				p = (Peer) peers.get(i);
-//				LOGGER.debug("Peer State:"+p.state+" FQDN:"+p.FQDN);
+//				LOGGER.debug("Peer State:"+p.state+" FQDN:"+p.FQDN+":"+p.port);
 //			}
 //			LOGGER.debug("-----------");
 			for(i=0;i<peers.size();i++){
@@ -174,7 +174,7 @@ public class PeerManager extends Thread {
 								i--;
 								break;
 							}
-							LOGGER.debug("Connecting to peer "+p.FQDN+" dynamic "+p.isDynamicPeer+" dropping "+ diameterPeer.DropUnknownOnDisconnect);
+							LOGGER.debug("Connecting to peer "+p.FQDN+":"+p.port+" dynamic "+p.isDynamicPeer+" dropping "+ diameterPeer.DropUnknownOnDisconnect);
 							p.refreshTimer();
 							StateMachine.process(p,StateMachine.Start);
 							break;
