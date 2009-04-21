@@ -2713,11 +2713,8 @@ int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 
 /**
  * Returns the terminating contact.
- * @param msg sip message
  * @param msg - the SIP message to look into
- * @param host - the host string to be filled with the result
- * @param port - the port number to be filled with the result 
- * @param transport - the transport type to be filled with the result
+ * @param uri - the uri str to be filled
  * @returns 1 on success
  */
 int cscf_get_terminating_identity(struct sip_msg *msg,str *uri)
@@ -2744,6 +2741,64 @@ int cscf_get_terminating_identity(struct sip_msg *msg,str *uri)
 	
 	LOG(L_INFO,"DBG:"M_NAME":cscf_get_terminating_identity: <%.*s> \n",uri->len,uri->s);	
 	return 1;
+}
+
+static str s_gr={"gr",2};
+/**
+ * Returns the gr parameter (GRUU id) from the terminating contact.
+ * @param msg - the SIP message to look into
+ * @param gr - the gr str to fill in the value of the parameter
+ * @returns 1 on success
+ */
+int cscf_get_terminating_identity_gr(struct sip_msg *msg,str *gr)
+{
+	struct sip_msg *req;	
+	str uri;
+	struct sip_uri puri;
+	param_hooks_t h;
+	param_t *p=0, *crt;
+	enum pclass p_class = CLASS_URI;
+	
+	gr->s=0;
+	gr->len=0;
+
+	req = msg;	
+	if (!req){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_terminating_identity_gr: NULL message!!!\n");
+		return 0;
+	}
+ 	if (req->first_line.type!=SIP_REQUEST){
+ 		req = cscf_get_request_from_reply(req);
+ 	}
+	
+	if (msg->new_uri.s) uri = msg->new_uri;
+	else uri = msg->first_line.u.request.uri;
+	
+	if(parse_uri(uri.s, uri.len, &puri)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_terminating_identity_gr: failed to parse URI <%.*s>\n",
+				uri.len, uri.s);
+		return 0;
+	}
+	if(puri.params.len <= 0)
+		return 0;
+			
+	if(parse_params(&(puri.params), p_class, &h, &p)){
+		LOG(L_ERR, "ERR:"M_NAME":cscf_get_terminating_identity_gr:error while parsing uri parameters\n");
+		if(p) free_params(p);
+		return 0;
+	}
+	
+	for(crt = p ; crt ; crt=crt->next){
+		if((crt->name.len == s_gr.len) &&
+				(strncmp(crt->name.s, s_gr.s, s_gr.len) == 0)){
+			*gr = crt->body;			
+			LOG(L_INFO,"DBG:"M_NAME":cscf_get_terminating_identity_gr: <%.*s> \n",gr->len,gr->s);	
+			if(p) free_params(p);
+			return 1;
+		}	
+	}
+	if(p) free_params(p);
+    return 0;
 }
 
 
@@ -2983,8 +3038,6 @@ int cscf_get_sos_uri_param(contact_t * contact)
 	
 	LOG(L_DBG, "DBG:"M_NAME":cscf_get_sos_uri_param: searching through the uri parameters:%.*s\n", 
 			puri.params.len, puri.params.s);        
-	if(puri.params.len == 0)
-		return 0;
 		
 	if(parse_params(&(puri.params), p_class, &h, &p)){
 		LOG(L_ERR, "ERR:"M_NAME":cscf_get_sos_uri_param:error while parsing uri parameters\n");

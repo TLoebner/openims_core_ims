@@ -107,6 +107,8 @@ typedef struct _r_contact {
 	qvalue_t qvalue;			/**< q-value of contact					*/
 	int sos_flag;				/**< 1 if Emergency, 0 otherwise		*/
 	
+	str pub_gruu;				/**< value of the gr parameter in the public gruu */
+	
 	r_contact_param *parameters;	/**< header parameters (not in the uri!)*/
 
 	struct _r_contact *next;	/**< the next contact in the list		*/
