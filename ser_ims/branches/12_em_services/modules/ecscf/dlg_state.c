@@ -564,8 +564,7 @@ static inline int find_dialog_aor(struct sip_msg *msg,enum e_dialog_direction d,
 	switch(d){
 		case DLG_MOBILE_ORIGINATING:
 			*aor = cscf_get_asserted_identity(msg); 
-			if (!aor->len) return 0;
-			return 1;
+			if (!aor->len) return cscf_get_from_uri(msg, aor);
 			break;
 		case DLG_MOBILE_TERMINATING:
 			*aor = cscf_get_called_party_id(msg,0);	

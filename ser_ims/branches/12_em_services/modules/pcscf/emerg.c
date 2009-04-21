@@ -72,6 +72,7 @@
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
 extern int emerg_support;
 extern str ecscf_uri_str;
+extern int anonym_em_call_support;
 
 /*global variables*/
 str ecscf_uri_str;
@@ -226,9 +227,29 @@ int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2){
 }
 
 /**
+ * check if the P-CSCF should accept anonymous Emergency calls
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not 
+ */
+int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2)
+{
+	struct via_body *vb;
+
+	LOG(L_INFO,"DBG:"M_NAME":P_accept_anonym_em_call: Check if the P-CSCF is configured to accept an anonymous emergency call or not\n");
+
+	if(anonym_em_call_support)	
+		return CSCF_RETURN_TRUE;
+	else	
+		return CSCF_RETURN_FALSE;
+}
+
+
+/**
  * Finds if the message comes from an anonymous sip uri at this P-CSCF
  * @param msg - the SIP message
- * @param str1 - the realm to look into
+ * @param str1 - not used
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not 
  */

@@ -99,4 +99,6 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2);
 
 int P_access_network_info(struct sip_msg *req,char *str1,char *str2);
 
+int fixup_assert_id(void** param, int param_no);
+
 #endif /* P_CSCF_REGISTRATION_H */

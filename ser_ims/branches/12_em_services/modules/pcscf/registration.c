@@ -57,6 +57,7 @@
  
 #include "registration.h"
 
+#include "../../sr_module.h"
 #include "../../data_lump.h"
 #include "../../mem/mem.h"
 #include "../../locking.h"
@@ -472,6 +473,58 @@ int P_is_registered(struct sip_msg *msg,char *str1,char *str2)
 	return ret;
 }
 
+int fixup_assert_id(void** param, int param_no){
+
+	char* str1;
+	int len;
+	fparam_t * p;
+
+	if(param_no!=1){
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: invalid param number\n");
+		return -1;
+	}
+
+	str1 = (char*) *param;
+	if(!str1 || str1[0] == '\0'){
+	
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: NULL param 1\n");
+		return -1;
+	}
+
+	len = strlen(str1);
+
+	if(len == 5 && strncmp(str1, "emerg", 5) == 0){
+		str1[0] = '1';
+	}else if (len ==9 && strncmp(str1, "non-emerg", 9)==0){
+		str1[0] = '0';
+	}else {
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: invalid param 1\n");
+		return -1;
+	}	
+
+	p = (fparam_t*)pkg_malloc(sizeof(fparam_t));
+	if (!p) {
+		ERR("No memory left\n");
+		return E_OUT_OF_MEM;
+    	}
+	memset(p, 0, sizeof(fparam_t));
+	p->orig = *param;
+
+	switch(str1[0]){
+	
+		case '0':
+			p->v.i = NORMAL_REG;
+			break;
+		case '1':
+			p->v.i = EMERG_REG;
+			break;
+	}
+
+	*param = (void*)p;
+
+	return 0;
+}
+
 
 static str p_asserted_identity_s={"P-Asserted-Identity: ",21};
 static str p_asserted_identity_m={"<",1};
@@ -479,7 +532,7 @@ static str p_asserted_identity_e={">\r\n",3};
 /**
  * Asserts the P-Preferred-Identity if registered and inserts the P-Asserted-Identity.
  * @param msg - the SIP message
- * @param str1 - the realm to look into
+ * @param str1 - "emerg"|"non-emerg", if it is about an emergency registration or not
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if asseted, #CSCF_RETURN_FALSE if not, #CSCF_RETURN_ERROR on error 
  */
@@ -490,10 +543,17 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	struct hdr_field *h=0;
 	name_addr_t preferred,asserted;
 	str x={0,0};
+	r_reg_type reg_type;
 
-	LOG(L_INFO,"INF:"M_NAME":P_assert_identity: Asserting Identity\n");
+	fparam_t * param = (fparam_t*)str1;
+	
 //	print_r(L_INFO);
 	
+	reg_type = param->v.i;
+	
+	LOG(L_INFO,"INF:"M_NAME":P_assert_identity: Asserting Identity, for an %s registration\n", 
+			(reg_type==1)?"non-emergency":"emergency");
+
 	vb = cscf_get_ue_via(msg);
 	
 	preferred = cscf_get_preferred_identity(msg,&h);
@@ -508,7 +568,7 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 		vb->proto,vb->host.len,vb->host.s,vb->port,
 		preferred.uri.len,preferred.uri.s);
 
-	asserted = r_assert_identity(vb->host,vb->port,vb->proto,preferred);
+	asserted = r_assert_identity(vb->host,vb->port,vb->proto,preferred, reg_type);
 	if (!asserted.uri.len){
 		ret = CSCF_RETURN_FALSE;	
 	}else{

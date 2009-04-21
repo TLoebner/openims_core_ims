@@ -179,6 +179,7 @@ str forced_clf_peer_str;					/**< fxied FQDN of the forced CLF DiameterPeer (CLF
 char* ecscf_uri ="sip:ecscf.open-ims.test:7060";				/** the e-cscf uri*/
 str ecscf_uri_str;
 int emerg_support = 1;
+int anonym_em_call_support = 1;
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -313,7 +314,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
 	{"P_is_registered",				P_is_registered, 			0, 0, REQUEST_ROUTE},
-	{"P_assert_identity",			P_assert_identity, 			0, 0, REQUEST_ROUTE},
+	{"P_assert_identity",			P_assert_identity, 			1, fixup_assert_id, REQUEST_ROUTE},
 
 	{"P_process_notification",		P_process_notification, 	0, 0, REQUEST_ROUTE},
 
@@ -354,6 +355,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_access_network_info",		P_access_network_info, 		1, 0, REQUEST_ROUTE},
 	
 	/*emergency services exported functions*/
+	{"P_accept_anonym_em_call",		P_accept_anonym_em_call, 	0, 0, REQUEST_ROUTE},
 	{"P_is_anonymous_identity",		P_is_anonymous_identity, 	0, 0, REQUEST_ROUTE},
 	{"P_emergency_flag",			P_emergency_flag,			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
@@ -489,6 +491,7 @@ static param_export_t pcscf_params[]={
 	
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
+	{"anonym_em_call_support",				INT_PARAM, &anonym_em_call_support},
 
 	{0,0,0} 
 };

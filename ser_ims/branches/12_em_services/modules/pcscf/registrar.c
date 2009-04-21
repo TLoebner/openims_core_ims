@@ -485,7 +485,7 @@ int r_is_registered(str host,int port,int transport, r_reg_type sos_mask)
  * @param preferred - the P-Preferred-Identity header value
  * @returns 1 if registered, {0,0} if not or error
  */
-name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t preferred)
+name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t preferred, r_reg_type reg_type)
 {
 	r_contact *c;
 	r_public *p;
@@ -497,7 +497,7 @@ name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t prefer
 	LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Asserting preferred id <%.*s>\n",
 		preferred.uri.len,preferred.uri.s);
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport, ANY_REG);
+	c = get_r_contact(host,port,transport, reg_type);
 
 	if (!c){
 		LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Contact not found\n");		
