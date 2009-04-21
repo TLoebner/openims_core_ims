@@ -671,19 +671,43 @@ int r_calc_contact_q(param_t* _q, qvalue_t* _r)
  * @param qvalue - q-value
  * @returns 1 if ok, 0 if not
  */
-static int r_add_contact(struct sip_msg *msg,str uri,int expires,qvalue_t qvalue)
+static int r_add_contact(struct sip_msg *msg,r_public *p,r_contact *c)
 {
 	str hdr;
 	int r;
-	hdr.s = pkg_malloc(10+uri.len+10+12+12+1);
-	if (!hdr.s) return 0;
-	if(qvalue != -1) {
-		float q = (float)qvalue/1000;
-		sprintf(hdr.s,"Contact: <%.*s>;expires=%d;q=%.3f\r\n",uri.len,uri.s,expires,q);
+	int expires;
+	if (!c) return 0;
+	expires = c->expires-time_now;
+	if (expires<0) expires = 0;
+	hdr.len = 10 /* "Contact: <" */
+		+c->uri.len	
+		+10			/* ">;expires= */
+		+12
+		+3			/* ";q=" */
+		+12
+		+11			/* ";pub-gruu=\"\"" */
+		+p->aor.len
+		+4			/* ;gr= */
+		+c->pub_gruu.len
+		+3			/* "\r\n\0" */ ;
+	hdr.s = pkg_malloc(hdr.len);
+	if (!hdr.s) {
+		LOG(L_ERR,"ERR:"M_NAME":r_add_contact: Error allocating %d bytes\n",hdr.len);
+		return 0;
+	}	
+	hdr.len = sprintf(hdr.s,"Contact: <%.*s>;expires=%d",
+			c->uri.len,c->uri.s,
+			expires);
+	if(c->qvalue != -1) {
+		float q = (float)(c->qvalue)/1000;
+		hdr.len+=sprintf(hdr.s+hdr.len,";q=%.3f",q);
 	}		
-	else
-		sprintf(hdr.s,"Contact: <%.*s>;expires=%d\r\n",uri.len,uri.s,expires);
-	hdr.len = strlen(hdr.s);
+	if (c->pub_gruu.len) {
+		hdr.len += sprintf(hdr.s+hdr.len,";pub-gruu=\"%.*s;gr=%.*s\"",
+				p->aor.len,p->aor.s,
+				c->pub_gruu.len,c->pub_gruu.s);
+	}
+	hdr.len+=sprintf(hdr.s+hdr.len,"\r\n");
 	r = cscf_add_header_rpl(msg,&hdr);
 	pkg_free(hdr.s);
 	return r;
@@ -695,7 +719,7 @@ static int r_add_contact(struct sip_msg *msg,str uri,int expires,qvalue_t qvalue
  * @p - the public identity
  * @uri - the uri of the given contact
  */
-static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri,qvalue_t q){
+static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri){
 
 	r_contact * c= 0;
 
@@ -707,7 +731,7 @@ static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri,qva
 			continue;
 
 		c->expires = time_now;
-		r_add_contact(msg,c->uri,0,q);
+		r_add_contact(msg,p,c);
 		del_r_contact(p,c);
 	}
 
@@ -748,7 +772,7 @@ static int update_contacts_help(struct sip_msg* msg, int _expires_hdr,
 					/*delete the previous contacts for emergency registration 
 					for the same public identity, different from the current contact*/
 					has_emerg = 1;
-					delete_emerg_contacts(msg, _p, ci->uri,qvalue);			     
+					delete_emerg_contacts(msg, _p, ci->uri);			     
 				}
 				
 				
@@ -839,7 +863,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 						//copy the contacts from the registrar into the Register response
 						if (!contacts_added){
 							for(c=p->head;c;c=c->next)
-								r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
+								r_add_contact(msg,p,c);
 							contacts_added = 1;
 						}
 					}
@@ -868,10 +892,10 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
             if (is_star){
                 LOG(L_ERR,"ERR:"M_NAME":update_contacts: STAR not accepted in contact for Re-Registration.\n");
             }else{
-	                	update_contacts_help(msg, expires_hdr, p, ua, path, assignment_type);
+            	update_contacts_help(msg, expires_hdr, p, ua, path, assignment_type);
 			
 				for(c=p->head;c;c=c->next)
-					r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);
+					r_add_contact(msg,p,c);
             }            
 			/* now update the implicit set */
 			if (p->s)
@@ -922,7 +946,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				while(c){
 					c->expires = time_now;
 					S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
-					r_add_contact(msg,c->uri,0,c->qvalue);
+					r_add_contact(msg,p,c);
 					del_r_contact(p,c);
 					c = c->next;
 				}
@@ -934,12 +958,12 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 							if (c) {
 								c->expires = time_now;
 								S_event_reg(p,c,0,IMS_REGISTRAR_CONTACT_UNREGISTERED,0);
-								r_add_contact(msg,c->uri,0,c->qvalue);
+								r_add_contact(msg,p,c);
 								del_r_contact(p,c);
 							}
 						}
 				for(c=p->head;c;c=c->next)
-					r_add_contact(msg,c->uri,c->expires-time_now,c->qvalue);						
+					r_add_contact(msg,p,c);						
 			}
 
 			/* now update the implicit set */
@@ -1321,6 +1345,7 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 	str uri,dst={0,0};
 	r_public *p=0;
 	r_contact *c=0;
+	str pub_gruu;
 
 	LOG(L_DBG,"DBG:"M_NAME":S_lookup: Looking up for contacts\n");
 	//print_r(L_INFO);
@@ -1335,8 +1360,11 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error extracting terminating uri!!!\n");
 		return CSCF_RETURN_ERROR;
 	}
+	cscf_get_terminating_identity_gr(msg,&pub_gruu);
 	
-	LOG(L_DBG,"DBG:"M_NAME":S_lookup: Looking for <%.*s>\n",uri.len,uri.s);
+	LOG(L_INFO,"DBG:"M_NAME":S_lookup: Looking for <%.*s> GRUU <%.*s>:\n",
+			uri.len,uri.s,
+			pub_gruu.len,pub_gruu.s);
 	
 	p = get_r_public(uri);
 //	pkg_free(uri.s);
@@ -1349,7 +1377,16 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 	r_act_time();
 	c = p->head;
 	while(c){
-		if (r_valid_contact(c)){
+		if (r_valid_contact(c) && 
+				(	/* if a gr parameter was specified, select only those contacts */
+				 pub_gruu.len == 0 ||
+						(
+						 pub_gruu.len == c->pub_gruu.len &&
+						 strncmp(pub_gruu.s,c->pub_gruu.s,pub_gruu.len)==0
+						)
+				)
+			)
+		{
 			LOG(L_DBG,"DBG:"M_NAME":S_lookup: Found at <%.*s>\n",
 				c->uri.len,c->uri.s);
 			
@@ -1357,9 +1394,10 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 			r_add_p_called_party_id(msg);
 			
 			if (rewrite_uri(msg, &(c->uri)) < 0) {
-				LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error rewritting uri with <%.*s>\n",
+				LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error rewriting uri with <%.*s>\n",
 					c->uri.len,c->uri.s);
-				ret = CSCF_RETURN_ERROR;	
+				ret = CSCF_RETURN_ERROR;
+				break;
 			} else {
 				if (c->path.len) {
 					dst=c->path;

@@ -637,6 +637,7 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_
 }
 
 
+static str s_sip_instance={"+sip.instance",13};
 /**
  * Updates the r_contact with the new expires, ua valu, path value.
  * \note If not found it is added
@@ -653,49 +654,51 @@ r_contact* add_r_contact(r_public *p,str uri,int expires,str ua,str path,qvalue_
 r_contact* update_r_contact(r_public *p,str uri,int *expires, str *ua,str *path,qvalue_t qvalue,param_t** cp,int *sos_flag)
 {
 	r_contact *c;
+	r_contact_param *rcp;
+	str instance_id;
 	param_t *px;
 	
 	if (!p) return 0;
 	c = get_r_contact(p,uri);
 	if (!c){
 		if (expires && ua && path)
-			return add_r_contact(p,uri,*expires,*ua,*path,qvalue,(cp?*cp:0),(sos_flag?*sos_flag:0));
+			c = add_r_contact(p,uri,*expires,*ua,*path,qvalue,(cp?*cp:0),(sos_flag?*sos_flag:0));
 		else return 0;
 	}else{
 		if (expires) c->expires = *expires;
 		if (ua){
 			if (c->ua.s) shm_free(c->ua.s);
-			c->ua.s = shm_malloc(ua->len);
-			if (!c->ua.s) {
-				LOG(L_ERR,"ERR:"M_NAME":update_r_contact(): Error allocating %d bytes\n",
-					ua->len);
-				c->ua.len=0;
-				return 0;
-			}
-			c->ua.len = ua->len;
-			memcpy(c->ua.s,ua->s,ua->len);
+			STR_SHM_DUP(c->ua,*ua,"shm");
 		}
 		if (path){
 			if (c->path.s) shm_free(c->path.s);
-			c->path.s = shm_malloc(path->len);
-			if (!c->path.s) {
-				LOG(L_ERR,"ERR:"M_NAME":update_r_contact(): Error allocating %d bytes\n",
-					path->len);
-				c->path.len=0;
-				return 0;
-			}
-			c->path.len = path->len;
-			memcpy(c->path.s,path->s,path->len);
+			STR_SHM_DUP(c->path,*path,"shm");
 		}
 		c->qvalue = qvalue;
 		if (cp){
 			for(px=*cp;px;px=px->next)
-				update_r_contact_param(c,px->name,px->body);		
+				rcp = update_r_contact_param(c,px->name,px->body);
 		}
 		if (sos_flag)
 			c->sos_flag = *sos_flag;
-		return c;
 	}
+	
+	/* Save instance id for Public GRUU if there is a +sip.instance parameter */
+	for(rcp=c->parameters;rcp;rcp=rcp->next){		
+		if (rcp && rcp->name.len == s_sip_instance.len &&
+				strncmp(rcp->name.s,s_sip_instance.s,s_sip_instance.len)==0){
+			instance_id = rcp->value;
+			if (instance_id.s[0]=='<') { instance_id.s++; instance_id.len--;	}
+			if (instance_id.s[instance_id.len-1]=='>') { instance_id.len--; }
+			STR_SHM_DUP(c->pub_gruu,instance_id,"shm");
+			break;
+		}
+	}
+	return c;
+	
+out_of_memory:
+	LOG(L_ERR,"ERR:"M_NAME":update_r_contact(): Out of memory!!! Some contacts might have not been updated entirely...\n");
+	return c;
 }
 
 /**
@@ -724,6 +727,7 @@ void free_r_contact(r_contact *c)
 	if (c->uri.s) shm_free(c->uri.s);
 	if (c->ua.s) shm_free(c->ua.s);
 	if (c->path.s) shm_free(c->path.s);
+	if (c->pub_gruu.s) shm_free(c->pub_gruu.s);
 	while (c->parameters){
 		cp = c->parameters->next;
 		free_r_contact_param(c->parameters);
@@ -1536,6 +1540,9 @@ void print_r(int log_level)
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           Path:"ANSI_YELLOW"%.*s"ANSI_GREEN"\n",c->path.len,c->path.s);
 					LOG(log_level,ANSI_GREEN"INF:"M_NAME":           UA: <%.*s>\n",
 						c->ua.len,c->ua.s);
+					if (c->pub_gruu.len)
+						LOG(log_level,ANSI_GREEN"INF:"M_NAME":           PUB_GRUU: <%.*s>\n",
+											c->pub_gruu.len,c->pub_gruu.s);
 					cp = c->parameters;
 					while(cp){
 						LOG(log_level,ANSI_GREEN"INF:"M_NAME":           Param: <%.*s=%.*s>\n",

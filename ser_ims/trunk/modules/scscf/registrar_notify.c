@@ -592,7 +592,7 @@ static str r_rejected={"rejected",8};
 static str contact_s={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\">\n",59};
 static str contact_s_q={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\" q=\"%.3f\">\n",69};
 static str contact_e={"\t\t</contact>\n",13};
-static str unknown_param_s={"\t\t\t<unknown-param name=\"%.*s\">",30};
+static str unknown_param_s={"\t\t\t<unknown-param name=\"%.*s\">\n",31};
 static str unknown_param_e={"</unknown-param>",16};
 
 
