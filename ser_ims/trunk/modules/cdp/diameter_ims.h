@@ -133,6 +133,12 @@
 /** 3GPP AVP Codes */ 
 enum {
 /**   1 to 255 reserved for backward compatibility with IMS Radius TS29.061	*/
+	AVP_IMS_Digest_Realm								= 104,
+	AVP_IMS_Digest_QoP									= 110,
+	AVP_IMS_Digest_Algorithm							= 111,
+	AVP_IMS_Digest_Auth_Param							= 117,
+	AVP_IMS_Digest_Domain								= 119,
+	AVP_IMS_Digest_HA1									= 121,
 /** 256 to 299 reserved for future use										*/
 	AVP_IMS_Vendor_Id									= 266,
 	AVP_IMS_Experimental_Result_Code					= 298,
@@ -207,6 +213,7 @@ enum {
 	AVP_IMS_Supported_Applications						= 631,
 	AVP_IMS_Associated_Identities						= 632,
 	AVP_IMS_Originating_Request							= 633,
+	AVP_IMS_SIP_Digest_Authenticate 					= 635,
 	AVP_IMS_UAR_Flags									= 637,
 /** 700 to 799 reserved for TS29.329											*/
 	AVP_IMS_User_Identity								= 700,
