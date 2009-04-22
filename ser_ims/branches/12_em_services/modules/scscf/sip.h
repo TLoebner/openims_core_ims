@@ -61,6 +61,9 @@
 #include "../../parser/digest/digest.h"
 #include "../../parser/parse_rr.h"
 
+//from ecscf
+void cscf_del_nonshm_lumps(struct sip_msg *msg);
+
 int cscf_add_header_first(struct sip_msg *msg, str *hdr,int type);
 int cscf_add_header(struct sip_msg *msg, str *hdr,int type);
 int cscf_add_header_rpl(struct sip_msg *msg, str *hdr);

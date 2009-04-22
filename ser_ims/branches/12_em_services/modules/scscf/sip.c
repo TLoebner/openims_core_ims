@@ -2092,7 +2092,16 @@ str cscf_get_min_se(struct sip_msg *msg,struct hdr_field **h)
 	return min_se;	
 }
 
+/* Cleans non SHM lumps that were added to the message in order to forward it, for example
+ * otherwise, if it is a request and an error response is received, run_failure_handlers from the TM will probably crash
+ */
+void cscf_del_nonshm_lumps(struct sip_msg *msg){
 
+
+	del_nonshm_lump(&msg->add_rm);
+	del_nonshm_lump(&msg->body_lumps);
+	del_nonshm_lump_rpl(&msg->reply_lump);
+}
 
 /**
  * Deletes the given header.

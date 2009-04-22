@@ -17,8 +17,7 @@ static str esqk_hdr_e = {"\r\n",2};
 static str to_hdr_s = {"To: <",5};
 static str to_hdr_e={">\r\n",3};
 
-/* Deletes all the Route headers, Adds a Route towards the PSAP URI and sets the RURI to the PSAP URI
- * TODO:add headers like ESQK
+/* Deletes all the Route headers, Adds a Route towards the PSAP URI and sets the RURI to the PSAP URI, adds the ESQK header
  * @param d  - the dialog that the INVITE request created
  */
 int E_fwd_to_psap(struct sip_msg * msg, str psap_uri, str esqk){
@@ -35,16 +34,11 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri, str esqk){
 		goto ret_false;
 	}
 
-	if(cscf_del_all_headers(msg, HDR_ROUTE_T)==0){
-		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete all the existing route headers\n");
-		goto ret_false;
-	}
-
 	if(cscf_del_all_headers(msg, HDR_TO_T)==0){
 		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete the existing From headers\n");
 		goto ret_false;
 	}
-		
+
 	x.s = pkg_malloc(route_s.len + psap_uri.len +route_e.len);
 	if (!x.s){
 		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
@@ -91,7 +85,12 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri, str esqk){
 	STR_APPEND(x, psap_uri);
 	STR_APPEND(x,route_e);	
 
-	if (!cscf_add_header_first(msg,&x,HDR_ROUTE_T)){
+	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)){
+		if(cscf_del_all_headers(msg, HDR_ROUTE_T)==0){
+			LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete all the existing route headers\n");
+			goto ret_false;
+		}
+	}else{	
 		goto ret_false;
 	}
 
