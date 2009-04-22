@@ -15,6 +15,7 @@
 #include "../../ut.h"
 #include "../../sr_module.h"
 #include "../../locking.h"
+#include "../../data_lump.h"
 #include "../tm/tm_load.h"
 #include "../tm/h_table.h"
 #include "../tm/t_reply.h"
@@ -135,7 +136,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: the INVITE message is not set in the INVITE trans\n");
 		goto error;
 	}
-
+	
 	enum e_dialog_direction dir = get_dialog_direction("orig");
 		
 	call_id = cscf_get_call_id(inv_trans->uas.request,0);
@@ -161,15 +162,20 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 
 	}else{
 		if(E_set_em_info(d, opt_repl) != CSCF_RETURN_TRUE)
-			goto error;	
+			goto error;
+		
 		if(E_fwd_to_psap(inv_trans->uas.request, d->psap_uri, d->esqk) != CSCF_RETURN_TRUE)
 			goto error;
+
 		if(E_add_record_route(inv_trans->uas.request, 0, 0) != CSCF_RETURN_TRUE)
 			goto error;
+
 		if(tmb.t_relay(inv_trans->uas.request, 0, 0) != 1){
 			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not relay the INVITE request\n");
 			goto error;
 		}
+		
+		cscf_del_nonshm_lumps(inv_trans->uas.request);
 	}
 	
 	ret = 0;	
@@ -399,6 +405,7 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:could not retrive hash_index and label of the current message's transaction\n");
 		goto ret_false;
 	}
+
 	inv_tr.callid.len = msg->callid->len; 
 	inv_tr.callid.s = msg->callid->name.s; 
 	service = msg->first_line.u.request.uri;
