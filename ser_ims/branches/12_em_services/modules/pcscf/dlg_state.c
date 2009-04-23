@@ -546,6 +546,8 @@ void free_p_dialog(p_dialog *d)
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
 	if (d->refresher.s) shm_free(d->refresher.s);
+	if (d->em_info.em_dialog && d->em_info.ecscf_uri.s)
+		shm_free(d->em_info.ecscf_uri.s);
 	shm_free(d);
 	p_dialog_count_decrement(); 
 }
@@ -574,8 +576,10 @@ void print_p_dialogs(int log_level)
 					d->transport,d->host.len,d->host.s,d->port);
 				LOG(log_level,"INF:"M_NAME":\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
 					"] State:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] SOS:["ANSI_MAGENTA"%s"ANSI_GREEN
 					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN"]\n",
 					d->method,d->state,
+					(d->em_info.em_dialog==1)?"X":" ",
 					(int)(d->expires - d_time_now));	
 				for(j=0;j<d->routes_cnt;j++)
 					LOG(log_level,"INF:"M_NAME":\t\t RR: <"ANSI_YELLOW"%.*s"ANSI_GREEN">\n",			
@@ -622,7 +626,7 @@ static inline enum p_dialog_direction get_dialog_direction(char *direction)
  * @param transport - transport to fill with the results
  * @returns 1 if found, 0 if not
  */
-static inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport)
+inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport)
 {
 	switch(dir){
 		case DLG_MOBILE_ORIGINATING:
@@ -814,12 +818,64 @@ error:
 	return CSCF_RETURN_FALSE;
 }		
 
+int fixup_save_dialog(void** param, int param_no){
+
+	char* str;
+	int len;
+	fparam_t * p;
+
+	if(param_no!=2){
+		return 0;
+	}
+
+	str = (char*) *param;
+	if(!str || str[0] == '\0'){
+	
+		LOG(L_ERR, "ERR:"M_NAME":fixup_save_dialog: NULL param 2\n");
+		return -1;
+	}
+
+	len = strlen(str);
+
+	if(len == 5 && strncmp(str, "emerg", 5) == 0){
+		str[0] = '1';
+	}else if (len ==9 && strncmp(str, "non-emerg", 9)==0){
+		str[0] = '0';
+	}else {
+		LOG(L_ERR, "ERR:"M_NAME":fixup_save_dialog: invalid param 2, "
+				"possible values are \"emerg\" or \"non-emerg\"\n");
+		return -1;
+	}	
+
+	p = (fparam_t*)pkg_malloc(sizeof(fparam_t));
+	if (!p) {
+		ERR("No memory left\n");
+		return E_OUT_OF_MEM;
+    	}
+	memset(p, 0, sizeof(fparam_t));
+	p->orig = *param;
+
+	switch(str[0]){
+	
+		case '0':
+			p->v.i = 0;
+			break;
+		case '1':
+			p->v.i = 1;
+			break;
+	}
+
+	*param = (void*)p;
+
+	return 0;
+}
+
 
 /**
  * Saves a dialog.
  * @param msg - the initial request
  * @param str1 - direction - "orig" or "term"
- * @param str2 - not used
+ * @param str2 - type of dialog: "emerg"|"non-emerg"
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_BREAK on error 
  */
 int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
@@ -836,9 +892,13 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	struct hdr_field *h;
 	unsigned int hash;
 	enum p_dialog_direction dir;
+	int em_dialog;
 	
 	dir = get_dialog_direction(str1);
 	
+	fparam_t * param = (fparam_t*)str2;
+	em_dialog = param->v.i;
+
 	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
@@ -849,7 +909,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 		return CSCF_RETURN_FALSE;
 
 	LOG(L_DBG,"DBG:"M_NAME":P_save_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
-
+	
 	if (is_p_dialog(call_id,host,port,transport,&dir)){
 		LOG(L_ERR,"ERR:"M_NAME":P_save_dialog: dialog already exists!\n");	
 		return CSCF_RETURN_TRUE;
@@ -863,6 +923,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
+	d->em_info.em_dialog = em_dialog;
 
 	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
 

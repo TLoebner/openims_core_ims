@@ -86,6 +86,11 @@ enum p_dialog_direction {
 	DLG_MOBILE_UNKNOWN=2
 };
 
+typedef struct _em_info{
+	int em_dialog; /*0 if not emergency, 1 if emergency*/
+	str ecscf_uri;
+} p_dialog_em_info;
+
 typedef struct _p_dialog {
 	unsigned int hash;
 	str call_id;
@@ -111,6 +116,7 @@ typedef struct _p_dialog {
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 	  										released or not, or its peer, with count on 
 											tries 										*/	
+	p_dialog_em_info em_info;
 	dlg_t *dialog_s;  /* dialog as UAS*/
 	dlg_t *dialog_c;  /* dialog as UAC*/
 			
@@ -132,7 +138,8 @@ void p_dialogs_destroy();
 inline void d_lock(unsigned int hash);
 inline void d_unlock(unsigned int hash);
 
-
+inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport);
+int fixup_save_dialog(void** param, int param_no);
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
 int is_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);

@@ -328,7 +328,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_enforce_service_routes",	P_enforce_service_routes, 	0, 0, REQUEST_ROUTE},
 
 	{"P_is_in_dialog",				P_is_in_dialog, 			1, 0, REQUEST_ROUTE},
-	{"P_save_dialog",				P_save_dialog, 				1, 0, REQUEST_ROUTE},
+	{"P_save_dialog",				P_save_dialog, 				2, fixup_save_dialog, REQUEST_ROUTE},
 	{"P_update_dialog",				P_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_drop_dialog",				P_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_follows_dialog_routes",		P_follows_dialog_routes, 	1, 0, REQUEST_ROUTE},
@@ -356,7 +356,6 @@ static cmd_export_t pcscf_cmds[]={
 	
 	/*emergency services exported functions*/
 	{"P_accept_anonym_em_call",		P_accept_anonym_em_call, 	0, 0, REQUEST_ROUTE},
-	{"P_is_anonymous_identity",		P_is_anonymous_identity, 	0, 0, REQUEST_ROUTE},
 	{"P_emergency_flag",			P_emergency_flag,			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
 	{"P_emergency_ruri",			P_emergency_ruri,			0, 0, REQUEST_ROUTE},

@@ -83,7 +83,6 @@ static cmd_export_t ecscf_cmds[]={
 	{"E_drop_dialog",				E_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"E_get_location",				E_get_location,				1, 0, REQUEST_ROUTE},
 	{"E_query_LRF",					E_query_LRF,				1, 0, REQUEST_ROUTE},
-	{"E_fwd_to_psap",				E_fwd_to_psap,				1, 0, REQUEST_ROUTE},
 	{"E_add_rr",					E_add_record_route,			0, 0, REQUEST_ROUTE},
 	{"E_del_ESQK_info",				E_del_ESQK_info,			0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
