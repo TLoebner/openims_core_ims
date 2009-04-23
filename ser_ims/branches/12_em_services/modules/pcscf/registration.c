@@ -498,7 +498,8 @@ int fixup_assert_id(void** param, int param_no){
 	}else if (len ==9 && strncmp(str1, "non-emerg", 9)==0){
 		str1[0] = '0';
 	}else {
-		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: invalid param 1\n");
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: invalid param 1, "
+				"possible values are \"emerg\" or \"non-emerg\"\n");
 		return -1;
 	}	
 

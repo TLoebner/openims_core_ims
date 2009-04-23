@@ -68,6 +68,7 @@
 #include "ims_pm_pcscf.h"
 #include "e2.h"
 #include "e2_avp.h"
+#include "dlg_state.h"
 
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
 extern int emerg_support;
@@ -235,38 +236,12 @@ int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2){
  */
 int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2)
 {
-	struct via_body *vb;
-
 	LOG(L_INFO,"DBG:"M_NAME":P_accept_anonym_em_call: Check if the P-CSCF is configured to accept an anonymous emergency call or not\n");
 
 	if(anonym_em_call_support)	
 		return CSCF_RETURN_TRUE;
 	else	
 		return CSCF_RETURN_FALSE;
-}
-
-
-/**
- * Finds if the message comes from an anonymous sip uri at this P-CSCF
- * @param msg - the SIP message
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not 
- */
-int P_is_anonymous_identity(struct sip_msg *msg,char *str1,char *str2)
-{
-	struct via_body *vb;
-
-	LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_identity: Check if anonymous identity used\n");
-
-	vb = cscf_get_ue_via(msg);
-	if(strncmp(vb->host.s, 	ANONYMOUS_DOMAIN_STR, ANONYMOUS_DOMAIN_STR_LEN) == 0){
-		LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_identity: using anonymous identity\n");
-
-		return CSCF_RETURN_TRUE;
-	}
-
-	return CSCF_RETURN_FALSE;
 }
 
 /**
@@ -358,9 +333,36 @@ static str route_e={">\r\n",3};
 int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 {
 	str newuri={0,0};
-	str x;
-	str sel_ecscf_uri;
+	str x = {0,0};
+	p_dialog *d = NULL;
+	str sel_ecscf_uri, call_id, host;
+	int port,transport;
+	enum p_dialog_direction dir;
+	
+	dir = DLG_MOBILE_ORIGINATING;
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes(): Error retrieving orig contact\n");
+		return CSCF_RETURN_BREAK;
+	}		
 		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":P_enforce_sos_routes(): Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not find the emergency dialog\n");
+		return CSCF_RETURN_BREAK;
+	}
+
+	if(!d->em_info.em_dialog){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: script error: trying to use Emergency Services to route a non-emergency call\n");
+		goto error;
+	}
+
 	if(select_ECSCF(&sel_ecscf_uri))
 		goto error;
 
@@ -371,39 +373,39 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Error allocating %d bytes\n",
 			x.len);
 		x.len=0;
-		return CSCF_RETURN_ERROR;
+		goto error;
 	}
 	x.len=0;
 	STR_APPEND(x,route_s);
 	STR_APPEND(x,sel_ecscf_uri);
 	STR_APPEND(x,route_e);
 	
-	newuri.s = pkg_malloc(sel_ecscf_uri.len);
-	if (!newuri.s){
-		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Error allocating %d bytes\n",
-			sel_ecscf_uri.len);
-		return CSCF_RETURN_ERROR;
-	}
-	newuri.len = sel_ecscf_uri.len;
-	memcpy(newuri.s,sel_ecscf_uri.s,newuri.len);
-	msg->dst_uri = newuri;
+	if(set_dst_uri(msg, &sel_ecscf_uri)){
 	
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Could not set the destination uri %.*s\n",
+				sel_ecscf_uri.len, sel_ecscf_uri.s);
+		goto error;
+	}
+
 	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)) {
 		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
-			return CSCF_RETURN_TRUE;
+			goto end;
 		else {
 			LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: new Route header added, but failed to drop old ones.\n");
-			return CSCF_RETURN_ERROR;
 		}
-	}
-	else {
-		if (x.s) pkg_free(x.s);
-		return CSCF_RETURN_ERROR;
 	}
 
 error:
+out_of_memory:
+	if(d) d_unlock(d->hash);
+	if (x.s) pkg_free(x.s);
+	if(newuri.s) pkg_free(newuri.s);
 	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not select an ECSCF\n");
 	return CSCF_RETURN_ERROR;
+end:
+	STR_SHM_DUP(d->em_info.ecscf_uri, sel_ecscf_uri, "P_enforce_sos_routes");
+	d_unlock(d->hash);
+	return CSCF_RETURN_TRUE;
 	
 }
 
