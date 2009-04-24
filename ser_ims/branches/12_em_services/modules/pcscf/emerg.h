@@ -58,9 +58,6 @@
 #include <libxml/parser.h>
 #include "../../sr_module.h"
 
-#define ANONYMOUS_DOMAIN_STR		"anonymous.invalid"
-#define ANONYMOUS_DOMAIN_STR_LEN	(sizeof(ANONYMOUS_DOMAIN_STR)-1)
-
 
 
 //emergency URNs from the RFC 5031 "A Uniform Resource Name (URN) for Emergency and Other Well-Known Services"
@@ -104,6 +101,8 @@
 int init_emergency_cntxt();
 
 int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2);
+
+int P_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2);
 
 int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2);
 

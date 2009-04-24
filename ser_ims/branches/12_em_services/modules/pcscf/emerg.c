@@ -59,6 +59,7 @@
 #include "../../mem/mem.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
+#include "../../parser/parse_from.h"
 
 #include "mod.h"
 #include "sip.h"
@@ -242,6 +243,35 @@ int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2)
 		return CSCF_RETURN_TRUE;
 	else	
 		return CSCF_RETURN_FALSE;
+}
+
+static str anonym_display = {"Anonymous", 9};
+
+/**
+ * Finds if the message comes from an anonymous sip uri at this P-CSCF
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not, #CSCF_RETURN_BREAK if error parsing 
+ */
+int P_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2)
+{
+	struct to_body * from_body;
+
+	LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_user: Check if anonymous identity used\n");
+
+	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0))
+		return CSCF_RETURN_BREAK;
+	
+
+	from_body = (struct to_body*)msg->from->parsed;
+	if((from_body->display.len == anonym_display.len) &&
+		(strncmp(from_body->display.s, anonym_display.s, anonym_display.len)==0)){
+		LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_user: using anonymous identity\n");
+		return CSCF_RETURN_TRUE;
+	}
+
+	return CSCF_RETURN_FALSE;
 }
 
 /**

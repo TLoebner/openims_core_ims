@@ -164,7 +164,10 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		if(E_set_em_info(d, opt_repl) != CSCF_RETURN_TRUE)
 			goto error;
 		
-		if(E_fwd_to_psap(inv_trans->uas.request, d->psap_uri, d->esqk) != CSCF_RETURN_TRUE)
+		if(E_fwd_to_psap(inv_trans->uas.request, d->psap_uri) != CSCF_RETURN_TRUE)
+			goto error;
+
+		if(!d->anonymous && E_add_esqk(inv_trans->uas.request, d->esqk) != CSCF_RETURN_TRUE)
 			goto error;
 
 		if(E_add_record_route(inv_trans->uas.request, 0, 0) != CSCF_RETURN_TRUE)
@@ -355,6 +358,7 @@ error:
 	return 0;
 }
 
+static str anonym_user = {"sip:anonymous@domain.org", 24};
 
 /* Find the appropriate psap uri that the request should be forwarded to, by querying the LRF
  * @param msg - the sip request
@@ -368,7 +372,7 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	e_dialog* d;
 	str call_id, from_uri;
 	str location_str = {0, 0};
-	str service;
+	str service, req_uri;
 	struct initial_tr inv_tr;
 
 	enum e_dialog_direction dir = get_dialog_direction(str1);
@@ -409,8 +413,15 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	inv_tr.callid.len = msg->callid->len; 
 	inv_tr.callid.s = msg->callid->name.s; 
 	service = msg->first_line.u.request.uri;
+	if(d->anonymous){
+		req_uri.s = anonym_user.s;
+		req_uri.len = anonym_user.len;
+	}else {
+		req_uri.s = from_uri.s;
+		req_uri.len = from_uri.len;
+	}
 
-	if(!send_options_req(from_uri, location_str, service, &inv_tr)){
+	if(!send_options_req(req_uri, location_str, service, &inv_tr)){
 		goto ret_false;
 	}
 	

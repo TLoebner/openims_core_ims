@@ -122,6 +122,7 @@ void free_e_dialog(e_dialog *d);
 void print_e_dialogs(int log_level);
 enum e_dialog_direction get_dialog_direction(char *direction);
 
+int E_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2);
 
 int E_is_in_dialog(struct sip_msg* msg, char* str1, char* str2);
 
