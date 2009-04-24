@@ -17,23 +17,52 @@ static str esqk_hdr_e = {"\r\n",2};
 static str to_hdr_s = {"To: <",5};
 static str to_hdr_e={">\r\n",3};
 
+int E_add_esqk(struct sip_msg * msg, str esqk){
+
+	str  y = {0,0};
+	if(!esqk.len || !esqk.s){
+		goto ret_false;
+	}
+
+	y.s = pkg_malloc(esqk_hdr_s.len + esqk.len +esqk_hdr_e.len);
+	if (!y.s){
+		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
+			esqk.len);
+		goto ret_false;
+	}
+
+	y.len = 0;
+	STR_APPEND(y, esqk_hdr_s);
+	STR_APPEND(y, esqk);
+	STR_APPEND(y, esqk_hdr_e);	
+
+	if (!cscf_add_header_first(msg,&y,HDR_ESQK_T)){
+		goto ret_false;
+	}
+
+	return CSCF_RETURN_TRUE;
+
+ret_false:
+	if(y.s){
+		pkg_free(y.s);
+		y.s = NULL;
+	}
+	return CSCF_RETURN_FALSE;
+}
+
 /* Deletes all the Route headers, Adds a Route towards the PSAP URI and sets the RURI to the PSAP URI, adds the ESQK header
  * @param d  - the dialog that the INVITE request created
  */
-int E_fwd_to_psap(struct sip_msg * msg, str psap_uri, str esqk){
+int E_fwd_to_psap(struct sip_msg * msg, str psap_uri){
 	
-	str x = {0,0}, y = {0,0}, to = {0,0};
+	str x = {0,0},to = {0,0};
 
 	if(!psap_uri.len || !psap_uri.s){
 		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap: invalid psap_uri parameter\n");
 		goto ret_false;
 	}
 
-	if(!esqk.len || !esqk.s){
-		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap: invalid esqk parameter\n");
-		goto ret_false;
-	}
-
+	
 	if(cscf_del_all_headers(msg, HDR_TO_T)==0){
 		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete the existing From headers\n");
 		goto ret_false;
@@ -48,19 +77,10 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri, str esqk){
 
 	}
 
-	y.s = pkg_malloc(esqk_hdr_s.len + esqk.len +esqk_hdr_e.len);
-	if (!y.s){
-		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
-			esqk.len);
-		y.len=0;
-		goto ret_false;
-	}
-
 	to.s = pkg_malloc(to_hdr_s.len + psap_uri.len +to_hdr_e.len);
 	if (!to.s){
 		LOG(L_ERR, "ERR"M_NAME":E_fwd_to_psap: Error allocating %d bytes\n",
 			(to_hdr_s.len + psap_uri.len +to_hdr_e.len));
-		to.len=0;
 		goto ret_false;
 	}
 
@@ -93,16 +113,7 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri, str esqk){
 	}else{	
 		goto ret_false;
 	}
-
-	y.len = 0;
-	STR_APPEND(y, esqk_hdr_s);
-	STR_APPEND(y, esqk);
-	STR_APPEND(y, esqk_hdr_e);	
-
-	if (!cscf_add_header_first(msg,&y,HDR_ESQK_T)){
-		goto ret_false;
-	}
-
+	
 	to.len = 0;
 	STR_APPEND(to, to_hdr_s);
 	STR_APPEND(to, psap_uri);
@@ -120,11 +131,11 @@ ret_false:
 		pkg_free(x.s);
 		x.s = NULL;
 	}
-	if(y.s){
-		pkg_free(y.s);
-		y.s = NULL;
+	if(to.s){
+		pkg_free(to.s);
+		to.s = NULL;
 	}
-
+//TODO: clean the memory allocated at rewrite_uri
 	return CSCF_RETURN_FALSE;
 
 }

@@ -15,6 +15,7 @@
 #include "../sl/sl_funcs.h"
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_rr.h"
+#include "../../parser/parse_from.h"
 
 #include "sip.h"
 //#include "release_call.h"
@@ -511,14 +512,19 @@ void print_e_dialogs(int log_level)
 					d->direction,
 					d->call_id.len,d->call_id.s,
 					d->aor.len,d->aor.s);
+
 				LOG(log_level,"INF:"M_NAME":\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
 					"] State:["ANSI_MAGENTA"%d"ANSI_GREEN
-					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN"] Ref:["ANSI_MAGENTA"%.*s"ANSI_GREEN"] Event:["ANSI_MAGENTA"%.*s"ANSI_GREEN"]\n",				
+					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN
+					"] Ref:["ANSI_MAGENTA"%.*s"ANSI_GREEN
+					"] Anonym:["ANSI_MAGENTA"%s"ANSI_GREEN"]\n"
+					"] Event:["ANSI_MAGENTA"%.*s"ANSI_GREEN"]\n",				
 					d->method,
 					d->state,
 					(int)(d->expires - d_time_now),
 					d->refresher.len,d->refresher.s,
-					d->event.len,d->event.s);
+					(d->anonymous)?"X":" ",
+					d->event.len, d->event.s);
 					
 				d = d->next;
 			} 		
@@ -607,6 +613,37 @@ static inline enum e_dialog_direction find_dialog_route_dir(struct sip_msg *msg)
 	}
 	return DLG_MOBILE_UNKNOWN;
 }
+
+static str anonym_display = {"Anonymous", 9};
+
+/**
+ * Finds if the message comes from an anonymous sip uri at this E-CSCF
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not, #CSCF_RETURN_BREAK if error parsing 
+ */
+int E_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2)
+{
+	struct to_body * from_body;
+
+	LOG(L_INFO,"DBG:"M_NAME":E_is_anonymous_user: Check if anonymous identity used\n");
+
+	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0))
+		return CSCF_RETURN_BREAK;
+	
+
+	from_body = (struct to_body*)msg->from->parsed;
+	if((from_body->display.len == anonym_display.len) &&
+		(strncmp(from_body->display.s, anonym_display.s, anonym_display.len)==0)){
+		LOG(L_INFO,"DBG:"M_NAME":E_is_anonymous_user: using anonymous identity\n");
+		return CSCF_RETURN_TRUE;
+	}
+
+	return CSCF_RETURN_FALSE;
+}
+
+
 
 /**
  * Find out if a message is within a saved dialog.
@@ -788,7 +825,7 @@ error:
  * Saves a dialog.
  * @param msg - the initial request
  * @param str1 - direction - "orig" or "term"
- * @param str2 - not used
+ * @param str2 - anonymous ("1"), non-anonymous ("0")
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_BREAK on error 
  */
 int E_save_dialog(struct sip_msg* msg, char* str1, char* str2)
@@ -804,9 +841,16 @@ int E_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str event = {0,0};
 	struct hdr_field *h;
 	unsigned int hash;
+	int anonymous;
 	
 	enum e_dialog_direction dir = get_dialog_direction(str1);
-	
+	switch(str2[0]){
+		case '0': anonymous = 0; break;
+		case '1': anonymous = 1; break;
+		default: LOG(L_ERR, "ERR:"M_NAME":E_save_dialog(): invalid str2 parameter\n");
+			 return CSCF_RETURN_BREAK;
+	}
+
 	if (!find_dialog_aor(msg,dir,&aor)){
 		LOG(L_ERR,"ERR:"M_NAME":E_save_dialog(): Error retrieving %s contact\n",str1);
 		return CSCF_RETURN_BREAK;
@@ -831,6 +875,7 @@ int E_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
+	d->anonymous = anonymous;
 
 	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
 

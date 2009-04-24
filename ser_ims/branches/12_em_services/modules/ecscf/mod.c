@@ -77,8 +77,9 @@ int E_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
  */
 static cmd_export_t ecscf_cmds[]={
 	{"E_is_in_dialog",				E_is_in_dialog, 			1, 0, REQUEST_ROUTE},
+	{"E_is_anonymous_user",				E_is_anonymous_user, 			0, 0, REQUEST_ROUTE},
 	{"E_trans_in_processing",			E_trans_in_processing, 			0, 0, REQUEST_ROUTE},
-	{"E_save_dialog",				E_save_dialog,				1, 0, REQUEST_ROUTE},
+	{"E_save_dialog",				E_save_dialog,				2, 0, REQUEST_ROUTE},
 	{"E_update_dialog",				E_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"E_drop_dialog",				E_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"E_get_location",				E_get_location,				1, 0, REQUEST_ROUTE},
