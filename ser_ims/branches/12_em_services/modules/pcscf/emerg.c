@@ -154,15 +154,10 @@ error:
 	return -1;
 }
 
-#define check_sos_URN(_uri, _type, _len)\
-	do{\
-		if((_uri[SOS_URN_LEN+_len+1] == '\0') && \
-				(strncmp(_uri+SOS_URN_LEN+1, _type, _len) ==0)){\
-				LOG(L_DBG, "DBG:"M_NAME":emergency_URN: call to %s\n",_type);\
-				goto is_emerg;\
-		}\
-	}while(0);
-
+//return 0 if matched
+int check_sos_URN(char *p, char* service, int service_len){
+	return strncmp(p, service, service_len);
+}
 
 int emergency_urn(char* uri,  int len){
 
@@ -172,29 +167,42 @@ int emergency_urn(char* uri,  int len){
 	if(len == SOS_URN_LEN)
 		goto is_emerg;
 
-	if(uri[SOS_URN_LEN] !='.'){	
+	char* p = uri+SOS_URN_LEN;
+	if(*p !='.'){	
 		goto error;
 	}
+	p++;
 
-	switch(uri[SOS_URN_LEN+1]){
+	switch(*p){
 		case 'a':
-			check_sos_URN(uri, SOS_URN_AMB, SOS_URN_AMB_LEN);
-			check_sos_URN(uri, SOS_URN_AN_CTR, SOS_URN_AN_CTR_LEN);
+			if(!check_sos_URN(uri, SOS_URN_AMB, SOS_URN_AMB_LEN)) 
+				goto is_emerg;
+			if(!check_sos_URN(uri, SOS_URN_AN_CTR, SOS_URN_AN_CTR_LEN))
+				goto is_emerg;
 			break;			
 		case 'f':
-			check_sos_URN(uri, SOS_URN_FIRE, SOS_URN_FIRE_LEN);
+			if(!check_sos_URN(uri, SOS_URN_FIRE, SOS_URN_FIRE_LEN))
+				goto is_emerg;
 			break;
 		case 'g':
-			check_sos_URN(uri, SOS_URN_GAS, SOS_URN_GAS_LEN);
+			if(!check_sos_URN(uri, SOS_URN_GAS, SOS_URN_GAS_LEN))
+				goto is_emerg;
 			break;
 		case 'm':
-			check_sos_URN(uri, SOS_URN_MAR, SOS_URN_MAR_LEN);
-			check_sos_URN(uri, SOS_URN_MOUNT, SOS_URN_MOUNT_LEN);
+			if(!check_sos_URN(uri, SOS_URN_MAR, SOS_URN_MAR_LEN))
+				goto is_emerg;
+
+			if(!check_sos_URN(uri, SOS_URN_MOUNT, SOS_URN_MOUNT_LEN))
+				goto is_emerg;
 			break;
 		case 'p':
-			check_sos_URN(uri, SOS_URN_POL, SOS_URN_POL_LEN);
-			check_sos_URN(uri, SOS_URN_POIS, SOS_URN_POIS_LEN);
-			check_sos_URN(uri, SOS_URN_PHYS, SOS_URN_PHYS_LEN);
+			if(!check_sos_URN(p, SOS_URN_POL, SOS_URN_POL_LEN))
+				goto is_emerg;
+			if(!check_sos_URN(p, SOS_URN_POIS, SOS_URN_POIS_LEN))
+				goto is_emerg;
+			if(!check_sos_URN(p, SOS_URN_PHYS, SOS_URN_PHYS_LEN))
+				goto is_emerg;
+			break;
 		default:
 			break;
 	}
@@ -214,6 +222,7 @@ is_emerg:
 	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: we have an emergency call for the URI %.*s\n",
 			len, uri);
 	return CSCF_RETURN_TRUE;
+
 }
 
 /* Checks if the Request Uri is used for an Emergency Service
