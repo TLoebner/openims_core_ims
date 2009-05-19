@@ -23,7 +23,7 @@ int get_pidf_lo_body(struct sip_msg* msg, str * pidf_body){
 
 	if(get_body_content(msg, pidf_body, type, subtype)){
 	
-		LOG(L_ERR, "ERR:"M_NAME":get_pidf_body:an error has occured while retrieving the pidf+xml information");
+		LOG(L_ERR, "ERR:"M_NAME":get_pidf_body:an error has occured while retrieving the pidf+xml information\n");
 		return -1;
 	}
 	
