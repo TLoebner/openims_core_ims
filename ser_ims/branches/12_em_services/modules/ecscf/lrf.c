@@ -494,7 +494,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	
 	if(get_pidf_lo_body(msg, &pidf_body)){
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location:could not get the pidf+xml body, but with the Geolocation header set\\n");
+		LOG(L_ERR, "ERR:"M_NAME":E_get_location:could not get the pidf+xml body, but with the Geolocation header set\n");
 		goto error_loc;
 	}
 	
