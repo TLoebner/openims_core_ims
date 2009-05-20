@@ -156,6 +156,7 @@ error:
 
 //return 0 if matched
 int check_sos_URN(char *p, char* service, int service_len){
+
 	return strncmp(p, service, service_len);
 }
 
@@ -175,24 +176,24 @@ int emergency_urn(char* uri,  int len){
 
 	switch(*p){
 		case 'a':
-			if(!check_sos_URN(uri, SOS_URN_AMB, SOS_URN_AMB_LEN)) 
+			if(!check_sos_URN(p, SOS_URN_AMB, SOS_URN_AMB_LEN)) 
 				goto is_emerg;
-			if(!check_sos_URN(uri, SOS_URN_AN_CTR, SOS_URN_AN_CTR_LEN))
+			if(!check_sos_URN(p, SOS_URN_AN_CTR, SOS_URN_AN_CTR_LEN))
 				goto is_emerg;
 			break;			
 		case 'f':
-			if(!check_sos_URN(uri, SOS_URN_FIRE, SOS_URN_FIRE_LEN))
+			if(!check_sos_URN(p, SOS_URN_FIRE, SOS_URN_FIRE_LEN))
 				goto is_emerg;
 			break;
 		case 'g':
-			if(!check_sos_URN(uri, SOS_URN_GAS, SOS_URN_GAS_LEN))
+			if(!check_sos_URN(p, SOS_URN_GAS, SOS_URN_GAS_LEN))
 				goto is_emerg;
 			break;
 		case 'm':
-			if(!check_sos_URN(uri, SOS_URN_MAR, SOS_URN_MAR_LEN))
+			if(!check_sos_URN(p, SOS_URN_MAR, SOS_URN_MAR_LEN))
 				goto is_emerg;
 
-			if(!check_sos_URN(uri, SOS_URN_MOUNT, SOS_URN_MOUNT_LEN))
+			if(!check_sos_URN(p, SOS_URN_MOUNT, SOS_URN_MOUNT_LEN))
 				goto is_emerg;
 			break;
 		case 'p':
