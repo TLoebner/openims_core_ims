@@ -119,12 +119,6 @@ int init_em_alt_serv_body(){
    	}
    	xmlDocSetRootElement(reply_380_doc, em_alt_serv_node);
 
-	/*if(!xmlNewNs(root_node, BAD_CAST LOST_NS_HREF, NULL)){
-		ERROR_LOG("could not add the namespace %s to the root node\n",
-				LOST_NS_HREF);
-		goto error;
-	}*/
-
 	alt_serv_node = xmlNewChild(em_alt_serv_node, NULL, BAD_CAST ALTERN_SERV_XML_NODE, NULL);
 	if(!alt_serv_node){
 		LOG(L_ERR, "ERR:"M_NAME":init_em_alt_serv_body: when adding new node %s\n", ALTERN_SERV_XML_NODE);
@@ -138,13 +132,13 @@ int init_em_alt_serv_body(){
 	}
 
 	reason_alt_serv_node = xmlNewChild(alt_serv_node, NULL, BAD_CAST REASON_XML_NODE, BAD_CAST "");
-	if(!type_node){
+	if(!reason_alt_serv_node){
 		LOG(L_ERR, "ERR:"M_NAME":init_em_alt_serv_body: when adding new node %s\n", REASON_XML_NODE);
 		goto error;
 	}
 
 	action_alt_serv_node = xmlNewChild(alt_serv_node, NULL, BAD_CAST ACTION_XML_NODE, BAD_CAST ALT_SERV_ACTION_VAL);
-	if(!type_node){
+	if(!action_alt_serv_node){
 		LOG(L_ERR, "ERR:"M_NAME":init_em_alt_serv_body: when adding new node %s\n", ACTION_XML_NODE);
 		goto error;
 	}
