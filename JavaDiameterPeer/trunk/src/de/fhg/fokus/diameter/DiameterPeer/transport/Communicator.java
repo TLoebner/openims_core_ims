@@ -76,9 +76,18 @@ public class Communicator extends Thread {
 	/** socket connected to */
 	public Socket socket;
 
-	private static int MAX_MESSAGE_LENGTH=1048576;
-	
-	
+	/** Diameter protocol header: 
+		byte 0:   protocol version
+		byte 1-3: length of message, including the header
+	*/
+	private static int HEADER_LENGTH = 4;
+
+	/**
+	   The size of the buffer that run() allocates for flushing the
+	   InputStream of a message that is too big to fit in memory.
+	 */
+	private static final int TRASH_BUFFER_LENGTH = 524388; // 512KB
+
 	/**
 	 * Constructor giving the opened socket.
 	 * 
@@ -164,10 +173,20 @@ public class Communicator extends Thread {
 	 */
 	public void run() {
 		InputStream in;
-		byte[] buffer = new byte[MAX_MESSAGE_LENGTH];
+		byte[] buffer;
+		long bytesRead = 0L;
+
+		// Every message begins with a header.  We know how big that
+		// is.  We don't need to allocate the header every time.
+		byte[] header = new byte[HEADER_LENGTH];
+
+		// When a message is legitimate but too big to fit into the
+		// JVM, we'll attempt to read all of it in chunks to remove if
+		// from the InputStream.  We put those chunks in trashBuffer.
+		byte[] trashBuffer = new byte[TRASH_BUFFER_LENGTH];
 		DiameterMessage msg;
 		
-		int cnt,len,x;
+		int cnt = 0,len = 0,x = 0;
 		
 		try {
 			socket.setTcpNoDelay(true);
@@ -179,35 +198,60 @@ public class Communicator extends Thread {
 		}
 
 		try {
-				while(running){
-					/* first we read the version */ 
-					cnt=0;
-					while(cnt<1){
-						x=in.read(buffer,cnt,1);
-						if (x<0) throw(new Exception("Read failed"));
-						cnt+=x;
-					}
-					if (buffer[0]!=1){
-						System.err.println("Communicator: Expecting diameter version 1. Received version "+buffer[0]);
-						continue;
-					}
-					/* then we read the length of the message */
-					while(cnt<4){
-						x = in.read(buffer,cnt,4-cnt);
-						if (x<0) throw(new Exception("Read failed"));
-						cnt+=x;
-					}
-					len = ((int)buffer[1]&0xFF)<<16 |
-						  ((int)buffer[2]&0xFF)<< 8 |
-						  ((int)buffer[3]&0xFF);
-					if (len>MAX_MESSAGE_LENGTH){
-						System.err.println("Communicator: Message too long ("+len+">"+MAX_MESSAGE_LENGTH+".");
-					}
+			// TALMAGE: New plan: After reading the four-byte header,
+			// allocate a buffer for the whole message.  Read into
+			// the buffer in chunks, blocking if necessary.
+			//
+			// What I really want to do is to use a StringBuilder to
+			// accumulate bytes.  Alas, there is no byte holding
+			// version of StringBuilder.
+			//
+			// I also considered using Java NIO.
+			while(running){
+				/* first we read the version */ 
+				cnt=0;
+				while(cnt<1){
+					x=in.read(header,cnt,1);
+					// It's not that the read failed.  There isn't
+					// any more data in the input stream.
+					if (x<0) throw(new Exception("Read failed"));
+					cnt+=x;
+				}
+				if (header[0]!=1){
+					System.err.println("Communicator: Expecting diameter version 1. Received version "+header[0]);
+					continue;
+				}
+				/* then we read the length of the message */
+				while(cnt<4){
+					x = in.read(header,cnt,4-cnt);
+					if (x<0) throw(new Exception("Read failed.  # bytes before failure: "));
+					cnt+=x;
+					bytesRead += x;
+				}
+				len = ((int)header[1]&0xFF)<<16 |
+					((int)header[2]&0xFF)<< 8 |
+					((int)header[3]&0xFF);
+
+				LOGGER.debug("Message length " + len);
+				try {
+					// The biggest message permitted by the protocol
+					// is 2^24 (= 16777216) bytes.  This could throw
+					// OutOfMemoryError.
+					buffer = new byte[len];
+
+					// This could throw three different RuntimeExceptions.
+					// The conditions that cause them will never occur
+					// here, so there is no need to catch them.
+					System.arraycopy(header, 0, buffer, 0, header.length);
+
 					/* and then we read all the rest of the message */
 					while(cnt<len){
 						x = in.read(buffer,cnt,len-cnt);
-						if (x<0) throw(new Exception("Read failed"));
+						// It's not that the read failed.  There isn't
+						// any more data in the input stream.
+						if (x<0) throw(new Exception("Premature end of input stream"));
 						cnt+=x;
+						bytesRead += x;
 					}
 					//LOGGER.debug("received "+cnt+" bytes");
 					/* now we can decode the message */
@@ -224,20 +268,37 @@ public class Communicator extends Thread {
 						this.peer.refreshTimer();
 					processMessage(msg);
 					msg = null;
-															
+				} catch (OutOfMemoryError e1) {
+					// Attempt to read all of the bytes in the message and
+					// throw them away.  Is it an error to continue?
+					//
+					// TALMAGE: I want to wrap the arg of
+					// LOGGER.warn() in one of my Strings objects to
+					// prevent concatenation unless the logging level
+					// is Level.WARN or higher.  However,
+					// OutOfMemoryError shouldn't occur very often and
+					// I don't have permission to distribute the
+					// Strings class.
+					LOGGER.warn("Out of memory allocating buffer for message of length " + len);
+					LOGGER.debug(e1);
+					try {
+						while (cnt < len) {
+							x = in.read(trashBuffer, 0, trashBuffer.length);
+							cnt += x;
+							bytesRead += x;
+						}
+					} catch (IOException ex) {
+						LOGGER.warn("Read " + bytesRead + 
+									" before Exception.");
+						disconnect(ex);
+						running=false;
+					}
 				}
+			}
 		} catch (Exception e1) {
-			if (running){
-				if (this.peer!=null){
-					if (this.peer.I_comm==this) StateMachine.process(this.peer,StateMachine.I_Peer_Disc);
-					if (this.peer.R_comm==this) StateMachine.process(this.peer,StateMachine.R_Peer_Disc);
-				}
-				LOGGER.debug("Communicator: Error reading from InputStream. Closing socket.");
-				e1.printStackTrace();
-			}/* else it was a shutdown request, it's normal */
+			LOGGER.warn("Read " + bytesRead + " before Exception.");
+			disconnect(e1);
 		}
-
-		running=false;
 
 		try {
 			socket.close();
@@ -400,6 +461,26 @@ public class Communicator extends Thread {
 		}
 	}
 	
+	/**
+	   On some kind of Exception, forcefully disconnect from the Peer
+	   that caused it.
+	 */
+    private void disconnect(Exception ex) {
+		if (running){
+			if (this.peer!=null){
+				if (this.peer.I_comm==this) 
+					StateMachine.process(this.peer,StateMachine.I_Peer_Disc);
+				if (this.peer.R_comm==this) 
+					StateMachine.process(this.peer,StateMachine.R_Peer_Disc);
+			}
+			LOGGER.debug("Communicator: Error reading from InputStream. Closing socket.");
+			if (null != ex) {
+				LOGGER.debug(ex);
+			}
+		}/* else it was a shutdown request, it's normal */
+	}
+
+
 	/**
 	 * Shutdown the socket.
 	 */
