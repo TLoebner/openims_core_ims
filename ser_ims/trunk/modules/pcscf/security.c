@@ -57,6 +57,7 @@
  * Added TLS support
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Laurent Etiemble laurent dot etiemble -at- inexbee dot com
  * 
  */
  
@@ -393,10 +394,10 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 
 				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot.len,prot.s);
 				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod.len,mod.s);
-				if (prot.len == s_esp_inout.len && strncasecmp(prot.s,s_esp_inout.s,prot.len)==0) {
-					prot_set = s_esp_inout;
-				} else {
+				if (prot.len == s_ah_inout.len && strncasecmp(prot.s,s_ah_inout.s,prot.len)==0) {
 					prot_set = s_ah_inout;
+				} else {
+					prot_set = s_esp_inout;
 				}
 				if (mod.len == s_tun_inout.len && strncasecmp(mod.s,s_tun_inout.s,mod.len)==0) {
 					mod_set = s_tun_inout;
