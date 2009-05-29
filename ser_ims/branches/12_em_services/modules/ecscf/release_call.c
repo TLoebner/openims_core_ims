@@ -28,7 +28,7 @@ static str reason_hdr_e={"\"\r\n",3};
 
 //static int default_code=503;
 //static str _503_text_s={"Service Unavailable",28};
-static str _488_text_s={"Not Acceptable Here",19};
+//static str _488_text_s={"Not Acceptable Here",19};
 
 static str method_CANCEL_s={"CANCEL",6};
 static str method_ACK_s={"ACK",3};
@@ -381,7 +381,7 @@ done:
  * @str2 - [optional] the Reason header that you want to go to the messages 
  * @returns - TRUE on success or FALSE on misscall and BREAK on error
  */
-int E_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
+/*int E_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 {
 	enum e_dialog_direction dir;
 	e_dialog *d=NULL;
@@ -422,7 +422,7 @@ int E_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 		return CSCF_RETURN_BREAK;
 	}
 	
-}
+}*/
 /**
  * Sends the request on the dialog with the direction given as a parameter
  * @param method - the SIP method of the request

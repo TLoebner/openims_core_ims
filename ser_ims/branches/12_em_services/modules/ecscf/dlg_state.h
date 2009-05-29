@@ -81,6 +81,7 @@ typedef struct _e_dialog {
 	str location_str;	
 	loc_fmt d_loc_fmt;
 	/*psap uri information*/
+	str service;
 	str psap_uri;
 	str esqk;
 	uri_type psap_uri_type; /* uri scheme of the PSAP URI*/
@@ -112,8 +113,8 @@ inline void d_unlock(unsigned int hash);
 e_dialog* new_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
 e_dialog* add_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
 int is_e_dialog(str call_id,str aor,enum e_dialog_direction dir);
-int is_e_dialog_dir(str call_id,enum e_dialog_direction dir);
-e_dialog* get_e_dialog(str call_id,str aor);
+e_dialog* is_e_dialog_dir(struct sip_msg *, str call_id,enum e_dialog_direction dir);
+//e_dialog* get_e_dialog(str call_id,str aor);
 e_dialog* get_e_dialog_dir(str call_id,enum e_dialog_direction dir);
 e_dialog* get_e_dialog_dir_nolock(str call_id,enum e_dialog_direction dir);
 int terminate_e_dialog(e_dialog *d);
@@ -139,5 +140,9 @@ void dialog_timer(unsigned int ticks, void* param);
 int E_check_session_expires(struct sip_msg* msg, char* str1, char* str2);
 
 int E_422_session_expires(struct sip_msg* msg, char* str1, char* str2);
+
+int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2);
+
+int E_replace_from_header(struct sip_msg* msg, char* str1, char* str2);
 		
 #endif

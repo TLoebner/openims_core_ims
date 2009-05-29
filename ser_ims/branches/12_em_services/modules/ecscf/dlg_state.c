@@ -16,6 +16,7 @@
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_rr.h"
 #include "../../parser/parse_from.h"
+#include "../../parser/parse_to.h"
 
 #include "sip.h"
 //#include "release_call.h"
@@ -321,30 +322,110 @@ int is_e_dialog(str call_id,str aor,enum e_dialog_direction dir)
 	return 0;
 }
 
-/**
- * Finds out if a dialog is in the hash table.
- * @param call_id - call_id of the dialog
- * @param dir - the direction
- * @returns 1 if found, 0 if not found
+/*check if the from uri and to_uri of a SIP message are inside a dialog
+ * request to the callee or reponses of it
+ * @param sip_msg_type - type of the message, Request or Reply
+ * @param d - dialog to be checked
+ * @param from_uri - from uri of the SIP message
+ * @param from_uri - to uri of the SIP message
  */
-int is_e_dialog_dir(str call_id,enum e_dialog_direction dir)
+int is_dialog_to_callee(int sip_msg_type, e_dialog* d, str from_uri, str to_uri){
+
+	str psap_str = (sip_msg_type == SIP_REQUEST)?d->service:d->psap_uri;
+
+	LOG(L_DBG,"DBG:"M_NAME":dialog_to_callee: comparing %.*s to %.*s and %.*s to %.*s\n",
+			to_uri.len, to_uri.s, psap_str.len, psap_str.s,
+			from_uri.len, from_uri.s, d->dialog_c->loc_uri.len-2, d->dialog_c->loc_uri.s+1);
+
+	if(to_uri.len == psap_str.len &&
+			from_uri.len == (d->dialog_c->loc_uri.len-2) &&
+			strncasecmp(to_uri.s, psap_str.s, to_uri.len)==0 &&
+			strncasecmp(from_uri.s, d->dialog_c->loc_uri.s+1, from_uri.len)==0){
+		LOG(L_DBG, "DBG:"M_NAME":dialog_to_callee: matched\n");
+		return 1;
+	}
+	return 0;
+}
+/*check if the from uri and to_uri of a SIP message are inside a dialog
+ * request to the caller or reponses of it
+ * @param sip_msg_type - type of the message, Request or Reply
+ * @param d - dialog to be checked
+ * @param from_uri - from uri of the SIP message
+ * @param from_uri - to uri of the SIP message
+*/
+int is_dialog_to_caller(int sip_msg_type, e_dialog* d, str from_uri, str to_uri){
+
+	str psap_str = (sip_msg_type == SIP_REPLY)?d->service:d->psap_uri;
+
+	LOG(L_DBG,"DBG:"M_NAME":dialog_to_caller: comparing %.*s to %.*s and %.*s to %.*s\n",
+			from_uri.len, from_uri.s, psap_str.len, psap_str.s,
+			to_uri.len, to_uri.s, d->dialog_c->loc_uri.len-2, d->dialog_c->loc_uri.s+1);
+
+	if(from_uri.len == psap_str.len &&
+			to_uri.len == (d->dialog_c->loc_uri.len-2) &&
+			strncasecmp(from_uri.s, psap_str.s, from_uri.len)==0 &&
+			strncasecmp(to_uri.s, d->dialog_c->loc_uri.s+1, to_uri.len)==0){
+		LOG(L_DBG, "DBG:"M_NAME":dialog_to_caller: matched\n");
+		return 1;
+	}
+	return 0;
+}
+
+/**
+ * Finds out if a dialog for a SIP message is in the hash table.
+ * @param msg - the request or response to be mapped to a dialog
+ * @param call_id - call_id of the dialog
+ * @param dir - the direction : referring to a request coming from the caller or callee
+ * response are build based on the request
+ * @returns the dialog, if found
+ */
+e_dialog * is_e_dialog_dir(struct sip_msg * msg, str call_id,enum e_dialog_direction dir)
 {
 	e_dialog *d=0;
 	unsigned int hash = get_e_dialog_hash(call_id);
+	str from_uri, to_uri;
+	int sip_msg_type = msg->first_line.type;
+
+	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0)){
+		LOG(L_ERR, "ERR:"M_NAME":is_e_dialog_dir: failed to parse the From header\n");
+		return d;
+	}
+
+	if((!msg->to || !msg->to->parsed) && ( parse_headers(msg,HDR_TO_F,0)==-1 || !msg->to || !msg->to->parsed)) {
+		LOG(L_ERR, "ERR:"M_NAME":is_e_dialog_dir: failed to parse the To header\n");
+		return d;
+	}
+
+	from_uri = get_from(msg)->uri;
+	to_uri = get_to(msg)->uri;
 
 	d_lock(hash);
-		d = e_dialogs[hash].head;
-		while(d){
-				if (d->direction == dir &&
-				d->call_id.len == call_id.len &&
-				strncasecmp(d->call_id.s,call_id.s,call_id.len)==0) {
+	if(dir == DLG_MOBILE_ORIGINATING){
+			d = e_dialogs[hash].head;
+			while(d){
+				if (d->call_id.len == call_id.len &&
+					strncasecmp(d->call_id.s,call_id.s,call_id.len)==0 &&
+					is_dialog_to_callee(sip_msg_type, d, from_uri, to_uri)) {
 					d_unlock(hash);
-					return 1;
+					return d;
 				}
-			d = d->next;
-		}
+				d = d->next;
+			}
+	}else{
+			d = e_dialogs[hash].head;
+			while(d){
+				if (d->call_id.len == call_id.len &&
+					strncasecmp(d->call_id.s,call_id.s,call_id.len)==0 &&
+					is_dialog_to_caller(sip_msg_type, d, from_uri, to_uri)) {
+					d_unlock(hash);
+					return d;
+				}
+				d = d->next;
+			}
+
+	}
 	d_unlock(hash);
-	return 0;
+	return d;
 }
 
 /**
@@ -486,6 +567,7 @@ void free_e_dialog(e_dialog *d)
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
 	if (d->refresher.s) shm_free(d->refresher.s); 		
 	if (d->event.s) shm_free(d->event.s); 		
+	if (d->service.s) shm_free(d->service.s); 		
 	shm_free(d);
 	e_dialog_count_decrement(); 	
 }
@@ -656,21 +738,13 @@ int E_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 {
 	str call_id;
 	enum e_dialog_direction dir = get_dialog_direction(str1);
-	enum e_dialog_direction dirmsg = find_dialog_route_dir(msg);
-	
-
-//	LOG(L_CRIT,"%d - %d\n",dir,dirmsg);
-//	TODO: dirmsg used ot not?
-//	if (dir!=dirmsg) return CSCF_RETURN_FALSE;				
-			
-//	print_e_dialogs(L_ERR);
+		
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len){
-		
 		return CSCF_RETURN_FALSE;
 	}
 	
-	if (is_e_dialog_dir(call_id,dir))
+	if (is_e_dialog_dir(msg, call_id,dir))
 		return CSCF_RETURN_TRUE;
 	else {
 		LOG(L_ERR, "ERR:"M_NAME":E_is_in_dialog: could not find the dialog "
@@ -876,6 +950,7 @@ int E_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
 	d->anonymous = anonymous;
+	STR_SHM_DUP(d->service, msg->first_line.u.request.uri, "shm");
 
 	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
 
@@ -1057,31 +1132,13 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str refresher = {0,0};
 
 	enum e_dialog_direction dir = get_dialog_direction(str1);
-		
-//	if (!find_dialog_aor(msg,str1,&aor)){
-//		req = cscf_get_request_from_reply(msg);		
-//		if (!find_dialog_aor(req,str1,&aor)){
-//			LOG(L_ERR,"ERR:"M_NAME":E_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
-//			return CSCF_RETURN_BREAK;
-//		}
-//	}		
-		
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
 
 	LOG(L_DBG,"DBG:"M_NAME":E_update_dialog(%s): Call-ID <%.*s>\n",str1,call_id.len,call_id.s);
 
-	d = get_e_dialog_dir(call_id,dir);
-//	if (!d && msg->first_line.type==SIP_REPLY){
-//		/* Try to get the dialog from the request */
-//		if (!req) req = cscf_get_request_from_reply(msg);		
-//		if (!find_dialog_aor(req,str1,&aor)){
-//			LOG(L_ERR,"ERR:"M_NAME":E_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
-//			return CSCF_RETURN_BREAK;
-//		}		
-//		d = get_e_dialog_dir(call_id,aor);		
-//	}
+	d = is_e_dialog_dir(msg, call_id, dir);
 	if (!d){
 		LOG(L_INFO,"INFO:"M_NAME":E_update_dialog: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
@@ -1245,11 +1302,6 @@ int E_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	enum e_dialog_direction dir = get_dialog_direction(str1);
 	
 	
-//	if (!find_dialog_aor(msg,str1,&aor)){
-//		LOG(L_ERR,"ERR:"M_NAME":E_is_in_dialog(): Error retrieving %s contact\n",str1);
-//		return CSCF_RETURN_BREAK;
-//	}		
-		
 	call_id = cscf_get_call_id(msg,0);
 	if (!call_id.len)
 		return CSCF_RETURN_FALSE;
@@ -1258,16 +1310,7 @@ int E_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 		str1,call_id.len,call_id.s,
 		dir);
 
-	d = get_e_dialog_dir(call_id,dir);
-//	if (!d && msg->first_line.type==SIP_REPLY){
-//		/* Try to get the dialog from the request */
-//		req = cscf_get_request_from_reply(msg);		
-//		if (!find_dialog_aor(req,str1,&aor)){
-//			LOG(L_ERR,"ERR:"M_NAME":E_update_dialog(%s): Error retrieving %s contact\n",str1,str1);
-//			return CSCF_RETURN_BREAK;
-//		}		
-//		d = get_e_dialog(call_id,aor);		
-//	}
+	d = is_e_dialog_dir(msg, call_id,dir);
 	if (!d){
 		LOG(L_ERR,"ERR:"M_NAME":E_drop_dialog: dialog does not exists!\n");	
 		return CSCF_RETURN_FALSE;
@@ -1282,6 +1325,173 @@ int E_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	print_e_dialogs(L_INFO);
 	
 	return CSCF_RETURN_TRUE;	
+}
+
+static str to_hdr_s = {"To: <",5};
+static str to_hdr_mid = {">",1};
+static str to_hdr_tag={";tag=",5};
+static str to_hdr_e={"\r\n",2};
+
+static str from_hdr_s = {"From: <",7};
+static str from_hdr_mid={">;tag=",6};
+static str from_hdr_e={"\r\n",2};
+
+
+/* replace the To header so that it does not mess up the sip stack on the clients
+ * not used for the initial INVITE
+ * @param msg: the handled message
+ * @param str1: "0" if msg is a subsequent/standalone request coming from the caller: 
+ * 	To header <- PSAP URI + to tag, if present
+ * @param str1: "1" if reply from the PSAP: 
+ * 	To header <- service URN + to_tag
+ */
+int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2){
+
+	e_dialog* d = NULL;
+	str call_id, uri = {0,0};
+	str to = {0,0}, to_tag = {0,0};
+
+	LOG(L_DBG, "DBG:"M_NAME":E_replace_to_header: %s\n", str1);
+	if(str1[0] != '0' && str1[0] !='1'){
+		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header: misuse!\n");
+		return CSCF_RETURN_ERROR;
+	}
+	
+	enum e_dialog_direction dir = DLG_MOBILE_ORIGINATING;
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":E_replace_to_header: Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = is_e_dialog_dir(msg, call_id,dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header:message did not create no dialog\n");
+		return CSCF_RETURN_ERROR;
+	}
+
+	if(!cscf_get_to_tag(msg,&to_tag))
+		return CSCF_RETURN_ERROR;
+
+	LOG(L_DBG, "DBG:"M_NAME":E_replace_to_header: to_tag is %.*s\n", to_tag.len, to_tag.s);
+	if(cscf_del_all_headers(msg, HDR_TO_T)==0){
+		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header:could not delete the existing To headers\n");
+		goto ret_false;
+	}
+
+	if(str1[0] == '0')
+	       uri = d->psap_uri;
+	else if(str1[0] == '1')
+	       uri = d->service;
+	to.len = to_hdr_s.len + uri.len +to_hdr_mid.len + to_hdr_e.len;
+	if(to_tag.len)
+		to.len += to_hdr_tag.len + to_tag.len ;
+	to.s = pkg_malloc(to.len);
+	if (!to.s){
+		LOG(L_ERR, "ERR"M_NAME":E_replace_to_header: Error allocating %d bytes\n",
+			to.len);
+		goto ret_false;
+	}
+
+	to.len = 0;
+	STR_APPEND(to, to_hdr_s);
+	STR_APPEND(to, uri);
+	STR_APPEND(to, to_hdr_mid);
+	if(to_tag.len){
+		STR_APPEND(to, to_hdr_tag);
+		STR_APPEND(to, to_tag);
+	}
+	STR_APPEND(to, to_hdr_e);	
+
+	if (!cscf_add_header_first(msg,&to,HDR_TO_T)){
+		goto ret_false;
+	}
+
+	d_unlock(d->hash);
+
+	return CSCF_RETURN_TRUE;
+ret_false: 
+	if(d)
+		d_unlock(d->hash);
+	if(to.s)
+		pkg_free(to.s);
+	return CSCF_RETURN_FALSE;
+}
+
+/* replace the From header so that it does not mess up the sip stack on the clients
+ * not used for the initial INVITE
+ * @param msg: the handled message
+ * @param str1: "0" if msg is a subsequent/standalone request coming from the PSAP: 
+ * 	From header <- service URN + from tag
+ * @param str1: "1" if reply from the caller: 
+ * 	From header <- PSAP URI + to_tag
+ */
+int E_replace_from_header(struct sip_msg* msg, char* str1, char* str2){
+
+	e_dialog* d=NULL;
+	str call_id, uri = {0,0};
+	str from = {0,0}, from_tag ={0,0};
+
+	if(str1[0] != '0' && str1[0] !='1'){
+		LOG(L_ERR, "ERR:"M_NAME":E_replace_from_header: misuse!\n");
+		return CSCF_RETURN_ERROR;
+	}
+	
+	LOG(L_DBG, "DBG:"M_NAME":E_replace_from_header: %s\n", str1);
+
+	if(!cscf_get_from_tag(msg,&from_tag))
+		return CSCF_RETURN_ERROR;
+
+	LOG(L_DBG,"DBG:"M_NAME":E_replace_from_header: from tag %.*s\n",from_tag.len,from_tag.s);
+
+	enum e_dialog_direction dir = DLG_MOBILE_TERMINATING;
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":E_replace_from_header: Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = is_e_dialog_dir(msg, call_id,dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":E_replace_from_header:message did not create no dialog\n");
+		return CSCF_RETURN_ERROR;
+	}
+
+	if(cscf_del_all_headers(msg, HDR_FROM_T)==0){
+		LOG(L_ERR, "ERR:"M_NAME":E_replace_to_header:could not delete the existing From headers\n");
+		goto ret_false;
+	}
+
+	if(str1[0] == '0')
+	       uri = d->psap_uri;
+	else if(str1[0] == '1')
+	       uri = d->service;
+	
+	from.s = pkg_malloc(from_hdr_s.len + uri.len +from_hdr_mid.len + from_tag.len + from_hdr_e.len);
+	if (!from.s){
+		LOG(L_ERR, "ERR"M_NAME":E_replace_to_header: Error allocating %d bytes\n",
+			(from_hdr_s.len + uri.len + from_hdr_mid.len + from_tag.len +from_hdr_e.len));
+		goto ret_false;
+	}
+
+	from.len = 0;
+	STR_APPEND(from, from_hdr_s);
+	STR_APPEND(from, uri);
+	STR_APPEND(from, from_hdr_mid);
+	STR_APPEND(from, from_tag);
+	STR_APPEND(from, from_hdr_e);	
+
+	if (!cscf_add_header_first(msg,&from,HDR_FROM_T)){
+		goto ret_false;
+	}
+
+	d_unlock(d->hash);
+	return CSCF_RETURN_TRUE;
+ret_false: 
+	if(d) d_unlock(d->hash);
+	if(from.s)
+		pkg_free(from.s);
+	return CSCF_RETURN_FALSE;
 }
 
 /**
