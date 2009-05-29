@@ -86,6 +86,8 @@ static cmd_export_t ecscf_cmds[]={
 	{"E_query_LRF",					E_query_LRF,				1, 0, REQUEST_ROUTE},
 	{"E_add_rr",					E_add_record_route,			0, 0, REQUEST_ROUTE},
 	{"E_del_ESQK_info",				E_del_ESQK_info,			0, 0, REQUEST_ROUTE},
+	{"E_replace_to_header",				E_replace_to_header,			1, 0, REQUEST_ROUTE |ONREPLY_ROUTE |FAILURE_ROUTE},
+	{"E_replace_from_header",			E_replace_from_header,			1, 0, REQUEST_ROUTE |ONREPLY_ROUTE |FAILURE_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 

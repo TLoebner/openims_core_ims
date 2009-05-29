@@ -145,7 +145,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 
 	LOG(L_DBG,"DBG:"M_NAME":E_process_options_repl: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
-	d = get_e_dialog_dir(call_id,dir);
+	d = is_e_dialog_dir(inv_trans->uas.request, call_id,dir);
 	if(!d){
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:message did not create no dialog\n");
 		goto error;
@@ -183,6 +183,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 	
 	ret = 0;	
 error:
+	LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:forward the INVITE request\n");
 	if(d)	d_unlock(d->hash);
 	return ret;
 
@@ -390,8 +391,7 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	
 	LOG(L_DBG,"DBG:"M_NAME":E_query_LRF: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
-	d = get_e_dialog_dir(call_id,dir);
-
+	d = is_e_dialog_dir(msg, call_id,dir);
 	if(!d){
 		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:message did not create no dialog\n");
 		return CSCF_RETURN_ERROR;
@@ -465,8 +465,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 
 	LOG(L_DBG,"DBG:"M_NAME":E_get_location: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
-	d = get_e_dialog_dir(call_id,dir);
-
+	d = is_e_dialog_dir(msg, call_id,dir);
 	if(!d){
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location:message did not create no dialog\n");
 		return CSCF_RETURN_ERROR;
