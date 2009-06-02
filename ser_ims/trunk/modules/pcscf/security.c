@@ -92,7 +92,7 @@ extern str pcscf_record_route_mt_uri;	/**< URI for Record-route terminating */
 extern r_hash_slot *registrar;			/**< the contacts */
 extern int r_hash_size;					/**< records tables parameters 	*/
 
-int current_spi=5000;					/**< current SPI value */
+unsigned int current_spi=5000;					/**< current SPI value */
 extern int pcscf_use_tls;				/**< whether to use or not tls */
 extern int pcscf_tls_port;				/**< PORT for TLS server */
 extern int tls_disable;
@@ -102,7 +102,7 @@ extern int tls_disable;
  * \todo - make sure that this SPI is not used at the moment
  * @returns the next SPI
  */
-int get_next_spi()
+unsigned int get_next_spi()
 {
 	return current_spi++;
 }
@@ -422,11 +422,11 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 				/* and for spis */
 				get_param(sec_hdr,s_spi_c,tmp);
 				strtoint(tmp,spi_uc);
-				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-C: %d\n",
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-C: %u\n",
 					spi_uc);
 				get_param(sec_hdr,s_spi_s,tmp);
 				strtoint(tmp,spi_us);
-				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-S: %d\n",
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-S: %u\n",
 					spi_us);
 				/* and for ports */
 				get_param(sec_hdr,s_port_c,tmp);
@@ -705,7 +705,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 			 */
 			ipsec = c->security_temp->data.ipsec;
 			/* try to add the Security-Server header */
-			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; prot=%.*s; mod=%.*s; q=0.1\r\n",
+			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%u; spi-s=%u; port-c=%d; port-s=%d; prot=%.*s; mod=%.*s; q=0.1\r\n",
 				ipsec->r_ealg.len,ipsec->r_ealg.s,
 				ipsec->r_alg.len,ipsec->r_alg.s,
 				ipsec->spi_pc,ipsec->spi_ps,
@@ -728,7 +728,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 	
 			/* run the IPSec script */	
 			/* P_Inc_Req */
-			sprintf(cmd,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(cmd,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Inc_Req,
 				c->host.len,c->host.s,
 				ipsec->port_uc,
@@ -860,7 +860,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 			i = c->security->data.ipsec;
 			
 			/* P_Out_Rpl */
-			sprintf(out_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(out_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Out_Rpl,
 				c->host.len,c->host.s,
 				i->port_uc,
@@ -875,7 +875,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->mod.len,i->mod.s);					
 	
 			/* P_Out_Req */
-			sprintf(out_req,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(out_req,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Out_Req,
 				c->host.len,c->host.s,
 				i->port_us,
@@ -890,7 +890,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->mod.len,i->mod.s);								
 
 			/* P_Out_Inc_Rpl */
-			sprintf(inc_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(inc_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Inc_Rpl,
 				c->host.len,c->host.s,
 				i->port_us,
@@ -951,7 +951,7 @@ void P_security_drop(r_contact *c,r_security *s)
 		case SEC_IPSEC:
 			i = s->data.ipsec;
 			if (!i) return;
-			sprintf(drop,"%s %.*s %d %d %s %d %d %d %d %d %d %.*s",
+			sprintf(drop,"%s %.*s %hu %hu %s %d %d %u %u %u %u %.*s",
 				pcscf_ipsec_P_Drop,
 				c->host.len,c->host.s,
 				i->port_uc,
