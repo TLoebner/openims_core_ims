@@ -234,10 +234,10 @@ int bin_encode_ipsec(bin_data *x,r_ipsec *ipsec)
 	
 	if (!bin_encode_char(x,1)) goto error;
 
-	if (!bin_encode_int(x,ipsec->spi_uc)) goto error;
-	if (!bin_encode_int(x,ipsec->spi_us)) goto error;
-	if (!bin_encode_int(x,ipsec->spi_pc)) goto error;
-	if (!bin_encode_int(x,ipsec->spi_ps)) goto error;
+	if (!bin_encode_uint(x,ipsec->spi_uc)) goto error;
+	if (!bin_encode_uint(x,ipsec->spi_us)) goto error;
+	if (!bin_encode_uint(x,ipsec->spi_pc)) goto error;
+	if (!bin_encode_uint(x,ipsec->spi_ps)) goto error;
 	if (!bin_encode_ushort(x,ipsec->port_uc)) goto error;
 	if (!bin_encode_ushort(x,ipsec->port_us)) goto error;
 	
@@ -284,10 +284,10 @@ int bin_decode_ipsec(bin_data *x,r_ipsec **ipsec)
 	}
 	memset(*ipsec,0,len);
 
-	if (!bin_decode_int(x,	&(*ipsec)->spi_uc)) goto error;
-	if (!bin_decode_int(x,	&(*ipsec)->spi_us)) goto error;
-	if (!bin_decode_int(x,	&(*ipsec)->spi_pc)) goto error;
-	if (!bin_decode_int(x,	&(*ipsec)->spi_ps)) goto error;
+	if (!bin_decode_uint(x,	&(*ipsec)->spi_uc)) goto error;
+	if (!bin_decode_uint(x,	&(*ipsec)->spi_us)) goto error;
+	if (!bin_decode_uint(x,	&(*ipsec)->spi_pc)) goto error;
+	if (!bin_decode_uint(x,	&(*ipsec)->spi_ps)) goto error;
 	if (!bin_decode_ushort(x,	&(*ipsec)->port_uc)) goto error;
 	if (!bin_decode_ushort(x,	&(*ipsec)->port_us)) goto error;
 
