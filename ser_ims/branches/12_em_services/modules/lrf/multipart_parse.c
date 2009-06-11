@@ -1,3 +1,29 @@
+ /* Copyright (C) 2001-2003 FhG Fokus
+ *
+ * This file is part of Kamailio, a free SIP server.
+ *
+ * Kamailio is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version
+ *
+ * Kamailio is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License 
+ * along with this program; if not, write to the Free Software 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
+
+/* History:
+ * Ancuta Onofrei - generalized the code to get the part of a multipart body for 
+ * 		different types and subtypes
+ * 		email andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
+ *
+ */
 
 #include "mod.h"
 
@@ -8,6 +34,9 @@
 #include "multipart_parse.h"
 
 static int str_trim_newline(str *s);
+static int get_body_content(struct sip_msg * _m, str * body_content, unsigned int type, unsigned int subtype);
+static int get_mixed_body_content(str* mixed_body, str delimiter, unsigned int type, unsigned int subtype, 
+		str * body_content);
 
 /* get the PIDF-LO body of a request
  * @param msg - the SIP request

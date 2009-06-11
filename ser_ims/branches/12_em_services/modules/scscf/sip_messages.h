@@ -1,7 +1,7 @@
 /*
  * $Id$
  *  
- * Copyright (C) 2004-2006 FhG Fokus
+ * Copyright (C) 2004-2009 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
