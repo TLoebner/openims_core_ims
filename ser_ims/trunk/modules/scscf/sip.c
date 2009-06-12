@@ -74,7 +74,6 @@
 #include "../tm/tm_load.h"
 
 #include "mod.h"
-#include "auth_api.h"
 
 #define strtotime(src,dest) \
 {\
@@ -157,6 +156,10 @@ int cscf_add_header(struct sip_msg *msg, str *hdr,int type)
 {
 	struct hdr_field *last;
 	struct lump* anchor;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_add_header: Error parsing until end of headers: \n");
+		return 0;
+	}
 	last = msg->headers;
 	while(last->next) 
 		last = last->next;
@@ -167,7 +170,7 @@ int cscf_add_header(struct sip_msg *msg, str *hdr,int type)
 	}
 
 	if (!insert_new_lump_after(anchor, hdr->s,hdr->len,type)){
-		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header_first: error creting lump for header\n" );
+		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header_first: error creating lump for header\n" );
 		return 0;
 	}	
  	return 1;
@@ -1571,7 +1574,7 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 
 static str s_called_party_id={"P-Called-Party-ID",17};
 /**
- * Looks for the P-Preferred-Identity header and extracts its content.
+ * Looks for the P-Called-Party-ID header and extracts its content.
  * @param msg - the sip message
  * @param hr - ptr to return the found hdr_field 
  * @returns the P-Called_Party-ID
@@ -2496,7 +2499,7 @@ name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h
 }
 
 /**
- * Looks for the P-Preferred-Identity header and extracts its content
+ * Extracts the preferred identity from the From header
  * @param msg - the SIP message to look into
  * @param hr - the header ptr to be filled with the result
  * @returns the preferred identity string or an empty string if none found
@@ -2521,6 +2524,7 @@ name_addr_t cscf_get_preferred_identity_from_from(struct sip_msg *msg,struct hdr
 	if (hr) *hr = msg->from;			
 	return id;
 }
+
 
 /**
  * Returns the next route.
@@ -2567,8 +2571,15 @@ str cscf_get_content_type(struct sip_msg *msg)
 {
 	str ct={0,0};
 	if (!msg) return ct;
-	if (parse_headers(msg, HDR_CONTENTTYPE_F, 0) != -1 && msg->content_type)
+	if (parse_headers(msg, HDR_CONTENTTYPE_F, 0) != -1 && msg->content_type){
 		ct = msg->content_type->body;		
+		while(ct.s[0]==' '||ct.s[0]=='\t'){
+			ct.s++;
+			ct.len--;
+		}
+		while(ct.s[ct.len-1]==' '||ct.s[ct.len-1]=='\t')
+			ct.len--;
+	}
 	return ct;
 }
 

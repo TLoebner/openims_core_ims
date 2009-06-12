@@ -128,6 +128,8 @@
 #include "../../mem/shm_mem.h"
 #include "../../mem/mem.h"
 
+#include "auth_api.h"
+
 #define M_NAME "S-CSCF"
 
 /** Return and break the execution of routing script */
