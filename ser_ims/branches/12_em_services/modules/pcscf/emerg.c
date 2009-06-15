@@ -53,14 +53,15 @@
  */
  
 #include <time.h>
- 
+
+
 #include "../../data_lump.h"
 #include "../../data_lump_rpl.h"
 #include "../../mem/mem.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "../../parser/parse_from.h"
-
+#include "../../dset.h"
 #include "mod.h"
 #include "sip.h"
 #include "emerg.h"
@@ -72,6 +73,7 @@
 #include "dlg_state.h"
 
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
+extern char * ecscf_uri;
 extern int emerg_support;
 extern str ecscf_uri_str;
 extern int anonym_em_call_support;
@@ -89,9 +91,25 @@ int init_emergency_cntxt(){
 	
 	/*init the XML library*/
 	xmlInitParser();
+
+	if(emerg_support){
+		ecscf_uri_str.s = ecscf_uri;
+		ecscf_uri_str.len = strlen(ecscf_uri);
+		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
+		if(store_em_numbers())
+			return -1;
+	}
+
 	
 	/*init the xml doc*/
 	return init_em_alt_serv_body();
+}
+
+void clean_emergency_cntxt(){
+
+	if(emerg_support)
+		clean_em_numbers();
+
 }
 
 /* Contructing the rough XML body for the 380 Alternative Service reply
@@ -148,78 +166,6 @@ error:
 	return -1;
 }
 
-//return 0 if matched
-int check_sos_URN(char *p, char* service, int service_len){
-
-	return strncmp(p, service, service_len);
-}
-
-int emergency_urn(char* uri,  int len){
-
-	if((len < SOS_URN_LEN ) || (strncmp(uri,SOS_URN, SOS_URN_LEN)!=0))
-		goto not_emerg;
-
-	if(len == SOS_URN_LEN)
-		goto is_emerg;
-
-	char* p = uri+SOS_URN_LEN;
-	if(*p !='.'){	
-		goto error;
-	}
-	p++;
-
-	switch(*p){
-		case 'a':
-			if(!check_sos_URN(p, SOS_URN_AMB, SOS_URN_AMB_LEN)) 
-				goto is_emerg;
-			if(!check_sos_URN(p, SOS_URN_AN_CTR, SOS_URN_AN_CTR_LEN))
-				goto is_emerg;
-			break;			
-		case 'f':
-			if(!check_sos_URN(p, SOS_URN_FIRE, SOS_URN_FIRE_LEN))
-				goto is_emerg;
-			break;
-		case 'g':
-			if(!check_sos_URN(p, SOS_URN_GAS, SOS_URN_GAS_LEN))
-				goto is_emerg;
-			break;
-		case 'm':
-			if(!check_sos_URN(p, SOS_URN_MAR, SOS_URN_MAR_LEN))
-				goto is_emerg;
-
-			if(!check_sos_URN(p, SOS_URN_MOUNT, SOS_URN_MOUNT_LEN))
-				goto is_emerg;
-			break;
-		case 'p':
-			if(!check_sos_URN(p, SOS_URN_POL, SOS_URN_POL_LEN))
-				goto is_emerg;
-			if(!check_sos_URN(p, SOS_URN_POIS, SOS_URN_POIS_LEN))
-				goto is_emerg;
-			if(!check_sos_URN(p, SOS_URN_PHYS, SOS_URN_PHYS_LEN))
-				goto is_emerg;
-			break;
-		default:
-			break;
-	}
-
-error:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: invalid emergency URI %.*s\n",
-			len, uri);
-	return CSCF_RETURN_ERROR;
-
-not_emerg:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: no emergency URI %.*s\n",
-			len, uri);
-
-	return CSCF_RETURN_FALSE;
-
-is_emerg:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: we have an emergency call for the URI %.*s\n",
-			len, uri);
-	return CSCF_RETURN_TRUE;
-
-}
-
 /* Checks if the Request Uri is used for an Emergency Service
  * @param msg - the SIP message
  * @param str1 - not used
@@ -228,8 +174,23 @@ is_emerg:
  */
 int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2){
 
-	return emergency_urn(msg->first_line.u.request.uri.s,
-				msg->first_line.u.request.uri.len);
+	int sos;
+
+
+	str ruri = {msg->first_line.u.request.uri.s,
+				msg->first_line.u.request.uri.len};
+
+	LOG(L_DBG, "DBG:"M_NAME":P_emergency_ruri:checking if the ruri %.*s is an emergency ruri\n",
+			ruri.len, ruri.s);	
+
+	sos = is_emerg_ruri(ruri, NULL);
+	switch(sos){
+	
+		case NOT_URN:	return CSCF_RETURN_FALSE;
+		case URN_ERROR:	return CSCF_RETURN_ERROR;
+		default: 
+				return CSCF_RETURN_TRUE;
+	}
 }
 
 /**
@@ -366,12 +327,25 @@ static str route_e={">\r\n",3};
  */
 int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 {
+	int sos;
 	str newuri={0,0};
-	str x = {0,0};
+	str x = {0,0}, urn = {0,0};
 	p_dialog *d = NULL;
 	str sel_ecscf_uri, call_id, host;
 	int port,transport;
 	enum p_dialog_direction dir;
+	str ruri = {msg->first_line.u.request.uri.s,
+			msg->first_line.u.request.uri.len};
+
+	sos = is_emerg_ruri(ruri, &urn);
+	if(sos == NOT_URN || sos == URN_ERROR){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: invalid use: no emergency request URI\n");
+		return CSCF_RETURN_ERROR;
+	}
+
+	LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
+				urn.len, urn.s);
+
 	
 	dir = DLG_MOBILE_ORIGINATING;
 	
@@ -400,6 +374,7 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 	if(select_ECSCF(&sel_ecscf_uri))
 		goto error;
 
+
 	x.len = route_s.len + route_e.len + sel_ecscf_uri.len;
 			
 	x.s = pkg_malloc(x.len);
@@ -421,6 +396,18 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 		goto error;
 	}
 
+	if(urn.len && urn.s){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
+				urn.len, urn.s);
+
+		if(rewrite_uri(msg, &urn) < 0) {
+			LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: Error rewritting uri with <%.*s>\n",
+				urn.len, urn.s);
+			goto error;	
+		}
+	} 
+
+
 	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)) {
 		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
 			goto end;
@@ -431,10 +418,10 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 
 error:
 out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not select an ECSCF\n");
 	if(d) d_unlock(d->hash);
 	if (x.s) pkg_free(x.s);
 	if(newuri.s) pkg_free(newuri.s);
-	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not select an ECSCF\n");
 	return CSCF_RETURN_ERROR;
 end:
 	STR_SHM_DUP(d->em_info.ecscf_uri, sel_ecscf_uri, "P_enforce_sos_routes");
@@ -487,7 +474,10 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
 	str body_str = {0, 0};
 	xmlChar * body = NULL;
        	const xmlChar *reason;
-	int len = 0, ret;
+	int len = 0;
+	urn_t ret;
+	str uri = {msg->first_line.u.request.uri.s, 
+				msg->first_line.u.request.uri.len};
 
 	ret = CSCF_RETURN_FALSE;
 
@@ -500,9 +490,8 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
 			strncmp(msg->first_line.u.request.method.s, invite_method.s, invite_method.len) == 0){
 		
 		
-		ret = emergency_urn(msg->first_line.u.request.uri.s, 
-				msg->first_line.u.request.uri.len);
-		if(ret == CSCF_RETURN_ERROR)
+		ret = is_emerg_ruri(uri, NULL);
+		if(ret == URN_ERROR)
 			return CSCF_RETURN_ERROR;
 	}
 
