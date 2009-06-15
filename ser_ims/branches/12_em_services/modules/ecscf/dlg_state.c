@@ -371,15 +371,17 @@ int is_e_dialog(str call_id,str aor,enum e_dialog_direction dir)
  */
 int is_dialog_to_callee(int sip_msg_type, e_dialog* d, str from_uri, str to_uri){
 
-	str psap_str = (sip_msg_type == SIP_REQUEST)?d->service:d->psap_uri;
+	//str psap_str = (sip_msg_type == SIP_REQUEST)?d->service:d->psap_uri;
+	str psap_str = (sip_msg_type == SIP_REQUEST)?d->dialog_c->rem_uri:d->psap_uri;
 
 	LOG(L_DBG,"DBG:"M_NAME":dialog_to_callee: comparing %.*s to %.*s and %.*s to %.*s\n",
-			to_uri.len, to_uri.s, psap_str.len, psap_str.s,
+			//to_uri.len, to_uri.s, psap_str.len, psap_str.s,
+			to_uri.len, to_uri.s, psap_str.len-2, psap_str.s+1,
 			from_uri.len, from_uri.s, d->dialog_c->loc_uri.len-2, d->dialog_c->loc_uri.s+1);
 
-	if(to_uri.len == psap_str.len &&
+	if(to_uri.len == (psap_str.len-2) &&
 			from_uri.len == (d->dialog_c->loc_uri.len-2) &&
-			strncasecmp(to_uri.s, psap_str.s, to_uri.len)==0 &&
+			strncasecmp(to_uri.s, psap_str.s+1, to_uri.len)==0 &&
 			strncasecmp(from_uri.s, d->dialog_c->loc_uri.s+1, from_uri.len)==0){
 		LOG(L_DBG, "DBG:"M_NAME":dialog_to_callee: matched\n");
 		return 1;
@@ -395,7 +397,8 @@ int is_dialog_to_callee(int sip_msg_type, e_dialog* d, str from_uri, str to_uri)
 */
 int is_dialog_to_caller(int sip_msg_type, e_dialog* d, str from_uri, str to_uri){
 
-	str psap_str = (sip_msg_type == SIP_REPLY)?d->service:d->psap_uri;
+	//str psap_str = (sip_msg_type == SIP_REPLY)?d->service:d->psap_uri;
+	str psap_str = (sip_msg_type == SIP_REPLY)?d->dialog_c->rem_uri:d->psap_uri;
 
 	LOG(L_DBG,"DBG:"M_NAME":dialog_to_caller: comparing %.*s to %.*s and %.*s to %.*s\n",
 			from_uri.len, from_uri.s, psap_str.len, psap_str.s,
@@ -1422,7 +1425,7 @@ int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2){
 	if(str1[0] == '0')
 	       uri = d->psap_uri;
 	else if(str1[0] == '1')
-	       uri = d->service;
+	       uri = d->dialog_c->rem_uri;
 	to.len = to_hdr_s.len + uri.len +to_hdr_mid.len + to_hdr_e.len;
 	if(to_tag.len)
 		to.len += to_hdr_tag.len + to_tag.len ;
@@ -1504,9 +1507,10 @@ int E_replace_from_header(struct sip_msg* msg, char* str1, char* str2){
 
 	if(str1[0] == '0')
 	       uri = d->psap_uri;
-	else if(str1[0] == '1')
-	       uri = d->service;
-	
+	else if(str1[0] == '1'){
+	       uri.s = d->dialog_c->rem_uri.s+1;
+	       uri.len = d->dialog_c->rem_uri.len -2;
+	}
 	from.s = pkg_malloc(from_hdr_s.len + uri.len +from_hdr_mid.len + from_tag.len + from_hdr_e.len);
 	if (!from.s){
 		LOG(L_ERR, "ERR"M_NAME":E_replace_to_header: Error allocating %d bytes\n",

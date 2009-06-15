@@ -128,7 +128,7 @@ char* pcscf_ipsec_P_Drop	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Drop.s
 
 int registrar_hash_size=1024;				/**< the size of the hash table for registrar		*/
 
-char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/pcscf/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
+char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
 int pcscf_subscribe_retries = 1;			/**< times to retry subscribe to reg on failure 	*/
 
 int pcscf_assert_fallback = 0;				/**< whether to fallback and use the From header on 
@@ -180,6 +180,7 @@ char* ecscf_uri ="sip:ecscf.open-ims.test:7060";				/** the e-cscf uri*/
 str ecscf_uri_str;
 int emerg_support = 1;
 int anonym_em_call_support = 1;
+char* emerg_numbers_file="/opt/OpenIMSCore/ser_ims/modules/pcscf/emerg_info.xml";
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -363,7 +364,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
 	{"P_is_em_registered",			P_is_em_registered, 			0, 0, REQUEST_ROUTE},
-
+	
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -492,7 +493,7 @@ static param_export_t pcscf_params[]={
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
 	{"anonym_em_call_support",				INT_PARAM, &anonym_em_call_support},
-
+	{"emerg_numbers_file",					STR_PARAM, &emerg_numbers_file},
 	{0,0,0} 
 };
 
@@ -642,12 +643,7 @@ int fix_parameters()
 	forced_clf_peer_str.s = forced_clf_peer;
 	forced_clf_peer_str.len = strlen(forced_clf_peer);
 	
-	if(emerg_support){
-		ecscf_uri_str.s = ecscf_uri;
-		ecscf_uri_str.len = strlen(ecscf_uri);
-		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
-	}
-
+	
 	return 1;
 }
 
@@ -853,12 +849,7 @@ static int mod_init(void)
 		}
 	}
 
-	/* initializing the variables needed for the Emergency Services support*/
-	if (init_emergency_cntxt()<0){
-		LOG(L_ERR,"ERR:"M_NAME":mod_init: error on init_emergency_cntxt()\n");
-		goto error;	
-	}
-	
+		
 	return 0;
 error:
 	return -1;
@@ -881,7 +872,13 @@ static int mod_child_init(int rank)
 	/* don't do anything for main process and TCP manager process */
 	if ( rank == PROC_MAIN || rank == PROC_TCP_MAIN )
 		return 0;
-			
+
+	/* initializing the variables needed for the Emergency Services support*/
+	if (init_emergency_cntxt()<0){
+		LOG(L_ERR,"ERR:"M_NAME":mod_child: error on init_emergency_cntxt()\n");
+		return -1;	
+	}
+
 	/* Init the user data parser */
 	if (!parser_init(pcscf_reginfo_dtd)) return -1;
 		
@@ -914,6 +911,7 @@ static void mod_destroy(void)
 			make_snapshot_subscriptions();
 		}
 		/* Then nuke it all */		
+		clean_emergency_cntxt();
 		parser_destroy();
 		r_subscription_destroy();
 		r_storage_destroy();
@@ -932,8 +930,8 @@ static void mod_destroy(void)
 	#ifdef WITH_IMS_PM
 		ims_pm_destroy();	
 	#endif /* WITH_IMS_PM */		
-}
 
+}
 
 /**
  * Checks if the transaction is in processing.
