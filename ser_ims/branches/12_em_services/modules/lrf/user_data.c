@@ -308,7 +308,6 @@ user_d * new_user_data(str user_uri, str service){
 	user_data->service.s = (char*) (esqk.s + esqk.len+user_uri.len);
 	user_data->service.len = service.len;
 	memcpy(user_data->service.s, service.s, service.len*sizeof(char));
-
 	LOG(L_DBG, "DBG:"M_NAME":new_alloc_user_data: the service uri is %.*s\n", 
 			user_data->service.len, user_data->service.s);
 

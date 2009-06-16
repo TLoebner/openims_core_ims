@@ -104,7 +104,7 @@ int init_lost_lib();
 void end_lost_lib();
 
 CURL* lost_http_conn(char *url, int port, str* chunk);
-int create_lost_req(xmlNode* location, loc_fmt d_loc_fmt, str* lost_req);
+int create_lost_req(xmlNode* location, char * service, loc_fmt d_loc_fmt, str* lost_req);
 int send_POST_data(CURL* connhandle, str data);
 void lost_http_disconn(CURL* connhandle);
 
