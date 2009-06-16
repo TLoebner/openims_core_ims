@@ -217,14 +217,13 @@ void lost_http_disconn(CURL* connhandle){
 	curl_easy_cleanup(connhandle);
 }
 
-int create_lost_req(xmlNode* location, loc_fmt d_loc_fmt, str* lost_req){
+int create_lost_req(xmlNode* location, char* service, loc_fmt d_loc_fmt, str* lost_req){
 
 	xmlDocPtr doc= NULL;
    	xmlNodePtr root_node;
    	xmlNodePtr loc_node = NULL, loc_copy=NULL;
 	char * id = "1234";
 	char * profile;
-	char * service_val = "urn:service:sos";
 	xmlChar * req_body = NULL;
 	int req_len = 0;
 
@@ -293,12 +292,11 @@ int create_lost_req(xmlNode* location, loc_fmt d_loc_fmt, str* lost_req){
 	}
 
 	loc_node = NULL;
-	if(!xmlNewChild(root_node, NULL, BAD_CAST LOST_SERVICE_NODE, BAD_CAST service_val)){
+	if(!xmlNewChild(root_node, NULL, BAD_CAST LOST_SERVICE_NODE, BAD_CAST service)){
 	
 		ERROR_LOG("could not add the %s node to root\n", LOST_SERVICE_NODE);
 		goto error;
 	}
-
 	//print_element_names(root_node);
 
 	xmlDocDumpFormatMemoryEnc(doc, &req_body, &req_len, LOST_XML_ENC, 1);

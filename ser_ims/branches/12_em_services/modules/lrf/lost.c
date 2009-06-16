@@ -131,15 +131,24 @@ str get_psap_by_LoST(user_d * d){
 
 	location = d->loc;
 	d_loc_fmt = d->l_fmt;
-
-	if(create_lost_req(location, d_loc_fmt, &lost_req)){
 	
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap:could not create the LoST request\n");
+	char * service_val = pkg_malloc((d->service.len+1)*sizeof(char));
+	if (!service_val){
+		LOG(L_ERR,"ERR:"M_NAME":get_psap_by_LoST: Error allocating %d bytes\n",d->service.len+1);
+		goto end;
+	}
+	
+	memcpy(service_val,d->service.s,d->service.len*sizeof(char));
+	service_val[d->service.len] = '\0';
+	
+	if(create_lost_req(location, service_val, d_loc_fmt, &lost_req)){
+	
+		LOG(L_ERR, "ERR:"M_NAME":get_psap_by_LoST:could not create the LoST request\n");
 		goto end;
 	}
 	
 	if(snd_rcv_LoST(lost_req, &result)){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap:could not send the LoST request, setting the default PSAP URI\n");
+		LOG(L_ERR, "ERR:"M_NAME":get_psap_by_LoST:could not send the LoST request, setting the default PSAP URI\n");
 		goto end;
 	}
 	
@@ -147,9 +156,9 @@ str get_psap_by_LoST(user_d * d){
 	root = get_LoST_resp_type(result, &resp_type, &reason);
 	if(resp_type != LOST_OK){
 		
-		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: LoST response type is not OK\n");
+		LOG(L_ERR, "ERR:"M_NAME":get_psap_by_LoST: LoST response type is not OK\n");
 		if(reason.s != NULL)
-			LOG(L_DBG, "DBG:"M_NAME": LRF_get_psap:reason: %s\n", reason.s);
+			LOG(L_DBG, "DBG:"M_NAME": get_psap_by_LoST:reason: %s\n", reason.s);
 		
 		goto end;
 	}
@@ -157,11 +166,11 @@ str get_psap_by_LoST(user_d * d){
 	//get the PSAP URI
 	psap_uri = get_mapped_psap(root, &exp_type, &exp_timestamp, &puri);
 	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_ERR, "ERR:"M_NAME": LRF_get_psap:LoST response had no valid SIP uri\n");
+		LOG(L_ERR, "ERR:"M_NAME": get_psap_by_LoST:LoST response had no valid SIP uri\n");
 		goto end;
 	}
 
-	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:found psap uri is %.*s\n", psap_uri.len, psap_uri.s);
+	LOG(L_DBG, "DBG:"M_NAME":get_psap_by_LoST:found psap uri is %.*s\n", psap_uri.len, psap_uri.s);
 	
 end:
 	if(result.s)
@@ -186,12 +195,13 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 	user_d * d=NULL;
 	str service;
 
+	LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap \n");
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
-
+	
 	user_uri = msg->first_line.u.request.uri;
 	d = get_user_data(user_uri, service);
 	if(!d) {
@@ -199,9 +209,9 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 				user_uri.len, user_uri.s, service.len, service.s);
 		return CSCF_RETURN_FALSE;
 	}
-
+	
 	//if not using a LoST server
-	if(using_lost_srv){
+	if(using_lost_srv){		
 		psap_uri = get_psap_by_LoST(d);
 		if(!psap_uri.s || !psap_uri.len)
 			goto error;

@@ -193,9 +193,17 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		//send error response to INVITE and update the dialog
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: received an error response %i\n", code);
 
-		if(tmb.t_reply(inv_trans->uas.request, 500, NO_PSAP)<0){
+		if(tmb.t_reply(inv_trans->uas.request, 404, NO_PSAP)<0){
 			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not reply to the INVITE request\n");
 			goto error;
+		}
+		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: sent a 404 no available PSAP error response\n");
+
+		d->state = DLG_STATE_TERMINATED;
+		d_unlock(d->hash);				
+		if(inv_trans->nr_of_outgoings < 2){
+			del_e_dialog(d);
+			print_e_dialogs(L_INFO);
 		}
 
 	}else{
@@ -217,11 +225,11 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		}
 		
 		cscf_del_nonshm_lumps(inv_trans->uas.request);
+		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:forward the INVITE request\n");
 	}
 	
 	ret = 0;	
 error:
-	LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:forward the INVITE request\n");
 	if(d)	d_unlock(d->hash);
 	return ret;
 
