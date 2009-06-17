@@ -70,6 +70,7 @@
 #include "sip.h"
 #include "mgcf.h"
 #include "dlg_state.h"
+#include "release_call.h"
 
 MODULE_VERSION
 
@@ -109,6 +110,8 @@ str mgcf_record_route_mo;		/**< record route header for PSTN origination dialogs
 str mgcf_record_route_mt;		/**< record route header for PSTN termination dialogs */
 str mgcf_record_route_mo_uri;	/**< record route header for PSTN origination dialogs */
 str mgcf_record_route_mt_uri;	/**< record route header for PSTN termination dialogs */
+str mgcf_record_route_mo_body;	/**< record route header for PSTN origination dialogs */
+str mgcf_record_route_mt_body;	/**< record route header for PSTN termination dialogs */
 str mgcf_default_realm_str;		/**< fixed default realm */
 
 extern str cscf_icid_value_prefix_str;				/**< fixed hexadecimal prefix for the icid-value - must be unique on each node */
@@ -140,6 +143,8 @@ extern str cscf_term_ioi_str;						/**< fixed name of the Terminating network 		
  * - M_check_session_expires() - Checks if Session-Expires value is over Min_SE local policy
  * - M_422_session_expires() - Return a 422 response with Min_SE set to local policy
  * <p>
+ * - M_release_call("orig"/"term",reason) - release a call
+ * <p>
  * - M_enforce_dialog_requri("orig"/"term") - enforces the use of the proper Request-URI on subsequent requests, as saved from the contact header
  * <p>
  * - M_record_route_simple("orig"/"term") - simply adds a Record-Route header
@@ -169,6 +174,9 @@ static cmd_export_t mgcf_cmds[]={
 	{"M_record_route",				M_record_route,				1, 0, REQUEST_ROUTE},		
 	{"M_check_session_expires",		M_check_session_expires, 	0, 0, REQUEST_ROUTE},
 	{"M_422_session_expires",		M_422_session_expires,	 	0, 0, REQUEST_ROUTE},
+	
+	{"M_release_call",				M_release_call,			 	2, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+
 	
 	{"M_enforce_dialog_requri",		M_enforce_dialog_requri,	1, 0, REQUEST_ROUTE},
 	
@@ -280,6 +288,8 @@ static int fix_parameters()
 	STR_APPEND(mgcf_record_route_mo,s_record_route_e);
 	mgcf_record_route_mo_uri.s = mgcf_record_route_mo.s + s_record_route_s.len;
 	mgcf_record_route_mo_uri.len = mgcf_record_route_mo.len - s_record_route_s.len - s_record_route_lr.len - s_record_route_e.len;
+	mgcf_record_route_mo_body.s = mgcf_record_route_mo_uri.s-1;
+	mgcf_record_route_mo_body.len = mgcf_record_route_mo_uri.len+1 + s_record_route_lr.len + s_record_route_e.len;
 
 	mgcf_record_route_mt.len=0;
 	STR_APPEND(mgcf_record_route_mt,s_record_route_s);
@@ -296,6 +306,8 @@ static int fix_parameters()
 	STR_APPEND(mgcf_record_route_mt,s_record_route_e);
 	mgcf_record_route_mt_uri.s = mgcf_record_route_mt.s + s_record_route_s.len;
 	mgcf_record_route_mt_uri.len = mgcf_record_route_mt.len - s_record_route_s.len - s_record_route_lr.len - s_record_route_e.len;
+	mgcf_record_route_mt_body.s = mgcf_record_route_mt_uri.s-1;
+	mgcf_record_route_mt_body.len = mgcf_record_route_mt_uri.len+1+ s_record_route_lr.len + s_record_route_e.len;
 
 	
 	mgcf_default_realm_str.s = mgcf_default_realm; 

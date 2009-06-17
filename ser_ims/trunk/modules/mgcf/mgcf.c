@@ -484,7 +484,7 @@ int M_filter_content_type(struct sip_msg *msg,char *content_type,char *str2)
 	str new_body,new_part,new_content_len,x={0,0};
 	struct lump* anchor;	
 	
-	LOG(L_INFO,"DBG:"M_NAME":M_filter_content_type: filtering content type %s\n",content_type);
+	LOG(L_DBG,"DBG:"M_NAME":M_filter_content_type: filtering content type %s\n",content_type);
 	
 	if (body_content_type.len>=s_multipart.len &&
 			strncasecmp(body_content_type.s,s_multipart.s,s_multipart.len)==0){
@@ -497,7 +497,7 @@ int M_filter_content_type(struct sip_msg *msg,char *content_type,char *str2)
 			new_content_len.len = content_length_s.len + 12 + content_length_e.len;
 			new_content_len.s = pkg_malloc(new_content_len.len);
 			if (!new_content_len.s){
-				LOG(L_ERR, "ERR"M_NAME":M_filter_content_type: Error allocating %d bytes\n",
+				LOG(L_ERR, "ERR:"M_NAME":M_filter_content_type: Error allocating %d bytes\n",
 					x.len);
 				x.len=0;
 				return CSCF_RETURN_ERROR;		
@@ -533,19 +533,19 @@ int M_filter_content_type(struct sip_msg *msg,char *content_type,char *str2)
 				LOG(L_ERR, "ERR:"M_NAME":M_filter_content_type: error creating lump for header\n" );
 				return CSCF_RETURN_ERROR;
 			}	
-			LOG(L_INFO,"DBG:"M_NAME":M_filter_content_type: content-type %s found in multipart and replaced.\n",content_type);											
+			LOG(L_DBG,"DBG:"M_NAME":M_filter_content_type: content-type %s found in multipart and replaced.\n",content_type);											
 			return CSCF_RETURN_TRUE;
 		} else {
-			LOG(L_INFO,"DBG:"M_NAME":M_filter_content_type: content-type %s not found in multipart body.\n",content_type);
+			LOG(L_DBG,"DBG:"M_NAME":M_filter_content_type: content-type %s not found in multipart body.\n",content_type);
 			return CSCF_RETURN_FALSE;
 		}
 	} else {
 		if (body_content_type.len>=search_content_type.len &&
 				strncasecmp(body_content_type.s,search_content_type.s,search_content_type.len)==0){
-			LOG(L_INFO,"DBG:"M_NAME":M_filter_content_type: content-type %s found as main body - nothing to do.\n",content_type);											
+			LOG(L_DBG,"DBG:"M_NAME":M_filter_content_type: content-type %s found as main body - nothing to do.\n",content_type);											
 			return CSCF_RETURN_TRUE;
 		} else {
-			LOG(L_INFO,"DBG:"M_NAME":M_filter_content_type: content-type %s not found in body.\n",content_type);			
+			LOG(L_DBG,"DBG:"M_NAME":M_filter_content_type: content-type %s not found in body.\n",content_type);			
 			return CSCF_RETURN_FALSE;			
 		}
 	}
@@ -561,12 +561,18 @@ out_of_memory:
 int M_drop_body(struct sip_msg *msg,char *str1,char *str2)
 {
 	str new_content_len,x={0,0};
+	char *body_start = get_body(msg);
+	
+	if (cscf_get_content_len(msg)<=0){
+		LOG(L_DBG,"DBG:"M_NAME":M_drop_body: old body was empty - nothing to do\n");
+		return CSCF_RETURN_TRUE;
+	}
 	
 	/* add new Content-Length header */
 	new_content_len.len = content_length_s.len + 1 + content_length_e.len;
 	new_content_len.s = pkg_malloc(new_content_len.len);
 	if (!new_content_len.s){
-		LOG(L_ERR, "ERR"M_NAME":M_drop_body: Error allocating %d bytes\n",
+		LOG(L_ERR, "ERR:"M_NAME":M_drop_body: Error allocating %d bytes\n",
 			x.len);
 		x.len=0;
 		goto error;		
@@ -585,16 +591,18 @@ int M_drop_body(struct sip_msg *msg,char *str1,char *str2)
 	/* remove old body */
 	if ( parse_headers(msg, HDR_EOH_F, 0)==-1 )
 		goto error;
-	
-	if (!del_lump(msg,msg->unparsed-msg->buf,msg->len-(msg->unparsed-msg->buf),0)){
+	get_body(msg);
+	if (!del_lump(msg,body_start-msg->buf,msg->len-(body_start-msg->buf),0)){
 		LOG(L_ERR,"ERR:"M_NAME":M_drop_body: Error adding del lump\n");
 		goto error;		
 	}		
 
-	LOG(L_INFO,"DBG:"M_NAME":M_drop_body: done\n");
+	LOG(L_DBG,"DBG:"M_NAME":M_drop_body: done\n");
 	return CSCF_RETURN_TRUE;
 	
 error:	
 	LOG(L_ERR,"ERR:"M_NAME":M_drop_body: Error on deletion\n");
 	return CSCF_RETURN_ERROR;
 }
+
+
