@@ -61,6 +61,7 @@
 #include "../sl/sl_funcs.h"
 
 #include "sip.h"
+#include "release_call.h"
 
 int m_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 m_dialog_hash_slot *m_dialogs=0;			/**< the dialogs hash table				*/
@@ -459,9 +460,9 @@ m_dialog* get_m_dialog_dir_nolock(str call_id,enum m_dialog_direction dir)
 	return 0;
 }
 
-str reason_terminate_m_dialog_s={"Session terminated in the P-CSCF",32};
+str reason_terminate_m_dialog_s={"Session terminated in the MGCF",30};
 /** 
- * Terminates a dialog - called before del_m_dialog to send out terminatination messages.
+ * Terminates a dialog - called before del_m_dialog to send out termination messages.
  * @param d - the dialog to terminate
  * @returns - 1 if the requests were sent and the dialog will be deleted, 0 on error (you will have to delete the
  * dialog yourself!) 
@@ -472,9 +473,9 @@ int terminate_m_dialog(m_dialog *d)
 	switch (d->method){
 		case DLG_METHOD_INVITE:
 			LOG(L_ERR,"ERR:"M_NAME":terminate_m_dialog(): Not implemented for MGCF INVITE dialogs - silent drop on expiration.\n");
-//			if (release_call_p(d,503,reason_terminate_m_dialog_s)==-1){				
-//				del_m_dialog(d);
-//			}
+			if (release_call_p(d,503,reason_terminate_m_dialog_s)==-1){				
+				del_m_dialog(d);
+			}
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:
@@ -1458,7 +1459,7 @@ int M_enforce_dialog_routes(struct sip_msg *msg,char *str1,char*str2)
 			strncasecmp(d->routes[i].s,mgcf_record_route_mo_uri.s,mgcf_record_route_mo_uri.len)==0)||
 			(d->routes[i].len >= mgcf_record_route_mt_uri.len &&
 			strncasecmp(d->routes[i].s,mgcf_record_route_mt_uri.s,mgcf_record_route_mt_uri.len)==0)){
-			start = i;
+			start = i+1;
 			if (d->routes_cnt<=i){
 				d_unlock(d->hash);
 				return CSCF_RETURN_TRUE;

@@ -185,7 +185,7 @@ str cscf_get_multipart_part(str body,str boundary,int *position)
 		goto nomoreleft;	
 	x.len = k-j;
 	if (position) *position = k;
-	LOG(L_INFO,"DBG:"M_NAME":cscf_get_multipart_part(): Found part is:\n%.*s\n---\n",
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_multipart_part(): Found part is:\n%.*s\n---\n",
 			x.len,x.s);	
 	return x;
 nomoreleft:
@@ -214,7 +214,7 @@ str cscf_get_multipart_body(str part)
 	x.s = part.s+k;
 	x.len = part.len-k;
 	if (x.len<0) x.len=0;	
-	LOG(L_INFO,"DBG:"M_NAME":cscf_get_multipart_body(): Found body is:\n%.*s\n---\n",
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_multipart_body(): Found body is:\n%.*s\n---\n",
 			x.len,x.s);	
 	return x;
 }
@@ -237,7 +237,7 @@ int cscf_get_multipart_hdr_field(str part, int *position, struct hdr_field* hdr)
 	else if (hdr->type==HDR_ERROR_T)
 		return -1;
 	else {
-		LOG(L_INFO,"DBG:"M_NAME":cscf_get_multipart_hdr_field(): Found header <%.*s: %.*s>\n",
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_multipart_hdr_field(): Found header <%.*s: %.*s>\n",
 				hdr->name.len,hdr->name.s,
 				hdr->body.len,hdr->body.s);			
 		return 1;
@@ -280,7 +280,7 @@ str cscf_get_body_with_type_from_body(str body,str body_content_type,str search_
 	str x={0,0},boundary,part,part_content_type,part_body;
 	int position=0;
 	
-	LOG(L_INFO,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): looking for %.*s inside body of type %.*s.\n",
+	LOG(L_DBG,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): looking for %.*s inside body of type %.*s.\n",
 			search_content_type.len,search_content_type.s,
 			body_content_type.len,body_content_type.s);
 	
@@ -288,17 +288,17 @@ str cscf_get_body_with_type_from_body(str body,str body_content_type,str search_
 	
 	if (body_content_type.len>=search_content_type.len &&
 			strncasecmp(body_content_type.s,search_content_type.s,search_content_type.len)==0){
-		LOG(L_INFO,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): found!\n");		
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): found!\n");		
 		return body;
 	}
 	if (body_content_type.len>=s_multipart.len &&
 		strncasecmp(body_content_type.s,s_multipart.s,s_multipart.len)==0){
 		if (!body.len) goto notfound;
-		LOG(L_INFO,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): found a multipart - looking inside.\n");
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): found a multipart - looking inside.\n");
 		
 		boundary = cscf_get_multipart_boundary(body_content_type);
 		if (!boundary.len){
-			LOG(L_INFO,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): the boundary is empty... can't split multipart.\n");
+			LOG(L_DBG,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): the boundary is empty... can't split multipart.\n");
 			goto notfound;
 		}
 		for(part = cscf_get_multipart_part(body,boundary,&position);
@@ -307,7 +307,7 @@ str cscf_get_body_with_type_from_body(str body,str body_content_type,str search_
 			if (!part.len) continue;
 			
 			part_content_type = cscf_get_multipart_content_type(part);
-			LOG(L_INFO,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): found a non-empty part with type <%.*s>.\n",
+			LOG(L_DBG,"DBG:"M_NAME":cscf_get_body_with_type_from_body(): found a non-empty part with type <%.*s>.\n",
 					part_content_type.len,part_content_type.s);
 			/*
 			 *  TODO - fix the next line to fill the default content-type based on which multipart/? there is
