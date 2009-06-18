@@ -532,14 +532,15 @@ str get_asserted_identity(struct sip_msg *msg)
 /**
  *	Get the public identity from P-Asserted-Identity, or From if asserted not found.
  * @param msg - the SIP message
- * @param uri - uri to fill into
+ * @param user - user to fill into
  * @returns 1 if found, 0 if not
  */
-int get_originating_user( struct sip_msg * msg, str *uri )
+int get_originating_user( struct sip_msg * msg, str *user )
 {
 	struct to_body * from;
-	*uri = get_asserted_identity(msg);
-	if (!uri->len) {		
+	int i;
+	*user = get_asserted_identity(msg);
+	if (!user->len) {		
 		/* Fallback to From header */
 		if ( parse_from_header( msg ) == -1 ) {
 			LOG(L_ERR,"ERROR:enum:get_originating_user: unable to extract URI from FROM header\n" );
@@ -547,10 +548,21 @@ int get_originating_user( struct sip_msg * msg, str *uri )
 		}
 		if (!msg->from) return 0;
 		from = (struct to_body*) msg->from->parsed;
-		*uri = from->uri;
+		*user = from->uri;
 		//isc_strip_uri(uri);
 	}
-	DBG("DEBUG:enum:get_originating_user: From %.*s\n", uri->len,uri->s );
+	for(i=0;i<user->len;i++)
+		if (user->s[i]==':'){
+			user->s+=i+1;
+			user->len-=i+1;
+			break;
+		}
+	for(i=0;i<user->len;i++)
+			if (user->s[i]=='@'||user->s[i]==';'||user->s[i]=='?'){
+				user->len=i;
+				break;
+			}
+	DBG("DEBUG:enum:get_originating_user: From %.*s\n", user->len,user->s );
 	return 1;
 }
 
@@ -568,21 +580,37 @@ int set_dst_uri(struct sip_msg* msg, str* uri)
 	return 0;
 }
 
-inline int add_route(struct sip_msg *msg,str *uri)
+inline int add_route(struct sip_msg *msg,str uri)
 {
 	struct hdr_field *first;
 	struct lump* anchor;
-	str route;
-	if (!uri || !uri->len) return -1;
+	str domain,route;
+	int i;
+	if (!uri.len) return -1;
 	
+	domain=uri;
+	for(i=0;i<uri.len;i++)
+		if (uri.s[i]=='@'){
+			domain.s = uri.s+i+1;
+			domain.len = uri.len-i-1;
+			break;
+		}
+	for(i=0;i<domain.len;i++)
+		if (domain.s[i]==';'||domain.s[i]=='?'){
+			domain.len = i;
+			break;
+		}
+			
 	parse_headers(msg,HDR_EOH_F,0);			
 	first = msg->headers;	
-	route.s = pkg_malloc(21+uri->len);
+	route.s = pkg_malloc(32+domain.len+tel_uri_params_orig.len);
 	if (!route.s){
-		LOG(L_ERR,"ERR:enum:add_route(): error allocating %d bytes\n",14+uri->len);
+		LOG(L_ERR,"ERR:enum:add_route(): error allocating %d bytes\n",32+domain.len+tel_uri_params_orig.len);
 		return -1;
 	}
-	sprintf(route.s,"Route: <%.*s;lr>\r\n",uri->len,uri->s);
+	sprintf(route.s,"Route: <sip:%.*s%.*s;lr>\r\n",
+			domain.len,domain.s,
+			tel_uri_params_orig.len,tel_uri_params_orig.s);
 	
 	route.len =strlen(route.s);
 	LOG(L_DBG,"DEBUG:enum:add_route: <%.*s>\n",route.len,route.s);
@@ -600,6 +628,99 @@ inline int add_route(struct sip_msg *msg,str *uri)
 	}	
 	return 0;
 }
+
+
+static int replace_from(struct sip_msg *msg,str replace)
+{
+	struct lump* anchor;
+	struct to_body *from = get_from(msg);
+	str new_from;
+	int i;
+	
+	parse_headers(msg,HDR_EOH_F,0);	
+	for(i=0;i<replace.len;i++)
+		if (replace.s[i]==';'||replace.s[i]=='?'){
+			replace.len = i;
+			break;
+		}	
+	
+	new_from.s = pkg_malloc(replace.len);
+	if (!new_from.s) 
+		return -1;
+	new_from.len = replace.len;
+	memcpy(new_from.s,replace.s,replace.len);
+	
+	anchor = anchor_lump(msg, from->uri.s - msg->buf, 0 , 0);
+	if (anchor == NULL) {
+		LOG(L_ERR, "ERR:enum:replace_from: anchor_lump failed\n");
+		pkg_free(new_from.s);
+		return -1;
+	}
+	
+	if (!insert_new_lump_after(anchor, new_from.s,new_from.len,HDR_OTHER_T)){
+		LOG(L_ERR, "ERR:enum:replace_from: error creating lump for string\n" );
+		pkg_free(new_from.s);
+		return -1;
+	}	
+	if (!del_lump(msg, from->uri.s - msg->buf, from->uri.len, 0)) {
+		LOG(L_ERR, "ERR:enum:replace_from: Can't remove string <%.*s>\n",
+			from->uri.len,from->uri.s);
+		pkg_free(new_from.s);
+		return -1;
+	}
+	return 1;
+}
+
+static str s_asserted_id={"P-Asserted-Identity",19};
+static int replace_asserted(struct sip_msg *msg,str replace)
+{
+	struct hdr_field *first,*h;
+	struct lump* anchor;
+	str asserted;
+	int i;
+	
+	for(i=0;i<replace.len;i++)
+		if (replace.s[i]==';'||replace.s[i]=='?'){
+			replace.len = i;
+			break;
+		}	
+	
+	parse_headers(msg,HDR_EOH_F,0);		
+	first = msg->headers;	
+	for(h=first;h;h=h->next)
+		if (h->name.len == s_asserted_id.len &&
+				strncasecmp(h->name.s,s_asserted_id.s,s_asserted_id.len)==0){
+			if (!del_lump(msg, h->name.s - msg->buf, h->len, 0)) {
+					LOG(L_ERR, "ERR:enum:replace_asserted: Can't remove P-Asserted-Identity header <%.*s>\n",
+							h->len,h->name.s);
+					return -1;
+				}
+		}
+	
+	asserted.s = pkg_malloc(32+replace.len);
+	if (!asserted.s){
+		LOG(L_ERR,"ERR:enum:replace_asserted(): error allocating %d bytes\n",32+replace.len);
+		return -1;
+	}
+	sprintf(asserted.s,"P-Asserted-Identity: <%.*s>\r\n",replace.len,replace.s);
+	
+	asserted.len =strlen(asserted.s);
+	LOG(L_DBG,"DEBUG:enum:add_asserted: <%.*s>\n",asserted.len,asserted.s);
+	
+	anchor = anchor_lump(msg, first->name.s - msg->buf, 0 , HDR_OTHER_T);
+	if (anchor == NULL) {
+		LOG(L_ERR, "ERROR:enum:add_asserted: anchor_lump failed\n");
+		if (asserted.s) pkg_free(asserted.s);
+		return -1;
+	}
+	if (!insert_new_lump_before(anchor, asserted.s,asserted.len,HDR_OTHER_T)){
+		LOG( L_ERR, "ERROR:enum:add_asserted: error creating lump for P-Asserted-Identity header\n" );
+		if (asserted.s) pkg_free(asserted.s);
+		return -1;
+	}	
+	return 1;
+}
+
 int enum_query_orig(struct sip_msg* msg, char* p1, char* p2)
 {
 	char *user_s;
@@ -645,7 +766,8 @@ int enum_query_orig(struct sip_msg* msg, char* p1, char* p2)
 	}
 
 	if (test_e164(&user) == -1) {
-		LOG(L_ERR, "enum_query_orig(): uri user is not an E164 number\n");
+		LOG(L_ERR, "enum_query_orig(): uri user is not an E164 number (%.*s)\n",
+				user.len,user.s);
 		return -1;
 	}
 
@@ -734,6 +856,9 @@ int enum_query_orig(struct sip_msg* msg, char* p1, char* p2)
 		}
 
 		if (first) {
+			replace_asserted(msg,result);
+			//replace_from(msg,result);
+			add_route(msg,result);
 			if (set_dst_uri(msg, &result) == -1) {
 				goto done;
 			}
