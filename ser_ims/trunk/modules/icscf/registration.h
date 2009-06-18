@@ -64,7 +64,8 @@
  
 #define MSG_400 "Bad Request" 
 #define MSG_400_NO_PRIVATE "Bad Request - Private ID in Authorization / username token missing" 
-#define MSG_400_NO_PUBLIC "Bad Request - Public ID in To header missing" 
+#define MSG_400_NO_PUBLIC_FROM "Bad Request - Public ID in P-Asserted-Identity or From header missing"
+#define MSG_400_NO_PUBLIC "Bad Request - Public ID in To header or Request-URI missing" 
 #define MSG_400_MALFORMED_CONTACT "Bad Request - Error parsing Contact parameters" 
 #define MSG_400_NO_VISITED "Bad Request - P-Visited-Network-ID header missing" 
 
