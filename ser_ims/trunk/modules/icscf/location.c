@@ -118,7 +118,10 @@ int I_LIR(struct sip_msg* msg, char* str1, char* str2)
 	}
 	if (!public_identity.len) {
 		LOG(L_ERR,"ERR:"M_NAME":I_LIR: Public Identity not found, responding with 400\n");
-		cscf_reply_transactional(msg,400,MSG_400_NO_PUBLIC);
+		if (orig)
+			cscf_reply_transactional(msg,400,MSG_400_NO_PUBLIC_FROM);
+		else
+			cscf_reply_transactional(msg,400,MSG_400_NO_PUBLIC);
 		result=CSCF_RETURN_BREAK;
 		goto done;
 	}
