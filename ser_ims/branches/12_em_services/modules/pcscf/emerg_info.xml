@@ -2,10 +2,10 @@
 <emergency>
 	<sos_number>
 		<number>112</number>
-		<urn>urn:service:sos</urn>
+		<urn>urn:service:sos.ambulance</urn>
 	</sos_number>
 	<sos_number>
 		<number>911</number>
-		<urn>urn:service:sos.ambulance</urn>
+		<urn>urn:service:sos</urn>
 	</sos_number>
 </emergency>
