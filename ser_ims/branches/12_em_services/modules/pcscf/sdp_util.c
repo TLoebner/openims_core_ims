@@ -26,6 +26,7 @@
 #include "mod.h"
 #include "nat_helper.h"
 #include "sip.h"
+#include "sip_body.h"
 
 extern int pcscf_nat_enable;
 extern struct rtpp_head rtpp_list;
@@ -43,6 +44,9 @@ static str sup_ptypes[] = {
 	{.s = "rtp/avp", .len = 7},
 	{.s = NULL, .len = 0}
 };
+
+static str app_sdp_s = {"application/sdp", 15};
+
 
 extern network_t nets_1918[];
 
@@ -138,38 +142,6 @@ other:
 	LOG(L_ERR,"ERROR:check_content_type: invalid type for a message\n");
 	return -1;
 }
-
-int extract_body(struct sip_msg *msg, str *body )
-{
-	
-	body->s = get_body(msg);
-	if (body->s==0) {
-		LOG(L_ERR, "ERROR: extract_body: failed to get the message body\n");
-		goto error;
-	}
-	body->len = msg->len -(int)(body->s-msg->buf);
-	if (body->len==0) {
-		LOG(L_ERR, "ERROR: extract_body: message body has length zero\n");
-		goto error;
-	}
-	
-	/* no need for parse_headers(msg, EOH), get_body will 
-	 * parse everything */
-	/*is the content type correct?*/
-	if (check_content_type(msg)==-1)
-	{
-		LOG(L_ERR,"ERROR: extract_body: content type mismatching\n");
-		goto error;
-	}
-	
-	/*DBG("DEBUG:extract_body:=|%.*s|\n",body->len,body->s);*/
-
-	return 1;
-error:
-	return -1;
-}
-
-
 
 static int isnulladdr(str *sx, int pf)
 {
@@ -925,6 +897,10 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 	char **ap, *argv[10];
 	struct lump* anchor;
 	struct rtpp_node *node;
+	str new_part;
+	str body_content_type = cscf_get_content_type(msg);
+	str init_body;
+
 	struct iovec v[14] = {
 		{NULL, 0},	/* command */
 		{NULL, 0},	/* options */
@@ -1021,14 +997,25 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 	} else {
 		return -1;
 	}
-	/* extract_body will also parse all the headers in the message as
+	/* get_body will also parse all the headers in the message as
 	 * a side effect => don't move get_callid/get_to_tag in front of it
-	 * -- andrei */
-	if (extract_body(msg, &body) == -1) {
+	 * -- andrei/ancuta */
+	
+	init_body.s = get_body(msg);
+	if (init_body.s==0) {
 		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't extract body "
+				"from message\n");
+		return -1;
+	}
+	init_body = cscf_get_body(msg);
+	body = cscf_get_body_with_type_from_body(init_body, body_content_type,
+			app_sdp_s, &new_part);
+	if (!body.s){
+		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't extract sdp body "
 		    "from the message\n");
 		return -1;
 	}
+
 	if (get_callid(msg, &callid) == -1 || callid.len == 0) {
 		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't get Call-Id field\n");
 		return -1;
@@ -1445,27 +1432,42 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 	int had_sdp_in_invite = 0;
 	str body;
 	struct sip_msg *req=0;
+	str sdp_body_part = {0,0};
+	str new_body = {0,0};
+	str body_content_type = cscf_get_content_type(msg);
+
 
 	if (!pcscf_nat_enable || !rtpproxy_enable) return CSCF_RETURN_FALSE;
-	
-    if( check_content_type(msg) ) 
-    {
-	    if (msg->first_line.type == SIP_REQUEST) 
-	    	req = msg;
-	    else 
-	    	req = cscf_get_request_from_reply(msg);
-	    	
-    	if (req) 
-    		method = req->first_line.u.request.method_value;
-    	else 
-    		method=METHOD_UNDEF;
-    	
-		switch(method)
-		{	
-		    case METHOD_INVITE:
-		    	if (extract_body(req,&body)<0) had_sdp_in_invite = 0;
-				else had_sdp_in_invite = 1; 
-		    	if (msg->first_line.type == SIP_REQUEST){
+	new_body = cscf_get_body_with_type_from_body(cscf_get_body(msg), body_content_type, 
+			app_sdp_s, &sdp_body_part);
+	if (!new_body.s){
+		LOG(L_DBG,"DBG:"M_NAME":P_SDP_manipulate: content-type %.*s "
+				"not found in body.\n",app_sdp_s.len, app_sdp_s.s);			
+		response = -1;
+		return response ;
+	}
+
+
+	if (msg->first_line.type == SIP_REQUEST)
+		req = msg;
+	else
+		req = cscf_get_request_from_reply(msg);
+	if (req)
+		method = req->first_line.u.request.method_value;
+	else
+		method=METHOD_UNDEF;
+	switch(method)
+	{	
+	    case METHOD_INVITE:
+		had_sdp_in_invite = 1; 
+	    	if (req != msg){
+			new_body = cscf_get_body_with_type_from_body(cscf_get_body(req), body_content_type, 
+					app_sdp_s, &sdp_body_part);
+			if(!new_body.s)
+				had_sdp_in_invite = 0;
+		}
+		
+		if (msg->first_line.type == SIP_REQUEST){
 			 		/* on INVITE */
 					/* check the sdp if it has a 1918 */
 					if(1)
@@ -1527,13 +1529,8 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 		    	response = CSCF_RETURN_FALSE;
 				break; 
 		}    
-    } else {
-		LOG(L_ERR, "ERROR:check_content_type: parse error:"
-			"see the content_type block\n");
-		response = -1 ;
-    }	
+return response;
 
-return response ;
 }
 
 

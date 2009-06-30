@@ -74,7 +74,7 @@
 #include "../tm/tm_load.h"
 
 #include "mod.h"
-#include "auth_api.h"
+//#include "auth_api.h"
 
 #define strtotime(src,dest) \
 {\
