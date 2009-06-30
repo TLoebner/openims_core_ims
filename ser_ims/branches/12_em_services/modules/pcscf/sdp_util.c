@@ -1434,14 +1434,16 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 	struct sip_msg *req=0;
 	str sdp_body_part = {0,0};
 	str new_body = {0,0};
-	str body_content_type = cscf_get_content_type(msg);
+	str body_content_type;
 
+	LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: searching for sdp content\n");
+       	body_content_type = cscf_get_content_type(msg);
 
 	if (!pcscf_nat_enable || !rtpproxy_enable) return CSCF_RETURN_FALSE;
 	new_body = cscf_get_body_with_type_from_body(cscf_get_body(msg), body_content_type, 
 			app_sdp_s, &sdp_body_part);
 	if (!new_body.s){
-		LOG(L_DBG,"DBG:"M_NAME":P_SDP_manipulate: content-type %.*s "
+		LOG(L_ERR,"ERROR:"M_NAME":P_SDP_manipulate: content-type %.*s "
 				"not found in body.\n",app_sdp_s.len, app_sdp_s.s);			
 		response = -1;
 		return response ;

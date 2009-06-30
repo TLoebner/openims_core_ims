@@ -343,7 +343,7 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 		return CSCF_RETURN_ERROR;
 	}
 
-	LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
+	LOG(L_DBG, "DBG:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
 				urn.len, urn.s);
 
 	
@@ -397,7 +397,7 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 	}
 
 	if(urn.len && urn.s){
-		LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
+		LOG(L_DBG,"DBG:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
 				urn.len, urn.s);
 
 		if(rewrite_uri(msg, &urn) < 0) {
