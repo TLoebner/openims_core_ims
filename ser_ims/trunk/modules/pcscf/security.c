@@ -1511,3 +1511,71 @@ int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2)
 	if (r1==CSCF_RETURN_TRUE&&r2==CSCF_RETURN_TRUE) return CSCF_RETURN_TRUE;
 	else return CSCF_RETURN_FALSE;
 }
+
+
+static str route_s={"Route: <",8};
+static str route_e={">\r\n",3};
+/**
+ * Inserts the Route header containing the Service-Route to be enforced
+ * @param msg - the SIP message to add to
+ * @param str1 - the value to insert (IBCF URI here) - !!! quoted if needed
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_ERROR on error
+ */
+int P_route_to_IBCF(struct sip_msg *msg,char *str1,char*str2)
+{
+	str newuri={0,0};
+	str uri;
+	str x;
+	int add_lr=0;
+	static str lr_param={";lr",3};
+
+	/* Get char *str1 into str uri */
+	uri.s = str1;
+	uri.len = strlen(str1);
+
+	x.len = route_s.len + uri.len + route_e.len;
+	/* Add ;lr if there's not in the URI */
+	if (!strstr(str1,";lr")){
+		add_lr=1;
+		x.len+=lr_param.len;
+	}
+
+	x.s = pkg_malloc(x.len);
+	if (!x.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_route_to_IBCF: Error allocating %d bytes\n",x.len);
+		x.len=0;
+		return CSCF_RETURN_ERROR;
+	}
+	
+	/* Get complete Route header into x */
+	x.len=0;
+	STR_APPEND(x,route_s);
+	STR_APPEND(x,uri);
+	if (add_lr)
+		STR_APPEND(x,lr_param);
+	STR_APPEND(x,route_e);
+
+	/* Set dst_uri to the topmost Route URI */
+	newuri.s = pkg_malloc(uri.len);
+	if (!newuri.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_route_to_IBCF: Error allocating %d bytes\n",uri.len);
+		return CSCF_RETURN_ERROR;
+	}
+	newuri.len = uri.len;
+	memcpy(newuri.s,uri.s,newuri.len);
+	if (msg->dst_uri.s)
+		pkg_free(msg->dst_uri.s);
+	msg->dst_uri = newuri;
+
+	/* Add those Route header in x into msg */
+	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T))
+		return CSCF_RETURN_TRUE;
+	else {
+		LOG(L_ERR,"ERR:"M_NAME":P_route_to_IBCF: Failed to add new Route.\n");
+		if (x.s) pkg_free(x.s);
+		return CSCF_RETURN_ERROR;
+	}
+
+}
+

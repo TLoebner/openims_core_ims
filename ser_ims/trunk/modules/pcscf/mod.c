@@ -236,6 +236,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_is_integrity_protected() - checks if the message was received over a secure channel
  * - P_security_relay() - forward a message through TLS/IPSec
  * <p>
+ * - P_route_to_IBCF() - add a Route header to IBCF and set dst_uri to IBCF uri
+ * <p>
  * - P_save_location() - save the contacts for the 200 OK response to REGISTER in the local registrar
  * - P_subscribe() - subscribe to the reg event to the S-CSCF for the 200 OK response to REGISTER
  * - P_is_registered() - check if the originator contact of this message is registered at a S-CSCF
@@ -309,6 +311,8 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_security_200",				P_security_200,				0, 0, ONREPLY_ROUTE},	
 	{"P_is_integrity_protected",	P_is_integrity_protected, 	0, 0, REQUEST_ROUTE},	
 	{"P_security_relay", 			P_security_relay, 			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	
+	{"P_route_to_IBCF",				P_route_to_IBCF,			1, 0, REQUEST_ROUTE},
 	
 	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
