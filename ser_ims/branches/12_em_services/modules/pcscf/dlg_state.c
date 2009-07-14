@@ -646,6 +646,44 @@ inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,s
 	return 1;
 }
 
+/*
+ *check if the current message is a request and part of a transaction that has been processed
+ * @param d - the dialog to be checked
+ * @param dir - direction of the message
+ * @param msg - current request
+ * @return CSCF_RETURN_FALSE if already processed, CSCF_RETURN_TRUE if it is a new transaction
+ * CSCF_RETURN_ERROR if error
+ */
+int not_yet_processed(p_dialog *d, enum p_dialog_direction dir, struct sip_msg * msg){
+	
+	dlg_t * dialog;
+	int msg_cseq;
+	
+	if(dir == DLG_MOBILE_ORIGINATING)
+	       dialog = d->dialog_c;
+	else if(dir == DLG_MOBILE_TERMINATING)
+	       dialog = d->dialog_s;
+	else return CSCF_RETURN_ERROR;
+
+	msg_cseq = cscf_get_cseq(msg, NULL);
+	LOG(L_DBG, "DBG:"M_NAME":not_yet_processed: msg crt cseq is %i\n", msg_cseq);
+	
+	dlg_seq_t cseq = dialog->loc_seq;
+	if(cseq.is_set > 0){
+	
+		LOG(L_DBG, "DBG:"M_NAME":not_yet_processed: the local cseq is set and is %u\n", 
+				cseq.value);
+		if(cseq.value >= ((unsigned int)msg_cseq)){
+			LOG(L_DBG, "DBG:"M_NAME":not_yet_processed: already processed\n");
+			return CSCF_RETURN_TRUE;
+		}
+	}	
+
+
+	return CSCF_RETURN_FALSE;
+}
+
+
 /**
  * Find out if a message is within a saved dialog.
  * @param msg - the SIP message
@@ -659,7 +697,6 @@ int P_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 	str host;
 	int port,transport;
 	enum p_dialog_direction dir;
-
 	dir = get_dialog_direction(str1);
 	
 	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
