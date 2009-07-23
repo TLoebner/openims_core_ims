@@ -391,8 +391,11 @@ int M_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 		STR_APPEND(x,p_asserted_identity_m);
 		STR_APPEND(x,asserted.uri);
 		STR_APPEND(x,p_asserted_identity_e);
+
+		LOG(L_INFO,"DBG:"M_NAME":M_assert_identity: Adding header: <%.*s>\n",
+			x.len,x.s);
 		
-		if (cscf_add_header(msg,&x,HDR_OTHER_T))
+		if (cscf_add_header_first(msg,&x,HDR_OTHER_T))
 			ret = CSCF_RETURN_TRUE;
 		else
 			ret = CSCF_RETURN_FALSE;	
