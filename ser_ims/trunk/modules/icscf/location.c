@@ -167,6 +167,9 @@ int I_LIA(struct sip_msg* msg, AAAMessage** lia, int originating)
 	str call_id;
 	int status_code=999;
 	char *reason_phrase=0;	
+#ifdef SER_MOD_INTERFACE
+	struct run_act_ctx ra_ctx;
+#endif	
 	
 	if (!*lia){
 		//TODO - add the warning code 99 in the reply	
@@ -189,9 +192,16 @@ int I_LIA(struct sip_msg* msg, AAAMessage** lia, int originating)
 				case RC_IMS_DIAMETER_ERROR_USER_UNKNOWN:
 					if (!originating && route_on_term_user_unknown_n > -1) {
 						if (*lia) cdpb.AAAFreeMessage(lia);
-						if (run_actions(main_rt.rlist[route_on_term_user_unknown_n], msg)<0){
-							LOG(L_WARN,"ERR:"M_NAME":I_LIA: error while trying script\n");
-						}
+						#ifdef SER_MOD_INTERFACE
+							init_run_actions_ctx(&ra_ctx);
+							if (run_actions(&ra_ctx,main_rt.rlist[route_on_term_user_unknown_n], msg)<0){
+								LOG(L_WARN,"ERR:"M_NAME":I_LIA: error while trying script\n");
+							}
+						#else
+							if (run_actions(main_rt.rlist[route_on_term_user_unknown_n], msg)<0){
+								LOG(L_WARN,"ERR:"M_NAME":I_LIA: error while trying script\n");
+							}
+						#endif
 						return CSCF_RETURN_BREAK;
 					} else {
 						status_code = 604;

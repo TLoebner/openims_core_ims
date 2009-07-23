@@ -55,7 +55,11 @@
 
 #include "db.h"
 
-#include "../../db/db.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../lib/srdb1/db.h"
+#else
+	#include "../../db/db.h"
+#endif
 #include "../../mem/shm_mem.h"
 
 #include "mod.h"
@@ -66,9 +70,11 @@ extern char * icscf_db_nds_table;			/**< NDS table in DB */
 extern char * icscf_db_scscf_table;			/**< S-CSCF table in db */
 extern char * icscf_db_capabilities_table;	/**< S-CSCF capabilities table in db */
 
-static db_con_t *hdl_nds=0;					/**< handle for the NDS table */
-static db_con_t *hdl_scscf=0;				/**< handle for the S-CSCF table */
-static db_con_t *hdl_capabilities=0;		/**< handle for the S-CSCF capabilities table */
+#ifdef SER_MOD_INTERFACE
+	static db1_con_t *hdl_db=0;				/**< handle for the database queries */	
+#else
+	static db_con_t *hdl_db=0;				/**< handle for the database queries */	
+#endif	
 
 
 
@@ -79,7 +85,17 @@ static db_con_t *hdl_capabilities=0;		/**< handle for the S-CSCF capabilities ta
  */
 int icscf_db_bind(char* db_url)
 {
-	if (bind_dbmod(icscf_db_url, &dbf)) {
+#ifdef SER_MOD_INTERFACE	
+	str db_url_str={db_url,strlen(db_url)};
+#endif
+	
+	if (
+#ifdef SER_MOD_INTERFACE	
+		db_bind_mod(&db_url_str, &dbf) < 0
+#else	
+		bind_dbmod(db_url, &dbf)
+#endif	
+		) {
 		LOG(L_CRIT, "CRIT:"M_NAME":icscf_db_bind: cannot bind to database module! "
 		"Did you forget to load a database module ?\n");
 		return -1;
@@ -101,58 +117,31 @@ int icscf_db_init(char* db_url,
 	char* db_table_scscf,
 	char* db_table_capabilities)
 {
+#ifdef SER_MOD_INTERFACE	
+	str db_url_str={db_url,strlen(db_url)};
+#endif
+	
 	if (dbf.init==0){
 		LOG(L_CRIT, "BUG:"M_NAME":icscf_db_init: unbound database module\n");
 		return -1;
 	}
 	/* NDS */
-	hdl_nds=dbf.init(db_url);
-	if (hdl_nds==0){
-		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot initialize database "
-			"connection\n");
+#ifdef SER_MOD_INTERFACE	
+	hdl_db=dbf.init(&db_url_str);
+#else
+	hdl_db=dbf.init(db_url);
+#endif	
+	if (hdl_db==0){
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot initialize database connection\n");
 		goto error;
 	}	
-	if (dbf.use_table(hdl_nds, db_table_nds)<0) {
-		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",db_table_nds);
-		goto error;
-	}
-	/* S_CSCF */
-	hdl_scscf=dbf.init(db_url);
-	if (hdl_scscf==0){
-		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot initialize database "
-			"connection\n");
-		goto error;
-	}	
-	if (dbf.use_table(hdl_scscf, db_table_scscf)<0) {
-		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",db_table_scscf);
-		goto error;
-	}
-	/* Capabilities */
-	hdl_capabilities=dbf.init(db_url);
-	if (hdl_capabilities==0){
-		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot initialize database "
-			"connection\n");
-		goto error;
-	}	
-	if (dbf.use_table(hdl_capabilities, db_table_capabilities)<0) {
-		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",db_table_capabilities);
-		goto error;
-	}
 
 	return 0;
 
 error:
-	if (hdl_nds){
-		dbf.close(hdl_nds);
-		hdl_nds=0;
-	}
-	if (hdl_scscf){
-		dbf.close(hdl_scscf);
-		hdl_nds=0;
-	}
-	if (hdl_capabilities){
-		dbf.close(hdl_capabilities);
-		hdl_nds=0;
+	if (hdl_db){
+		dbf.close(hdl_db);
+		hdl_db=0;
 	}
 	return -1;
 }
@@ -162,9 +151,10 @@ error:
  */
 void icscf_db_close()
 {
-	if (hdl_nds && dbf.close){
-		dbf.close(hdl_nds);
-		hdl_nds=0;
+	if (!dbf.close) return;
+	if (hdl_db){
+		dbf.close(hdl_db);
+		hdl_db=0;
 	}
 }
 
@@ -173,7 +163,13 @@ void icscf_db_close()
  * @param db_hdl - database handle to test
  * @returns 1 if connected, 0 if not
  */
-static inline int icscf_db_check_init(db_con_t *db_hdl)
+static inline int icscf_db_check_init(
+#ifdef SER_MOD_INTERFACE		
+		db1_con_t *db_hdl
+#else
+		db_con_t *db_hdl
+#endif		
+		)
 {
 	if (db_hdl) return 1;
 	return (icscf_db_init( icscf_db_url,
@@ -182,24 +178,42 @@ static inline int icscf_db_check_init(db_con_t *db_hdl)
 		icscf_db_capabilities_table)==0);		
 }
 
+
+static str s_trusted_domain={"trusted_domain",14};
 /**
  *  Get the NDS list from the database.
  * @param d - array of string to fill with the db contents
  * @returns 1 on success, 0 on error 
  */
 int icscf_db_get_nds(str *d[])
-{
-	db_key_t   keys_ret[] = {"trusted_domain"};
+{	
+#ifdef 	SER_MOD_INTERFACE	
+	db_key_t   keys_ret[] = {&s_trusted_domain};
+	db1_res_t   * res = 0 ;	
+	str db_table_nds_str={icscf_db_nds_table,strlen(icscf_db_nds_table)};
+#else		
+	db_key_t   keys_ret[] = {s_trusted_domain.s};
 	db_res_t   * res = 0 ;	
+#endif	
 	str s;
 	int i;
 
-	if (!icscf_db_check_init(hdl_nds))
+	if (!icscf_db_check_init(hdl_db))
 		goto error;
 
 	DBG("DBG:"M_NAME":icscf_db_get_nds: fetching list of NDS for I-CSCF \n");
-
-	if (dbf.query(hdl_nds, 0, 0, 0, keys_ret, 0, 1, NULL, & res) < 0) {
+#ifdef 	SER_MOD_INTERFACE		
+	if (dbf.use_table(hdl_db, &db_table_nds_str)<0) {
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",db_table_nds_str.s);
+		goto error;
+	}
+#else
+	if (dbf.use_table(hdl_db, icscf_db_nds_table)<0) {
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",icscf_db_nds_table);
+		goto error;
+	}	
+#endif	
+	if (dbf.query(hdl_db, 0, 0, 0, keys_ret, 0, 1, NULL, & res) < 0) {
 		LOG(L_ERR, "ERR:"M_NAME":icscf_db_get_nds: db_query failed\n");
 		goto error;
 	}
@@ -241,11 +255,11 @@ int icscf_db_get_nds(str *d[])
 	LOG(L_INFO, "INF:"M_NAME":icscf_db_get_nds: Loaded %d trusted domains\n",
 		res->n);
 
-	dbf.free_result( hdl_nds, res);
+	dbf.free_result( hdl_db, res);
 	return 1;
 error:
 	if (res)
-		dbf.free_result( hdl_nds, res);
+		dbf.free_result( hdl_db, res);
 	*d=shm_malloc(sizeof(str));
 	if (*d==NULL)
 		LOG(L_ERR, "ERR:"M_NAME":icscf_db_get_nds: failed shm_malloc for 0 domains\n");
@@ -257,6 +271,8 @@ error:
 }
 
 
+static str s_id={"id",2};
+static str s_s_cscf_uri={"s_cscf_uri",10};
 /**
  *  Get the S-CSCF names from the database and create the S-CSCF set.
  * @param cap - array of scscf_capabilities to fill with the db contents for the S-CSCF names
@@ -264,19 +280,37 @@ error:
  */
 int icscf_db_get_scscf(scscf_capabilities *cap[])
 {
-	db_key_t   keys_ret[] = {"id","s_cscf_uri"};
-	db_key_t   key_ord = "id";
+#ifdef 	SER_MOD_INTERFACE	
+	db_key_t   keys_ret[] = {&s_id,&s_s_cscf_uri};
+	db_key_t   key_ord = &s_id;
+	db1_res_t   * res = 0 ;	
+	str db_table_scscf_str={icscf_db_scscf_table,strlen(icscf_db_scscf_table)};
+#else		
+	db_key_t   keys_ret[] = {s_id.s,s_s_cscf_uri.s};
+	db_key_t   key_ord = s_id.s;
 	db_res_t   * res = 0 ;	
+#endif	
 	int i;
 
 	*cap = 0;
 		
-	if (!icscf_db_check_init(hdl_scscf))
+	if (!icscf_db_check_init(hdl_db))
 		goto error;
 
 	DBG("DBG:"M_NAME":icscf_db_get_scscf: fetching S-CSCFs \n");
-
-	if (dbf.query(hdl_scscf, 0, 0, 0, keys_ret, 0, 2, key_ord, & res) < 0) {
+#ifdef 	SER_MOD_INTERFACE		
+	if (dbf.use_table(hdl_db, &db_table_scscf_str)<0) {
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",db_table_scscf_str.s);
+		goto error;
+	}
+#else
+	if (dbf.use_table(hdl_db, icscf_db_scscf_table)<0) {
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",icscf_db_scscf_table);
+		goto error;
+	}	
+#endif	
+	
+	if (dbf.query(hdl_db, 0, 0, 0, keys_ret, 0, 2, key_ord, & res) < 0) {
 		LOG(L_ERR, "ERR:"M_NAME":icscf_db_get_scscf: db_query failed\n");
 		goto error;
 	}
@@ -308,17 +342,19 @@ int icscf_db_get_scscf(scscf_capabilities *cap[])
 		}
 	}
 
-	dbf.free_result( hdl_scscf, res);
+	dbf.free_result( hdl_db, res);
 	
 	// return the size of scscf set  
 	return i;
 	
 error:
 	if (res)
-		dbf.free_result( hdl_scscf, res);
+		dbf.free_result( hdl_db, res);
 	return 0;
 }
 
+static str s_id_s_cscf={"id_s_cscf",9};
+static str s_capability={"capability",10};
 /**
  *  Get the S-CSCF capabilities from the database and fill the S-CSCF set.
  * @param cap - array of scscf_capabilities to fill with capabilities
@@ -326,22 +362,39 @@ error:
  */
 int icscf_db_get_capabilities(scscf_capabilities *cap[],int cap_cnt)
 {
-//	db_key_t   keys_cmp[] = {"icscf"};
-	db_key_t   keys_ret[] = {"id_s_cscf","capability"};
-	db_key_t   key_ord = "id_s_cscf";
+#ifdef 	SER_MOD_INTERFACE	
+	db_key_t   keys_ret[] = {&s_id_s_cscf,&s_capability};
+	db_key_t   key_ord = &s_id_s_cscf;
+	db1_res_t   * res = 0 ;	
+	str db_table_capabilities_str={icscf_db_capabilities_table,strlen(icscf_db_capabilities_table)};	
+#else		
+	db_key_t   keys_ret[] = {s_id_s_cscf.s,s_capability.s};
+	db_key_t   key_ord = s_id_s_cscf.s;
 	db_res_t   * res = 0 ;	
+#endif		
 	int i,j;
 	int ccnt=0;
 	int cnt;
 
 
-	if (!icscf_db_check_init(hdl_capabilities))
+	if (!icscf_db_check_init(hdl_db))
 		goto error;
 
 	DBG("DBG:"M_NAME":icscf_db_get_capabilities: fetching list of Capabilities for I-CSCF\n");
 
-
-	if (dbf.query(hdl_capabilities, 0, 0, 0, keys_ret, 0, 2, key_ord, & res) < 0) {
+#ifdef 	SER_MOD_INTERFACE		
+	if (dbf.use_table(hdl_db, &db_table_capabilities_str)<0) {
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",db_table_capabilities_str.s);
+		goto error;
+	}
+#else
+	if (dbf.use_table(hdl_db, icscf_db_capabilities_table)<0) {
+		LOG(L_CRIT,"ERR:"M_NAME":icscf_db_init: cannot select table \"%s\"\n",icscf_db_capabilities_table);
+		goto error;
+	}	
+#endif
+	
+	if (dbf.query(hdl_db, 0, 0, 0, keys_ret, 0, 2, key_ord, & res) < 0) {
 		LOG(L_ERR, "ERR:"M_NAME":icscf_db_get_capabilities: db_query failed\n");
 		goto error;
 	}
@@ -375,11 +428,11 @@ int icscf_db_get_capabilities(scscf_capabilities *cap[],int cap_cnt)
 	} 
 	LOG(L_INFO, "INF:"M_NAME":icscf_db_get_capabilities: Loaded %d capabilities for %d S-CSCFs (%d invalid entries in db)\n",
 		ccnt,cap_cnt,res->n-ccnt);
-	dbf.free_result( hdl_capabilities, res);
+	dbf.free_result( hdl_db, res);
 	return 1;
 	
 error:
 	if (res)
-		dbf.free_result( hdl_capabilities, res);
+		dbf.free_result( hdl_db, res);
 	return 0;
 }
