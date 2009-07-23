@@ -121,10 +121,13 @@ void receiver_init(int sock,peer *p)
 		
 	set_peer_pipe();	
 
-	mkfifo(pipe_name.s, 0666);	
+	if (mkfifo(pipe_name.s, 0666)<0){
+		LOG(L_ERR,"ERROR:receiver_init(): FIFO make failed > %s\n",strerror(errno));
+		return;
+	}
 	pipe_fd = open(pipe_name.s, O_RDONLY | O_NDELAY);
 	if (pipe_fd<0){
-		LOG(L_ERR,"ERROR:receiver_process(): FIFO open failed > %s\n",strerror(errno));
+		LOG(L_ERR,"ERROR:receiver_init(): FIFO open failed > %s\n",strerror(errno));
 	}
 	// we open it for writting just to keep it alive - won't close when all other writers close it
 	pipe_fd_out = open(pipe_name.s, O_WRONLY);
