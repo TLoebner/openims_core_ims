@@ -62,7 +62,7 @@
 #include "../../sr_module.h"
 #include "../../timer.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../cdp/cdp_load.h"
 
 #include "db.h"
@@ -353,10 +353,7 @@ static int icscf_mod_init(void)
 		LOG(L_ERR, "ERR"M_NAME":mod_init: This module requires sl module\n");
 		goto error;
 	}
-	
-	/* bind to the db module */
-	if ( icscf_db_bind( icscf_db_url ) < 0 ) goto error;
-	
+		
 	/* bind to the tm module */
 	if (!(load_tm = (load_tm_f)find_export("load_tm",NO_SCRIPT,0))) {
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_tm. This module requires tm module\n");
@@ -374,9 +371,19 @@ static int icscf_mod_init(void)
 		goto error;
 
 	/* cache the trusted domain names and capabilities */
-	I_NDS_get_trusted_domains();
+	/* bind to the db module */
+	if ( icscf_db_bind( icscf_db_url ) < 0 ) goto error;
+	
+	icscf_db_init( icscf_db_url, 
+		icscf_db_nds_table,
+		icscf_db_scscf_table,
+		icscf_db_capabilities_table);
+	
+	I_NDS_get_trusted_domains();	
 	I_get_capabilities();
-			
+	
+	icscf_db_close();
+	
 	if (!i_hash_table_init(icscf_hash_size)){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored S-CSCF lists\n");
 		goto error;
@@ -421,11 +428,6 @@ static int icscf_mod_child_init(int rank)
 	if ( rank == PROC_MAIN || rank == PROC_TCP_MAIN )
 		return 0;
 	
-	/* db child init */
-	icscf_db_init( icscf_db_url, 
-		icscf_db_nds_table,
-		icscf_db_scscf_table,
-		icscf_db_capabilities_table);
 		
 	return 0;
 }
