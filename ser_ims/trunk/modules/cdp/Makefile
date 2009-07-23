@@ -9,6 +9,9 @@ include ../../Makefile.defs
 auto_gen=
 NAME=cdp.so
 
+ifeq ($(CFG_NAME),sip-router)
+	DEFS+=-DSER_MOD_INTERFACE
+endif	
 
 
 DEFS += -I/usr/include/libxml2 -DCDP_FOR_SER
