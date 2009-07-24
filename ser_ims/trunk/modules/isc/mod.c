@@ -60,7 +60,7 @@
 #include <signal.h>
 
 #include "mod.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../scscf/scscf_load.h"
 
 #include "sip.h"
@@ -385,6 +385,9 @@ static inline enum dialog_direction get_dialog_direction(char *direction)
 	}
 }
 
+#ifdef SER_MOD_INTERFACE
+	extern int route_type;
+#endif	
 
 /**
  * Checks if there is a match.
@@ -422,8 +425,13 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): Starting triggering\n",str1);				
 	}
 	
-
-	if (*isc_tmb.route_mode==MODE_ONFAILURE) {
+	if (
+#ifdef SER_MOD_INTERFACE
+	route_type == FAILURE_ROUTE
+#else
+	*isc_tmb.route_mode==MODE_ONFAILURE
+#endif
+		){
 		LOG(L_INFO,"INFO:"M_NAME":ISC_match_filter(%s): failure\n",str1);
 		
 		/* need to find the handling for the failed trigger */
