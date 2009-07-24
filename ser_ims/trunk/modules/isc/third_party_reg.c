@@ -59,7 +59,7 @@
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_uri.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../scscf/scscf_load.h"
 #include "sip.h"
 #include "ims_pm.h"
@@ -177,6 +177,9 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
 {
         str h={0,0};
         str b={0,0};
+#ifdef SER_MOD_INTERFACE
+        uac_req_t req;
+#endif
 
         LOG(L_DBG,"DBG:"M_NAME":r_send_third_party_reg: REGISTER to <%.*s>\n",
                 r->req_uri.len,r->req_uri.s);
@@ -249,9 +252,20 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
 	        STR_APPEND(b,body_e);	        
 		}
 		
-
+#ifdef SER_MOD_INTERFACE
+		set_uac_req(&req,
+				&method,
+				&h,
+				&b,
+				0,
+				TMCB_RESPONSE_IN|TMCB_ON_FAILURE|TMCB_LOCAL_COMPLETED,
+				r_third_party_reg_response,
+				&(r->req_uri));
+		if (isc_tmb.t_request(&req,&(r->req_uri), &(r->to), &(r->from),0)<0)
+#else
         if (isc_tmb.t_request(&method, &(r->req_uri), &(r->to), &(r->from), &h, &b, 0,
                  r_third_party_reg_response, &(r->req_uri))<0)
+#endif        	
         {
                 LOG(L_ERR,"ERR:"M_NAME":r_send_third_party_reg: Error sending in transaction\n");
                 goto error;
