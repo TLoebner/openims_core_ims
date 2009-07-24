@@ -67,7 +67,7 @@
 
 #include "mod.h"
 #include "../../script_cb.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #include "sip.h"
 

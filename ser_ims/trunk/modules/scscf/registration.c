@@ -56,7 +56,7 @@
 
 #include "registration.h"
 
-#include "../tm/tm_load.h"
+#include "../modules/tm/tm_load.h"
 #include "../cdp/cdp_load.h"
 #include "sip.h"
 #include "cx.h"

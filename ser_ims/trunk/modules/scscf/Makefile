@@ -11,9 +11,17 @@ include ../../Makefile.defs
 auto_gen=
 NAME=scscf.so
 
+ifeq ($(CFG_NAME),sip-router)
+	DEFS+=-DSER_MOD_INTERFACE
+	SERLIBPATH=../../lib
+	SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
+	LIBS+=-L../../lib/cds -lser_cds
+else
+	LIBS+=-L../../lib/cds -l_ser_cds
+endif
 
 DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../.. 
-LIBS += -lxml2 -L../../lib/cds -l_ser_cds
+LIBS += -lxml2
 
 #DEFS += -DWITH_IMS_PM
 

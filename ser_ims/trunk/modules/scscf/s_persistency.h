@@ -66,6 +66,9 @@ typedef enum {
 } data_type_t;
 
 
+int scscf_db_init(char *scscf_db_url);
+void scscf_db_close();
+
 int make_snapshot_authdata();
 int load_snapshot_authdata();
 void persistency_timer_authdata(unsigned int ticks, void* param);

@@ -104,8 +104,12 @@ Basic datatype representations:
 
 #include "mod.h"
 #include "../../mem/mem.h"
-#include "../dialog/dlg_mod.h"
 
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
 
 typedef struct _bin_data {
 	char* s; /*string*/

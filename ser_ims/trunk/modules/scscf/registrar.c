@@ -58,7 +58,7 @@
 #include "../../parser/contact/contact.h"
 #include "../../parser/contact/parse_contact.h"
 #include "../../ut.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../cdp/cdp_load.h"
 #include "../../dset.h"
 
@@ -1413,7 +1413,13 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 					dst.len = i;
 				}
 	
-				if (*tmb.route_mode==MODE_ONFAILURE) {
+				if (
+#ifdef SER_MOD_INTERFACE
+					route_type == FAILURE_ROUTE	
+#else						
+					*tmb.route_mode==MODE_ONFAILURE
+#endif						
+						) {
 					LOG(L_DBG,"DEBUG:"M_NAME":S_lookup: MODE_ONFAILURE, appending branch\n");
 					/* need to append_branch for this first contact */
 					if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {

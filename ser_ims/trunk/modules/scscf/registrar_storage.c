@@ -1516,7 +1516,12 @@ void print_r(int log_level)
 	r_contact_param *cp;
 	r_subscriber *s;
 	int i;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
+#ifdef SER_MOD_INTERFACE
+	if (is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		 return; /* to avoid useless calls when nothing will be printed */
 	r_act_time();
 	LOG(log_level,ANSI_GREEN"INF:"M_NAME":----------  Registrar Contents begin --------\n");
 	for(i=0;i<r_hash_size;i++){
