@@ -56,8 +56,12 @@
 #include <time.h>
 
 #include "dlg_state.h"
-#include "../tm/tm_load.h"
-#include "../sl/sl_funcs.h"
+#include "../../modules/tm/tm_load.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/sl/sl_funcs.h"
+#else 
+	#include "../../modules/sl/sl_funcs.h"
+#endif
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_rr.h"
 
@@ -543,7 +547,12 @@ void print_s_dialogs(int log_level)
 {
 	s_dialog *d;
 	int i;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
+#ifdef SER_MOD_INTERFACE
+	if (is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		 return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  S-CSCF Dialog List begin --------------\n");
 	for(i=0;i<s_dialogs_hash_size;i++){

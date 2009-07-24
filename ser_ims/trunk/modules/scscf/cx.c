@@ -55,7 +55,7 @@
 
 #include "cx.h"
 
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "cx_avp.h"
 #include "sip.h"
 #include "registrar_storage.h"

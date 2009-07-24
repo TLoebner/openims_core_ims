@@ -59,7 +59,7 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../../locking.h"
-#include "../tm/dlg.h"
+#include "../../modules/tm/dlg.h"
 
 /** Enumeration for known dialogs */
 enum s_dialog_method {

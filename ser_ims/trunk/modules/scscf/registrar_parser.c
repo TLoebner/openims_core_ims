@@ -1012,7 +1012,12 @@ error:
 void print_user_data(int log_level,ims_subscription *s)
 {
 	int i,j,k;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
+#ifdef SER_MOD_INTERFACE
+	if (is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		 return; /* to avoid useless calls when nothing will be printed */
 	LOG(log_level,"INF:"M_NAME":IMSSubscription:\n");
 	if (!s) return;
 	lock_get(s->lock);
