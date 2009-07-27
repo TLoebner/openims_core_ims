@@ -313,7 +313,12 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	
 	if (t && t!=(void*) -1  && t->uas.request) {
 		/*first trick: i really want to get this reply sent even though we are onreply*/
+
+#ifdef SER_MOD_INTERFACE
+		route_type = FAILURE_ROUTE;
+#else
 		*tmb.route_mode=MODE_ONFAILURE;
+#endif
 		
 		/*second trick .. i haven't recieve any response from the uac
 		 * if i don't do this i get a cancel sent to the S-CSCF .. its not a big deal*/
@@ -325,7 +330,6 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 		/*now its safe to do this*/
 		
 		tmb.t_reply(t->uas.request,reason_code,reason_text.s);
-		*tmb.route_mode=MODE_ONREPLY;
 		tmb.t_release(t->uas.request);
 
 		/*needed because if not i get last message retransmited... 

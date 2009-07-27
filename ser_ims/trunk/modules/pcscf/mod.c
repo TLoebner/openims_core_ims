@@ -68,16 +68,18 @@
 
 #include "mod.h"
 
-#include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../socket_info.h"
 #include "../../timer.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
+#include "../../modules/tm/tm_load.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
 #include "../cdp/cdp_load.h"
 
-//#include "db.h"
 #include "registration.h"
 #include "registrar_storage.h"
 #include "registrar_subscribe.h"
@@ -523,9 +525,6 @@ extern r_hash_slot *registrar;			/**< the contacts */
 
 extern p_dialog_hash_slot *p_dialogs;	/**< the dialogs hash table				*/
 
-/** database */
-db_con_t* pcscf_db = NULL; /**< Database connection handle */
-db_func_t pcscf_dbf;	/**< Structure with pointers to db functions */
 
 static str path_str_s={"Path: <",7};
 static str path_str_1={"sip:term@",9};
@@ -651,13 +650,6 @@ int fix_parameters()
 	return 1;
 }
 
-db_con_t* create_pcscf_db_connection()
-{
-	if (pcscf_persistency_mode!=WITH_DATABASE_BULK && pcscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
-	if (!pcscf_dbf.init) return NULL;
-
-	return pcscf_dbf.init(pcscf_db_url);
-}
 
 /**
  * Initializes the module.
@@ -700,18 +692,8 @@ static int mod_init(void)
 				"(pcscf_persistency_mode=%d\n", pcscf_persistency_mode);
 			return -1;
 		}
-		if (bind_dbmod(pcscf_db_url, &pcscf_dbf) < 0) { /* Find database module */
-			LOG(L_ERR, "ERR"M_NAME":mod_init: Can't bind database module via url %s\n", pcscf_db_url);
-			return -1;
-		}
-
-		if (!DB_CAPABILITY(pcscf_dbf, DB_CAP_ALL)) {
-			LOG(L_ERR, "ERR:"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
-			return -1;
-		}
 		
-		pcscf_db = create_pcscf_db_connection();
-		if (!pcscf_db) {
+		if (!pcscf_db_init(pcscf_db_url)<0){
 			LOG(L_ERR, "ERR:"M_NAME": mod_init: Error while connecting database\n");
 			return -1;
 		}
@@ -866,10 +848,6 @@ error:
 
 extern gen_lock_t* process_lock;		/* lock on the process table */
 
-void close_pcscf_db_connection(db_con_t* db)
-{
-	if (db && pcscf_dbf.close) pcscf_dbf.close(db);
-}
 
 /**
  * Initializes the module in child.
@@ -923,11 +901,10 @@ static void mod_destroy(void)
         lock_destroy(pcscf_dialog_count_lock);
 	}
 	
-	if ( (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) && pcscf_db) {
+	if (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) {
 		DBG("INFO:"M_NAME": ... closing db connection\n");
-		close_pcscf_db_connection(pcscf_db);
+		pcscf_db_close();		
 	}
-	pcscf_db = NULL;
 
 	#ifdef WITH_IMS_PM
 		ims_pm_destroy();	

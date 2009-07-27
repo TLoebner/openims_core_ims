@@ -809,9 +809,12 @@ void print_r(int log_level)
 	r_public *p;
 	r_contact *c;
 	int i,j;
-
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */	
-	r_act_time();
+#ifdef SER_MOD_INTERFACE
+	if (is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		return; /* to avoid useless calls when nothing will be printed */	r_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  Registrar Contents begin --------\n");
 	if (!registrar) return;
 	for(i=0;i<r_hash_size;i++){

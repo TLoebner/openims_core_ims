@@ -56,7 +56,7 @@
 #define P_CSCF_SECURITY_H
 
 #include "../../sr_module.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #include "registration.h"
 #include "registrar_storage.h"

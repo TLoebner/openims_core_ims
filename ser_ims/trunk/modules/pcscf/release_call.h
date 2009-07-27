@@ -55,9 +55,13 @@
 
 #ifndef RELEASE_CALL_H_
 #define RELEASE_CALL_H_
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "dlg_state.h"
-#include "../dialog/dlg_mod.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
 #include "sip.h"
 
 
