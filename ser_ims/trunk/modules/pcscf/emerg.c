@@ -58,7 +58,7 @@
 #include "../../data_lump_rpl.h"
 #include "../../mem/mem.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #include "mod.h"
 #include "sip.h"

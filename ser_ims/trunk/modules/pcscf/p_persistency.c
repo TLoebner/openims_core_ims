@@ -52,6 +52,11 @@
  *
  */
 
+#ifdef SER_MOD_INTERFACE
+	#include "../../lib/srdb1/db.h"
+#else
+	#include "../../db/db.h"
+#endif
 #include "p_persistency.h"
 
 extern persistency_mode_t pcscf_persistency_mode;/**< the type of persistency					*/
@@ -62,8 +67,60 @@ extern int p_dialogs_hash_size;						/**< size of the dialog hash table 					*/
 extern p_dialog_hash_slot *p_dialogs;				/**< the hash table									*/
 
 /*****  DB related stuff *****/
-extern db_con_t* pcscf_db; /**< Database connection handle */
-extern db_func_t pcscf_dbf;	/**< Structure with pointers to db functions */
+db_func_t pcscf_dbf;							/**< Structure with pointers to db functions */
+#ifdef SER_MOD_INTERFACE
+	static db1_con_t *pcscf_db=0;				/**< Database connection handle */	
+#else
+	static db_con_t *pcscf_db=0;				/**< Database connection handle */
+#endif
+
+
+int pcscf_db_init(char *pcscf_db_url)
+{
+#ifdef SER_MOD_INTERFACE	
+	str pcscf_db_url_str={pcscf_db_url,strlen(pcscf_db_url)};
+#endif
+	
+	/* Find database module */
+	if (
+#ifdef SER_MOD_INTERFACE	
+			db_bind_mod(&pcscf_db_url_str, &pcscf_dbf) < 0
+#else	
+			bind_dbmod(pcscf_db_url, &pcscf_dbf)
+#endif			
+		) { 
+		LOG(L_ERR, "ERR"M_NAME":pcscf_db_init: Can't bind database module via url %s\n", pcscf_db_url);
+		return -1;
+	}
+
+	if (!DB_CAPABILITY(pcscf_dbf, DB_CAP_ALL)) {
+		LOG(L_ERR, "ERR:"M_NAME":pcscf_db_init: Database module does not implement all functions needed by the module\n");
+		return -1;
+	}
+	
+	if (!pcscf_dbf.init) {
+		LOG(L_ERR, "ERR:"M_NAME": pcscf_db_init: Error while connecting to database - modules db functions not available?\n");
+		return -1;
+	}
+	#ifdef SER_MOD_INTERFACE	
+		pcscf_db=pcscf_dbf.init(&pcscf_db_url_str);
+	#else
+		pcscf_db=pcscf_dbf.init(pcscf_db_url);
+	#endif	
+	if (!pcscf_db) {
+		LOG(L_ERR, "ERR:"M_NAME": pcscf_db_init: Error while connecting database\n");
+		return -1;
+	}
+	return 0;
+}
+
+void pcscf_db_close()
+{
+	if (pcscf_db && pcscf_dbf.close) 
+		pcscf_dbf.close(pcscf_db);
+	pcscf_db = NULL;
+}		
+	
 extern int* registrar_snapshot_version;
 extern int* registrar_step_version;
 extern int* dialogs_snapshot_version;
@@ -360,6 +417,21 @@ void persistency_timer_subscriptions(unsigned int ticks, void* param)
 
 /******  DB related functions  *****/
 
+
+	/* Table structure constants */
+
+static str s_snapshot={"snapshot",8};
+
+static str s_node_id={"node_id",7};
+static str s_data_type={"data_type",9};
+static str s_snapshot_version={"snapshot_version",16};
+static str s_step_version={"step_version",12};
+static str s_data={"data",4};
+static str s_record_id_1={"record_id_1",11};
+static str s_record_id_2={"record_id_2",11};
+static str s_record_id_3={"record_id_3",11};
+static str s_record_id_4={"record_id_4",11};
+
 	/* Dump related functions*/
 	
 /**
@@ -487,12 +559,21 @@ int bin_bulk_dump_to_table(data_type_t dt, int snapshot_version, int step_versio
 	int len;
 
 	/* id auto incremented */
-	keys[0] = "node_id";
-	keys[1] = "data_type";
-	keys[2] = "snapshot_version";
-	keys[3] = "step_version";
+#ifdef 	SER_MOD_INTERFACE	
+	keys[0] = &s_node_id;
+	keys[1] = &s_data_type;
+	keys[2] = &s_snapshot_version;
+	keys[3] = &s_step_version;
 	/* record_id_1/2/3/4=NULL */
-	keys[4] = "data";
+	keys[4] = &s_data;
+#else
+	keys[0] = s_node_id.s;
+	keys[1] = s_data_type.s;
+	keys[2] = s_snapshot_version.s;
+	keys[3] = s_step_version.s;
+	/* record_id_1/2/3/4=NULL */
+	keys[4] = s_data.s;	
+#endif		
 	
 	vals[0].type = DB_STR;
 	vals[0].nul = 0;
@@ -520,7 +601,13 @@ int bin_bulk_dump_to_table(data_type_t dt, int snapshot_version, int step_versio
 	//lock
 	lock_get(db_lock);
 
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_bulk_dump_to_table(): Error in use_table\n");
 		lock_release(db_lock);//unlock
 		return 0;
@@ -563,7 +650,13 @@ int bin_cache_dump_registrar_to_table(int snapshot_version, int step_version){
 	//lock
 	lock_get(db_lock);
 
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_cache_dump_registrar_to_table(): Error in use_table\n");
 		goto error;
 	}
@@ -585,15 +678,27 @@ int bin_cache_dump_registrar_to_table(int snapshot_version, int step_version){
 			db_val_t vals[8];
 			
 			/* id auto incremented */
-			keys[0] = "node_id";
-			keys[1] = "data_type";
-			keys[2] = "snapshot_version";
-			keys[3] = "step_version";
-			keys[4] = "record_id_1"; /* host */
-			keys[5] = "record_id_2"; /* port */
-			keys[6] = "record_id_3"; /* transport */
+#ifdef 	SER_MOD_INTERFACE	
+			keys[0] = &s_node_id;
+			keys[1] = &s_data_type;
+			keys[2] = &s_snapshot_version;
+			keys[3] = &s_step_version;
+			keys[4] = &s_record_id_1; /* host */
+			keys[5] = &s_record_id_2; /* port */
+			keys[6] = &s_record_id_3; /* transport */
 			/* record_id_4=NULL */
-			keys[7] = "data";
+			keys[7] = &s_data;
+#else
+			keys[0] = s_node_id.s;
+			keys[1] = s_data_type.s;
+			keys[2] = s_snapshot_version.s;
+			keys[3] = s_step_version.s;
+			keys[4] = s_record_id_1.s; /* host */
+			keys[5] = s_record_id_2.s; /* port */
+			keys[6] = s_record_id_3.s; /* transport */
+			/* record_id_4=NULL */
+			keys[7] = s_data.s;	
+#endif				
 			
 			vals[0].type = DB_STR;
 			vals[0].nul = 0;
@@ -681,7 +786,13 @@ int bin_cache_dump_dialogs_to_table(int snapshot_version, int step_version){
 	//lock
 	lock_get(db_lock);
 
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_cache_dump_dialogs_to_table(): Error in use_table\n");
 		goto error;
 	}
@@ -703,15 +814,27 @@ int bin_cache_dump_dialogs_to_table(int snapshot_version, int step_version){
 			db_val_t vals[9];
 			
 			/* id auto incremented */
-			keys[0] = "node_id";
-			keys[1] = "data_type";
-			keys[2] = "snapshot_version";
-			keys[3] = "step_version";
-			keys[4] = "record_id_1"; /* call-id */
-			keys[5] = "record_id_2"; /* host */
-			keys[6] = "record_id_3"; /* port */
-			keys[7] = "record_id_4"; /* transport */
-			keys[8] = "data";
+#ifdef 	SER_MOD_INTERFACE	
+			keys[0] = &s_node_id;
+			keys[1] = &s_data_type;
+			keys[2] = &s_snapshot_version;
+			keys[3] = &s_step_version;
+			keys[4] = &s_record_id_1; /* call-id */
+			keys[5] = &s_record_id_2; /* host */
+			keys[6] = &s_record_id_3; /* port */
+			keys[7] = &s_record_id_4; /* transport */
+			keys[8] = &s_data;
+#else
+			keys[0] = s_node_id.s;
+			keys[1] = s_data_type.s;
+			keys[2] = s_snapshot_version.s;
+			keys[3] = s_step_version.s;
+			keys[4] = s_record_id_1.s; /* call-id */
+			keys[5] = s_record_id_2.s; /* aor */
+			keys[6] = s_record_id_3.s; /* port */
+			keys[7] = s_record_id_4.s; /* transport */
+			keys[8] = s_data.s;	
+#endif				
 			
 			vals[0].type = DB_STR;
 			vals[0].nul = 0;
@@ -802,7 +925,13 @@ int bin_cache_dump_subs_to_table(int snapshot_version, int step_version){
 	//lock
 	lock_get(db_lock);
 
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_cache_dump_subs_to_table(): Error in use_table\n");
 		goto error;
 	}
@@ -824,13 +953,23 @@ int bin_cache_dump_subs_to_table(int snapshot_version, int step_version){
 			db_val_t vals[6];
 			
 			/* id auto incremented */
-			keys[0] = "node_id";
-			keys[1] = "data_type";
-			keys[2] = "snapshot_version";
-			keys[3] = "step_version";
-			keys[4] = "record_id_1"; /* req_uri */
+#ifdef 	SER_MOD_INTERFACE	
+			keys[0] = &s_node_id;
+			keys[1] = &s_data_type;
+			keys[2] = &s_snapshot_version;
+			keys[3] = &s_step_version;
+			keys[4] = &s_record_id_1; /* req_uri */
 			/* record_id_2/3/4=NULL*/
-			keys[5] = "data";
+			keys[5] = &s_data;
+#else
+			keys[0] = s_node_id.s;
+			keys[1] = s_data_type.s;
+			keys[2] = s_snapshot_version.s;
+			keys[3] = s_step_version.s;
+			keys[4] = s_record_id_1.s; /* req_uri */
+			/* record_id_2/3/4=NULL*/			
+			keys[5] = s_data.s;	
+#endif
 			
 			vals[0].type = DB_STR;
 			vals[0].nul = 0;
@@ -907,13 +1046,20 @@ int delete_older_snapshots(char* table, char* node_id, data_type_t dt, int curre
 	db_val_t query_vals[3];
 	int len;
 
-	query_cols[0] = "snapshot_version";
+#ifdef 	SER_MOD_INTERFACE	
+	query_cols[0] = &s_snapshot_version;	
+	query_cols[1] = &s_node_id;	
+	query_cols[2] = &s_data_type;	
+#else
+	query_cols[0] = s_snapshot_version.s;	
+	query_cols[1] = s_node_id.s;	
+	query_cols[2] = s_data_type.s;	
+#endif		
 	query_ops[0] = OP_LEQ;
 	query_vals[0].type = DB_INT;
 	query_vals[0].nul = 0;
 	query_vals[0].val.int_val = current_snapshot - bin_db_keep_count;
 	
-	query_cols[1] = "node_id";
 	query_ops[1] = OP_EQ;
 	query_vals[1].type = DB_STR;
 	query_vals[1].nul = 0;
@@ -921,13 +1067,18 @@ int delete_older_snapshots(char* table, char* node_id, data_type_t dt, int curre
 	query_vals[1].val.str_val.s=node_id;
 	query_vals[1].val.str_val.len=MIN(len, 256);
 	
-	query_cols[2] = "data_type";
 	query_ops[2] = OP_EQ;
 	query_vals[2].type = DB_INT;
 	query_vals[2].nul = 0;
 	query_vals[2].val.int_val = dt;
 
-	if (pcscf_dbf.use_table(pcscf_db, table) < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":delete_older_snapshots(): Error in use_table\n");
 		return 0;
 	}
@@ -1066,11 +1217,21 @@ int bin_bulk_load_from_table(data_type_t dt, bin_data* x){
 	db_op_t ops[3];
 	db_key_t result_cols[1];
 	
-	db_res_t *res = NULL;
+#ifdef 	SER_MOD_INTERFACE	
+	db1_res_t *res = NULL;
+#else		
+	db_res_t *res = NULL;	
+#endif	
 	
-	keys[0] = "node_id";
-	keys[1] = "data_type";
-	keys[2] = "snapshot_version";
+#ifdef 	SER_MOD_INTERFACE	
+	keys[0] = &s_node_id;
+	keys[1] = &s_data_type;
+	keys[2] = &s_snapshot_version;
+#else
+	keys[0] = s_node_id.s;
+	keys[1] = s_data_type.s;
+	keys[2] = s_snapshot_version.s;
+#endif	
 	
 	ops[0] = OP_EQ;
 	ops[1] = OP_EQ;
@@ -1090,9 +1251,19 @@ int bin_bulk_load_from_table(data_type_t dt, bin_data* x){
 	vals[2].nul = 0;
 	vals[2].val.int_val = snapshot_version;
 	
-	result_cols[0]="data";
+#ifdef 	SER_MOD_INTERFACE	
+	result_cols[0] = &s_data;
+#else
+	result_cols[0] = s_data.s;
+#endif
 	
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_bulk_load_from_table(): Error in use_table\n");
 		lock_release(db_lock);//unlock
 		return 0;
@@ -1164,11 +1335,21 @@ int bin_cache_load_registrar_from_table(){
 	db_op_t ops[3];
 	db_key_t result_cols[1];
 	
-	db_res_t *res = NULL;
+#ifdef 	SER_MOD_INTERFACE	
+	db1_res_t *res = NULL;
+#else		
+	db_res_t *res = NULL;	
+#endif	
 	
-	keys[0] = "node_id";
-	keys[1] = "data_type";
-	keys[2] = "snapshot_version";
+#ifdef 	SER_MOD_INTERFACE	
+	keys[0] = &s_node_id;
+	keys[1] = &s_data_type;
+	keys[2] = &s_snapshot_version;
+#else
+	keys[0] = s_node_id.s;
+	keys[1] = s_data_type.s;
+	keys[2] = s_snapshot_version.s;
+#endif	
 	
 	ops[0] = OP_EQ;
 	ops[1] = OP_EQ;
@@ -1188,9 +1369,19 @@ int bin_cache_load_registrar_from_table(){
 	vals[2].nul = 0;
 	vals[2].val.int_val = snapshot_version;
 	
-	result_cols[0]="data";
+#ifdef 	SER_MOD_INTERFACE	
+	result_cols[0] = &s_data;
+#else
+	result_cols[0] = s_data.s;
+#endif
 	
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_cache_load_registrar_from_table(): Error in use_table\n");
 		goto error;
 	}
@@ -1268,11 +1459,21 @@ int bin_cache_load_dialogs_from_table(){
 	db_op_t ops[3];
 	db_key_t result_cols[1];
 	
-	db_res_t *res = NULL;
+#ifdef 	SER_MOD_INTERFACE	
+	db1_res_t *res = NULL;
+#else		
+	db_res_t *res = NULL;	
+#endif	
 	
-	keys[0] = "node_id";
-	keys[1] = "data_type";
-	keys[2] = "snapshot_version";
+#ifdef 	SER_MOD_INTERFACE	
+	keys[0] = &s_node_id;
+	keys[1] = &s_data_type;
+	keys[2] = &s_snapshot_version;
+#else
+	keys[0] = s_node_id.s;
+	keys[1] = s_data_type.s;
+	keys[2] = s_snapshot_version.s;
+#endif	
 	
 	ops[0] = OP_EQ;
 	ops[1] = OP_EQ;
@@ -1292,9 +1493,19 @@ int bin_cache_load_dialogs_from_table(){
 	vals[2].nul = 0;
 	vals[2].val.int_val = snapshot_version;
 	
-	result_cols[0]="data";
+#ifdef 	SER_MOD_INTERFACE	
+	result_cols[0] = &s_data;
+#else
+	result_cols[0] = s_data.s;
+#endif
 	
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_cache_load_registrar_from_table(): Error in use_table\n");
 		goto error;
 	}
@@ -1372,11 +1583,21 @@ int bin_cache_load_subscriptions_from_table(){
 	db_op_t ops[3];
 	db_key_t result_cols[1];
 	
-	db_res_t *res = NULL;
+#ifdef 	SER_MOD_INTERFACE	
+	db1_res_t *res = NULL;
+#else		
+	db_res_t *res = NULL;	
+#endif	
 	
-	keys[0] = "node_id";
-	keys[1] = "data_type";
-	keys[2] = "snapshot_version";
+#ifdef 	SER_MOD_INTERFACE	
+	keys[0] = &s_node_id;
+	keys[1] = &s_data_type;
+	keys[2] = &s_snapshot_version;
+#else
+	keys[0] = s_node_id.s;
+	keys[1] = s_data_type.s;
+	keys[2] = s_snapshot_version.s;
+#endif	
 	
 	ops[0] = OP_EQ;
 	ops[1] = OP_EQ;
@@ -1396,9 +1617,19 @@ int bin_cache_load_subscriptions_from_table(){
 	vals[2].nul = 0;
 	vals[2].val.int_val = snapshot_version;
 	
-	result_cols[0]="data";
+#ifdef 	SER_MOD_INTERFACE	
+	result_cols[0] = &s_data;
+#else
+	result_cols[0] = s_data.s;
+#endif
 	
-	if (pcscf_dbf.use_table(pcscf_db, "snapshot") < 0) {
+	if (
+#ifdef 	SER_MOD_INTERFACE				
+			pcscf_dbf.use_table(pcscf_db, &s_snapshot) < 0
+#else
+			pcscf_dbf.use_table(pcscf_db, s_snapshot.s) < 0
+#endif
+			) {
 		LOG(L_ERR, "ERR:"M_NAME":bin_cache_load_subscriptions_from_table(): Error in use_table\n");
 		goto error;
 	}
@@ -1454,12 +1685,24 @@ error:
  * @returns 1 on success, -1 if empty table, 0 on error
  */
 int db_get_last_snapshot_version(char* table, char* node_id, data_type_t dt, int* version){
-	db_res_t *res = NULL;
+#ifdef 	SER_MOD_INTERFACE	
+	db1_res_t *res = NULL;
+	str query;
+#else		
+	db_res_t *res = NULL;	
+#endif
 	char sql[200];
 	
 	sprintf(sql, "SELECT max(snapshot_version) from %s where node_id='%s' and data_type=%d", table, node_id, dt);
-	
-	if (pcscf_dbf.raw_query(pcscf_db, sql, &res) < 0) {
+
+#ifdef SER_MOD_INTERFACE
+	query.s = sql;
+	query.len = strlen(sql);
+	if (pcscf_dbf.raw_query(pcscf_db, &query, &res) < 0)
+#else
+	if (pcscf_dbf.raw_query(pcscf_db, sql, &res) < 0)
+#endif		
+	{
 		LOG(L_ERR, "ERR:"M_NAME":db_get_last_snapshot_version(): Error while getting last snapshot version from %s\n", table);
 		return 0;
 	}

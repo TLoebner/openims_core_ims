@@ -55,7 +55,7 @@
 
 #include "e2.h"
 
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "e2_avp.h"
 #include "sip.h"
 #include "registrar_storage.h"

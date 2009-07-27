@@ -61,7 +61,7 @@
 #include "registrar_storage.h"
 #include "dlg_state.h"
 #include "registrar_subscribe.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #define BIN_INITIAL_ALLOC_SIZE 256
 

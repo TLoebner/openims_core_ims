@@ -65,8 +65,12 @@
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_uri.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
+#include "../../modules/tm/tm_load.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
 #include "sip.h"
 #include "ims_pm.h"
 
@@ -623,7 +627,12 @@ void print_subs(int log_level)
 {
 	r_subscription *s;
 	int i;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */	
+#ifdef SER_MOD_INTERFACE
+	if (is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		return; /* to avoid useless calls when nothing will be printed */
 	LOG(log_level,ANSI_GREEN"INF:"M_NAME":----------  Subscription list begin ---------\n");
 	for(i=0;i<subscriptions_hash_size;i++){
 		subs_lock(i);

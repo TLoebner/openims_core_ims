@@ -57,7 +57,12 @@
 #include "dlg_state.h"
 
 #include "../../mem/shm_mem.h"
-#include "../sl/sl_funcs.h"
+
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/sl/sl_funcs.h"
+#else 
+	#include "../../modules/sl/sl_funcs.h"
+#endif
 
 #include "sip.h"
 #include "release_call.h"
@@ -558,7 +563,12 @@ void print_p_dialogs(int log_level)
 {
 	p_dialog *d;
 	int i,j;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
+#ifdef SER_MOD_INTERFACE
+	if (is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List begin --------------\n");
 	for(i=0;i<p_dialogs_hash_size;i++){
