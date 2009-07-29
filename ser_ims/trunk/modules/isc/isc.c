@@ -106,7 +106,7 @@ int isc_forward( struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	/* append branch if last trigger failed */
 	if (
 #ifdef SER_MOD_INTERFACE
-	route_type == FAILURE_ROUTE
+	is_route_type(FAILURE_ROUTE)
 #else
 	*isc_tmb.route_mode==MODE_ONFAILURE
 #endif

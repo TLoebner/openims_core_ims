@@ -427,7 +427,7 @@ int ISC_match_filter(struct sip_msg *msg,char *str1,char *str2)
 	
 	if (
 #ifdef SER_MOD_INTERFACE
-	route_type == FAILURE_ROUTE
+	is_route_type(FAILURE_ROUTE)
 #else
 	*isc_tmb.route_mode==MODE_ONFAILURE
 #endif
