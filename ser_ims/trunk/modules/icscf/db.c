@@ -125,7 +125,7 @@ int icscf_db_init(char* db_url,
 		LOG(L_CRIT, "BUG:"M_NAME":icscf_db_init: unbound database module\n");
 		return -1;
 	}
-	/* NDS */
+
 #ifdef SER_MOD_INTERFACE	
 	hdl_db=dbf.init(&db_url_str);
 #else
