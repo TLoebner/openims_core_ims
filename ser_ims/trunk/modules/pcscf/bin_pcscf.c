@@ -46,9 +46,9 @@
 /**
  * \file
  *
- * Binary codec operations for the S-CSCF
+ * Binary codec operations extensions for the P-CSCF
  *
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  *
  */
 

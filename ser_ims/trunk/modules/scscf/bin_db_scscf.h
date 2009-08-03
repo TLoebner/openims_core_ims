@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: bin_db_scscf.h 589 2008-10-14 17:09:18Z vingarzan $
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -46,31 +46,50 @@
 /**
  * \file
  *
- * S-CSCF persistency operations
+ * S-CSCF persistency operations - db dump/load
  *
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * Database persistency implemented by Mario Ferreira (PT INOVACAO)
+ * \author Mario Ferreira est-m-aferreira at ptinovacao.pt
+ *
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  *
  */
 
 
 
-#ifndef _SCSCF_PERSITENCY_H
-#define _SCSCF_PERSITENCY_H
+#ifndef _BIN_DB_SCSCF_H
+#define _BIN_DB_SCSCF_H
 
 #include "bin_scscf.h"
-#include "bin_db_scscf.h"
 
+typedef enum {
+	S_AUTH=4,
+	S_DIALOGS=5,
+	S_REGISTRAR=6
+} data_type_t;
 
-int make_snapshot_authdata();
-int load_snapshot_authdata();
-void persistency_timer_authdata(unsigned int ticks, void* param);
+int scscf_db_init(char *scscf_db_url);
+void scscf_db_close();
 
-int make_snapshot_dialogs();
-int load_snapshot_dialogs();
-void persistency_timer_dialogs(unsigned int ticks, void* param);
+int bin_dump_to_db(bin_data *x, data_type_t dt);
+int bin_dump_registrar_to_table(bin_data *x, int snapshot_version, int step_version);
+int bin_dump_dialogs_to_table(bin_data *x, int snapshot_version, int step_version);
+int bin_dump_auth_to_table(bin_data *x, int snapshot_version, int step_version);
+int bin_bulk_dump_to_table(data_type_t dt, int snapshot_version, int step_version, bin_data *x);
+int bin_cache_dump_registrar_to_table(int snapshot_version, int step_version);
+int bin_cache_dump_dialogs_to_table(int snapshot_version, int step_version);
+int bin_cache_dump_auth_to_table(int snapshot_version, int step_version);
+int delete_older_snapshots(char* table, char* node_id, data_type_t dt, int current_snapshot);
 
-int make_snapshot_registrar();
-int load_snapshot_registrar();
-void persistency_timer_registrar(unsigned int ticks, void* param);
+int bin_load_from_db(bin_data *x, data_type_t dt);
+int bin_load_registrar_from_table(bin_data *x);
+int bin_load_dialogs_from_table(bin_data *x);
+int bin_load_auth_from_table(bin_data *x);
+int bin_bulk_load_from_table(data_type_t dt, bin_data* x);
+int bin_cache_load_registrar_from_table();
+int bin_cache_load_dialogs_from_table();
+int bin_cache_load_auth_from_table();
+int db_get_last_snapshot_version(char* table, char* node_id, data_type_t dt, int* version);
+int set_versions(data_type_t dt, int snapshot_version, int step_version);
 
 #endif
