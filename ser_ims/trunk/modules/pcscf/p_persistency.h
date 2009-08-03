@@ -58,15 +58,9 @@
 #define _PCSCF_PERSITENCY_H
 
 #include "bin_pcscf.h"
+#include "bin_db_pcscf.h"
 
-typedef enum {
-	P_REGISTRAR=1,
-	P_DIALOGS=2,
-	P_SUBSCRIPTIONS=3
-} data_type_t;
 
-int pcscf_db_init(char *scscf_db_url);
-void pcscf_db_close();
 
 int make_snapshot_dialogs();
 int load_snapshot_dialogs();
