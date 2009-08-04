@@ -65,6 +65,7 @@
 #include "timer.h"
 #include "peermanager.h"
 #include "worker.h"
+#include "receiver.h"
 #include "api_process.h"
 #include "transaction.h"
 #include "session.h"
@@ -85,6 +86,9 @@ gen_lock_t *pid_list_lock;	/**< lock for list of local processes	*/
 
 extern handler_list *handlers; 		/**< list of handlers */
 extern gen_lock_t *handlers_lock;	/**< lock for list of handlers */
+
+extern peer_list_t *peer_list;		/**< list of peers */
+extern gen_lock_t *peer_list_lock;	/**< lock for the list of peers */
 
 
 /**
@@ -256,25 +260,7 @@ int diameter_peer_start(int blocking)
 {
 	int pid;
 	int k=0;
-
-
-	/* Fork the acceptor process */
-	#ifdef CDP_FOR_SER		
-		pid = fork_process(1000,"cdp_acceptor",1);
-	#else
-		pid = fork();
-	#endif
-	if (pid==-1){
-		LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for acceptor!\n");
-		return 0;
-	}
-	if (pid==0) {
-		acceptor_process(config);
-		LOG(L_CRIT,"ERROR:init_diameter_peer(): acceptor_process finished without exit!\n");
-		exit(-1);		
-	}else{
-		dp_add_pid(pid);
-	}
+	peer *p;
 
 	/* fork workers */
 	for(k=0;k<config->workers;k++){
@@ -300,7 +286,80 @@ int diameter_peer_start(int blocking)
 			dp_add_pid(pid);
 		}
 	}
-				
+
+	/* fork receivers for each pre-configured peers */
+	lock_get(peer_list_lock);
+	for(p = peer_list->head,k=-1;p;p = p->next,k--){
+		receiver_init(p);
+		#ifdef CDP_FOR_SER		
+			pid = fork_process(1001+k,"cdp_receiver_peer",1);
+		#else
+			pid = fork();
+		#endif
+		if (pid==-1){
+			LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for peer receiver!\n");
+			return 0;
+		}
+		if (pid==0) {
+			srandom(time(0)*k);
+			#ifdef CDP_FOR_SER
+				snprintf(pt[process_no].desc, MAX_PT_DESC,
+					"cdp_receiver_peer=%.*s", p->fqdn.len,p->fqdn.s );
+			#endif	
+			receiver_process(p);
+			LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
+			exit(-1);		
+		}else{
+			dp_add_pid(pid);
+		}
+	}
+	lock_release(peer_list_lock);
+	
+	/* fork receiver for unknown peers */
+	if (config->accept_unknown_peers){
+		receiver_init(NULL);
+		#ifdef CDP_FOR_SER		
+			pid = fork_process(1001+k,"cdp_receiver_peer_unkown",1);
+		#else
+			pid = fork();
+		#endif
+		if (pid==-1){
+			LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for unknown peer receiver!\n");
+			return 0;
+		}
+		if (pid==0) {
+			srandom(time(0)*k);
+			#ifdef CDP_FOR_SER
+				snprintf(pt[process_no].desc, MAX_PT_DESC,
+					"cdp receiver peer unknown");
+			#endif	
+			receiver_process(NULL);
+			LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
+			exit(-1);		
+		}else{
+			dp_add_pid(pid);
+		}
+	}
+
+	/* Fork the acceptor process (after receivers, so it inherits all the right sockets) */
+	#ifdef CDP_FOR_SER		
+		pid = fork_process(1000,"cdp_acceptor",1);
+	#else
+		pid = fork();
+	#endif
+	if (pid==-1){
+		LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for acceptor!\n");
+		return 0;
+	}
+	if (pid==0) {
+		acceptor_process(config);
+		LOG(L_CRIT,"ERROR:init_diameter_peer(): acceptor_process finished without exit!\n");
+		exit(-1);		
+	}else{
+		dp_add_pid(pid);
+	}
+	
+	
 	/* fork/become timer */
 	if (blocking) {
 		dp_add_pid(getpid());

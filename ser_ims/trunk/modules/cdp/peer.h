@@ -124,7 +124,10 @@ typedef struct _peer_t{
 	int is_dynamic;			/**< whether this peer was accepted although it was not initially configured */
 	int waitingDWA;			/**< if a Diameter Watch-dog Request was sent out and waiting for an answer */
 	
-	str send_pipe;			/**< pipe to send out messages */
+	str send_pipe_name;		/**< pipe to signal messages to be sent out*/
+	
+	int fd_exchange_pipe;	/**< pipe to communicate with the receiver process and exchange a file descriptor */
+	
 	struct _peer_t *next;	/**< next peer in the peer list */
 	struct _peer_t *prev;	/**< previous peer in the peer list */
 } peer;
