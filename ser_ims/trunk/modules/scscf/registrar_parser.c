@@ -1013,7 +1013,7 @@ void print_user_data(int log_level,ims_subscription *s)
 {
 	int i,j,k;
 #ifdef SER_MOD_INTERFACE
-	if (is_printable(log_level))
+	if (!is_printable(log_level))
 #else		
 	if (debug<log_level)
 #endif	

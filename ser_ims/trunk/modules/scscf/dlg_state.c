@@ -548,7 +548,7 @@ void print_s_dialogs(int log_level)
 	s_dialog *d;
 	int i;
 #ifdef SER_MOD_INTERFACE
-	if (is_printable(log_level))
+	if (!is_printable(log_level))
 #else		
 	if (debug<log_level)
 #endif	

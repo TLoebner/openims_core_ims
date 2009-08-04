@@ -628,7 +628,7 @@ void print_subs(int log_level)
 	r_subscription *s;
 	int i;
 #ifdef SER_MOD_INTERFACE
-	if (is_printable(log_level))
+	if (!is_printable(log_level))
 #else		
 	if (debug<log_level)
 #endif	
