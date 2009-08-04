@@ -115,7 +115,13 @@ static void log_serviced_peers(int level)
 #endif
 		return;
 	
-	LOG(level,"--- Receiver ["ANSI_BLUE"%s"ANSI_GREEN"] Serviced Peers: ---\n", pt[process_no].desc);
+	LOG(level,"--- Receiver ["ANSI_BLUE"%s"ANSI_GREEN"] Serviced Peers: ---\n", 
+#ifdef CDP_FOR_SER
+			pt[process_no].desc
+#else
+			"receiver"
+#endif			
+			);
 	for(sp=serviced_peers;sp;sp=sp->next){
 		LOG(level,ANSI_GREEN" Peer: ["ANSI_YELLOW"%.*s"ANSI_GREEN"]  TCP Socket: ["ANSI_YELLOW"%d"ANSI_GREEN"] Recv.State: ["ANSI_YELLOW"%d"ANSI_GREEN"]\n",
 				sp->p?sp->p->fqdn.len:0,
