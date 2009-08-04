@@ -148,6 +148,13 @@ void log_peer_list(int level)
 	/* must have lock on peer_list_lock when calling this!!! */
 	peer *p;
 	int i;
+#ifdef SER_MOD_INTERFACE
+	if (!is_printable(level))
+#else		
+	if (debug<level)
+#endif
+		return;
+	
 	LOG(level,"--- Peer List: ---\n");
 	for(p = peer_list->head;p;p = p->next){
 		LOG(level,ANSI_GREEN" S["ANSI_YELLOW"%s"ANSI_GREEN"] "ANSI_BLUE"%.*s:%d"ANSI_GREEN" D["ANSI_RED"%c"ANSI_GREEN"]\n",dp_states[p->state],p->fqdn.len,p->fqdn.s,p->port,p->is_dynamic?'X':' ');
