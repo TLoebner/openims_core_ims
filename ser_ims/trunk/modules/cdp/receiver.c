@@ -83,27 +83,28 @@ extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 int dp_add_pid(pid_t pid);
 void dp_del_pid(pid_t pid);
 
-void receive_loop();
+int receive_loop();
 
 void receive_message(AAAMessage *msg,serviced_peer_t *sp);
-int serviced_peer_connect(serviced_peer_t *sp);
+
 
 /** prefix for the send FIFO pipes */
 #define PIPE_PREFIX "/tmp/cdp_send_"
-//int pipe_fd;		/**< file descriptor for reading from the send pipe */
-//int pipe_fd_out;	/**< file descriptor for writting to the send pipe */
-//str pipe_name;		/**< full path to the pipe	*/
 
-int local_id=0;					/**< incrementing process local variable, to distinguish between different peer send pies */
+int local_id=0;						/**< incrementing process local variable, to distinguish between different peer send pies */
 
 
-int fd_exchange_pipe[2];		/**< pipe to pass file descriptors towards this process */
+int fd_exchange_pipe[2];			/**< pipe to pass file descriptors towards this process */
 
-int fd_exchange_pipe_unknown;	/**< pipe to pass file descriptors towards the receiver process for unknown peers */
+int fd_exchange_pipe_unknown;		/**< pipe to pass file descriptors towards the receiver process for unknown peers */
 
-serviced_peer_t *serviced_peers=0; /**< pointer to the list of peers serviced by this process */
+serviced_peer_t *serviced_peers=0; 	/**< pointer to the list of peers serviced by this process */
 
 
+/**
+ * Print debug information about this receiver process
+ * @param level
+ */
 static void log_serviced_peers(int level)
 {
 	serviced_peer_t *sp;
@@ -128,8 +129,9 @@ static void log_serviced_peers(int level)
 
 
 /**
- * Makes a send pipe for signaling messages to send-out
- * @return
+ * Makes a send pipe for signaling messages to send-out and attaches it to where necessary.
+ * @params sp - the serviced peer to open it for
+ * @return 1 on success or 0 on failure
  */
 static int make_send_pipe(serviced_peer_t *sp)
 {		
@@ -162,7 +164,7 @@ static int make_send_pipe(serviced_peer_t *sp)
 
 /**
  * Close a send pipe for signaling messages to send-out
- * @param sp
+ * @param sp - the serviced peer to close it for
  */
 static void close_send_pipe(serviced_peer_t *sp)
 {
@@ -213,9 +215,10 @@ static serviced_peer_t* add_serviced_peer(peer *p)
 }
 
 /**
- * Disconnects a serviced peer, but does not deletes it from this receiver's list
- * @param sp
- * @param locked
+ * Disconnects a serviced peer, but does not delete it from this receiver's list.
+ * Used from dedicated receivers, when the peers should be kept associated even if disconnected.
+ * @param sp - the serviced peer to operate on
+ * @param locked - if the sp->p has been previously locked
  */
 static void disconnect_serviced_peer(serviced_peer_t *sp,int locked)
 {
@@ -254,15 +257,18 @@ static void drop_serviced_peer(serviced_peer_t *sp,int locked)
 	if (sp->next) sp->next->prev = sp->prev;
 	if (sp->prev) sp->prev->next = sp->next;
 	else serviced_peers = sp->next;
+	if (sp->msg) shm_free(sp->msg);
+	sp->msg = 0;
 	pkg_free(sp);
 }
 
 
 /**
- * Sends a file descriptor to another process through a pipe
+ * Sends a file descriptor to another process through a pipe, together with a pointer to the peer that it is
+ * associated with.
  * @param pipe_fd - pipe to send through
  * @param fd - descriptor to send
- * @param p - peer to send pointer to, or null
+ * @param p - peer associated with the descriptor or null if unknown peer
  * @returns 1 on success, 0 on failure
  */
 static int send_fd(int pipe_fd,int fd, peer *p)
@@ -319,20 +325,12 @@ again:
 
 
 
-/* receives a fd and data_len data
- * params: unix_socket 
- *         data
- *         data_len
- *         fd         - will be set to the passed fd value or -1 if no fd
- *                      was passed
- *         flags      - 0, MSG_DONTWAIT, MSG_WAITALL; same as recv_all flags
- * returns: bytes read on success, -1 on error (and sets errno) */
 /**
  * Receive a file descriptor from another process
  * @param pipe_fd - pipe to read from
  * @param fd - file descriptor to fill
- * @param flags
- * @return 1 on success or 0 on failure
+ * @param p - optional pipe to fill
+ * @returns 1 on success or 0 on failure
  */
 static int receive_fd(int pipe_fd, int* fd,peer **p)
 {
@@ -420,8 +418,8 @@ error:
 
 /**
  * Initializes the receiver.
- * @param sock - the socket to initialize with
- * @param p - the peer to initialize with, or NULL if to initialize as the generic receiver
+ * @param p - the peer to initialize with, or NULL if to initialize as the receiver for unknown peers
+ * @return 1 on success or 0 on failure
  */
 int receiver_init(peer *p)
 {
@@ -437,7 +435,7 @@ int receiver_init(peer *p)
 
 /**
  * The Receiver Process - calls the receiv_loop and it never returns.
- * @param sock - socket to receive data from
+ * @param p - the peer it is associated with or NULL for the unknown peers receiver
  * @returns never, when disconnected it will exit
  */
 void receiver_process(peer *p)
@@ -452,10 +450,14 @@ void receiver_process(peer *p)
 
 	log_serviced_peers(L_INFO);		
 
-	receive_loop();
+	if (receive_loop()<0){
+		LOG(L_INFO,"ERROR:receiver_process(): [%.*s] receive_loop() return -1 (error)!\n",
+						p?p->fqdn.len:0,p?p->fqdn.s:0);
+				
+	}
 
 done:	
-	if (!shutdownx){
+	if (!*shutdownx){
 		LOG(L_INFO,"ERROR:receiver_process(): [%.*s]... Receiver process cleaning-up - should not happen unless shuting down!\n",
 				p?p->fqdn.len:0,p?p->fqdn.s:0);
 		
@@ -490,7 +492,14 @@ done:
 	exit(0);
 }
 
-
+/**
+ * Does the actual receive operations on the Diameter TCP socket, for retrieving incoming messages.
+ * The functions is to be called iteratively, each time there is something to be read from the TCP socket. It uses
+ * a simple state machine to read first the version, then the header and then the rest of the message. When an
+ * entire message is received, it is decoded and passed to the processing functions.
+ * @param sp - the serviced peer to operate on
+ * @return 1 on success, 0 on failure
+ */
 static inline int do_receive(serviced_peer_t *sp)
 {
 	int cnt,n,version;
@@ -518,12 +527,13 @@ static inline int do_receive(serviced_peer_t *sp)
 					sp->p?sp->p->fqdn.len:0,
 					sp->p?sp->p->fqdn.s:0,
 					sp->state);			
-			return 0;
+			goto error_and_reset;
 	}
 	
 	cnt = recv(sp->tcp_socket,dst,n,0);
 	
-	if (cnt<=0)	return 0;
+	if (cnt<=0)	
+		goto error_and_reset;
 	
 	switch (sp->state){
 		case Receiver_Waiting:			
@@ -533,8 +543,7 @@ static inline int do_receive(serviced_peer_t *sp)
 		  				sp->p->fqdn.len,
 		  				sp->p->fqdn.s,
 		  				(unsigned char)sp->buf[0]);
-		  		sp->state = Receiver_Waiting;
-		  		sp->buf_len = 0;
+				goto error_and_reset;
 			}else{
 				sp->state = Receiver_Header;
 				sp->buf_len = 1;
@@ -550,8 +559,7 @@ static inline int do_receive(serviced_peer_t *sp)
 							sp->p?sp->p->fqdn.len:0,
 							sp->p?sp->p->fqdn.s:0,
 							sp->length);
-					sp->state = Receiver_Waiting;					
-					return 0;
+					goto error_and_reset;
 				}
 				LOG(L_DBG,"DBG:receive_loop(): [%.*s] Recv Version %d Length %d\n",
 						sp->p?sp->p->fqdn.len:0,
@@ -561,8 +569,7 @@ static inline int do_receive(serviced_peer_t *sp)
 				sp->msg = shm_malloc(sp->length);
 				if (!sp->msg) {
 					LOG_NO_MEM("shm",sp->length);
-					sp->state = Receiver_Waiting;					
-					return 0;
+					goto error_and_reset;
 				}
 				
 				memcpy(sp->msg,sp->buf,sp->buf_len);
@@ -575,10 +582,14 @@ static inline int do_receive(serviced_peer_t *sp)
 			sp->msg_len+=cnt;
 			if (sp->msg_len==sp->length){
 		    	dmsg = AAATranslateMessage((unsigned char*)sp->msg,(unsigned int)sp->msg_len,1);		    	
-				if (dmsg) receive_message(dmsg,sp);
-				else
+				if (dmsg) {
+					sp->msg = 0;
+					receive_message(dmsg,sp);
+				}
+				else {
 					shm_free(sp->msg);
-				sp->msg = 0;
+					sp->msg = 0;
+				}
 				sp->msg_len = 0;
 				sp->buf_len = 0;
 				sp->state = Receiver_Waiting;
@@ -590,17 +601,29 @@ static inline int do_receive(serviced_peer_t *sp)
 					sp->p?sp->p->fqdn.len:0,
 					sp->p?sp->p->fqdn.s:0,
 					sp->state);			
-			return 0;
+			goto error_and_reset;
 	}
 	return 1;
+error_and_reset:
+	if (sp->msg){
+		shm_free(sp->msg);
+		sp->msg = 0;
+		sp->msg_len = 0;
+		sp->buf_len = 0;
+		sp->state = Receiver_Waiting;
+	}
+	return 0;
 }
 
 /**
- * Select on sockets for receiving and sending stuff.
- * Selects on both the socket and on the send pipe.
- * @returns number of bytes read or -1 on error 
+ * Selects once on sockets for receiving and sending stuff.
+ * Monitors:
+ *  - the fd exchange pipe, for receiving descriptors to be handled here
+ *  - the tcp sockets of all serviced peers, triggering the incoming messages do_receive()
+ *  - the send pipes of all serviced peers, triggering the sending of outgoing messages
+ * @returns 0 on normal exit or -1 on error
  */ 
-static inline int select_recv()
+int receive_loop()
 {
 	fd_set rfds,efds;
 	struct timeval tv;
@@ -611,192 +634,182 @@ static inline int select_recv()
 	int fd=-1;
 	
 //	if (shutdownx) return -1;	
-	n = 0;
 	
-	while(!n){
-   		if (shutdownx&&*shutdownx) break;	
-
-   		log_serviced_peers(L_DBG);		
-
-   		max =-1;
-
-		FD_ZERO(&rfds);
-		FD_ZERO(&efds);
-		
-		
-		FD_SET(fd_exchange_pipe[0],&rfds);
-		if (fd_exchange_pipe[0]>max) max = fd_exchange_pipe[0];
-		
-		for(sp=serviced_peers;sp;sp=sp->next){
-			if (sp->tcp_socket>=0){
-				FD_SET(sp->tcp_socket,&rfds);
-				FD_SET(sp->tcp_socket,&efds);
-				if (sp->tcp_socket>max) max = sp->tcp_socket;
-			}
-			if (sp->send_pipe_fd>=0) {
-				FD_SET(sp->send_pipe_fd,&rfds);
-				if (sp->send_pipe_fd>max) max = sp->send_pipe_fd;
-			}			
-		}
-		
-		tv.tv_sec=1;
-		tv.tv_usec=0;
-
-//		LOG(L_CRIT,"ERROR:select_recv(): HERE\n");
-		
-		n = select(max+1,&rfds,0,&efds,&tv);
-		if (n==-1){
-			if (shutdownx&&*shutdownx) return -1;
-			LOG(L_ERR,"ERROR:select_recv(): %s\n",strerror(errno));
-			return -1;
-		}else
-			if (n){
-				
-				if (FD_ISSET(fd_exchange_pipe[0],&rfds)){
-					/* fd exchange */
-					LOG(L_DBG,"DBG:select_recv(): There is something on the fd exchange pipe\n");
-					p = 0;
-					fd = -1;
-					if (!receive_fd(fd_exchange_pipe[0],&fd,&p)){
-						LOG(L_ERR,"ERROR:select_recv(): Error reading from fd exchange pipe\n");
-					}else{	
-						LOG(L_DBG,"DBG:select_recv(): fd exchange pipe says fd [%d] for peer %p:[%.*s]\n",fd,
-								p,
-								p?p->fqdn.len:0,
-								p?p->fqdn.s:0);
-						if (p){
-							sp2=0;
-							for(sp=serviced_peers;sp;sp=sp->next)
-								if (sp->p==p){
-									sp2 = sp;
-									break;
-								}
-							if (!sp2)
-								sp2 = add_serviced_peer(p);
-							else
-								make_send_pipe(sp2);
-							sp2->tcp_socket = fd;
-							if (p->state == Wait_Conn_Ack){
-								p->I_sock = fd;
-								sm_process(p,I_Rcv_Conn_Ack,0,0,fd);
-							}else{
-								p->R_sock = fd;								
-							}
-						}else{
-							sp2 = add_serviced_peer(NULL);
-							sp2->tcp_socket = fd;
-						}
-					}
+	while(shutdownx&&!*shutdownx){
+		n = 0;
+	
+		while(!n){
+			if (shutdownx&&*shutdownx) break;	
+	
+			log_serviced_peers(L_DBG);		
+	
+			max =-1;
+	
+			FD_ZERO(&rfds);
+			FD_ZERO(&efds);
+			
+			
+			FD_SET(fd_exchange_pipe[0],&rfds);
+			if (fd_exchange_pipe[0]>max) max = fd_exchange_pipe[0];
+			
+			for(sp=serviced_peers;sp;sp=sp->next){
+				if (sp->tcp_socket>=0){
+					FD_SET(sp->tcp_socket,&rfds);
+					FD_SET(sp->tcp_socket,&efds);
+					if (sp->tcp_socket>max) max = sp->tcp_socket;
 				}
-									
-				for(sp=serviced_peers;sp;){
-					if (sp->tcp_socket>=0 && FD_ISSET(sp->tcp_socket,&efds)) {
-						LOG(L_INFO,"INFO:select_recv(): [%.*s] Peer socket [%d] found on the exception list... dropping\n",
-								sp->p?sp->p->fqdn.len:0,
-								sp->p?sp->p->fqdn.s:0,
-								sp->tcp_socket);
-						goto drop_peer;
-					}
-					if (sp->send_pipe_fd>=0 && FD_ISSET(sp->send_pipe_fd,&rfds)) {					
-						/* send */
-						LOG(L_DBG,"DBG:select_recv(): There is something on the send pipe\n");
-						cnt = read(sp->send_pipe_fd,&msg,sizeof(AAAMessage *));
-						if (cnt==0){
-							//This is very stupid and might not work well - droped messages... to be fixed
-							LOG(L_INFO,"INFO:select_recv(): ReOpening pipe for read. This should not happen...\n");
-							close(sp->send_pipe_fd);
-							sp->send_pipe_fd = open(sp->send_pipe_name.s, O_RDONLY | O_NDELAY);
-							goto receive;
-						}
-						if (cnt<sizeof(AAAMessage *)){
-							if (cnt<0) LOG(L_ERR,"ERROR:select_recv(): Error reading from send pipe\n");
-							goto receive;
-						}	
-						LOG(L_DBG,"DBG:select_recv(): Send pipe says [%p] %d\n",msg,cnt);
-						if (sp->tcp_socket<0){
-							LOG(L_ERR,"ERROR:select_recv(): got a signal to send something, but the connection was not opened");
-						} else {
-							while( (cnt=write(sp->tcp_socket,msg->buf.s,msg->buf.len))==-1 ) {
-								if (errno==EINTR)
-									continue;
-								LOG(L_ERR,"INFO:select_recv(): [%.*s] write on socket [%d] returned error> %s... dropping\n",
-										sp->p?sp->p->fqdn.len:0,
-										sp->p?sp->p->fqdn.s:0,
-										sp->tcp_socket,
-										strerror(errno));
-								AAAFreeMessage(&msg);
-								close(sp->tcp_socket);
-								goto drop_peer;								
+				if (sp->send_pipe_fd>=0) {
+					FD_SET(sp->send_pipe_fd,&rfds);
+					if (sp->send_pipe_fd>max) max = sp->send_pipe_fd;
+				}			
+			}
+			
+			tv.tv_sec=1;
+			tv.tv_usec=0;
+	
+	//		LOG(L_CRIT,"ERROR:select_recv(): HERE\n");
+			
+			n = select(max+1,&rfds,0,&efds,&tv);
+			if (n==-1){
+				if (shutdownx&&*shutdownx) return 0;
+				LOG(L_ERR,"ERROR:select_recv(): %s\n",strerror(errno));
+				break;
+			}else
+				if (n){
+					
+					if (FD_ISSET(fd_exchange_pipe[0],&rfds)){
+						/* fd exchange */
+						LOG(L_DBG,"DBG:select_recv(): There is something on the fd exchange pipe\n");
+						p = 0;
+						fd = -1;
+						if (!receive_fd(fd_exchange_pipe[0],&fd,&p)){
+							LOG(L_ERR,"ERROR:select_recv(): Error reading from fd exchange pipe\n");
+						}else{	
+							LOG(L_DBG,"DBG:select_recv(): fd exchange pipe says fd [%d] for peer %p:[%.*s]\n",fd,
+									p,
+									p?p->fqdn.len:0,
+									p?p->fqdn.s:0);
+							if (p){
+								sp2=0;
+								for(sp=serviced_peers;sp;sp=sp->next)
+									if (sp->p==p){
+										sp2 = sp;
+										break;
+									}
+								if (!sp2)
+									sp2 = add_serviced_peer(p);
+								else
+									make_send_pipe(sp2);
+								sp2->tcp_socket = fd;
+								if (p->state == Wait_Conn_Ack){
+									p->I_sock = fd;
+									sm_process(p,I_Rcv_Conn_Ack,0,0,fd);
+								}else{
+									p->R_sock = fd;								
+								}
+							}else{
+								sp2 = add_serviced_peer(NULL);
+								sp2->tcp_socket = fd;
 							}
-													
-							if (cnt!=msg->buf.len){
-								LOG(L_ERR,"INFO:select_recv(): [%.*s] write on socket [%d] only wrote %d/%d bytes... dropping\n",
+						}
+					}
+										
+					for(sp=serviced_peers;sp;){
+						if (sp->tcp_socket>=0 && FD_ISSET(sp->tcp_socket,&efds)) {
+							LOG(L_INFO,"INFO:select_recv(): [%.*s] Peer socket [%d] found on the exception list... dropping\n",
+									sp->p?sp->p->fqdn.len:0,
+									sp->p?sp->p->fqdn.s:0,
+									sp->tcp_socket);
+							goto drop_peer;
+						}
+						if (sp->send_pipe_fd>=0 && FD_ISSET(sp->send_pipe_fd,&rfds)) {					
+							/* send */
+							LOG(L_DBG,"DBG:select_recv(): There is something on the send pipe\n");
+							cnt = read(sp->send_pipe_fd,&msg,sizeof(AAAMessage *));
+							if (cnt==0){
+								//This is very stupid and might not work well - droped messages... to be fixed
+								LOG(L_INFO,"INFO:select_recv(): ReOpening pipe for read. This should not happen...\n");
+								close(sp->send_pipe_fd);
+								sp->send_pipe_fd = open(sp->send_pipe_name.s, O_RDONLY | O_NDELAY);
+								goto receive;
+							}
+							if (cnt<sizeof(AAAMessage *)){
+								if (cnt<0) LOG(L_ERR,"ERROR:select_recv(): Error reading from send pipe\n");
+								goto receive;
+							}	
+							LOG(L_DBG,"DBG:select_recv(): Send pipe says [%p] %d\n",msg,cnt);
+							if (sp->tcp_socket<0){
+								LOG(L_ERR,"ERROR:select_recv(): got a signal to send something, but the connection was not opened");
+							} else {
+								while( (cnt=write(sp->tcp_socket,msg->buf.s,msg->buf.len))==-1 ) {
+									if (errno==EINTR)
+										continue;
+									LOG(L_ERR,"INFO:select_recv(): [%.*s] write on socket [%d] returned error> %s... dropping\n",
+											sp->p?sp->p->fqdn.len:0,
+											sp->p?sp->p->fqdn.s:0,
+											sp->tcp_socket,
+											strerror(errno));
+									AAAFreeMessage(&msg);
+									close(sp->tcp_socket);
+									goto drop_peer;								
+								}
+														
+								if (cnt!=msg->buf.len){
+									LOG(L_ERR,"INFO:select_recv(): [%.*s] write on socket [%d] only wrote %d/%d bytes... dropping\n",
+											sp->p?sp->p->fqdn.len:0,
+											sp->p?sp->p->fqdn.s:0,
+											sp->tcp_socket,
+											cnt,
+											msg->buf.len);							
+									AAAFreeMessage(&msg);
+									close(sp->tcp_socket);								
+									goto drop_peer;			
+								}
+							}
+							AAAFreeMessage(&msg);
+							//don't return, maybe there is something to read
+						}
+	receive:
+						/* receive */
+						if (sp->tcp_socket>=0 && FD_ISSET(sp->tcp_socket,&rfds)) {
+							errno=0;
+							cnt = do_receive(sp);
+							if (cnt<=0) {
+								LOG(L_INFO,"INFO:select_recv(): [%.*s] read on socket [%d] returned %d > %s... dropping\n",
 										sp->p?sp->p->fqdn.len:0,
 										sp->p?sp->p->fqdn.s:0,
 										sp->tcp_socket,
 										cnt,
-										msg->buf.len);							
-								AAAFreeMessage(&msg);
-								close(sp->tcp_socket);								
-								goto drop_peer;			
-							}
+										errno?strerror(errno):"");							
+								goto drop_peer;
+							}						
 						}
-						AAAFreeMessage(&msg);
-						//don't return, maybe there is something to read
+						
+	//next_sp:			
+						/* go to next serviced peer */
+						sp=sp->next;
+						continue;
+	drop_peer:
+						/* drop this serviced peer on error */
+						sp2 = sp->next;
+						disconnect_serviced_peer(sp,0);
+						if (sp->p && sp->p->is_dynamic)
+							drop_serviced_peer(sp,0);
+						sp = sp2;					 				
 					}
-receive:
-					/* receive */
-					if (sp->tcp_socket>=0 && FD_ISSET(sp->tcp_socket,&rfds)) {
-						errno=0;
-						cnt = do_receive(sp);
-						if (cnt<=0) {
-							LOG(L_INFO,"INFO:select_recv(): [%.*s] read on socket [%d] returned %d > %s... dropping\n",
-									sp->p?sp->p->fqdn.len:0,
-									sp->p?sp->p->fqdn.s:0,
-									sp->tcp_socket,
-									cnt,
-									errno?strerror(errno):"");							
-							goto drop_peer;
-						}						
-					}
-					
-//next_sp:			
-					/* go to next serviced peer */
-					sp=sp->next;
-					continue;
-drop_peer:
-					/* drop this serviced peer on error */
-					sp2 = sp->next;
-					disconnect_serviced_peer(sp,0);
-					if (sp->p && sp->p->is_dynamic)
-						drop_serviced_peer(sp,0);
-					sp = sp2;					 				
 				}
-			}
-		//LOG(L_ERR,".");
+			//LOG(L_ERR,".");
+		}
 	}
-	return 1;
+	return 0;
 }
-
-/** 
- * Receive Loop for Diameter messages.
- * Decodes the message and calls receive_message().
- * @param sock - the socket to receive from
- * @returns when the socket is closed
- */
-void receive_loop()
-{
-    while(!*shutdownx){
-    	select_recv();		
-    }
-}
-
 
 
 
 /**
  * Initiate a connection to a peer.
  * The obtained socket is then sent to the respective receiver.
+ * This is typically called from the timer, but otherwise it can be called from any other process.
  * @param p - peer to connect to
  * @returns socket if OK, -1 on error
  */
@@ -925,6 +938,7 @@ int peer_send_msg(peer *p,AAAMessage *msg)
  * Send a message to a peer (only to be called from the receiver process).
  * This directly writes the message on the socket. It is used for transmission during
  * the Capability Exchange procedure, when the send pipes are not opened yet.
+ * It also sends the file descriptor to the peer's dedicated receiver if one found. 
  * @param p - the peer to send to
  * @param sock - the socket to send through
  * @param msg - the message to send
@@ -988,9 +1002,10 @@ int peer_send(peer *p,int sock,AAAMessage *msg,int locked)
 
 /**
  * Receives a message and does basic processing or call the sm_process().
- * This gets called from the receive_loop for every message that is received.
+ * This gets called from the do_receive() for every message that is received.
+ * Basic processing, before the state machine, is done here.
  * @param msg - the message received
- * @param sock - socket received on
+ * @param sp - the serviced peer that it was receiver on
  */
 void receive_message(AAAMessage *msg,serviced_peer_t *sp)
 {
