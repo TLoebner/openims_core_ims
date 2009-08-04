@@ -101,7 +101,11 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 				case Start:
 					p->state = Wait_Conn_Ack;
 					next_event = I_Snd_Conn_Req(p);
-					sm_process(p,next_event,0,1,p->I_sock);
+					if (next_event==I_Rcv_Conn_NAck)
+						sm_process(p,next_event,0,1,p->I_sock);
+					else{
+						/* wait for fd to be transmitted to the respective receiver, in order to get a send pipe opened */						
+					}
 					break;	
 				case R_Conn_CER:
 					R_Accept(p,sock);

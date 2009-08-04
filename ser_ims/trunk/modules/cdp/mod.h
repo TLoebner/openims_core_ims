@@ -85,7 +85,21 @@
  * - 1 x Timer - timer.c
  * - 1 x Acceptor - acceptor.c
  * - k x Worker - worker.c (k configurable)   
- * - i x Receiver - receiver.c - one for each incoming or outgoing peer
+ * - p x Receiver - receiver.c - one for each initially configured peers
+ * - 1 x Receiver - receiver.c - one receiver for all other unknown peers
+ * 
+ * Due to sip-router restrictions, all processes must be forked at the ser start-up, without dynamic ones.
+ * The initial cdp architecture, which assigned one process for each peer, has been modified:
+ * - there are dedicated receiver processes for each initially configured peers. Each peer should be then initially
+ * configured as to obtain the best performance, or none if the minimum number of processes are to be obtained
+ * - there is one special receiver process for handling all the unknown peers
+ * - on incoming connections, the accept process passed the TCP socket descriptor to the special receiver (as the 
+ * peer identity is unknown before the CER)
+ * - after CER, if the peer is not dynamic, the special receiver passes once again the TCP socket descriptor to the
+ * dedicated receiver if one exists
+ * - on outgoing connections, the timer makes the connection and then passes it to the respective receiver process 
+ * assigned to that process or to the special receiver if the peer does not have a dedicated receiver.
+ * 
  * 
  * \section cdp_code Code Structure
  * The SER module exported API can be seen in mod.c. The full Diameter API is in diameter.h
