@@ -47,6 +47,8 @@ public class Application {
 	/** Type */
 	public int type;
 	
+	public static final int Unknown = -1;
+
 	/** Auth-application is identified with 0 */
 	public static final int Auth = 0;
 	
@@ -70,4 +72,11 @@ public class Application {
 	
 	/** Id Oxffffffff is allocated for relay agent. */
 	public static final int Relay=0xffffffff;
+
+	public boolean equals(Application x)
+	{
+		return this.id == x.id &&
+			this.vendor == x.vendor &&
+			(this.type == x.type || this.type == Application.Unknown || x.type == Application.Unknown);
+	}
 }
