@@ -108,7 +108,7 @@ peer* get_routing_peer(AAAMessage *m)
 	routing_realm *rr;
 	int app_id=0,vendor_id=0;
 	
-	app_id = m->applicationId;
+	app_id = m->applicationId;	
 	avp = AAAFindMatchingAVP(m,0,AVP_Vendor_Specific_Application_Id,0,AAA_FORWARD_SEARCH);
 	if (avp){
 		group = AAAUngroupAVPS(avp->data);
@@ -126,6 +126,21 @@ peer* get_routing_peer(AAAMessage *m)
 		AAAFreeAVPList(&group);
 	}
 
+	avp_vendor = AAAFindMatchingAVP(m,0,AVP_Vendor_Id,0,AAA_FORWARD_SEARCH);				
+	avp = AAAFindMatchingAVP(m,0,AVP_Auth_Application_Id,0,AAA_FORWARD_SEARCH);
+	if (avp){
+		if (avp_vendor) vendor_id = get_4bytes(avp_vendor->data.s);
+		else vendor_id = 0;
+		app_id = get_4bytes(avp->data.s);		
+	}
+	
+	avp = AAAFindMatchingAVP(m,0,AVP_Acct_Application_Id,0,AAA_FORWARD_SEARCH);
+	if (avp){
+		if (avp_vendor) vendor_id = get_4bytes(avp_vendor->data.s);
+		else vendor_id = 0;
+		app_id = get_4bytes(avp->data.s);		
+	}
+	
 	avp = AAAFindMatchingAVP(m,0,AVP_Destination_Host,0,AAA_FORWARD_SEARCH);
 	if (avp) destination_host = avp->data;
 	
