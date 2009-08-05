@@ -1158,8 +1158,12 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 				/*I save the dialogs only here because
 				 * i only want to release confirmed dialogs*/
 				cscf_get_to_tag(msg,&totag);
-				tmb.update_dlg_uas(d->dialog_s,response,&totag);
-				tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);				
+				if (d->dialog_s){
+					tmb.update_dlg_uas(d->dialog_s,response,&totag);
+					tmb.dlg_response_uac(d->dialog_c,msg,IS_NOT_TARGET_REFRESH);
+				}else{
+					LOG(L_ERR,"ERR:S_update_dialog(): dialog_s for dialog was NULL!\n");
+				}
 			}else
 				if (response>300){
 					d->state = DLG_STATE_TERMINATED;
