@@ -140,4 +140,15 @@ public class Peer {
 	{
 		this.lastReceiveTime = System.currentTimeMillis();
 	}
+	
+	
+	public boolean handlesApplication(Application app)
+	{
+		int i;
+		for(i=0;i<AuthApp.size();i++)
+			if (AuthApp.get(i).equals(app)) return true;
+		for(i=0;i<AcctApp.size();i++)
+			if (AcctApp.get(i).equals(app)) return true;
+		return false;
+	}
 }

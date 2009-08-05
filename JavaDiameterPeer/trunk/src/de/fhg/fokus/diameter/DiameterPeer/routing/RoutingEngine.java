@@ -34,7 +34,9 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import de.fhg.fokus.diameter.DiameterPeer.data.AVP;
+import de.fhg.fokus.diameter.DiameterPeer.data.AVPDecodeException;
 import de.fhg.fokus.diameter.DiameterPeer.data.DiameterMessage;
+import de.fhg.fokus.diameter.DiameterPeer.peer.Application;
 import de.fhg.fokus.diameter.DiameterPeer.peer.Peer;
 import de.fhg.fokus.diameter.DiameterPeer.peer.PeerManager;
 import de.fhg.fokus.diameter.DiameterPeer.peer.StateMachine;
@@ -74,6 +76,8 @@ public class RoutingEngine {
 		String destinationHost=null,destinationRealm=null;
 		AVP avp;
 		Peer p;
+		Application application=null;
+		
 		avp = msg.findAVP(AVP.Destination_Host);
 		if (avp!=null) destinationHost = new String(avp.getData());
 		if (destinationHost!=null && destinationHost.length()>0){
@@ -83,22 +87,80 @@ public class RoutingEngine {
 		}
 		avp = msg.findAVP(AVP.Destination_Realm);
 		if (avp!=null) destinationRealm = new String(avp.getData());
+		application = getApplication(msg);
 		if (destinationRealm!=null && destinationRealm.length()>0){
 			RoutingRealm rr = realms.get(destinationRealm);
 			if (rr!=null){
 				for (RoutingEntry i : rr.routes) {
 					p = peerManager.getPeerByFQDN(i.FQDN);
-					if (p!=null && (p.state==StateMachine.I_Open || p.state==StateMachine.R_Open))
+					if (p!=null && 
+						(p.state==StateMachine.I_Open || p.state==StateMachine.R_Open) &&
+						(application==null || p.handlesApplication(application))
+						)
 						return p;					
 				}
 			}
 		}
 		for (RoutingEntry i : defaultRoutes) {
 			p = peerManager.getPeerByFQDN(i.FQDN);
-			if (p!=null && (p.state==StateMachine.I_Open || p.state==StateMachine.R_Open))
+			if (p!=null && (p.state==StateMachine.I_Open || p.state==StateMachine.R_Open) &&
+				(application==null || p.handlesApplication(application))
+				)
 				return p;					
 		}
 		return null;
+	}
+
+	private Application getApplication(DiameterMessage msg) {
+		AVP avp,avp_vendor,avp2;
+		int vendorId=0,appId;
+	
+		appId = msg.applicationID;	
+		
+		avp_vendor = msg.findAVP(AVP.Vendor_Id);				
+		avp = msg.findAVP(AVP.Auth_Application_Id);
+		if (avp!=null){
+			if (avp_vendor!=null) vendorId = avp_vendor.getIntData();
+			else vendorId = 0;
+			appId = avp.getIntData();
+			return new Application(appId,vendorId,Application.Auth);
+		}
+
+		avp = msg.findAVP(AVP.Acct_Application_Id);
+		if (avp!=null){
+			if (avp_vendor!=null) vendorId = avp_vendor.getIntData();
+			else vendorId = 0;
+			appId = avp.getIntData();
+			return new Application(appId,vendorId,Application.Acct);
+		}
+				
+		avp = msg.findAVP(AVP.Vendor_Specific_Application_Id);
+		if (avp!=null){
+			try {
+				avp.ungroup();
+				avp_vendor = avp.findChildAVP(AVP.Vendor_Id);
+				if (avp_vendor!=null) vendorId = avp_vendor.getIntData();
+				else vendorId = 0;
+				avp2 = avp.findChildAVP(AVP.Auth_Application_Id);				
+				if (avp_vendor!=null&&avp2!=null){
+					vendorId = avp_vendor.getIntData();				
+					appId = avp2.getIntData();
+					return new Application(appId,vendorId,Application.Auth);
+				}
+				avp2 = avp.findChildAVP(AVP.Acct_Application_Id);				
+				if (avp_vendor!=null&&avp2!=null){
+					vendorId = avp_vendor.getIntData();				
+					appId = avp2.getIntData();
+					return new Application(appId,vendorId,Application.Acct);
+				}
+			} catch (AVPDecodeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+		return new Application(appId,vendorId,Application.Unknown);
+
 	}
 	
 	
