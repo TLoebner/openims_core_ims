@@ -68,10 +68,12 @@
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "../cdp/cdp_load.h"
+#include "../dialog/dlg_mod.h"
 #include <lost/client.h>
 
 #include "lost.h"
 #include "user_data.h"
+#include "dlg_state.h"
 
 MODULE_VERSION
 
@@ -95,6 +97,15 @@ char * esqk_prefix = "123";
 str esqk_prefix_str = {0,0};
 str local_psap_uri_str = {0,0};
 int * shutdown_singleton;				/**< Shutdown singleton 	*/
+dlg_func_t dialogb;								/**< Structure with pointers to dialog funcs			*/
+extern lrf_dialog_hash_slot *lrf_dialogs;	/**< the dialogs hash table				*/
+int lrf_dialogs_hash_size=1024;			/**< the size of the hash table for dialogs			*/
+int lrf_dialogs_expiration_time=3600;		/**< expiration time for a dialog					*/
+//int lrf_dialogs_enable_release=1;			/**< if to enable dialog release					*/
+int* lrf_dialog_count = 0;				/**< Counter for saved dialogs						*/
+int lrf_max_dialog_count=20000;			/**< Maximum number of dialogs						*/ 
+gen_lock_t* l_dialog_count_lock=0; 		/**< Lock for the dialog counter					*/
+
 
 int LRF_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 
@@ -112,6 +123,10 @@ static cmd_export_t lrf_cmds[]={
 	{"LRF_get_psap",			LRF_get_psap,				0, 0, REQUEST_ROUTE},
 	{"LRF_call_query_resp",			LRF_call_query_resp,			0, 0, REQUEST_ROUTE},
 	{"LRF_trans_in_processing",		LRF_trans_in_processing,		0, 0, REQUEST_ROUTE},
+	{"LRF_is_in_dialog",			LRF_is_in_dialog, 			1, 0, REQUEST_ROUTE},
+	{"LRF_save_dialog",			LRF_save_dialog, 				1, 0, REQUEST_ROUTE},
+	{"LRF_update_dialog",			LRF_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"LRF_drop_dialog",			LRF_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -125,6 +140,10 @@ static param_export_t lrf_params[]={
 	{"esqk_prefix",			STR_PARAM, 		&esqk_prefix},
 	{"default_psap",		STR_PARAM, 		&local_psap_uri},
 	{"using_lost_srv",		INT_PARAM, 		&using_lost_srv},
+	{"dialogs_hash_size",		INT_PARAM,		&lrf_dialogs_hash_size},
+	{"dialogs_expiration_time",	INT_PARAM,		&lrf_dialogs_expiration_time},
+	//{"dialogs_enable_release",	INT_PARAM,		&lrf_dialogs_enable_release},
+	{"max_dialog_count",		INT_PARAM,		&lrf_max_dialog_count},
 	{0,0,0} 
 };
 
@@ -218,6 +237,7 @@ int fix_parameters()
 static int mod_init(void)
 {
 	load_tm_f load_tm;
+	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
@@ -242,8 +262,15 @@ static int mod_init(void)
 	if (load_tm(&tmb) == -1)
 		goto error;
 
-	/* register the user datas timer */
-	if (register_timer(user_data_timer, user_datas,60)<0) goto error;
+	/* bind to the dialog module */
+	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
+	if (!load_dlg) {
+		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
+		return -1;
+	}
+	if (load_dlg(&dialogb) != 0) {
+		return -1;
+	}
 
 	if (using_lost_srv && init_lost_lib()){
 		LOG(L_ERR, "ERR:"M_NAME":mod_init: Error initializing the LoST library\n");
@@ -254,6 +281,23 @@ static int mod_init(void)
 		LOG(L_ERR, "ERR:"M_NAME":mod_init: Error initializing the user data\n");
 		goto error;
 	}
+	/* init the dialog storage */
+	if (!lrf_dialogs_init(lrf_dialogs_hash_size)){
+		LOG(L_ERR, "ERR"M_NAME":mod_init: Error initializing the Hash Table for stored dialogs\n");
+		goto error;
+	}		
+	lrf_dialog_count = shm_malloc(sizeof(int));
+	*lrf_dialog_count = 0;
+	l_dialog_count_lock = lock_alloc();
+	l_dialog_count_lock = lock_init(l_dialog_count_lock);
+
+	/* register the user datas timer */
+	if (register_timer(user_data_timer, user_datas,60)<0) goto error;
+
+	/* register the dialog timer */
+	if (register_timer(dialog_timer,lrf_dialogs,60)<0) goto error;
+
+
 	return 0;
 error:
 	return -1;
@@ -292,11 +336,14 @@ static void mod_destroy(void)
 	}
 	lock_release(process_lock);
 
-	//TODO:destroy the map
 	if (do_destroy){
 		/* Then nuke it all */	
 		destroy_lrf_user_data();	
 		end_lost_lib();
+		lrf_dialogs_destroy();
+	        lock_get(l_dialog_count_lock);
+        	shm_free(lrf_dialog_count);
+	        lock_destroy(l_dialog_count_lock);
 	}
 	
 }
