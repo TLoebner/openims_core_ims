@@ -179,7 +179,8 @@
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  */
  
- 
+#ifdef CDP_FOR_SER
+
 #ifndef _CDP__H
 #define _CDP__H
 
@@ -194,3 +195,5 @@ static int cdp_exit( void );
 
 
 #endif
+
+#endif /* CDP_FOR_SER */

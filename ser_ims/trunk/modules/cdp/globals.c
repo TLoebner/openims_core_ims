@@ -60,6 +60,11 @@
 #ifdef CDP_FOR_SER
 
 #else
+
+#ifdef WHARF
+
+#else
+
 	unsigned long shm_mem_size = SHM_MEM_SIZE;
 	int memlog = L_ERR;
 	int memdbg = L_MEM;
@@ -67,6 +72,9 @@
 	int log_facility = 1;
 	int log_stderr = 1;
 	int process_no=0;
+	
+#endif
+	
 #endif
 
 
@@ -122,7 +130,11 @@ void destroy_memory(int show_status)
 #endif		
 	}
 	/* zero all shmem alloc vars that we still use */
+#ifdef WHARF	
+
+#else
 	shm_mem_destroy();
+#endif	
 #endif
 #ifdef PKG_MALLOC
 	if (show_status){

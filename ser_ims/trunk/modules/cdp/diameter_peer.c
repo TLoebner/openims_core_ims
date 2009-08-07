@@ -74,6 +74,10 @@
 	#include "../../pt.h"
 #endif
 
+#ifdef WHARF
+	#include "../../base/fork.h"
+#endif
+
 dp_config *config=0;		/**< Configuration for this diameter peer 	*/
 
 int *shutdownx=0;			/**< whether a shutdown is in progress		*/
@@ -155,18 +159,14 @@ inline void dp_del_pid(pid_t pid)
 
 
 /**
- * Initialize the CDiameterPeer from a configuration file.
- * The file is kept as dtd. See configdtd.h for the DTD and ConfigExample.xml.
- * @param cfg_filename - file with the configuration
- * @returns 1 on success, 0 on error
+ * Real initialization, called after the config is parsed
  */
-int diameter_peer_init(char *cfg_filename)
+int diameter_peer_init_real()
 {	
 	pid_list_t *i,*j;
 
-	config = parse_dp_config(cfg_filename);
 	if (!config) {
-		LOG(L_ERR,"ERROR:init_diameter_peer(): Error loading configuration file. Aborting...\n");
+		LOG(L_ERR,"ERROR:diameter_peer_init_real(): Configuration was not parsed yet. Aborting...\n");
 		goto error;
 	}
 	log_dp_config(L_INFO,config);
@@ -250,6 +250,48 @@ error:
 
 
 /**
+ * Initialize the CDiameterPeer from a configuration file.
+ * The file is kept as dtd. See configdtd.h for the DTD and ConfigExample.xml.
+ * @param cfg_filename - file with the configuration
+ * @returns 1 on success, 0 on error
+ */
+int diameter_peer_init(char *cfg_filename)
+{	
+	xmlDocPtr doc = parse_dp_config_file(cfg_filename);
+	config = parse_dp_config(doc);
+	if (!config) {
+		LOG(L_ERR,"ERROR:init_diameter_peer(): Error loading configuration file. Aborting...\n");
+		goto error;
+	}
+	
+	return diameter_peer_init_real();
+error:
+	return 0;
+}
+
+/**
+ * Initialize the CDiameterPeer from a configuration string
+ * The file is kept as dtd. See configdtd.h for the DTD and ConfigExample.xml.
+ * @param cfg_filename - file with the configuration
+ * @returns 1 on success, 0 on error
+ */
+int diameter_peer_init_str(str config_str)
+{	
+	xmlDocPtr doc = parse_dp_config_str(config_str);
+	config = parse_dp_config(doc);
+	if (!config) {
+		LOG(L_ERR,"ERROR:init_diameter_peer(): Error loading configuration file. Aborting...\n");
+		goto error;
+	}
+	
+	return diameter_peer_init_real();
+error:
+	return 0;
+}
+
+
+
+/**
  * Start the CDiameterPeer operations.
  * It forks all the processes required.
  * @param blocking - if this is set, use the calling processes for the timer and never 
@@ -267,7 +309,11 @@ int diameter_peer_start(int blocking)
 		#ifdef CDP_FOR_SER		
 			pid = fork_process(1001+k,"cdp_worker",1);
 		#else
-			pid = fork();
+			#ifdef WHARF
+				pid = wharf_fork("cdp_worker",WHARF_PROCESS_CDP_WORKER);
+			#else
+				pid = fork();
+			#endif
 		#endif
 		if (pid==-1){
 			LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for worker!\n");
@@ -281,6 +327,9 @@ int diameter_peer_start(int blocking)
 			#endif	
 			worker_process(k);
 			LOG(L_CRIT,"ERROR:init_diameter_peer(): worker_process finished without exit!\n");
+			#ifdef WHARF
+				wharf_exit(-1);
+			#endif	
 			exit(-1);		
 		}else{
 			dp_add_pid(pid);
@@ -294,7 +343,11 @@ int diameter_peer_start(int blocking)
 		#ifdef CDP_FOR_SER		
 			pid = fork_process(1001+k,"cdp_receiver_peer",1);
 		#else
-			pid = fork();
+			#ifdef WHARF
+				pid = wharf_fork("cdp_receiver_peer",WHARF_PROCESS_CDP_RECEIVER);
+			#else
+				pid = fork();
+			#endif
 		#endif
 		if (pid==-1){
 			LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for peer receiver!\n");
@@ -308,6 +361,9 @@ int diameter_peer_start(int blocking)
 			#endif	
 			receiver_process(p);
 			LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
+			#ifdef WHARF
+				wharf_exit(-1);
+			#endif	
 			exit(-1);		
 		}else{
 			dp_add_pid(pid);
@@ -316,36 +372,45 @@ int diameter_peer_start(int blocking)
 	lock_release(peer_list_lock);
 	
 	/* fork receiver for unknown peers */
-	if (config->accept_unknown_peers){
-		receiver_init(NULL);
-		#ifdef CDP_FOR_SER		
-			pid = fork_process(1001+k,"cdp_receiver_peer_unkown",1);
+	receiver_init(NULL);
+	#ifdef CDP_FOR_SER		
+		pid = fork_process(1001+k,"cdp_receiver_peer_unkown",1);
+	#else
+		#ifdef WHARF
+			pid = wharf_fork("cdp_receiver_unknown",WHARF_PROCESS_CDP_RECEIVER);
 		#else
 			pid = fork();
 		#endif
-		if (pid==-1){
-			LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for unknown peer receiver!\n");
-			return 0;
-		}
-		if (pid==0) {
-			srandom(time(0)*k);
-			#ifdef CDP_FOR_SER
-				snprintf(pt[process_no].desc, MAX_PT_DESC,
-					"cdp receiver peer unknown");
-			#endif	
-			receiver_process(NULL);
-			LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
-			exit(-1);		
-		}else{
-			dp_add_pid(pid);
-		}
+	#endif
+	if (pid==-1){
+		LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for unknown peer receiver!\n");
+		return 0;
+	}
+	if (pid==0) {
+		srandom(time(0)*k);
+		#ifdef CDP_FOR_SER
+			snprintf(pt[process_no].desc, MAX_PT_DESC,
+				"cdp receiver peer unknown");
+		#endif	
+		receiver_process(NULL);
+		LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
+		#ifdef WHARF
+			wharf_exit(-1);
+		#endif	
+		exit(-1);		
+	}else{
+		dp_add_pid(pid);
 	}
 
 	/* Fork the acceptor process (after receivers, so it inherits all the right sockets) */
 	#ifdef CDP_FOR_SER		
 		pid = fork_process(1000,"cdp_acceptor",1);
 	#else
-		pid = fork();
+		#ifdef WHARF
+			pid = wharf_fork("cdp_acceptor",WHARF_PROCESS_CDP_ACCEPTOR);
+		#else
+			pid = fork();
+		#endif
 	#endif
 	if (pid==-1){
 		LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for acceptor!\n");
@@ -354,6 +419,9 @@ int diameter_peer_start(int blocking)
 	if (pid==0) {
 		acceptor_process(config);
 		LOG(L_CRIT,"ERROR:init_diameter_peer(): acceptor_process finished without exit!\n");
+		#ifdef WHARF
+			wharf_exit(-1);
+		#endif	
 		exit(-1);		
 	}else{
 		dp_add_pid(pid);
@@ -369,7 +437,11 @@ int diameter_peer_start(int blocking)
 		#ifdef CDP_FOR_SER		
 			pid = fork_process(1001,"cdp_timer",1);
 		#else
-			pid = fork();
+			#ifdef WHARF
+				pid = wharf_fork("cdp_timer",WHARF_PROCESS_CDP_TIMER);
+			#else
+				pid = fork();
+			#endif
 		#endif
 		if (pid==-1){
 			LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for timer!\n");
@@ -378,6 +450,9 @@ int diameter_peer_start(int blocking)
 		if (pid==0) {
 			timer_process(0);
 			LOG(L_CRIT,"ERROR:init_diameter_peer(): timer_process finished without exit!\n");
+			#ifdef WHARF
+				wharf_exit(-1);
+			#endif	
 			exit(-1);		
 		}else{			
 			dp_add_pid(pid);
@@ -473,6 +548,10 @@ void diameter_peer_destroy()
 	LOG(L_CRIT,"INFO:destroy_diameter_peer(): Bye Bye from C Diameter Peer test\n");
 
 #ifndef CDP_FOR_SER
+
+#ifdef WHARF
+	
+#else	
 	#ifdef PKG_MALLOC
 		LOG(memlog, "Memory status (pkg):\n");
 		//pkg_status();
@@ -489,6 +568,7 @@ void diameter_peer_destroy()
 		/* zero all shmem alloc vars that we still use */
 		shm_mem_destroy();
 	#endif
+#endif		
 #endif	
 }
 

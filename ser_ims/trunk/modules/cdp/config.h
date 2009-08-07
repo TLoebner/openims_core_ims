@@ -140,6 +140,9 @@ void free_routing_realm(routing_realm *rr);
 void free_routing_entry(routing_entry *re);
 inline void log_dp_config(int level,dp_config *x);
 
-dp_config* parse_dp_config(char* filename);
+xmlDocPtr parse_dp_config_file(char* filename);
+xmlDocPtr parse_dp_config_str(str config_str);
+
+dp_config* parse_dp_config(xmlDocPtr);
 
 #endif /*__CONFIG_H_*/

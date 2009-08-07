@@ -111,51 +111,93 @@ static inline void quote_trim_dup(str *dest, char *src)
 }
 
 /**
+ * Parse the cdp configuration from file to xml
+ * @param filename
+ * @return the xmlDocPtr or null on error
+ */
+xmlDocPtr parse_dp_config_file(char* filename)
+{
+	FILE *f=0;
+	xmlDocPtr doc;
+
+	parser_init();
+
+	if (!filename){
+		LOG(L_ERR,"ERROR:parse_dp_config_file(): filename parameter is null\n");
+		goto error;
+	}
+	f = fopen(filename,"r");
+	if (!f){
+		LOG(L_ERR,"ERROR:parse_dp_config_file(): Error opening <%s> file > %s\n",filename,strerror(errno));
+		goto error;
+	}
+	fclose(f);
+	
+	doc = xmlParseFile(filename);
+	if (!doc){
+		LOG(L_ERR,"ERR:parse_dp_config_file():  This is not a valid XML file <%s>\n",
+			filename);
+		goto error;
+	}
+	
+	return doc;
+error:
+	return 0;		
+}
+
+/**
+ * Parse the cdp configuration from str to xml
+ * @param filename
+ * @return the xmlDocPtr or null on error
+ */
+xmlDocPtr parse_dp_config_str(str config_str)
+{
+	xmlDocPtr doc;
+	
+	char c = config_str.s[config_str.len];
+	if (!config_str.len){
+		LOG(L_ERR,"ERROR:parse_dp_config_str(): empty string\n");
+		goto error;
+	}
+	parser_init();
+
+	config_str.s[config_str.len] = 0;
+	doc = xmlParseDoc((xmlChar*)config_str.s);
+	config_str.s[config_str.len] = c;
+
+	if (!doc){
+		LOG(L_ERR,"ERR:parse_dp_config_file():  This is not a valid XML string <%.*s>\n",
+			config_str.len,config_str.s);
+		goto error;
+	}
+	
+	return  doc;
+error:
+	return 0;		
+}
+
+/**
  * Parses a DiameterPeer configuration file.
  * @param filename - path to the file
  * @returns the dp_config* structure containing the parsed configuration  
  */
-dp_config* parse_dp_config(char* filename)
+dp_config* parse_dp_config(xmlDocPtr doc)
 {
-	FILE *f=0;
 	dp_config *x=0;
-	xmlDocPtr doc=0;
 	xmlNodePtr root=0,child=0,nephew=0;
 	xmlChar *xc=0;
 	int k;
 	routing_entry *re,*rei;
 	routing_realm *rr,*rri;
-
-	parser_init();
-
-	if (!filename){
-		LOG(L_ERR,"ERROR:parse_dp_config(): filename parameter is null\n");
-		goto error;
-	}
-	f = fopen(filename,"r");
-	if (!f){
-		LOG(L_ERR,"ERROR:parse_dp_config(): Error opening <%s> file > %s\n",filename,strerror(errno));
-		goto error;
-	}
-	fclose(f);
 	
-	
+	if (!doc)
+		goto error;
+		
 	x = new_dp_config();
-	if (!f){
-		LOG(L_ERR,"ERROR:parse_dp_config(): Error opening <%s> file > %s\n",filename,strerror(errno));
-		goto error;
-	}
-
-	doc = xmlParseFile(filename);
-	if (!doc){
-		LOG(L_ERR,"ERR:parse_dp_config():  This is not a valid XML file <%s>\n",
-			filename);
-		goto error;
-	}
 
 	root = xmlDocGetRootElement(doc);
 	if (!root){
-		LOG(L_ERR,"ERR:parse_dp_config():  Empty XML <%s>\n",filename);
+		LOG(L_ERR,"ERR:parse_dp_config():  Empty XML \n");
 		goto error;
 	}
 
