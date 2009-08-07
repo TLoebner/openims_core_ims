@@ -53,6 +53,7 @@
  
 #include "cdp_load.h"
 
+#ifdef CDP_FOR_SER
 #include "../../sr_module.h"
 
 
@@ -103,3 +104,5 @@ int load_cdp( struct cdp_binds *cdpb)
 	
 	return 1;
 }
+
+#endif /* CDP_FOR_SER */

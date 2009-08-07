@@ -53,6 +53,7 @@
  * 
  */
 
+#ifdef CDP_FOR_SER
 
 #include "mod.h"
 
@@ -214,4 +215,4 @@ static int cdp_exit( void )
 
 
 
-
+#endif /* CDP_FOR_SER*/

@@ -13,8 +13,13 @@ ifeq ($(CFG_NAME),sip-router)
 	DEFS+=-DSER_MOD_INTERFACE
 endif	
 
+ifeq ($(CFG_NAME),Wharf)
+	DEFS += -DWHARF
+else
+	DEFS += -DCDP_FOR_SER
+endif	
 
-DEFS += -I/usr/include/libxml2 -DCDP_FOR_SER
+DEFS += -I/usr/include/libxml2 
 LIBS += -L$(LOCALBASE)/lib -lxml2
 
 include ../../Makefile.modules

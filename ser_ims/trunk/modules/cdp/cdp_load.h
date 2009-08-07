@@ -54,7 +54,6 @@
 #ifndef _CDP_BIND_H
 #define _CDP_BIND_H
 
-#define CDP_FOR_SER 1
 
 #include "utils.h"
 #include "diameter.h"
@@ -171,8 +170,12 @@ struct cdp_binds {
 };
 
 
+#ifdef CDP_FOR_SER
+
 typedef int(*load_cdp_f)( struct cdp_binds *cdpb );
 int load_cdp( struct cdp_binds *cdpb);
+
+#endif /* CDP_FOR_SER */
 
 #endif
 
