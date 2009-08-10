@@ -74,6 +74,8 @@
 #include "lost.h"
 #include "user_data.h"
 #include "dlg_state.h"
+#include "locsip.h"
+#include "locsip_subscribe.h"
 
 MODULE_VERSION
 
@@ -106,6 +108,16 @@ int* lrf_dialog_count = 0;				/**< Counter for saved dialogs						*/
 int lrf_max_dialog_count=20000;			/**< Maximum number of dialogs						*/ 
 gen_lock_t* l_dialog_count_lock=0; 		/**< Lock for the dialog counter					*/
 
+/*global location enabler settings*/
+char* locsip_srv_ip = "locsip.open-ims.test";
+int locsip_srv_port = 5060;
+str locsip_srv_ip_s = {0, 0};
+int use_locsip = 0;
+int lrf_subscribe_retries = 0;
+int subscriptions_hash_size=1024;
+char * uri = "sip:10.147.65.202:9160";
+str locsip_server_route = {"sip:10.147.65.202:9160", 22};
+
 
 int LRF_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 
@@ -124,9 +136,12 @@ static cmd_export_t lrf_cmds[]={
 	{"LRF_call_query_resp",			LRF_call_query_resp,			0, 0, REQUEST_ROUTE},
 	{"LRF_trans_in_processing",		LRF_trans_in_processing,		0, 0, REQUEST_ROUTE},
 	{"LRF_is_in_dialog",			LRF_is_in_dialog, 			1, 0, REQUEST_ROUTE},
-	{"LRF_save_dialog",			LRF_save_dialog, 				1, 0, REQUEST_ROUTE},
+	{"LRF_save_dialog",			LRF_save_dialog, 			1, 0, REQUEST_ROUTE},
 	{"LRF_update_dialog",			LRF_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"LRF_drop_dialog",			LRF_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"LRF_drop_dialog",			LRF_drop_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"LRF_uses_LOCSIP",			LRF_uses_LOCSIP,			0, 0, REQUEST_ROUTE},
+	{"LRF_subscribe_LOCSIP",		LRF_subscribe_LOCSIP,			0, 0, REQUEST_ROUTE},
+	{"LRF_return_default_PSAP", 		LRF_return_default_PSAP,		0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -144,6 +159,9 @@ static param_export_t lrf_params[]={
 	{"dialogs_expiration_time",	INT_PARAM,		&lrf_dialogs_expiration_time},
 	//{"dialogs_enable_release",	INT_PARAM,		&lrf_dialogs_enable_release},
 	{"max_dialog_count",		INT_PARAM,		&lrf_max_dialog_count},
+	{"enable_locsip",		INT_PARAM,		&use_locsip},
+	{"locsip_srv_ip",		STR_PARAM,		&locsip_srv_ip},
+	{"locsip_srv_port",		INT_PARAM,		&locsip_srv_port},
 	{0,0,0} 
 };
 
@@ -227,6 +245,20 @@ int fix_parameters()
 	LOG(L_DBG, "DBG:"M_NAME":fix_parameters: lost server host: %.*s port: %u\n", 
 			lost_server.host.len, lost_server.host.s, lost_server.port);
 	
+	if(use_locsip){
+		int len = strlen(locsip_srv_ip);
+		if(!len){
+			LOG(L_ERR, "ERR:"M_NAME":fix_parameters: invalid LOCSIP server address\n");
+			return 0;
+		}
+		locsip_srv_ip_s.s = locsip_srv_ip;
+		if(locsip_srv_port < 1023 || locsip_srv_port > 65535){
+			LOG(L_DBG, "ERR:"M_NAME":fix_parameters: invalid port number %d\n", locsip_srv_port);
+			return 0;
+		}
+		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: gle address is %.*s:%d\n",
+			locsip_srv_ip_s.len, locsip_srv_ip_s.s, locsip_srv_port);
+	}
 	return 1;
 }
 
@@ -291,12 +323,17 @@ static int mod_init(void)
 	l_dialog_count_lock = lock_alloc();
 	l_dialog_count_lock = lock_init(l_dialog_count_lock);
 
+	if(!loc_subscription_init())
+		goto error;
+
 	/* register the user datas timer */
 	if (register_timer(user_data_timer, user_datas,60)<0) goto error;
 
 	/* register the dialog timer */
 	if (register_timer(dialog_timer,lrf_dialogs,60)<0) goto error;
 
+	/* register the dialog timer */
+	if (register_timer(subscription_timer, NULL, 60)<0) goto error;
 
 	return 0;
 error:
@@ -344,6 +381,7 @@ static void mod_destroy(void)
 	        lock_get(l_dialog_count_lock);
         	shm_free(lrf_dialog_count);
 	        lock_destroy(l_dialog_count_lock);
+		loc_subscription_destroy();
 	}
 	
 }
