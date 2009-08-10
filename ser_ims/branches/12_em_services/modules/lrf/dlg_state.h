@@ -1,5 +1,5 @@
 /**
- * $Id: dlg_state.h 655 2009-04-23 15:31:52Z aon $
+ * $Id: dlg_state.h 708 2009-04-23 15:31:52Z aon $
  *  
  * Copyright (C) 2009 FhG Fokus
  *
