@@ -65,6 +65,7 @@
 #include "../tm/tm_load.h"
 #include "../dialog/dlg_mod.h"
 #include "sip.h"
+#include "user_data.h"
 
 extern struct tm_binds tmb;   		/**< Structure with pointers to tm funcs 		*/
 extern dlg_func_t dialogb;			/**< Structure with pointers to dialog funcs			*/
@@ -173,7 +174,7 @@ void loc_subscription_destroy()
  * @param duration - SUBCRIBE expires
  * @returns 1 on success, 0 on failure
  */
-loc_subscription* loc_subscribe(str uri,int duration)
+loc_subscription* loc_subscribe(str uri,int duration, user_d * user_data)
 {
 	loc_subscription *s;
 	/* first we try to update. if not found, add it */
@@ -185,6 +186,7 @@ loc_subscription* loc_subscribe(str uri,int duration)
 		subs_unlock(s->hash);
 	}else{			
 		s = new_loc_subscription(uri,duration);
+		s->user_data = user_data;
 		if (!s){
 			LOG(L_ERR,"ERR:"M_NAME":loc_subscribe: Error creating new subscription\n");
 			return 0;
@@ -205,7 +207,7 @@ static str max_fwds_hdr={"Max-Forwards: 10\r\n",18};
 static str expires_s={"Expires: ",9};
 static str expires_e={"\r\n",2};
 static str contact_s={"Contact: <",10};
-static str contact_e={">\r\n",3};
+static str contact_e={">;g.oma.locsip=\"true\"\r\n",23};
 static str p_asserted_identity_s={"P-Asserted-Identity: <",22};
 static str p_asserted_identity_e={">\r\n",3};
 /**
@@ -261,13 +263,13 @@ int loc_send_subscribe(loc_subscription *s, str route, int duration)
 				s->dialog->hooks.next_hop->s,
 				s->dialog->dst_uri.len,
 				s->dialog->dst_uri.s);
-		if (dialogb.request_outside(&method, &h, 0, s->dialog, loc_subscribe_response,  0) < 0){
+		if (dialogb.request_outside(&method, &h, 0, s->dialog, loc_subscribe_response,  (void *)s->user_data) < 0){
 			LOG(L_ERR,"ERR:"M_NAME":loc_send_subscribe: Error sending initial request in a SUBSCRIBE dialog\n");
 			goto error;
 		}		
 	}else{
 		/* this is a subsequent subscribe */
-		if (dialogb.request_inside(&method, &h, 0, s->dialog, loc_subscribe_response,  0) < 0){
+		if (dialogb.request_inside(&method, &h, 0, s->dialog, loc_subscribe_response,  (void *)s->user_data) < 0){
 			LOG(L_ERR,"ERR:"M_NAME":loc_send_subscribe: Error sending subsequent request in a SUBSCRIBE dialog\n");
 			goto error;
 		}				
@@ -281,6 +283,47 @@ error:
 	return 0;
 }
 
+
+//get the OPTIONS transaction
+//send an error response
+void subscription_err_resp(struct cell * t, struct tmcb_params *ps){
+
+	user_d * user_data;
+	struct cell* options_trans, * crt_trans;
+	enum route_mode crt_rmode;
+
+	user_data = *((user_d **)ps->param);
+
+	LOG(L_DBG, "DBG:"M_NAME":subscription_err_resp: user_data: %p, user_uri %.*s, OPTIONS trans index: %u label: %u callid: %.*s\n", 
+			user_data, user_data->user_uri.len, user_data->user_uri.s,
+			user_data->options_tr.hash_index, user_data->options_tr.label, 
+			user_data->options_tr.callid.len, user_data->options_tr.callid.s);
+
+	if(tmb.t_enter_ctx(user_data->options_tr.hash_index, user_data->options_tr.label,
+		&crt_rmode, MODE_REQUEST, &crt_trans, &options_trans)!=0){
+		LOG(L_ERR, "ERR:"M_NAME":subscription_err_resp: could not switch to the OPTIONS transaction\n");
+		goto error;
+	}
+
+	LOG(L_DBG, "DBG:"M_NAME":subscription_err_resp: OPTIONS trans %p callid: %.*s\n", 
+			options_trans, options_trans->callid.len, options_trans->callid.s);
+
+	if(tmb.t_reply(options_trans->uas.request, 405, NO_LOCATION)<0){
+		LOG(L_ERR, "ERR:"M_NAME":subscription_err_resp:Could not reply to the OPTIONS request\n");
+		goto error;
+	}
+	LOG(L_ERR, "ERR:"M_NAME":subscription_err_resp: sent a 405 no available location error response\n");
+
+	//set the SUBSCRIBE trans as the current one
+	tmb.t_exit_ctx(t, crt_rmode);
+
+error:
+	shm_free(user_data);
+	ps->param = NULL;
+	return;
+
+}
+
 /**
  * Response callback for subscribe
  */
@@ -289,6 +332,7 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 	str req_uri;
 	int expires;
 	loc_subscription *s=0;
+
 	LOG(L_DBG,"DBG:"M_NAME":loc_subscribe_response: code %d\n",ps->code);
 	if (!ps->rpl || ps->rpl==(void*) -1) {
 		LOG(L_ERR,"INF:"M_NAME":loc_subscribe_response: No reply\n");
@@ -308,13 +352,11 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 		expires = cscf_get_expires_hdr(ps->rpl);
 		update_loc_subscription(s,expires);
 		tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
-	}else
-		if (ps->code==404){
-			update_loc_subscription(s,0);			
-			//tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
-		}else{
-			LOG(L_INFO,"INF:"M_NAME":loc_subscribe_response: SUBSCRIRE response code %d ignored\n",ps->code);				
-		}	
+	}else{
+		update_loc_subscription(s,0);
+		subscription_err_resp(t, ps);
+		LOG(L_INFO,"INF:"M_NAME":loc_subscribe_response: SUBSCRIRE error response code %d\n",ps->code);				
+	}	
 	if (s) subs_unlock(s->hash);		
 }
 
@@ -678,58 +720,6 @@ static inline void space_trim_dup(str *dest, char *src)
 	}
 	memcpy(dest->s,src+i,dest->len);
 }
-
-/**
- * Parses a notification and creates the loc_notification object
- * @param xml - the XML data
- * @returns the new loc_notification* or NULL on error
- */
-loc_notification* loc_notification_parse(str xml)
-{
-	
-	return 0;
-}
-
-
-
-/**
- * Processes a notification and updates the registrar info.
- * @param n - the notification
- * @param expires - the Subscription-Status expires parameter
- * @returns 1 on success, 0 on error
- */
-int loc_notification_process(loc_notification *n,int expires)
-{
-
-	
-	loc_notification_print(n);	
-	if (!n) return 0;
-	
-//	lrf_act_time();
-	
-	return 1;
-}
-
-/** 
- * Prints the content of a notification
- * @param n - the notification to print
- */
-void loc_notification_print(loc_notification *n)
-{
-	if (!n) return;
-	LOG(L_DBG,"DBG:"M_NAME":loc_notification_print: State %d\n",n->state);
-			
-}
-
-/**
- * Frees up the space taken by a notification
- * @param n - the notification to free
- */
-void loc_notification_free(loc_notification *n)
-{
-
-}
-
 
 
 

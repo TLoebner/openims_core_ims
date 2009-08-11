@@ -54,6 +54,14 @@
 #include <lost/parsing.h>
 #include <lost/pidf_loc.h>
 
+struct trans_info {
+	/* tells in which hash table entry the initial transaction lives */
+	unsigned int  hash_index;
+	/* sequence number within hash collision slot */
+	unsigned int  label;
+	/* callid of the initial trans*/
+	str callid;
+};
 
 /** Structure for a LRF user data cell */
 typedef struct user_d_cell{
@@ -65,6 +73,7 @@ typedef struct user_d_cell{
 	str loc_str;
 	xmlNode * loc;
 	loc_fmt l_fmt;
+	struct trans_info options_tr;
 	struct user_d_cell * next;
 	struct user_d_cell * prev;
 }user_d;
@@ -79,9 +88,9 @@ typedef struct {
 int init_lrf_user_data(int hash_size);
 void destroy_lrf_user_data();
 
-user_d * add_user_data(str user_uri, str service);
+user_d * add_user_data(str user_uri, str service, struct trans_info * options_tr);
 /*get_user_data acquires the lock of the d->hash also. Do not forget to unlock it*/
-user_d * get_user_data(str user_uri, str service);
+user_d * get_user_data(str user_uri, str service, str callid);
 void lrf_unlock(unsigned int i);
 void del_user_data(user_d *d);
 

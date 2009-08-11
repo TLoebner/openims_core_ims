@@ -61,6 +61,9 @@
 
 #include "user_data.h"
 
+#define NO_LOCATION "no location was retrieved, could not get a PSAP"
+
+
 /** LOCINFO constants */
 enum {
 	IMS_LOCNFO_FULL,
@@ -84,7 +87,7 @@ typedef struct _loc_subscription {
 	int duration;			/**< duration of subscription					*/
 	time_t expires;			/**< time of expiration							*/
 	char attempts_left;		/**< number of unsuccesful attempts to subscribe*/
-
+	user_d * user_data;
 	dlg_t *dialog; 
 		
 	struct _loc_subscription *next, *prev;
@@ -104,7 +107,7 @@ int loc_subscription_init();
 void loc_subscription_destroy();
 
 
-loc_subscription* loc_subscribe(str uri,int duration);
+loc_subscription* loc_subscribe(str uri,int duration, user_d *);
 void set_dialog_route_set(dlg_t *d, str route);
 int loc_send_subscribe(loc_subscription *s,str route, int duration);
 
@@ -122,19 +125,8 @@ void del_loc_subscription_nolock(loc_subscription *s);
 void free_loc_subscription(loc_subscription *s);
 void print_subs(int log_level);
 
-/** loc Notification structure */
-typedef struct {
-	int state;
-	str location_info;
-} loc_notification;
-
 int parser_init(char *dtd_filename);
 void parser_destroy();
-
-loc_notification* loc_notification_parse(str xml);
-int loc_notification_process(loc_notification *n,int expires);
-void loc_notification_print(loc_notification *n);
-void loc_notification_free(loc_notification *n);
 
 
 #endif //LRF_LOCSIP_SUBSCRIBE_H

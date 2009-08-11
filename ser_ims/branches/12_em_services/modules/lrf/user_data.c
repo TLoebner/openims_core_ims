@@ -168,6 +168,10 @@ void print_user_data(user_d* d, int log_level){
 			d->esqk.len, d->esqk.s,
 			d->service.len, d->service.s,
 			d->psap_uri.len, d->psap_uri.s);
+
+	LOG(log_level, "			OPTIONS trans: callid %.*s, index %u, label %u\n",
+			d->options_tr.callid.len, d->options_tr.callid.s,
+			d->options_tr.hash_index, d->options_tr.label);
 }
 
 
@@ -178,6 +182,8 @@ void print_lrf_user_data(int log_level){
 
 	int i;
 	user_d *d;
+
+	LOG(L_INFO, "INFO:"M_NAME":--------LRF user data list begin--------\n");
 	for(i=0;i<user_data_hash_size;i++){
 		lrf_lock(i);
 			d = user_datas[i].head;
@@ -187,6 +193,7 @@ void print_lrf_user_data(int log_level){
 			}
 		lrf_unlock(i);
 	}
+	LOG(L_INFO, "INFO:"M_NAME":--------LRF user data list end--------\n");
 }
 
 /**
@@ -260,7 +267,7 @@ inline unsigned int get_user_d_hash(str user_uri)
  * @param user_uri the SIP uri of the user
  * @param sevice the service that the user is trying to access
  */
-user_d * new_user_data(str user_uri, str service){
+user_d * new_user_data(str user_uri, str service, struct trans_info * options_tr){
 
 	user_d * user_data=NULL;
 	str esqk = {0,0};
@@ -277,10 +284,12 @@ user_d * new_user_data(str user_uri, str service){
 
 	esqk.len = esqk_prefix_str.len + esqk_post_len;
 
-	char * p = (char*)shm_malloc(sizeof(user_d)+(esqk.len+user_uri.len+ service.len)*sizeof(char));
+	str callid = options_tr->callid;
+
+	char * p = (char*)shm_malloc(sizeof(user_d)+(esqk.len+user_uri.len+service.len+callid.len)*sizeof(char));
 	if(!p){
 		LOG(L_ERR, "ERR:"M_NAME":new_user_data: could not alloc %i bytes\n",
-				sizeof(struct user_d_cell)+(esqk.len+user_uri.len+service.len)*sizeof(char));
+				sizeof(struct user_d_cell)+(esqk.len+user_uri.len+service.len+callid.len)*sizeof(char));
 		return user_data;
 	}
 
@@ -288,7 +297,8 @@ user_d * new_user_data(str user_uri, str service){
 	memset(user_data, 0, sizeof(struct user_d_cell));
 
 	/*set the esqk identifier*/
-	user_data->esqk.s = esqk.s = (char*) (p + sizeof(struct user_d_cell));
+	p += sizeof(struct user_d_cell);
+	user_data->esqk.s = esqk.s =  p;
 	user_data->esqk.len = esqk.len;
 	sprintf(esqk.s, "%.*s", esqk_prefix_str.len, esqk_prefix_str.s);
 	sprintf(esqk.s+esqk_prefix_str.len, "%u", tmstamp);
@@ -297,7 +307,8 @@ user_d * new_user_data(str user_uri, str service){
 			user_data->esqk.len, user_data->esqk.s);
 	
 	/*set the user uri*/
-	user_data->user_uri.s = (char*) (esqk.s + esqk.len);
+	p += esqk.len;
+	user_data->user_uri.s = p;
 	user_data->user_uri.len = user_uri.len;
 	memcpy(user_data->user_uri.s, user_uri.s, user_uri.len*sizeof(char));
 	
@@ -305,13 +316,21 @@ user_d * new_user_data(str user_uri, str service){
 			user_data->user_uri.len, user_data->user_uri.s);
 
 	/*set the name of the service*/
-	user_data->service.s = (char*) (esqk.s + esqk.len+user_uri.len);
+	p += user_uri.len;
+	user_data->service.s = p;
 	user_data->service.len = service.len;
 	memcpy(user_data->service.s, service.s, service.len*sizeof(char));
 	LOG(L_DBG, "DBG:"M_NAME":new_alloc_user_data: the service uri is %.*s\n", 
 			user_data->service.len, user_data->service.s);
-
+	
 	user_data->hash = get_user_d_hash(user_uri);
+	p += service.len;
+	user_data->options_tr.callid.s = p;
+	user_data->options_tr.callid.len = callid.len;
+	memcpy(user_data->options_tr.callid.s, callid.s, callid.len*sizeof(char));
+	user_data->options_tr.hash_index = options_tr->hash_index;
+	user_data->options_tr.label = options_tr->label;
+
 	return user_data;
 }
 
@@ -320,21 +339,22 @@ user_d * new_user_data(str user_uri, str service){
  * @param user_uri the SIP uri of the user
  * @param sevice the service that the user is trying to access
  */
-user_d * add_user_data(str user_uri, str service){
+user_d * add_user_data(str user_uri, str service, struct trans_info * options_tr){
 		
 	user_d * d;
 	
-	d = get_user_data(user_uri, service);
+	d = get_user_data(user_uri, service, options_tr->callid);
 	if(d){
 		LOG(L_ERR, "ERR:"M_NAME":add_user_data: there is already a user data "
-				"for the user %.*s for the service %.*s\n",
+				"for the user %.*s for the service %.*s and callid %.*s\n",
 				user_uri.len, user_uri.s, 
-				service.len, service.s);
+				service.len, service.s,
+				options_tr->callid.len, options_tr->callid.s);
 		lrf_unlock(d->hash);
 		return NULL;
 	}
 
-	d = new_user_data(user_uri, service);
+	d = new_user_data(user_uri, service, options_tr);
 	if(!d)
 		return NULL;
 
@@ -354,7 +374,7 @@ user_d * add_user_data(str user_uri, str service){
  * @param user_uri the user SIP URI
  * @param service the service urn
  */
-user_d * get_user_data(str user_uri, str service){
+user_d * get_user_data(str user_uri, str service, str callid){
 
 	user_d* d=0;
 	unsigned int hash = get_user_d_hash(user_uri);
@@ -364,6 +384,8 @@ user_d * get_user_data(str user_uri, str service){
 		while(d){
 			if (d->user_uri.len == user_uri.len &&
 				d->service.len == service.len &&
+				d->options_tr.callid.len == callid.len &&
+				strncasecmp(d->options_tr.callid.s, callid.s, callid.len)== 0 &&
 				strncasecmp(d->user_uri.s,user_uri.s,user_uri.len)==0 &&
 				strncasecmp(d->service.s, service.s, service.len)==0) {
 					return d;
@@ -403,15 +425,29 @@ int LRF_alloc_user_data(struct sip_msg* msg, char*str1, char*str2){
 	str user_uri;
 	user_d * user_data;
 	str service;
+	struct trans_info options_tr;
 
-	service = cscf_get_headers_content(msg , service_hdr_name);
-	if(!service.len || !service.s){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_del_user_data: could not find the service header in the OPTIONS, or could not be parsed\n");
+	if(tmb.t_get_trans_ident(msg, &options_tr.hash_index, &options_tr.label) != 1){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_alloc_user_data:could not retrive hash_index and label of the current message's transaction\n");
 		return CSCF_RETURN_FALSE;
 	}
 
+	service = cscf_get_headers_content(msg , service_hdr_name);
+	if(!service.len || !service.s){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_alloc_user_data: could not find the service header in the OPTIONS, or could not be parsed\n");
+		return CSCF_RETURN_FALSE;
+	}
+
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.s || !callid.len){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_alloc_user_data: could not find the callid header in the OPTIONS request\n");
+		return CSCF_RETURN_FALSE;
+	}
+	options_tr.callid.s = callid.s;
+	options_tr.callid.len = callid.len;
+	
 	user_uri = msg->first_line.u.request.uri;
-	user_data = add_user_data(user_uri, service);
+	user_data = add_user_data(user_uri, service, &options_tr);
 	if(!user_data)
 		return CSCF_RETURN_FALSE;
 	print_lrf_user_data(L_INFO);
@@ -431,14 +467,33 @@ int LRF_del_user_data(struct sip_msg* msg, char*str1, char*str2){
 	unsigned int hash;
 	str service;
 
+	if (msg->first_line.u.request.method.len!=7||
+		memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+		LOG(L_WARN,"WARN:"M_NAME":LRF_del_user_data: The method is not an OPTIONS, trying to replace the message\n");
+
+		msg = cscf_get_request_from_reply(NULL);
+		if(! msg || msg->first_line.type!=SIP_REQUEST || msg->first_line.u.request.method.len!=7||
+			memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+					
+			LOG(L_ERR,"BUG:"M_NAME":LRF_del_user_data: The new message is not an OPTIONS request either\n");
+			return CSCF_RETURN_ERROR;
+		}
+	}
+
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_del_user_data: could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
 
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.s || !callid.len){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the callid header in the OPTIONS request\n");
+		return CSCF_RETURN_FALSE;
+	}
+
 	user_uri = msg->first_line.u.request.uri;
-	d = get_user_data(user_uri, service);
+	d = get_user_data(user_uri, service, callid);
 
 	if(!d) return CSCF_RETURN_FALSE;
 	hash = d->hash;
@@ -520,14 +575,35 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	str headers = {0,0};
 	unsigned int hash_index, label;
 
+	LOG(L_INFO, "INFO:"M_NAME":LRF_call_query_resp\n");
+
+	if (msg->first_line.u.request.method.len!=7||
+		memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+		LOG(L_WARN,"WARN:"M_NAME":LRF_call_query_resp: The method is not an OPTIONS, trying to replace the message\n");
+
+		msg = cscf_get_request_from_reply(NULL);
+		if(! msg || msg->first_line.type!=SIP_REQUEST || msg->first_line.u.request.method.len!=7||
+			memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+					
+			LOG(L_ERR,"BUG:"M_NAME":LRF_call_query_resp: The new message is not an OPTIONS request either\n");
+			return CSCF_RETURN_ERROR;
+		}
+	}
+
 	service = cscf_get_headers_content(msg, service_hdr_name);
 	if(!service.len || !service.s){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
 
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.s || !callid.len){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the callid header in the OPTIONS request\n");
+		return CSCF_RETURN_FALSE;
+	}
+
 	user_uri = msg->first_line.u.request.uri;
-	d = get_user_data(user_uri, service);
+	d = get_user_data(user_uri, service, callid);
 	if(!d) {
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
@@ -556,7 +632,7 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	}
 
 
-	if(tmb.t_reply_with_body(trans, 200, "OK", resp_body.s, headers.s, "lrf" )!= 1){
+	if(tmb.t_reply_with_body(trans, 200, "OK - PSAP found", resp_body.s, headers.s, "lrf" )!= 1){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not send the response\n");
 		goto error2;
 	}

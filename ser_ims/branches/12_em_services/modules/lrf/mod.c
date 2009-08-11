@@ -116,12 +116,13 @@ int use_locsip = 0;
 int lrf_subscribe_retries = 0;
 int subscriptions_hash_size=1024;
 char * uri = "sip:10.147.65.202:9160";
-str locsip_server_route = {"sip:10.147.65.202:9160", 22};
+str locsip_server_route = {"sip:10.147.65.202:9180", 22};
 
 
 int LRF_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 
 int LRF_get_psap(struct sip_msg* msg, char*str1, char*str2);
+
 
 /** 
  * Exported functions.
@@ -142,6 +143,8 @@ static cmd_export_t lrf_cmds[]={
 	{"LRF_uses_LOCSIP",			LRF_uses_LOCSIP,			0, 0, REQUEST_ROUTE},
 	{"LRF_subscribe_LOCSIP",		LRF_subscribe_LOCSIP,			0, 0, REQUEST_ROUTE},
 	{"LRF_return_default_PSAP", 		LRF_return_default_PSAP,		0, 0, REQUEST_ROUTE},
+	{"LRF_process_loc_notify", 		LRF_process_notification, 		0, 0, REQUEST_ROUTE},
+	{"LRF_deref_crt_trans", 		LRF_deref_crt_trans,			0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -180,10 +183,10 @@ struct module_exports exports = {
 
 
 /* Global variables and imported functions */
+/**< link to the stateless reply function in sl module */
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
-										/**< link to the stateless reply function in sl module */
-
-struct tm_binds tmb;            						/**< Structure with pointers to tm funcs 		*/
+/**< Structure with pointers to tm funcs 		*/
+struct tm_binds tmb;            						
 
 /**
  * Fix the configuration parameters.

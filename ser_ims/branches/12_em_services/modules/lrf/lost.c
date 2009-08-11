@@ -194,22 +194,49 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 	str user_uri;
 	user_d * d=NULL;
 	str service;
+	
+	/* check if we received what we should */
+	if (msg->first_line.type!=SIP_REQUEST) {
+		LOG(L_ERR,"ERR:"M_NAME":LRF_get_psap: The message is not a request\n");
+		return CSCF_RETURN_ERROR;
+	}
 
-	LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap \n");
+	if (msg->first_line.u.request.method.len!=7||
+		memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+		LOG(L_WARN,"WARN:"M_NAME":LRF_get_psap: The method is not an OPTIONS, trying to replace the message\n");
+
+		msg = cscf_get_request_from_reply(NULL);
+		if(! msg || msg->first_line.type!=SIP_REQUEST || msg->first_line.u.request.method.len!=7||
+			memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+					
+			LOG(L_ERR,"BUG:"M_NAME":LRF_get_psap: The new message is not an OPTIONS request either\n");
+			return CSCF_RETURN_ERROR;
+		}
+	}
+
+
+	LOG(L_INFO, "INFO:"M_NAME":LRF_get_psap \n");
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the service header in the OPTIONS, or could not be parsed\n");
 		return CSCF_RETURN_FALSE;
 	}
 	
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.s || !callid.len){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not find the callid header in the OPTIONS request\n");
+		return CSCF_RETURN_FALSE;
+	}
+
 	user_uri = msg->first_line.u.request.uri;
-	d = get_user_data(user_uri, service);
+
+	d = get_user_data(user_uri, service, callid);
 	if(!d) {
 		LOG(L_ERR, "ERR:"M_NAME":LRF_get_psap: could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
 		return CSCF_RETURN_FALSE;
 	}
-	
+
 	//if not using a LoST server
 	if(using_lost_srv){		
 		psap_uri = get_psap_by_LoST(d);
@@ -256,8 +283,14 @@ int LRF_has_loc(struct sip_msg* msg, char * str1, char* str2){
 		return CSCF_RETURN_FALSE;
 	}
 
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.s || !callid.len){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc: could not find the callid header in the OPTIONS request\n");
+		return CSCF_RETURN_FALSE;
+	}
+
 	user_uri = msg->first_line.u.request.uri;
-	d = get_user_data(user_uri, service);
+	d = get_user_data(user_uri, service, callid);
 	if(!d) {
 		LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc: could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
@@ -278,20 +311,55 @@ int LRF_has_loc(struct sip_msg* msg, char * str1, char* str2){
 	return CSCF_RETURN_TRUE;
 }
 
+xmlNode * verify_pidf_xml_body(str pidf_body, loc_fmt * crt_loc_fmt){
+	
+	xmlNode * presence, * loc;
+	int ret;
+
+	if(!(presence = xml_parse_string(pidf_body))){
+		LOG(L_ERR, "ERR:"M_NAME": verify_pidf_xml_body:invalid xml content\n");
+		goto error;
+	}
+
+	//print_element_names(presence);
+
+	if(!(loc = has_loc_info(&ret, presence, crt_loc_fmt))){
+	
+		LOG(L_ERR, "ERR:"M_NAME":verify_pidf_xml_body:could not find a valid location element\n");
+		goto error;
+	}
+
+	if((*crt_loc_fmt == GEO_SHAPE_LOC) || (*crt_loc_fmt == NEW_CIV_LOC) ||
+			(*crt_loc_fmt == OLD_CIV_LOC) || (*crt_loc_fmt == GEO_COORD_LOC)){
+	
+		LOG(L_DBG, "DBG:"M_NAME":verify_pidf_xml_body:LoST supported format, setting the location\n");
+
+	}else if(*crt_loc_fmt == ERR_LOC){
+		LOG(L_ERR, "ERR:"M_NAME":verify_pidf_xml_body:error while parsing the location information\n");
+		goto error;
+	}else{
+		LOG(L_DBG, "DBG:"M_NAME":verify_pidf_xml_body:no LoST supported format\n");
+		goto error;
+	}
+
+	return loc;
+
+error:
+	if(presence)
+		xmlFreeDoc(presence->doc);
+	return NULL;
+}
+
+
 int LRF_save_user_loc(struct sip_msg * msg, char* str1, char* str2){
 
+	xmlNode *loc = NULL;
 	loc_fmt crt_loc_fmt;
-	xmlNode* loc;
 	str pidf_body={NULL, 0};
-	xmlNode *presence;
-	int ret;
 
 	str user_uri;
 	user_d * d=NULL;
 	str service;
-
-	loc = NULL;
-
 
 	service = cscf_get_headers_content(msg , service_hdr_name);
 	if(!service.len || !service.s){
@@ -299,8 +367,14 @@ int LRF_save_user_loc(struct sip_msg * msg, char* str1, char* str2){
 		return CSCF_RETURN_FALSE;
 	}
 
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.s || !callid.len){
+		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc: could not find the callid header in the OPTIONS request\n");
+		return CSCF_RETURN_FALSE;
+	}
+
 	user_uri = msg->first_line.u.request.uri;
-	d = get_user_data(user_uri, service);
+	d = get_user_data(user_uri, service, callid);
 	if(!d) {
 		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc: could not found user data for uri %.*s and service %.*s\n",
 				user_uri.len, user_uri.s, service.len, service.s);
@@ -309,40 +383,11 @@ int LRF_save_user_loc(struct sip_msg * msg, char* str1, char* str2){
 
 	pidf_body.s = d->loc_str.s;
 	pidf_body.len = d->loc_str.len;
-
-	if(!(presence = xml_parse_string(pidf_body))){
-		LOG(L_ERR, "ERR:"M_NAME": LRF_save_user_loc:invalid xml content\n");
+	if (!(loc = verify_pidf_xml_body(pidf_body, &crt_loc_fmt))){
 		lrf_unlock(d->hash);
-		return ERR_PARSE_LOC;
-	}
-
-	//print_element_names(presence);
-
-	if(!(loc = has_loc_info(&ret, presence, &crt_loc_fmt))){
-	
-		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc:could not find a valid location element\n");
-		xmlFreeDoc(presence->doc);
-		lrf_unlock(d->hash);
-		return ERR_PARSE_LOC;
-	}
-
-	if((crt_loc_fmt == GEO_SHAPE_LOC) || (crt_loc_fmt == NEW_CIV_LOC) ||
-			(crt_loc_fmt == OLD_CIV_LOC) || (crt_loc_fmt == GEO_COORD_LOC)){
-	
-		LOG(L_DBG, "DBG:"M_NAME":LRF_save_user_loc:LoST supported format, setting the location\n");
-
-	}else if(crt_loc_fmt == ERR_LOC){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_save_user_loc:error while parsing the location information\n");
-		xmlFreeDoc(presence->doc);
-		lrf_unlock(d->hash);
-		return ERR_PARSE_LOC;
-	}else{
-		LOG(L_DBG, "DBG:"M_NAME":LRF_save_user_loc:no LoST supported format\n");
-		xmlFreeDoc(presence->doc);
-		lrf_unlock(d->hash);
-		return NO_SUPP_FMT_LOC;
-	}
-//	LOG(L_DBG, "DBG:"M_NAME":LRF_save_user_loc:printing the location useful tree\n");
+		return CSCF_RETURN_FALSE;
+	}	
+	//	LOG(L_DBG, "DBG:"M_NAME":LRF_save_user_loc:printing the location useful tree\n");
 //	print_element_names(loc);
 	d->loc = loc;
 	d->l_fmt = crt_loc_fmt;

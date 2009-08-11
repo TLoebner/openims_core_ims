@@ -675,19 +675,19 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 	str content_type,body;
 	r_notification *n=0;
 	int expires;
-	LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Checking NOTIFY\n");
+	LOG(L_DBG,"DBG:"M_NAME":P_process_notification: Checking NOTIFY\n");
 	
 //	print_r(L_INFO);
 
 	/* check if we received what we should */
 	if (msg->first_line.type!=SIP_REQUEST) {
-		LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: The message is not a request\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_process_notification: The message is not a request\n");
 		goto error;
 	}
 	if (msg->first_line.u.request.method.len!=6||
 		memcmp(msg->first_line.u.request.method.s,"NOTIFY",6)!=0)
 	{
-		LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: The method is not a NOTIFY\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_process_notification: The method is not a NOTIFY\n");
 		goto error;		
 	}
 
@@ -700,15 +700,15 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 	{
 		body.s = get_body(msg);
 		if (!body.s){
-			LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: No body extracted\n");									
+			LOG(L_ERR,"ERR:"M_NAME":P_process_notification: No body extracted\n");									
 			goto error;
 		}else{
 			body.len = cscf_get_content_len(msg);
-			LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Found body: %.*s\n",
+			LOG(L_DBG,"DBG:"M_NAME":P_process_notification: Found body: %.*s\n",
 				body.len,body.s);
 			n = r_notification_parse(body);
 			if (!n){
-				LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Error parsing XML\n");
+				LOG(L_DBG,"DBG:"M_NAME":P_process_notification: Error parsing XML\n");
 			}else {				
 				#ifdef WITH_IMS_PM
 					ims_pm_notify_reg(n,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
@@ -719,7 +719,7 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 			}
 		}
 	}else{
-		LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: The content should be %.*s but it is %.*s\n",
+		LOG(L_ERR,"ERR:"M_NAME":P_process_notification: The content should be %.*s but it is %.*s\n",
 			reginfo.len,reginfo.s,content_type.len,content_type.s);
 		goto error;		
 	}
