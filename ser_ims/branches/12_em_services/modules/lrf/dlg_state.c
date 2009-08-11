@@ -556,7 +556,7 @@ void print_lrf_dialogs(int log_level)
 			} 		
 		d_unlock(i);
 	}
-	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List end   --------------\n");	
+	LOG(log_level,"INF:"M_NAME":----------  LRF Dialog List end   --------------\n");	
 }
 
 /**
