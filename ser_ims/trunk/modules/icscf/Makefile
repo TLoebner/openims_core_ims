@@ -17,6 +17,10 @@ ifeq ($(CFG_NAME),sip-router)
 	SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
 endif
 
+DEFS += -DCDP_FOR_SER
+DEFS += -I/usr/include/libxml2 
+LIBS += -L$(LOCALBASE)/lib -lxml2
+
 #DEFS+= -DWITH_IMS_PM
 
 

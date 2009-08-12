@@ -20,8 +20,9 @@ else
 	LIBS+=-L../../lib/cds -l_ser_cds
 endif
 
-DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../.. 
-LIBS += -lxml2
+DEFS += -DCDP_FOR_SER
+DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
+LIBS += -L$(LOCALBASE)/lib -lxml2
 
 #DEFS += -DWITH_IMS_PM
 
