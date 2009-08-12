@@ -2,7 +2,6 @@
  * $Id$
  *  
  * Copyright (C) 2004-2007 FhG Fokus
- * Copyright (C) 2007 PT Inovacao
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -50,8 +49,6 @@
  * CDiameterPeer Session Handling 
  * 
  * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
- * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  * 
  * 

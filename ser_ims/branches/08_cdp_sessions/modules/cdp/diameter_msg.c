@@ -449,7 +449,6 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 
 	/* alloc a new message structure */
 	msg = (AAAMessage*)shm_malloc(sizeof(AAAMessage));
-	
 	if (!msg) {
 		LOG(L_ERR,"ERROR:AAATranslateMessage: no more free memory!!\n");
 		goto error;
@@ -551,7 +550,6 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 	msg->sessionId = AAAFindMatchingAVP(msg,0,AVP_Session_Id,0,0);
 
 	//AAAPrintMessage( msg );
-	 
 	return  msg;
 error:
 	LOG(L_ERR,"ERROR:AAATranslateMessage: message conversion droped!!\n");

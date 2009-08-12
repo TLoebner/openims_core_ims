@@ -440,7 +440,7 @@ static param_export_t pcscf_params[]={
     /* address of pdf or pcrf if  "release7" is set to 1 */
     {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
-	{"qos_side",					INT_PARAM,		&pcscf_qos_side},
+	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
 	{0,0,0} 
 };
 

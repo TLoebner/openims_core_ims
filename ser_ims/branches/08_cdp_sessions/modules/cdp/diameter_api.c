@@ -66,7 +66,6 @@
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
-
 				/* TRANSACTIONS */
 				
 /**
