@@ -12,7 +12,7 @@ typedef struct lost_server_i{
 		}lost_server_info;
 int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2);
 int LRF_has_loc(struct sip_msg* msg, char* str1, char* str2);
-int LRF_save_user_loc(struct sip_msg* msg, char* str1, char* str2);
+int LRF_parse_user_loc(struct sip_msg* msg, char* str1, char* str2);
 
 xmlNode * verify_pidf_xml_body(str pidf_body, loc_fmt * crt_loc_fmt);
 

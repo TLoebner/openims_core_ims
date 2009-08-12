@@ -65,7 +65,7 @@
 extern int locsip_srv_port;
 extern str locsip_srv_ip_s;
 extern int use_locsip;
-extern str locsip_server_route;
+extern str locsip_srv_uri;
 static str service_hdr_name = {"Service",7};
 extern struct tm_binds tmb; 
 
@@ -92,6 +92,10 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 
 /*
  * check if the LRF was configured to use the LOCSIP interface
+ * @param msg - not used
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if true and #CSCF_RETURN_FALSE otherwise
  */
 int LRF_uses_LOCSIP(struct sip_msg* msg, char * str1, char* str2){
 
@@ -153,7 +157,7 @@ int LRF_subscribe_LOCSIP(struct sip_msg *req, char* str1, char* str2)
 			goto error;
 		LOG(L_DBG, "DBG:"M_NAME":LRF_subscribe_LOCSIP: created a subscription for %.*s\n",
 				subscr->req_uri.len, subscr->req_uri.s);
-		if(!loc_send_subscribe(subscr, locsip_server_route, max_expires)){
+		if(!loc_send_subscribe(subscr, locsip_srv_uri, max_expires)){
 			LOG(L_ERR, "ERR:"M_NAME":LRF_subscribe_LOCSIP: could not send the subscription\n");
 			goto error;
 		}
@@ -167,11 +171,6 @@ error:
 }
 
 
-int LRF_return_default_PSAP(struct sip_msg* msg, char * str1, char* str2){
-
-	return CSCF_RETURN_FALSE;
-}
-
 static str pidflo_info = {"application/pidf+xml", 20};
 
 static fparam_t fp_481 = FParam_INT(481);
@@ -184,9 +183,12 @@ static fparam_t fp_200 = FParam_INT(200);
 static fparam_t fp_ok = FParam_STRING("OK - Notification processed");
 
 /* process the notification for the location event, received from the LOCSIP server
+ *	sends the appropriate reply to the LOCSIP server
+ *	releases the NOTIFY transaction and switches to the OPTIONS transaction
  * @param msg - the request
  * @param str1 - not used
  * @param str2 - not used
+ * @returns #CSCF_RETURN_ERROR if errors have occured and #CSCF_RETURN_TRUE if everything ok
  */
 int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 
@@ -280,9 +282,15 @@ int sw_tr_2_options_tr(struct sip_msg * msg, user_d * user_data){
 			hash_index, label, 
 			user_data->options_tr.callid.len, user_data->options_tr.callid.s);
 
+	//set the OPTIONS transaction as the current one
 	if(tmb.t_enter_ctx(hash_index, label,
 		&crt_rmode, MODE_REQUEST, &crt_trans, &options_trans)!=0){
 		LOG(L_ERR, "ERR:"M_NAME":sw_tr_2_options_tr: could not switch to the OPTIONS transaction\n");
+		return -1;
+	}
+	//dereference the options transaction
+	if(tmb.t_exit_ctx(options_trans, MODE_REQUEST)<0){
+		LOG(L_ERR, "ERR:"M_NAME":sw_tr_2_options_tr: could not dereference the OPTIONS transaction\n");
 		return -1;
 	}
 
@@ -313,11 +321,4 @@ parse_error:
 	return loc;
 }
 
-int LRF_deref_crt_trans(struct sip_msg* msg, char * str1, char* str2){
 
-	struct cell * options_trans;
-
-	options_trans = tmb.t_gett();
-	
-	return tmb.t_exit_ctx(options_trans, MODE_REQUEST);
-}
