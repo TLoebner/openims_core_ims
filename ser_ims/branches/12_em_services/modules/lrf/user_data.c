@@ -559,7 +559,8 @@ int get_options_resp_headers(str * headers, user_d * d){
 	return 0;
 }
 
-/* Send the OPTIONS response
+/* Send the OPTIONS response to the E-CSCF
+ * could be used after a LOCSIP NOTIFY is received
  * @param msg  - the OPTIONS request from the ECSCF
  * @param str1 - not used
  * @param str2 - not used

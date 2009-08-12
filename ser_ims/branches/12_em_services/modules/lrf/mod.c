@@ -61,6 +61,7 @@
 
 #include "mod.h"
 
+#include "../../parser/parse_uri.h"
 #include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../socket_info.h"
@@ -109,14 +110,11 @@ int lrf_max_dialog_count=20000;			/**< Maximum number of dialogs						*/
 gen_lock_t* l_dialog_count_lock=0; 		/**< Lock for the dialog counter					*/
 
 /*global location enabler settings*/
-char* locsip_srv_ip = "locsip.open-ims.test";
-int locsip_srv_port = 5060;
-str locsip_srv_ip_s = {0, 0};
+char* locsip_srv_uri_s = "sip:127.0.0.1:9260";
+str locsip_srv_uri;
 int use_locsip = 0;
 int lrf_subscribe_retries = 0;
 int subscriptions_hash_size=1024;
-char * uri = "sip:10.147.65.202:9160";
-str locsip_server_route = {"sip:10.147.65.202:9180", 22};
 
 
 int LRF_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
@@ -126,13 +124,30 @@ int LRF_get_psap(struct sip_msg* msg, char*str1, char*str2);
 
 /** 
  * Exported functions.
- * LRF_get_psap - query the lost server about the appropriate PSAP URI
+ * LRF_alloc_user_data - alloc a new ESQK and a user data element for the current user
+ * LRF_del_user_data - delete the user data of the current user if exists(the URI is the R-URI of the current OPTIONS msg
+ * LRF_has_loc - Parse the location information by value from the OPTIONS request
+ * 			store the location information in the user data
+ * LRF_parse_user_loc - check that the location information from the user data is a valid PIDF-LO
+ * LRF_get_psap - find the appropriate psap uri that the request should be forwarded to, using LoST protocol, if configured
+ * LRF_call_query_resp - send the OPTIONS response to the E-CSCF
+ * LRF_trans_in_processing - checks if the transaction is in processing
+ * LRF_is_in_dialog - Find out if a message is within a saved dialog.
+ * LRF_save_dialog - saves the dialog
+ * LRF_update_dialog - updates a dialog
+ * LRF_drop_dialog - drops a dialog 
+ * LRF_uses_LOCSIP - check if the module is using a LOCSIP interface to retrieve the location of the user
+ * LRF_subscribe_LOCSIP - Subscribe to the location event to the LOCSIP server
+ * LRF_process_notification - process the notification for the location event, received from the LOCSIP server
+ *	sends the appropriate reply to the LOCSIP server
+ *	releases the NOTIFY transaction and switches to the OPTIONS transaction
+ *
  */
 static cmd_export_t lrf_cmds[]={
 	{"LRF_alloc_user_data",			LRF_alloc_user_data,			0, 0, REQUEST_ROUTE},
 	{"LRF_del_user_data",			LRF_del_user_data,			0, 0, REQUEST_ROUTE},
 	{"LRF_has_loc",				LRF_has_loc,				0, 0, REQUEST_ROUTE},
-	{"LRF_save_user_loc",			LRF_save_user_loc,			0, 0, REQUEST_ROUTE},
+	{"LRF_parse_user_loc",			LRF_parse_user_loc,			0, 0, REQUEST_ROUTE},
 	{"LRF_get_psap",			LRF_get_psap,				0, 0, REQUEST_ROUTE},
 	{"LRF_call_query_resp",			LRF_call_query_resp,			0, 0, REQUEST_ROUTE},
 	{"LRF_trans_in_processing",		LRF_trans_in_processing,		0, 0, REQUEST_ROUTE},
@@ -142,9 +157,7 @@ static cmd_export_t lrf_cmds[]={
 	{"LRF_drop_dialog",			LRF_drop_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"LRF_uses_LOCSIP",			LRF_uses_LOCSIP,			0, 0, REQUEST_ROUTE},
 	{"LRF_subscribe_LOCSIP",		LRF_subscribe_LOCSIP,			0, 0, REQUEST_ROUTE},
-	{"LRF_return_default_PSAP", 		LRF_return_default_PSAP,		0, 0, REQUEST_ROUTE},
 	{"LRF_process_loc_notify", 		LRF_process_notification, 		0, 0, REQUEST_ROUTE},
-	{"LRF_deref_crt_trans", 		LRF_deref_crt_trans,			0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -163,8 +176,7 @@ static param_export_t lrf_params[]={
 	//{"dialogs_enable_release",	INT_PARAM,		&lrf_dialogs_enable_release},
 	{"max_dialog_count",		INT_PARAM,		&lrf_max_dialog_count},
 	{"enable_locsip",		INT_PARAM,		&use_locsip},
-	{"locsip_srv_ip",		STR_PARAM,		&locsip_srv_ip},
-	{"locsip_srv_port",		INT_PARAM,		&locsip_srv_port},
+	{"locsip_srv_uri",		STR_PARAM,		&locsip_srv_uri_s},
 	{0,0,0} 
 };
 
@@ -195,6 +207,7 @@ int fix_parameters()
 {
 	char * car, *last_car;
 	str port;
+	struct sip_uri locsip_srv_parsed_uri;
 	
 	lrf_name_str.s = lrf_name;
 	lrf_name_str.len = strlen(lrf_name);
@@ -249,18 +262,16 @@ int fix_parameters()
 			lost_server.host.len, lost_server.host.s, lost_server.port);
 	
 	if(use_locsip){
-		int len = strlen(locsip_srv_ip);
-		if(!len){
-			LOG(L_ERR, "ERR:"M_NAME":fix_parameters: invalid LOCSIP server address\n");
+		if(parse_uri(locsip_srv_uri_s, strlen(locsip_srv_uri_s), 
+					&locsip_srv_parsed_uri)<0){
+			LOG(L_ERR, "ERR:"M_NAME":fix_parameters: could not parse the locsip server uri %s\n",
+					locsip_srv_uri_s);
 			return 0;
 		}
-		locsip_srv_ip_s.s = locsip_srv_ip;
-		if(locsip_srv_port < 1023 || locsip_srv_port > 65535){
-			LOG(L_DBG, "ERR:"M_NAME":fix_parameters: invalid port number %d\n", locsip_srv_port);
-			return 0;
-		}
-		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: gle address is %.*s:%d\n",
-			locsip_srv_ip_s.len, locsip_srv_ip_s.s, locsip_srv_port);
+		locsip_srv_uri.s = locsip_srv_uri_s;
+		locsip_srv_uri.len = strlen(locsip_srv_uri_s);
+		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: locsip server uri %.*s\n", 
+				locsip_srv_uri.len, locsip_srv_uri.s);
 	}
 	return 1;
 }

@@ -108,7 +108,6 @@ void loc_subscription_destroy();
 
 
 loc_subscription* loc_subscribe(str uri,int duration, user_d *);
-void set_dialog_route_set(dlg_t *d, str route);
 int loc_send_subscribe(loc_subscription *s,str route, int duration);
 
 void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps);

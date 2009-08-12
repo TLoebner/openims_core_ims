@@ -80,6 +80,8 @@ loc_subscription_hash_slot *subscriptions=0;/**< list of subscriptions					*/
 extern int subscriptions_hash_size;	/**< the size of the hash table for subscriptions	*/
 time_t time_now;				/**< current time 								*/
 
+void set_dest_uri_dialog(dlg_t *d, str dest);
+
 /**
  * Computes the hash for a contact.
  * @param aor - the string of the target
@@ -217,7 +219,7 @@ static str p_asserted_identity_e={">\r\n",3};
  * @returns true if OK, false if not, error on failure
  * \todo store the dialog and reSubscribe on the same dialog
  */
-int loc_send_subscribe(loc_subscription *s, str route, int duration)
+int loc_send_subscribe(loc_subscription *s, str dest, int duration)
 {
 	str h={0,0};
 
@@ -257,7 +259,7 @@ int loc_send_subscribe(loc_subscription *s, str route, int duration)
 			LOG(L_ERR,"ERR:"M_NAME":loc_send_subscribe: Error creating a dialog for SUBSCRIBE\n");
 			goto error;
 		}
-		set_dialog_route_set(s->dialog, route);
+		set_dest_uri_dialog(s->dialog, dest);
 		LOG(L_DBG, "DBG:"M_NAME":loc_send_subsribe: next hop is %.*s dst_uri is %.*s\n",
 				s->dialog->hooks.next_hop->len,
 				s->dialog->hooks.next_hop->s,
@@ -366,13 +368,13 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 #endif
 
 /**
- * Alters the saved dlg_t routes for the dialog 
+ * set the destination uri for the subscription dialog 
  * required because the location subscription is not necesarily 
  * sent to the same domain as the user URI
- * @param d - the dialog to modify the Record-Routes
- * @param dir - the new route
+ * @param d - the dialog to br modified
+ * @param dest - the new destination uri
  */
-void set_dialog_route_set(dlg_t *d, str route)
+void set_dest_uri_dialog(dlg_t *d, str dest)
 {
 	rr_t *r,*r_new;	
 		
@@ -382,28 +384,22 @@ void set_dialog_route_set(dlg_t *d, str route)
 		shm_free_rr(&r);
 		d->route_set = r_new;
   	}	
-	/*LOG(L_DBG, "DBG:"M_NAME":set_dialog_route_set: settings to %.*s\n", route.len, route.s);
-	char * p = (char*)shm_malloc(sizeof(rr_t)+(route.len-2)*sizeof(char));
-	memset(p, sizeof(p), 0);
-	r_new = (rr_t*)p;
-	r_new->len = route.len;
-	r_new->nameaddr.uri.s= p+sizeof(rr_t);
-	memcpy(r_new->nameaddr.uri.s, route.s+1, sizeof(char)*route.len-2);
-	r_new->nameaddr.uri.len= route.len-2;
-	r_new->nameaddr.len = route.len;*/
+
 	if(d->dst_uri.s)
 		shm_free(d->dst_uri.s);
 	d->dst_uri.s = 0;
 	d->dst_uri.len = 0;
+	
 	tmb.calculate_hooks(d);
 
-	STR_SHM_DUP(d->dst_uri, route, "alter_dialog_route_set");
+	STR_SHM_DUP(d->dst_uri, dest, "set_dest_uri_dialog");
+	
 out_of_memory:
 	return;
 
 }
 
-extern str locsip_server_route;
+extern str locsip_srv_uri;
 /**
  * The Subscription timer looks for almost expired subscriptions and subscribes again.
  * @param ticks - the current time
@@ -411,65 +407,15 @@ extern str locsip_server_route;
  */
 void subscription_timer(unsigned int ticks, void* param)
 {
-	loc_subscription *s,*ns;
-	int i;
 	#ifdef WITH_IMS_PM
 		int subs_cnt=0;
 	#endif
-	for(i=0;i<subscriptions_hash_size;i++){
-		subs_lock(i);
-		s = subscriptions[i].head;
-//		loc_act_time();
-		while(s){
-			ns = s->next;			
-			if (s->attempts_left > 0 ){
-				/* attempt to send a subscribe */
-				if (!loc_send_subscribe(s,locsip_server_route, s->duration)){
-					LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on SUBSCRIBE (%d times)... droping\n",
-						lrf_subscribe_retries);
-					del_loc_subscription_nolock(s);
-				}else{
-					s->attempts_left--;
-					#ifdef WITH_IMS_PM
-						subs_cnt++;
-					#endif
-				}
-			}else if (s->attempts_left==0) {
-				/* we failed to many times, drop the subscription */
-				LOG(L_ERR,"ERR:"M_NAME":subscription_timer: Error on SUBSCRIBE for %d times... aborting\n",lrf_subscribe_retries);
-				del_loc_subscription_nolock(s);										
-			}else{
-				/* we are subscribed already */
-				/* if expired, drop it */
-				if (s->expires<time_now) 
-					del_loc_subscription_nolock(s);
-				#ifdef WITH_IMS_PM
-					else subs_cnt++;
-				#endif
-					
-				/* if not expired, check for renewal */
-//		Commented as the S-CSCF should adjust the subscription time accordingly				
-//				if ((s->duration<1200 && s->expires-time_now<s->duration/2)||
-//					(s->duration>=1200 && s->expires-time_now<600))
-//				{
-//					/* if we need a resubscribe, we mark it as such and try to subscribe again */					
-//					s->attempts_left = lrf_subscribe_retries;
-//					ns = s;
-//				}
-			}
-			s = ns;
-		}	
-		subs_unlock(i);
-	}
+	LOG(L_DBG, "DBG:"M_NAME":subscription_timer\n");
 	print_subs(L_INFO);
 	#ifdef WITH_IMS_PM
 		IMS_PM_LOG01(RD_NbrSubs,subs_cnt);
 	#endif	
 }
-
-
-
-
 
 /**
  * Creates a subscription based on the given parameters.
@@ -653,45 +599,6 @@ void print_subs(int log_level)
 	}
 	LOG(log_level,ANSI_GREEN"INF:"M_NAME":----------  Subscription list end -----------\n");	
 }
-
-
-
-
-
-
-
-
-static xmlDtdPtr	dtd=0;	/**< DTD file */
-static xmlValidCtxt	cvp;	/**< XML Validating context */
-
-/**
- * Initializes the libxml parser.
- * @param dtd_filename - path to the DTD file
- * @returns 1 if OK, 0 on error
- */
-int parser_init(char *dtd_filename)
-{
-	dtd = xmlParseDTD(NULL,(unsigned char*)dtd_filename);
-	if (!dtd){
-		LOG(L_ERR,"ERR:"M_NAME":parser_init: unsuccesful DTD parsing from file <%s>\n",
-			dtd_filename);
-		return 0;
-	}
-	cvp.userData = (void*)stderr;
-	cvp.error = (xmlValidityErrorFunc) fprintf;
-	cvp.warning = (xmlValidityWarningFunc) fprintf;
-	return 1;
-}
-
-/**
- * Destroys the parser. 
- */
-void parser_destroy()
-{
-	xmlCleanupParser();
-}
-
-
 
 /**
  * Trims spaces and duplicate content into pkg.

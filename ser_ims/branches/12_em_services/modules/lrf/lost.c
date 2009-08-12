@@ -183,6 +183,7 @@ end:
 }
 
 /* Find the appropriate psap uri that the request should be forwarded to
+ * could be called after a LOCSIP NOTIFY is received
  * @param msg - the sip request from the ECSCF node
  * @param str1 
  * @param str2 - not used
@@ -350,8 +351,12 @@ error:
 	return NULL;
 }
 
-
-int LRF_save_user_loc(struct sip_msg * msg, char* str1, char* str2){
+/* check that the location information from the user data is a valid PIDF-LO
+ * @param msg - OPTIONS request from the E-CSCF
+ * @param str1 - not used
+ * @param str2 - not used
+ */
+int LRF_parse_user_loc(struct sip_msg * msg, char* str1, char* str2){
 
 	xmlNode *loc = NULL;
 	loc_fmt crt_loc_fmt;
