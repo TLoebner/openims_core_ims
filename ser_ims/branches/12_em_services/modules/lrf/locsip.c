@@ -155,6 +155,7 @@ int LRF_subscribe_LOCSIP(struct sip_msg *req, char* str1, char* str2)
 		subscr = loc_subscribe(public_id,max_expires, d);
 		if(!subscr)
 			goto error;
+		d->loc_subscr = (void*) subscr;
 		LOG(L_DBG, "DBG:"M_NAME":LRF_subscribe_LOCSIP: created a subscription for %.*s\n",
 				subscr->req_uri.len, subscr->req_uri.s);
 		if(!loc_send_subscribe(subscr, locsip_srv_uri, max_expires)){
