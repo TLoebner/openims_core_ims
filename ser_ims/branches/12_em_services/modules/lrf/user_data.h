@@ -74,6 +74,7 @@ typedef struct user_d_cell{
 	xmlNode * loc;
 	loc_fmt l_fmt;
 	struct trans_info options_tr;
+	void * loc_subscr;
 	struct user_d_cell * next;
 	struct user_d_cell * prev;
 }user_d;

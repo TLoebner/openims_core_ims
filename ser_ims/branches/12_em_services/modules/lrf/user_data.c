@@ -67,6 +67,7 @@
 #include "parse_content.h"
 #include "sip.h"
 #include "user_data.h"
+#include "locsip_subscribe.h"
 
 extern str esqk_prefix_str;
 extern struct tm_binds tmb;    
@@ -78,6 +79,8 @@ static str service_hdr_name = {"Service",7};
 static str esqk_hdr_s = {"Esqk: ",6};
 static str esqk_hdr_e = {"\r\n",2};
 static str content_type_hdr=  {"Content-Type: application/route+xml\r\n",36};
+
+void del_loc_subscription(loc_subscription *s);
 
 /**
  * Initialize the LRF user data hash table.
@@ -494,8 +497,10 @@ int LRF_del_user_data(struct sip_msg* msg, char*str1, char*str2){
 
 	user_uri = msg->first_line.u.request.uri;
 	d = get_user_data(user_uri, service, callid);
-
 	if(!d) return CSCF_RETURN_FALSE;
+
+	if(d->loc_subscr)
+		del_loc_subscription((loc_subscription*)d->loc_subscr);
 	hash = d->hash;
 	del_user_data(d);
 	lrf_unlock(hash);
