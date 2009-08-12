@@ -12,7 +12,7 @@
 >
 	<Peer FQDN="pcrf.open-ims.test" Realm="open-ims.test" port="4868"/> 
 
-	<Acceptor port="3879" bind="10.147.65.93"/>
+	<Acceptor port="3879" bind="127.0.0.1"/>
 	
 	<Auth id="16777236" vendor="10415"/>
 	<Auth id="16777236" vendor="0"/>
