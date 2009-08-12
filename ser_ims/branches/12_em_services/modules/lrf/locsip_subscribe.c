@@ -181,14 +181,13 @@ loc_subscription* loc_subscribe(str uri,int duration, user_d * user_data)
 	loc_subscription *s;
 	/* first we try to update. if not found, add it */
 	LOG(L_DBG,"DBG:"M_NAME":loc_subscription: begin\n");
-	s = get_loc_subscription(uri);	
+	s = get_loc_subscription(uri, user_data);	
 	if (s){
 		s->duration = duration;
 		s->attempts_left=lrf_subscribe_retries;
 		subs_unlock(s->hash);
 	}else{			
-		s = new_loc_subscription(uri,duration);
-		s->user_data = user_data;
+		s = new_loc_subscription(uri,duration, user_data);
 		if (!s){
 			LOG(L_ERR,"ERR:"M_NAME":loc_subscribe: Error creating new subscription\n");
 			return 0;
@@ -260,17 +259,13 @@ int loc_send_subscribe(loc_subscription *s, str dest, int duration)
 			goto error;
 		}
 		set_dest_uri_dialog(s->dialog, dest);
-		LOG(L_DBG, "DBG:"M_NAME":loc_send_subsribe: next hop is %.*s dst_uri is %.*s\n",
-				s->dialog->hooks.next_hop->len,
-				s->dialog->hooks.next_hop->s,
-				s->dialog->dst_uri.len,
-				s->dialog->dst_uri.s);
 		if (dialogb.request_outside(&method, &h, 0, s->dialog, loc_subscribe_response,  (void *)s->user_data) < 0){
 			LOG(L_ERR,"ERR:"M_NAME":loc_send_subscribe: Error sending initial request in a SUBSCRIBE dialog\n");
 			goto error;
 		}		
 	}else{
 		/* this is a subsequent subscribe */
+		set_dest_uri_dialog(s->dialog, dest);
 		if (dialogb.request_inside(&method, &h, 0, s->dialog, loc_subscribe_response,  (void *)s->user_data) < 0){
 			LOG(L_ERR,"ERR:"M_NAME":loc_send_subscribe: Error sending subsequent request in a SUBSCRIBE dialog\n");
 			goto error;
@@ -318,6 +313,7 @@ void subscription_err_resp(struct cell * t, struct tmcb_params *ps){
 
 	//set the SUBSCRIBE trans as the current one
 	tmb.t_exit_ctx(t, crt_rmode);
+	//TODO: clean user data
 
 error:
 	shm_free(user_data);
@@ -340,11 +336,20 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 		LOG(L_ERR,"INF:"M_NAME":loc_subscribe_response: No reply\n");
 		return;	
 	}
-	if (!cscf_get_to_uri(ps->rpl,&req_uri)){
-		LOG(L_ERR,"INF:"M_NAME":loc_subscribe_response: Error extracting the original Req-URI from To header\n");
+
+	if(!cscf_get_to_uri(ps->rpl, &req_uri)){
+		LOG(L_ERR,"ERR:"M_NAME":loc_subscribe_response: could not retrieve the to uri\n");
 		return;
-	} 		
-	s = get_loc_subscription(req_uri);
+	}
+
+	str callid = cscf_get_call_id(ps->rpl, NULL);
+	if(!callid.len || !callid.s){
+		LOG(L_ERR,"ERR:"M_NAME":loc_subscribe_response: could not retrieve the callid header\n");
+		//TODO: error handling
+		return;
+	}
+
+	s = get_loc_subscription_callid(req_uri, callid);
 	if (!s){
 		LOG(L_ERR,"INF:"M_NAME":loc_subscribe_response: received a SUBSCRIBE response but no subscription for <%.*s>\n",
 			req_uri.len,req_uri.s);
@@ -423,7 +428,7 @@ void subscription_timer(unsigned int ticks, void* param)
  * @param duration - expires time in seconds
  * @returns the loc_notification or NULL on error
  */
-loc_subscription* new_loc_subscription(str req_uri,int duration)
+loc_subscription* new_loc_subscription(str req_uri,int duration, user_d * user_data)
 {
 	loc_subscription *s=0;
 	
@@ -444,6 +449,7 @@ loc_subscription* new_loc_subscription(str req_uri,int duration)
 		
 	s->duration = duration;
 	s->expires = 0;
+	s->user_data = user_data;
 	
 	return s;
 error:
@@ -494,14 +500,15 @@ int update_loc_subscription(loc_subscription *s,int expires)
  * @param aor - AOR to look for
  * @returns 1 if found, 0 if not
  */
-loc_subscription* get_loc_subscription(str aor)
+loc_subscription* get_loc_subscription(str aor, user_d * user_data)
 {
 	loc_subscription *s;
 	unsigned int hash = get_subscription_hash(aor);
 	subs_lock(hash);
 		s = subscriptions[hash].head;
 		while(s){
-			if (s->req_uri.len == aor.len &&
+			if (s->user_data == user_data && 
+				s->req_uri.len == aor.len &&
 				strncasecmp(s->req_uri.s,aor.s,aor.len)==0)
 			{
 				return s;
@@ -511,6 +518,36 @@ loc_subscription* get_loc_subscription(str aor)
 	subs_unlock(hash);	
 	return 0;
 }
+
+/**
+ * Returns a subscription if it exists
+ * \note - this returns with a lock on the subscriptions[s->hash] if found. Don't forget to unlock when done!!!
+ * @param aor - AOR to look for
+ * @returns 1 if found, 0 if not
+ */
+loc_subscription* get_loc_subscription_callid(str aor, str callid)
+{
+	loc_subscription *s;
+	unsigned int hash = get_subscription_hash(aor);
+	subs_lock(hash);
+		s = subscriptions[hash].head;
+		while(s){
+			LOG(L_DBG, "DBG:"M_NAME":get_loc_subscription_callid: crt callid is %.*s, compared to %.*s\n",
+					s->dialog->id.call_id.len, s->dialog->id.call_id.s,
+					callid.len, callid.s);
+			if (s->dialog->id.call_id.len == callid.len && 
+				s->req_uri.len == aor.len &&
+				strncasecmp(s->req_uri.s,aor.s,aor.len)==0 &&
+				strncasecmp(s->dialog->id.call_id.s, callid.s, callid.len) == 0)
+			{
+				return s;
+			}
+			s = s->next;
+		}
+	subs_unlock(hash);	
+	return 0;
+}
+
 
 /**
  * Finds out if a subscription exists

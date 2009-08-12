@@ -89,7 +89,6 @@ typedef struct _loc_subscription {
 	char attempts_left;		/**< number of unsuccesful attempts to subscribe*/
 	user_d * user_data;
 	dlg_t *dialog; 
-		
 	struct _loc_subscription *next, *prev;
 } loc_subscription;
 
@@ -114,10 +113,11 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps);
 
 void subscription_timer(unsigned int ticks, void* param);
 
-loc_subscription* new_loc_subscription(str req_uri,int duration);
+loc_subscription* new_loc_subscription(str req_uri,int duration, user_d * user_data);
 void add_loc_subscription(loc_subscription *s);
 int update_loc_subscription(loc_subscription *s,int expires);
-loc_subscription* get_loc_subscription(str aor);
+loc_subscription* get_loc_subscription(str aor, user_d * user_data);
+loc_subscription* get_loc_subscription_callid(str aor, str callid);
 int is_loc_subscription(str aor);
 void del_loc_subscription(loc_subscription *s);
 void del_loc_subscription_nolock(loc_subscription *s);

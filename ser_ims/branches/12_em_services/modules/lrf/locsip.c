@@ -203,14 +203,19 @@ int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 
 
 	LOG(L_INFO,"INFO:"M_NAME":LRF_process_notification: Checking NOTIFY\n");
-	
-	if(!cscf_get_from_uri(msg, &user_uri) || !user_uri.len || !user_uri.s){
 
+	if(!cscf_get_from_uri(msg, &user_uri) || !user_uri.len || !user_uri.s){
 		LOG(L_ERR,"ERR:"M_NAME":LRF_process_notification: could not retrieve the From uri\n");
-		goto parse_error;		
+		goto parse_error;
 	}
-	
-	subscr = get_loc_subscription(user_uri);
+
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.len || !callid.s){
+		LOG(L_ERR,"ERR:"M_NAME":LRF_process_notification: could not retrieve the callid header\n");
+		goto parse_error;
+	}
+
+	subscr = get_loc_subscription_callid(user_uri, callid);
 	if(!subscr){
 
 		LOG(L_ERR,"ERR:"M_NAME":LRF_process_notification: could not retrieve the location "
