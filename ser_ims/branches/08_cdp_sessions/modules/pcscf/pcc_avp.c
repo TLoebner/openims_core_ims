@@ -556,7 +556,9 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  				__FUNCTION__);
  	
  	LOG(L_DBG,"PCC_add_media_component_description() : about to end\n");		
- 	cdpb.AAAFreeAVP(&media_component_number);
+
+ 	cdpb.AAAFreeAVPList(&list);
+ 	/*cdpb.AAAFreeAVP(&media_component_number);
  	for(i=0;i<n;i++)
  	{
  		cdpb.AAAFreeAVP(&media_sub_component[i]);
@@ -585,9 +587,9 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	cdpb.AAAFreeAVP(&media_type);
  	cdpb.AAAFreeAVP(&codec_data1);
  	cdpb.AAAFreeAVP(&codec_data2);
- 	
  	list.tail=0;
  	list.head=0;
+ 	*/
  	return 1;
  }
 /* Creates and adds Media-Sub-Components to AVP_LIST
