@@ -92,6 +92,8 @@ int P_emergency_serv_enabled(struct sip_msg *msg, char* str1, char* str2);
 
 int P_380_em_alternative_serv(struct sip_msg *msg, char* str1, char* str2);
 
+int P_select_ecscf(struct sip_msg * msg, char* str1, char * str2);
+
 int fixup_380_alt_serv(void** param, int param_no);
 
 #endif

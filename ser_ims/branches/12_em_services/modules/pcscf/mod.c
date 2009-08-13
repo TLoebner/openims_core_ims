@@ -359,12 +359,12 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_accept_anonym_em_call",		P_accept_anonym_em_call, 	0, 0, REQUEST_ROUTE},
 	{"P_is_anonymous_user",			P_is_anonymous_user, 		0, 0, REQUEST_ROUTE},
 	{"P_emergency_flag",			P_emergency_flag,			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
+	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,		1, fixup_380_alt_serv, REQUEST_ROUTE},
 	{"P_emergency_ruri",			P_emergency_ruri,			0, 0, REQUEST_ROUTE},
-	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
+	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,		0, 0, REQUEST_ROUTE},
+	{"P_select_ecscf", 			P_select_ecscf,			0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
-	{"P_is_em_registered",			P_is_em_registered, 			0, 0, REQUEST_ROUTE},
-	
+	{"P_is_em_registered",			P_is_em_registered, 		0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 

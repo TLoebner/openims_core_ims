@@ -158,6 +158,7 @@ out_of_memory:
 }
 
 /* take actions according to the response code of the OPTIONS reply from the LRF
+ * TODO:if the invite was cancelled...no reply sent
  * @param opt_repl - the OPTIONS reply
  * @param inv_trans - the INVITE transaction
  * @param code - the code of the response 
@@ -285,6 +286,8 @@ void options_resp_cb(struct cell* t, int type, struct tmcb_params* ps){
 	
 		LOG(L_ERR, "ERR:"M_NAME":options_resp_cb:Could not process the OPTIONS response\n");
 		sl_reply(inv_trans->uas.request, (char*)&fp_310, (char*)&fp_int_err);
+		//set the OPTIONS trans as the current one
+		//tmb.t_unref_ident(inv_trans->hash_index, inv_trans->label);
 	}
 
 
