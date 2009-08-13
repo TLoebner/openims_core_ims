@@ -111,6 +111,7 @@ typedef struct _e_dialog {
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 											released or not, or its peer, with count on 
 											tries 										*/	
+	unsigned char is_cancelled;
 	dlg_t *dialog_c;					/**< dialog in direction to callee           	*/
 	dlg_t *dialog_s;					/**< dialog in direction to caller 				*/
 	/*flag for anonymous call*/

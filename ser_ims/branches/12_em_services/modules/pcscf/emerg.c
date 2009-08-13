@@ -85,7 +85,9 @@ xmlNode * alt_serv_node = NULL;
 xmlNode * reason_alt_serv_node = NULL;
 xmlNode * action_alt_serv_node = NULL;
 
+
 int init_em_alt_serv_body();
+
 
 int init_emergency_cntxt(){
 	
@@ -315,6 +317,60 @@ int select_ECSCF(str * ecscf_used){
 	return 0;
 }
 
+/**
+ * selects the ecscf uri to be enforced
+ * @param msg - the SIP message to add to
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_ERROR on error
+ */
+int P_select_ecscf(struct sip_msg *msg,char *str1,char*str2)
+{
+	p_dialog *d = NULL;
+	str sel_ecscf_uri, call_id, host;
+	int port,transport;
+	enum p_dialog_direction dir;
+
+	dir = DLG_MOBILE_ORIGINATING;
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_select_ecscf(): Error retrieving orig contact\n");
+		return CSCF_RETURN_BREAK;
+	}		
+		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":P_select_ecscf(): Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":P_select_ecscf: could not find the emergency dialog\n");
+		return CSCF_RETURN_BREAK;
+	}
+
+	if(!d->em_info.em_dialog){
+		LOG(L_ERR, "ERR:"M_NAME":P_select_ecscf: script error: trying to use Emergency Services to route a non-emergency call\n");
+		goto error;
+	}
+
+	if(select_ECSCF(&sel_ecscf_uri))
+		goto error;
+
+	STR_SHM_DUP(d->em_info.ecscf_uri, sel_ecscf_uri, "P_select_ecscf");
+	d_unlock(d->hash);
+	return CSCF_RETURN_TRUE;
+
+error:
+out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":P_select_ecscf: could not select an ECSCF\n");
+	if(d) d_unlock(d->hash);
+	return CSCF_RETURN_ERROR;
+	
+}
+
+
 static str route_s={"Route: <",8};
 static str route_e={">\r\n",3};
 
@@ -331,7 +387,7 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 	str newuri={0,0};
 	str x = {0,0}, urn = {0,0};
 	p_dialog *d = NULL;
-	str sel_ecscf_uri, call_id, host;
+	str call_id, host;
 	int port,transport;
 	enum p_dialog_direction dir;
 	str ruri = {msg->first_line.u.request.uri.s,
@@ -371,11 +427,12 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 		goto error;
 	}
 
-	if(select_ECSCF(&sel_ecscf_uri))
+	if(!d->em_info.ecscf_uri.len || !d->em_info.ecscf_uri.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: script_error: no selected ecscf uri in the dialog info\n");
 		goto error;
+	}
 
-
-	x.len = route_s.len + route_e.len + sel_ecscf_uri.len;
+	x.len = route_s.len + route_e.len + d->em_info.ecscf_uri.len;
 			
 	x.s = pkg_malloc(x.len);
 	if (!x.s){
@@ -386,13 +443,13 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 	}
 	x.len=0;
 	STR_APPEND(x,route_s);
-	STR_APPEND(x,sel_ecscf_uri);
+	STR_APPEND(x,d->em_info.ecscf_uri);
 	STR_APPEND(x,route_e);
 	
-	if(set_dst_uri(msg, &sel_ecscf_uri)){
+	if(set_dst_uri(msg, &d->em_info.ecscf_uri)){
 	
 		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Could not set the destination uri %.*s\n",
-				sel_ecscf_uri.len, sel_ecscf_uri.s);
+				d->em_info.ecscf_uri.len, d->em_info.ecscf_uri.s);
 		goto error;
 	}
 
@@ -417,14 +474,14 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 	}
 
 error:
-out_of_memory:
-	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not select an ECSCF\n");
+	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not enforce the E-CSCF URI\n");
 	if(d) d_unlock(d->hash);
 	if (x.s) pkg_free(x.s);
 	if(newuri.s) pkg_free(newuri.s);
 	return CSCF_RETURN_ERROR;
 end:
-	STR_SHM_DUP(d->em_info.ecscf_uri, sel_ecscf_uri, "P_enforce_sos_routes");
+	LOG(L_DBG, "DBG:"M_NAME":P_enforce_sos_routes: modified the info in order to be fwd to the E-CSCF %.*s\n",
+			d->em_info.ecscf_uri.len, d->em_info.ecscf_uri.s);
 	d_unlock(d->hash);
 	return CSCF_RETURN_TRUE;
 	
@@ -464,7 +521,7 @@ int fixup_380_alt_serv(void** param, int param_no){
 #define IMS_3GPP_XML_CNTENT_TYPE "Content-type: application/3gpp-ims+xml;schemaversion=\"1\"\n"
 str Cont_type_3gpp_app_xml= {IMS_3GPP_XML_CNTENT_TYPE, (sizeof(IMS_3GPP_XML_CNTENT_TYPE)-1)};
 static str invite_method={"INVITE",6}; 
-/* Create the body of a 380 Alternative Service reply for Emergency reasons
+/* Creates and adds the body of a 380 Alternative Service reply for Emergency reasons
  * @param msg - the SIP Request
  * @param str1 - the reason of the 380 reply
  * @param str2 - not used
@@ -525,3 +582,6 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
 
 	return CSCF_RETURN_TRUE;
 }
+
+
+
