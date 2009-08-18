@@ -158,7 +158,6 @@ out_of_memory:
 }
 
 /* take actions according to the response code of the OPTIONS reply from the LRF
- * TODO:if the invite was cancelled...no reply sent
  * @param opt_repl - the OPTIONS reply
  * @param inv_trans - the INVITE transaction
  * @param code - the code of the response 
@@ -188,6 +187,11 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 	if(!d){
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:message did not create no dialog\n");
 		goto error;
+	}
+	
+	if(d->is_cancelled){
+		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: the emergency call was cancelled, no further processing\n");
+		goto end;
 	}
 
 	if(code >= 300){
@@ -228,7 +232,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		cscf_del_nonshm_lumps(inv_trans->uas.request);
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:forward the INVITE request\n");
 	}
-	
+end:	
 	ret = 0;	
 error:
 	if(d)	d_unlock(d->hash);
@@ -286,8 +290,6 @@ void options_resp_cb(struct cell* t, int type, struct tmcb_params* ps){
 	
 		LOG(L_ERR, "ERR:"M_NAME":options_resp_cb:Could not process the OPTIONS response\n");
 		sl_reply(inv_trans->uas.request, (char*)&fp_310, (char*)&fp_int_err);
-		//set the OPTIONS trans as the current one
-		//tmb.t_unref_ident(inv_trans->hash_index, inv_trans->label);
 	}
 
 
