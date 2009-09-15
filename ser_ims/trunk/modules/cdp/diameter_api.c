@@ -61,6 +61,10 @@
 #include "transaction.h"
 #include "api_process.h"
 #include "routing.h"
+#include "peerstatemachine.h"
+
+
+extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
 				/* TRANSACTIONS */
 				
@@ -185,12 +189,13 @@ AAAReturnCode AAASendMessage(
 	/* only add transaction following when required */
 	if (callback_f){
 		if (is_req(message))
-			add_trans(message,callback_f,callback_param,DP_TRANS_TIMEOUT,1);
+			add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessage(): can't add transaction callback for answer.\n");
 	}
-		
-	if (!peer_send_msg(p,message))
+	
+//	if (!peer_send_msg(p,message))
+	if (!sm_process(p,Send_Message,message,0,0))	
 		goto error;
 		
 	return 1;
@@ -228,12 +233,13 @@ AAAReturnCode AAASendMessageToPeer(
 	/* only add transaction following when required */
 	if (callback_f){
 		if (is_req(message))
-			add_trans(message,callback_f,callback_param,DP_TRANS_TIMEOUT,1);
+			add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessageToPeer(): can't add transaction callback for answer.\n");
 	}
 		
-	if (!peer_send_msg(p,message))
+//	if (!peer_send_msg(p,message))
+	if (!sm_process(p,Send_Message,message,0,0))	
 		goto error;
 		
 	return 1;
@@ -290,9 +296,10 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 		lock = lock_alloc();
 		lock = lock_init(lock);
 		lock_get(lock);
-		t = add_trans(message,sendrecv_cb,(void*)lock,DP_TRANS_TIMEOUT,0);
+		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
 
-		if (!peer_send_msg(p,message)) {
+//		if (!peer_send_msg(p,message)) {
+		if (!sm_process(p,Send_Message,message,0,0)){	
 			lock_destroy(lock);
 			lock_dealloc((void*)lock);	
 			goto error;
@@ -349,9 +356,10 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 		lock = lock_alloc();
 		lock = lock_init(lock);
 		lock_get(lock);
-		t = add_trans(message,sendrecv_cb,(void*)lock,DP_TRANS_TIMEOUT,0);
+		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
 
-		if (!peer_send_msg(p,message)) {
+//		if (!peer_send_msg(p,message)) {
+		if (!sm_process(p,Send_Message,message,0,0)){	
 			lock_destroy(lock);
 			lock_dealloc((void*)lock);	
 			goto error;

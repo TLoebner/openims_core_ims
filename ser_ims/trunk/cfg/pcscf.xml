@@ -9,12 +9,18 @@
 	Tc="30"
 	Workers="4"
 	QueueLength="8"
+	TransactionTimeout="5"
+	SessionsHashSize="128"		
 >
 	<Peer FQDN="clf.open-ims.test" Realm="open-ims.test" port="3868"/> 
+	<Peer FQDN="pcrf.open-ims.test" Realm="open-ims.test" port="4868"/> 
 
 	<Acceptor port="3867" bind="127.0.0.1"/>
 	
-	<Auth id="16777231" vendor="13019"/><!-- ETSI e2 -->
+	<Auth id="16777231" vendor="13019"/> <!-- ETSI e2 -->
+	<Auth id="16777236" vendor="10415"/> <!-- 3GPP Rx -->
+	<Auth id="16777222" vendor="10415"/> <!-- 3GPP Gq -->
+	<Auth id="16777222" vendor="13019"/> <!-- ETSI Gq prima -->
 
 	<DefaultRoute FQDN="clf.open-ims.test" metric="10"/>
 	

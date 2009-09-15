@@ -219,12 +219,12 @@ int diameter_peer_init_real()
 	/* init the peer manager */
 	peer_manager_init(config);
 	
-	/* init the session */
-	if (!session_init()) goto error;
-	
-
 	/* init diameter transactions */
 	trans_init();
+	
+	/* init the session */
+	if (!sessions_init(config->sessions_hash_size)) goto error;
+	
 	
 	/* add callback for messages - used to implement the API */
 	cb_add(api_callback,0);
@@ -520,7 +520,7 @@ void diameter_peer_destroy()
 	peer_manager_destroy();
 	
 	/* cleaning up sessions */
-	session_destroy();
+	sessions_destroy();
 
 	/* cleaning up global vars */
 /*	lock_get(pid_list_lock);*/

@@ -441,6 +441,7 @@ static inline int refresh_dialog_req(struct sip_msg* _m, target_refresh_t is_tar
 static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 {
 	str contact, rtag;
+	rtag.s=0;
 
 	     /* Parse the whole message, we will need all Record-Route headers */
 	if (parse_headers(_m, HDR_EOH_F, 0) == -1) {
@@ -462,8 +463,12 @@ static inline int response2dlg(struct sip_msg* _m, dlg_t* _d)
 	if (contact.len && str_duplicate(&_d->rem_target, &contact) < 0) return -3;
 	
 	if (get_to_tag(_m, &rtag) < 0) goto err1;
+	//Its unlikely needed to update the tag with responses but for some reason i do it
+	if (_d->id.rem_tag.s) shm_free(_d->id.rem_tag.s); 
+	
 	if (rtag.len && str_duplicate(&_d->id.rem_tag, &rtag) < 0) goto err1;
 	
+	if (_d->route_set) shm_free_rr(&_d->route_set);
 	if (get_route_set(_m, &_d->route_set, REVERSE_ORDER) < 0) goto err2;
 
 	return 0;
@@ -506,6 +511,12 @@ static inline int dlg_new_resp_uac(dlg_t* _d, struct sip_msg* _m)
 		      * Send a request to jan@iptel.org if you need to update
 		      * the structures here
 		      */
+		     /*
+		      * Alberto Diez .. i might need to update the remote tag here?
+		      * and the route set? maybe i do want all that
+		      */
+		      if (response2dlg(_m, _d) < 0) return -1;
+		    
 	} else if ((code >= 200) && (code < 299)) {
 		     /* A final response, update the structures and transit
 		      * into DLG_CONFIRMED
@@ -545,6 +556,8 @@ static inline int dlg_early_resp_uac(dlg_t* _d, struct sip_msg* _m)
 	if (code < 200) {
 		     /* We are in early state already, do nothing
 		      */
+		if (response2dlg(_m, _d) < 0) return -1;
+		_d->state = DLG_EARLY;
 	} else if ((code >= 200) && (code <= 299)) {
 		/* Warning - we can handle here response for non-initial request (for
 		 * example UPDATE within early INVITE/BYE dialog) and move into

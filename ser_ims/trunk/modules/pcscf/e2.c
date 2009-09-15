@@ -155,14 +155,14 @@ AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_i
 		return 0;
 	
 	AAAMessage *udr=0,*uda=0;
-	AAASessionId sessId={0,0};
+	AAASession *session=0;
 	AAATransaction *trans=0;
 	unsigned int hash=0,label=0;	
 	
-	sessId = cdpb.AAACreateSession();
+	session = cdpb.AAACreateSession(0);
 	trans=cdpb.AAACreateTransaction(IMS_e2,IMS_UDR);
 
-	udr = cdpb.AAACreateRequest(IMS_e2,IMS_UDR,Flag_Proxyable,&sessId);
+	udr = cdpb.AAACreateRequest(IMS_e2,IMS_UDR,Flag_Proxyable,session);
 	if (!udr) goto error;
 
 	if (!e2_add_destination_realm(udr,dest_realm)) goto error;
@@ -192,7 +192,7 @@ AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_i
 	else
 		uda = cdpb.AAASendRecvMessage(udr);
 	
-	cdpb.AAADropSession(&sessId);
+	cdpb.AAADropSession(session);
 	cdpb.AAADropTransaction(trans);
 	
 	return uda;
@@ -201,7 +201,7 @@ AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_i
 error:
 	//free stuff
 	if (trans) cdpb.AAADropTransaction(trans);
-	if (sessId.s) cdpb.AAADropSession(&sessId);
+	if (session) cdpb.AAADropSession(session);
 	if (udr) cdpb.AAAFreeMessage(&udr);
 	return 0;	
 }

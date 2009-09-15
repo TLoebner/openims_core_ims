@@ -118,6 +118,8 @@ typedef struct {
 	int workers;				/**< Number of worker-processes to fork */
 	int queue_length;			/**< Length of the message queue; when it is filled, the server part will
 									 block until workers will finish work on at least one item in the queue */
+	int transaction_timeout;	/**< Transaction timeout duration */
+	int sessions_hash_size;		/**< Size of the sessions hash table */									 
 	
 	peer_config *peers;			/**< list of peers */
 	int peers_cnt;				/**< size of the list of peers */

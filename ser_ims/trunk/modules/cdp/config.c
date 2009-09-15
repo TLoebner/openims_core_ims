@@ -194,7 +194,9 @@ inline void log_dp_config(int level,dp_config *x)
 	LOG(level,"\tTc      : %d\n",x->tc);
 	LOG(level,"\tWorkers : %d\n",x->workers);
 	LOG(level,"\tQueueLen: %d\n",x->queue_length);
-	LOG(level,"\tPeers : %d\n",x->peers_cnt);
+	LOG(level,"\tTranTime: %d\n",x->transaction_timeout);
+	LOG(level,"\tSessHash: %d\n",x->sessions_hash_size);
+	LOG(level,"\tPeers   : %d\n",x->peers_cnt);
 	for(i=0;i<x->peers_cnt;i++)
 		LOG(level,"\t\tFQDN:  %.*s \t Realm: %.*s \t Port: %d\n",
 			x->peers[i].fqdn.len,x->peers[i].fqdn.s,
