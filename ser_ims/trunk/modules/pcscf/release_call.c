@@ -80,7 +80,7 @@ static str method_ACK_s={"ACK",3};
 static str method_BYE_s={"BYE",3};
 
 
-void alter_dialog_route_set(dlg_t *,enum p_dialog_direction);
+void alter_dialog_route_set(dlg_t *,enum p_dialog_direction,enum release_call_situation situation);
 int send_request(str ,str ,dlg_t *,transaction_cb , enum p_dialog_direction);
 void confirmed_response(struct cell *,int ,struct tmcb_params *);
 
@@ -133,9 +133,17 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 		default:
 			odir = d->direction;
 	}	
-	
+	 time_t time_now=time(0);
 	o = get_p_dialog_dir_nolock(d->call_id,odir);
-	if (o && !o->is_releasing) o->is_releasing = 1;
+	if (o && o->is_releasing==0) {
+		 o->is_releasing = 1;
+		 //in case of an error this dialog should also expire quickly
+		
+		if (o->expires>time_now+TIME_TO_EXPIRE)
+		{
+			o->expires=time_now+TIME_TO_EXPIRE;
+		}
+	}
 		
 	d->is_releasing++;
 		
@@ -145,11 +153,18 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 		goto error;
 	}
 	if (d->is_releasing==1) {	
+		/*The first time i decrease the expire time for the dialog expire , so that i guarantee that
+		 * its going to be deleted from the table sometime*/
+		
+		if (d->expires>time_now+TIME_TO_EXPIRE)
+		{
+			d->expires=time_now+TIME_TO_EXPIRE;
+		}
 		/*Before generating a request, we have to generate
 		 * the route_set in the dlg , because the route set
 		 * in the dialog is for the UAC everything which was in the 
 		 * Record-Routes (including local address)*/
-		alter_dialog_route_set(d->dialog_c,d->direction);		
+		alter_dialog_route_set(d->dialog_c,d->direction,RELEASE_CALL_CONFIRMED);		
 		
 		/*first generate the bye for called user*/
 		/*then generate the bye for the calling user*/
@@ -169,7 +184,7 @@ error:
 
 /**
  * Callback function for BYE requests!
- * Identify the s_dialog, then see if one BYE has already been recieved
+ * Identify the s_dialog, then see if one BYE response has already been recieved
  * if yes drop it , if no, wait for the second
  */
 void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
@@ -191,17 +206,17 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
   	call_id.s+=9;
   	call_id.len-=11;
 	
-	LOG(L_INFO,"DBG:"M_NAME":confirmed_response(): Received a BYE for a call release for <%.*s> DIR[%d].\n",
+	LOG(L_INFO,"DBG:"M_NAME":confirmed_response(): Received a response for a BYE for a call release for <%.*s> DIR[%d].\n",
 		call_id.len,call_id.s,dir);
 	
 	d = get_p_dialog_dir(call_id,dir);
 	if (!d)	{
-		LOG(L_ERR,"ERR:"M_NAME":confirmed_response(): Received a BYE for a call release but there is no dialog for <%.*s> DIR[%d].\n",
+		LOG(L_ERR,"ERR:"M_NAME":confirmed_response(): Received a response for BYE for a call release but there is no dialog for <%.*s> DIR[%d].\n",
 			call_id.len,call_id.s,dir);
 		return;
 	}
-	
-	if (ps->code>=200){
+	hash=d->hash;
+	if (ps->code>=200 && ps->code<400){
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
 			del_p_dialog(d);
@@ -241,7 +256,8 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	enum p_dialog_direction odir;
 	int i;
 	str r;
-	str hdrs={0,0};	
+	str hdrs={0,0};
+	str firstcseq;	
 	char buf[256];
 	
 	LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Releasing call <%.*s> DIR[%d].\n",
@@ -278,40 +294,80 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 			odir = d->direction;
 	}	
 	
+	time_t time_now=time(0);
+	
 	o = get_p_dialog_dir_nolock(d->call_id,odir);
-	if (o && !o->is_releasing) o->is_releasing = 1;
+	
 		
+	if (o && o->is_releasing==0)  {
+		
+		o->is_releasing = 1;
+		// Addition from Alberto Diez the 2nd November 2007
+		// the idea is to put the other one to expire in TIME_TO_EXPIRE 
+		// just in case no reply is received
+		if (o->expires>time_now+TIME_TO_EXPIRE) {
+				o->expires=time_now+TIME_TO_EXPIRE;
+		}
+		
+	}
 	d->is_releasing++;
-		
+	
+	/*The first time i decrease the expire time for the dialog expire , so that i guarantee that
+		 * its going to be deleted from the table sometime*/
+	
+	
+	if (d->expires>time_now+TIME_TO_EXPIRE)
+	{
+		d->expires=time_now+TIME_TO_EXPIRE;
+	}
+			
 	if (d->is_releasing>MAX_TIMES_TO_TRY_TO_RELEASE){
 		LOG(L_ERR,"ERR:"M_NAME":release_call_previous(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
 		del_p_dialog(d);
 		goto error;
 	}
 	
-	alter_dialog_route_set(d->dialog_c,d->direction);
+	alter_dialog_route_set(d->dialog_c,d->direction,situation);
 	
 	d->state=DLG_STATE_TERMINATED_ONE_SIDE;
 	/*this is just a trick to use the same callback function*/	
 	
-	/*trick or treat!*/
-	d->dialog_c->state=DLG_CONFIRMED;
 	
-	if (situation == RELEASE_CALL_WEIRD){
-		send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
-		send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-		//d->dialog_c->state=DLG_EARLY;
-	} else {/*(situation == RELEASE_CALL_EARLY)*/		
-		send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
-		//d->dialog_c->state=DLG_EARLY;
-	}
+	
 
 	/*i need the cell of the invite!!*/
 	/*this is very experimental
 	 * and very tricky too*/
-	t=tmb.t_gett();
+	//t=tmb.t_gett();
+	i=0;
+	i=snprintf(buf,256,"%i",d->first_cseq); // i just use buf because its there..
 	
+	if (i==256) {
+		LOG(L_ERR,"release_call_previous: some client used first CSeq way too big\n");
+		goto error;		
+	} 
+	
+	firstcseq.s=pkg_malloc(i+1); // the \0
+	firstcseq.len=i;
+	sprintf(firstcseq.s,"%i",d->first_cseq);
+	LOG(L_INFO,"CALLED t_lookup_callid with %.*s, %.*s\n",d->call_id.len,d->call_id.s,firstcseq.len,firstcseq.s);
+	tmb.t_lookup_callid(&t,d->call_id,firstcseq);
+	
+	pkg_free(firstcseq.s);
+		
 	if (t && t!=(void*) -1  && t->uas.request) {
+		
+		
+		if (t->method.len!=6 || t->method.s[0]!='I' || t->method.s[1]!='N' || t->method.s[2]!='V')
+		{
+			//well this is the transaction of a subsequent request within the dialog
+			//and the dialog is not confirmed yet, so its a PRACK or an UPDATE
+			//could also be an options, but the important thing is how am i going to get
+			//the transaction of the invite, that is the one i have to cancel
+			LOG(L_ERR,"this is not my transaction so where am i?\n");		
+		}
+		
+			
 		/*first trick: i really want to get this reply sent even though we are onreply*/
 
 #ifdef SER_MOD_INTERFACE
@@ -320,23 +376,63 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 		*tmb.route_mode=MODE_ONFAILURE;
 #endif
 		
-		/*second trick .. i haven't recieve any response from the uac
-		 * if i don't do this i get a cancel sent to the S-CSCF .. its not a big deal*/
-		 /*if i cared about sip forking then probably i would not do that and let the 
-		  * CANCEL go to the S-CSCF (reread specifications needed)*/
-		for (i=0; i< t->nr_of_outgoings; i++)
-			t->uac[i].last_received=99;
-		/*t->uas.status=100;*/ /*no one cares about this*/
-		/*now its safe to do this*/
+						
+		if (situation == RELEASE_CALL_WEIRD){
+			/*second trick .. i haven't recieve any response from the uac
+		 	* if i don't do this i get a cancel sent to the S-CSCF .. its not a big deal*/
+		 	/*if i cared about sip forking then probably i would not do that and let the 
+		  	* CANCEL go to the S-CSCF (reread specifications needed)*/
+			//for (i=0; i< t->nr_of_outgoings; i++)
+			//	t->uac[i].last_received=99;
+			/*t->uas.status=100;*/ /*no one cares about this*/
+			/*now its safe to do this*/
 		
-		tmb.t_reply(t->uas.request,reason_code,reason_text.s);
-		tmb.t_release(t->uas.request);
-
+			/*trick or treat!*/
+			for (i=0; i< t->nr_of_outgoings; i++)
+				t->uac[i].last_received=99;
+			t->uas.status=100;
+			d->dialog_c->state=DLG_CONFIRMED;
+			send_request(method_ACK_s,hdrs,d->dialog_c,0,0);
+			send_request(method_BYE_s,hdrs,d->dialog_c,confirmed_response,d->direction);
+			d->dialog_c->state=DLG_EARLY;
+				
+			tmb.t_reply(t->uas.request,reason_code,reason_text.s);
+			*tmb.route_mode=MODE_ONREPLY;
+			t->uas.status=488;
+			tmb.t_release(t->uas.request);
 		/*needed because if not i get last message retransmited... 
 		 * probably there is a more logical way to do this.. but since i really
 		 * want this transaction to end .. whats the point?*/
+		} else {/*(situation == RELEASE_CALL_EARLY)*/
+			d->dialog_c->loc_seq.value++;
+			
+			//d->dialog_c->state=DLG_CONFIRMED;		
+			//send_request(method_CANCEL_s,hdrs,d->dialog_c,confirmed_response,d->direction);
+			//d->dialog_c->state=DLG_EARLY;
+			
+			tmb.t_reply(t->uas.request,reason_code,reason_text.s);
+			
+			/*
+			for (i=0; i< t->nr_of_outgoings; i++)
+				t->uac[i].last_received=180;
+			*/
+			
+			// t_reply has decided to send a CANCEL already so no big deal!
+						
+			//tmb.cancel_uacs(t,0xFFFF,F_CANCEL_B_FAKE_REPLY);
+					
+			//t->uas.status=488;
+						
+			//tmb.t_release(t->uas.request);
+			
+					
+			// I thought of deleting the dialog here.. but 
+			// a good SIP client will respond to the CANCEL with a 487
+			//del_p_dialog(d);
+		}	
 	}
 	
+	if (hdrs.s) pkg_free(hdrs.s);
 	return 1;
 error:
 	if (hdrs.s) pkg_free(hdrs.s);
@@ -425,7 +521,7 @@ done:
  * @msg  - the sip message being processed
  * @str1 - the first parameter  "orig" or "term"
  * @str2 - [optional] the Reason header that you want to go to the messages 
- * @returns - TRUE on success or FALSE on misscall and BREAK on error
+ * @returns - BREAK ... whatever happens this message is not relayed
  */
 int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 {
@@ -434,6 +530,11 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	str callid;
 	struct hdr_field *h1;
 	str reason={NULL,0};
+	unsigned int hash;
+	
+	struct cell* t; /*needed to distinguish between UPDATE and INVITE*/
+	
+	LOG(L_INFO,ANSI_WHITE"P_release_call_on_reply\n");
 	
 	if (str2) {
 		reason.s=str2;
@@ -453,19 +554,38 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 	callid=cscf_get_call_id(msg,&h1);
 	if (is_p_dialog_dir(callid,dir)) {
 		d=get_p_dialog_dir(callid,dir);
-		if (msg->first_line.u.reply.statuscode > 199)
-		{
-			release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
-			d_unlock(d->hash);
-			return CSCF_RETURN_TRUE;
-		} else {
-			release_call_previous(d,RELEASE_CALL_EARLY,488,reason);
-			d_unlock(d->hash);
-			return CSCF_RETURN_TRUE;
+		hash=d->hash;
+		
+		t=tmb.t_gett();
+		if (!t) {
+			LOG(L_ERR,"P_release_call_onreply(): unable to get transaction\n");
+			return CSCF_RETURN_BREAK;
 		}
+		if (t->method.len==6 && memcmp(t->method.s,"INVITE",6)==0)
+		{
+			// If its an INVTE, the state depends on which reply we are processing
+									
+			if (msg->first_line.u.reply.statuscode > 199)
+			{
+				release_call_previous(d,RELEASE_CALL_WEIRD,488,reason);
+			} else {
+				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);		
+			}
+			d->pcc_session=0; // This means we already finished with the dialog
+			d_unlock(hash);
+			return CSCF_RETURN_BREAK;
+		} else {
+			
+				//UPDATE so early
+				release_call_early(d,488,reason);
+				d_unlock(hash);
+				return CSCF_RETURN_BREAK;
+			 			
+		}
+		
 	} else {
 		LOG(L_ERR,"ERR:"M_NAME "P_release_call_onreply :  unable to find dialog\n");
-		return CSCF_RETURN_BREAK;
+		return CSCF_RETURN_ERROR;
 	}
 	
 }
@@ -503,35 +623,57 @@ int send_request(str method,str reqbuf,dlg_t *d,transaction_cb cb, enum p_dialog
 	return 0;
 }
 
+// Copied from module tm file dlg.c
 
+static rr_t *revert_route(rr_t *r)
+{
+	rr_t *a, *b;
+
+	a = NULL;
+
+	while (r) {
+		b = r->next;
+		r->next = a;
+		a = r;
+		r = b;
+	}
+
+	return a;
+}
 
 /**
  * Alters the saved dlg_t routes for the dialog by removing
- * the first routes before myself.
- * This is requiered because half of the RRset is useless.
  * @param d - the dialog to modify the Record-Routes
  * @param dir - the direction
  */
-void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir)
+void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_call_situation situation)
 {
-	rr_t *r,*r_new;	
+	rr_t *r;
+	rr_t *r_new;
+		
 	str p; /*this is going to point to the scscf uri*/
 		
+		
 	
-	
+
 	switch (dir) {
 		case DLG_MOBILE_ORIGINATING:
 			p = pcscf_record_route_mo_uri;
+			
 			break;
 		case DLG_MOBILE_TERMINATING:
 			p = pcscf_record_route_mt_uri;
+	
 			break;
 		default:
 			return;
 	}
+	d->route_set=revert_route(d->route_set);
+		
 	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
 	//for(r=d->route_set;r!=NULL;r=r->next) 
-	//	LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+		//LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+	
 		
 	for(r=d->route_set;r!=NULL;r=r->next) {
 		if (r->nameaddr.uri.len>=p.len && 

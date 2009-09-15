@@ -117,12 +117,15 @@ static cmd_export_t cdp_cmds[] = {
 
 	{"AAACreateSession",			(cmd_function)AAACreateSession,			NO_SCRIPT, 0, 0},
 	{"AAADropSession",				(cmd_function)AAADropSession, 			NO_SCRIPT, 0, 0},
-
+	{"AAACreateAuthSession",		(cmd_function)AAACreateAuthSession,		NO_SCRIPT, 0, 0},
+	{"AAADropAuthSession",			(cmd_function)AAADropAuthSession, 		NO_SCRIPT, 0, 0},
+	{"AAATerminateAuthSession",		(cmd_function)AAATerminateAuthSession, 		NO_SCRIPT, 0, 0},	
 	{"AAACreateTransaction",		(cmd_function)AAACreateTransaction,		NO_SCRIPT, 0, 0},
 	{"AAADropTransaction",			(cmd_function)AAADropTransaction, 		NO_SCRIPT, 0, 0},
 
 	{"AAACreateAVP",				(cmd_function)AAACreateAVP, 			NO_SCRIPT, 0, 0},
 	{"AAAAddAVPToMessage",			(cmd_function)AAAAddAVPToMessage,		NO_SCRIPT, 0, 0},
+	{"AAAAddAVPToList",				(cmd_function)AAAAddAVPToList,			NO_SCRIPT, 0, 0},
 	{"AAAFindMatchingAVP",			(cmd_function)AAAFindMatchingAVP, 		NO_SCRIPT, 0, 0},
 	{"AAAGetNextAVP",				(cmd_function)AAAGetNextAVP, 			NO_SCRIPT, 0, 0},
 	{"AAAFreeAVP",					(cmd_function)AAAFreeAVP, 				NO_SCRIPT, 0, 0},
@@ -133,7 +136,9 @@ static cmd_export_t cdp_cmds[] = {
 
 	{"AAAAddRequestHandler",		(cmd_function)AAAAddRequestHandler, 	NO_SCRIPT, 0, 0},
 	{"AAAAddResponseHandler",		(cmd_function)AAAAddResponseHandler,	NO_SCRIPT, 0, 0},
-		
+	{"get_session",					(cmd_function)get_session,				NO_SCRIPT, 0, 0},
+	{"sessions_unlock",				(cmd_function)sessions_unlock,			NO_SCRIPT, 0, 0},
+	{"sessions_lock",				(cmd_function)sessions_lock,			NO_SCRIPT, 0, 0},
 	{ 0, 0, 0, 0, 0 }
 };
 

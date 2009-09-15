@@ -144,15 +144,30 @@ enum {
 	AVP_IMS_Experimental_Result_Code					= 298,
 	AVP_IMS_Experimental_Result							= 297,
 /** 300 to 399 reserved for TS29.234											*/
-	
+
 /** 400 to 499 reserved for TS29.109											*/
 	AVP_IMS_CCR_Number									= 415,
 	AVP_IMS_CCR_Type									= 416,
-
-/**  or   RFC 4006 							*/
+ 	AVP_IMS_Service_Identifier							= 439,
+ /**  or   RFC 4006 															*/
  	AVP_IMS_Subscription_Id								= 443,
- 	AVP_IMS_Subscription_Id_Type						= 450,
  	AVP_IMS_Subscription_Id_Data						= 444,
+ 	AVP_IMS_Subscription_Id_Type						= 450,
+ /* This require ETSI vendor id and are from ETSI TS 183 017*/
+ 	AVP_ETSI_Binding_Information						= 450,
+ 	AVP_ETSI_Binding_Input_List							= 451,
+ 	AVP_ETSI_Binding_Output_List						= 452,
+ 	AVP_ETSI_V6_transport_address						= 453,
+ 	AVP_ETSI_V4_transport_address						= 454,
+ 	AVP_ETSI_Port_Number								= 455,
+ 	AVP_ETSI_Reservation_Class							= 456,
+ 	AVP_ETSI_Latching_Indication						= 457,
+ 	AVP_ETSI_Reservation_Priority						= 458,
+	AVP_ETSI_Service_Class								= 459,
+	AVP_ETSI_Overbooking_Indication						= 460,
+	AVP_ETSI_Authorization_Package_Id  					= 461,
+	AVP_ETSI_Media_Authorization_Context_Id 			= 462,
+
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_IMS_Abort_Cause									= 500,
 	AVP_IMS_Access_Network_Charging_Address				= 501,
@@ -177,7 +192,10 @@ enum {
 	AVP_IMS_RR_Bandwidth								= 521,
 	AVP_IMS_RS_Bandwidth								= 522,
 	AVP_IMS_SIP_Forking_Indication						= 523,
+/** Codec-Data is from TS 29.214*/
 	AVP_IMS_Codec_Data									= 524,
+	AVP_IMS_Acceptable_Service_Info						= 526,
+	AVP_IMS_Service_Info_Status							= 527,
 /** 600 to 699 reserved for TS29.229											*/
 	AVP_IMS_Visited_Network_Identifier					= 600,
 	AVP_IMS_Public_Identity								= 601,
@@ -276,22 +294,23 @@ enum {
 	AVP_IMS_IMS_Information								= 876,
 	AVP_IMS_Expires										= 888,
 	AVP_IMS_Message_Body								= 889,
-	AVP_IMS_Service_Specific_Info						= 1249,
-	AVP_IMS_Requested_Party_Address						= 1251,
-	AVP_IMS_Access_Network_Information					= 1263,
 /** 1000   from TS29.212 */
- 	AVP_IMS_Bearer_Identifier							= 1020,
  	AVP_IMS_Charging_Rule_Install						= 1001,
  	AVP_IMS_Charging_Rule_Remove						= 1002,
  	AVP_IMS_Charging_Rule_Definition					= 1003,
  	AVP_IMS_Charging_Rule_Base_Name						= 1004,
  	AVP_IMS_Charging_Rule_Name							= 1005,
- 	AVP_IMS_Charging_Rule_Report						= 1018,
  	AVP_IMS_Event_Trigger								= 1006,
- 	AVP_IMS_Pcc_Rule_Status								= 1019,
  	AVP_IMS_QoS_Information								= 1016,
+ 	AVP_IMS_Charging_Rule_Report						= 1018,
+ 	AVP_IMS_Pcc_Rule_Status								= 1019,
+ 	AVP_IMS_Bearer_Identifier							= 1020,
  	AVP_IMS_QoS_Class_Identifier						= 1028,
- 	AVP_IMS_Service_Identifier							= 439,
+
+	AVP_IMS_Service_Specific_Info						= 1249,
+	AVP_IMS_Requested_Party_Address						= 1251,
+	AVP_IMS_Access_Network_Information					= 1263,
+
 };
 
 /** ETSI AVP Codes */ 
@@ -491,6 +510,12 @@ enum {
 	AVP_IMS_Media_Type_Text						= 5,
 	AVP_IMS_Media_Type_Message					= 6,
 	AVP_IMS_Media_Type_Other					= 0xFFFFFFFF
+};
+
+/** Latching Indication AVP **/
+enum {
+	AVP_ETSI_Latching_Indication_Latch 			= 0,
+	AVP_ETSI_Latching_Indication_Relatch		= 1
 };
 /**	Diameter Result Codes				*/
 enum {

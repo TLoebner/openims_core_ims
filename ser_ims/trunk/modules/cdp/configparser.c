@@ -209,33 +209,56 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 	}
 
 	xc = xmlGetProp(root,(xmlChar*)"FQDN");
-	quote_trim_dup(&(x->fqdn),(char*)xc);
-	quote_trim_dup(&(x->identity),(char*)xc);
-
+	if (xc){
+		quote_trim_dup(&(x->fqdn),(char*)xc);
+		quote_trim_dup(&(x->identity),(char*)xc);
+		xmlFree(xc);
+	}
+	
 	xc = xmlGetProp(root,(xmlChar*)"Realm");
-	quote_trim_dup(&(x->realm),(char*)xc);
+	if (xc){
+		quote_trim_dup(&(x->realm),(char*)xc);
+		xmlFree(xc);
+	}
 	
 	xc = xmlGetProp(root,(xmlChar*)"Vendor_Id");
-	x->vendor_id = atoi((char*)xc);
+	if (xc) x->vendor_id = atoi((char*)xc);
+	else x->vendor_id = 0;
 
 	xc = xmlGetProp(root,(xmlChar*)"Product_Name");
-	quote_trim_dup(&(x->product_name),(char*)xc);
-
+	if (xc){
+		quote_trim_dup(&(x->product_name),(char*)xc);
+		xmlFree(xc);
+	}
+	
 	xc = xmlGetProp(root,(xmlChar*)"AcceptUnknownPeers");
-	x->accept_unknown_peers = atoi((char*)xc);
+	if (xc) {x->accept_unknown_peers = atoi((char*)xc);xmlFree(xc);}
+	else x->accept_unknown_peers = 1;
 	
 	xc = xmlGetProp(root,(xmlChar*)"DropUnknownOnDisconnect");
-	x->drop_unknown_peers = atoi((char*)xc);
+	if (xc) {x->drop_unknown_peers = atoi((char*)xc);xmlFree(xc);}
+	else x->drop_unknown_peers = 1;
 	
 	xc = xmlGetProp(root,(xmlChar*)"Tc");
-	x->tc = atoi((char*)xc);
+	if (xc) {x->tc = atoi((char*)xc);xmlFree(xc);}
+	else x->tc = 30;
 
 	xc = xmlGetProp(root,(xmlChar*)"Workers");
-	x->workers = atoi((char*)xc);
+	if (xc) {x->workers = atoi((char*)xc);xmlFree(xc);}
+	else x->workers = 4;
 
 	xc = xmlGetProp(root,(xmlChar*)"QueueLength");
-	x->queue_length = atoi((char*)xc);
+	if (xc) {x->queue_length = atoi((char*)xc);xmlFree(xc);}
+	else x->queue_length = 32;
 
+	xc = xmlGetProp(root,(xmlChar*)"TransactionTimeout");
+	if (xc) {x->transaction_timeout = atoi((char*)xc);xmlFree(xc);}
+	else x->transaction_timeout = 5;
+	
+	xc = xmlGetProp(root,(xmlChar*)"SessionsHashSize");
+	if (xc) {x->sessions_hash_size = atoi((char*)xc);xmlFree(xc);}
+	else x->sessions_hash_size = 128;
+	
 	for(child = root->children; child; child = child->next)
 		if (child->type == XML_ELEMENT_NODE)
 	{
@@ -281,28 +304,49 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 		if (xmlStrlen(child->name)==4 && strncasecmp((char*)child->name,"Peer",4)==0){
 			//PEER
 			xc = xmlGetProp(child,(xmlChar*)"FQDN");
-			quote_trim_dup(&(x->peers[x->peers_cnt].fqdn),(char*)xc);
+			if (xc){
+				quote_trim_dup(&(x->peers[x->peers_cnt].fqdn),(char*)xc);
+				xmlFree(xc);
+			}
 			xc = xmlGetProp(child,(xmlChar*)"Realm");
-			quote_trim_dup(&(x->peers[x->peers_cnt].realm),(char*)xc);			
+			if (xc){
+				quote_trim_dup(&(x->peers[x->peers_cnt].realm),(char*)xc);			
+				xmlFree(xc);
+			}
 			xc = xmlGetProp(child,(xmlChar*)"port");
-			x->peers[x->peers_cnt].port = atoi((char*)xc);						
+			if (xc){
+				x->peers[x->peers_cnt].port = atoi((char*)xc);
+				xmlFree(xc);
+			}
 			x->peers_cnt++;		
 		}
 		else if (xmlStrlen(child->name)==8 && strncasecmp((char*)child->name,"Acceptor",8)==0){
 			//Acceptor
 			xc = xmlGetProp(child,(xmlChar*)"bind");			
-			quote_trim_dup(&(x->acceptors[x->acceptors_cnt].bind),(char*)xc);			
+			if (xc){
+				quote_trim_dup(&(x->acceptors[x->acceptors_cnt].bind),(char*)xc);			
+				xmlFree(xc);
+			}
 			xc = xmlGetProp(child,(xmlChar*)"port");
-			x->acceptors[x->acceptors_cnt].port = atoi((char*)xc);						
+			if (xc){
+				x->acceptors[x->acceptors_cnt].port = atoi((char*)xc);						
+				xmlFree(xc);
+			}
 			x->acceptors_cnt++;		
 		}
 		else if (xmlStrlen(child->name)==4 && ((char*)strncasecmp((char*)child->name,"Auth",4)==0||
 			strncasecmp((char*)child->name,"Acct",4)==0)){
 			//Application
-			xc = xmlGetProp(child,(xmlChar*)"id");			
-			x->applications[x->applications_cnt].id = atoi((char*)xc);						
+			xc = xmlGetProp(child,(xmlChar*)"id");	
+			if (xc){
+				x->applications[x->applications_cnt].id = atoi((char*)xc);						
+				xmlFree(xc);
+			}
 			xc = xmlGetProp(child,(xmlChar*)"vendor");
-			x->applications[x->applications_cnt].vendor = atoi((char*)xc);						
+			if (xc){
+				x->applications[x->applications_cnt].vendor = atoi((char*)xc);						
+				xmlFree(xc);
+			}
 			if (child->name[1]=='u'||child->name[1]=='U')
 				x->applications[x->applications_cnt].type = DP_AUTHORIZATION;						
 			else
@@ -317,9 +361,15 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 			re = new_routing_entry();
 			if (re){			
 				xc = xmlGetProp(child,(xmlChar*)"FQDN");
-				quote_trim_dup(&(re->fqdn),(char*)xc);			
+				if (xc){
+					quote_trim_dup(&(re->fqdn),(char*)xc);			
+					xmlFree(xc);
+				}
 				xc = xmlGetProp(child,(xmlChar*)"metric");			
-				re->metric = atoi((char*)xc);			
+				if (xc){
+					re->metric = atoi((char*)xc);			
+					xmlFree(xc);
+				}
 				
 				/* add it the list in ascending order */
 				if (! x->r_table->routes || re->metric <= x->r_table->routes->metric){
@@ -363,10 +413,15 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 							re = new_routing_entry();
 							if (re) {
 								xc = xmlGetProp(nephew,(xmlChar*)"FQDN");
-								quote_trim_dup(&(re->fqdn),(char*)xc);			
-								xc = xmlGetProp(nephew,(xmlChar*)"metric");			
-								re->metric = atoi((char*)xc);			
-								
+								if (xc){
+									quote_trim_dup(&(re->fqdn),(char*)xc);	
+									xmlFree(xc);
+								}
+								xc = xmlGetProp(nephew,(xmlChar*)"metric");
+								if (xc){
+									re->metric = atoi((char*)xc);			
+									xmlFree(xc);
+								}
 								/* add it the list in ascending order */
 								if (! rr->routes || re->metric <= rr->routes->metric){
 									re->next = rr->routes;

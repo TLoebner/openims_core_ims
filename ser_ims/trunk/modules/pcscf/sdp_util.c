@@ -578,7 +578,7 @@ static int alter_mediaport(struct sip_msg *msg, str *body, str *oldport, str *ne
 	return 0;
 }
 
-static char * find_sdp_line(char* p, char* plimit, char linechar)
+char * find_sdp_line(char* p, char* plimit, char linechar)
 {
 	static char linehead[3] = "x=";
 	char *cp, *cp1;
@@ -610,7 +610,7 @@ static char * find_sdp_line(char* p, char* plimit, char linechar)
 	return NULL;
 }
 
-static char * find_next_sdp_line(char* p, char* plimit, char linechar, char* defptr)
+char * find_next_sdp_line(char* p, char* plimit, char linechar, char* defptr)
 {
 	char *t;
 	if (p >= plimit || plimit - p < 3)

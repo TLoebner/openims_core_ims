@@ -1,7 +1,7 @@
 /**
  * $Id$
- *  
- * Copyright (C) 2004-2006 FhG Fokus
+ *   
+ * Copyright (C) 2004-2007 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -45,66 +45,64 @@
  
 /**
  * \file
+ *
+ * P-CSCF Policy and Charging Control interfaces AVPs
  * 
- * CDiameterPeer API processor
- * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- * 
- */
- #include "api_process.h"
- #include "transaction.h"
- #include "receiver.h"
- 
-
-
-handler_list *handlers = 0; /**< list of handlers */
-gen_lock_t *handlers_lock;	/**< lock for list of handlers */
-
-/**
- * This callback is added as an internal message listener and used to process
- * transaction requests. 
- * - first it calls all the registered handlers for requests and responses
- * - then it calls the transaction handler
- * @param p - peer that this message came from
- * @param msg - the diameter message
- * @param ptr - not used anymore
- * @returns 1 always
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */ 
-int api_callback(peer *p,AAAMessage *msg,void* ptr)
-{
-	cdp_trans_t *t;
-	int auto_drop;	
-	handler *h;
-	enum handler_types type;
-	AAAMessage *rsp;
-	if (is_req(msg)) type = REQUEST_HANDLER;
-	else type=RESPONSE_HANDLER;
+ 
+#ifndef __PCC_AVP_H
+#define __PCC_AVP_H
 
-	lock_get(handlers_lock);
-		for(h=handlers->head;h;h=h->next){
-			if (h->type==type){
-				if (h->type == REQUEST_HANDLER) {					
-					rsp = (h->handler.requestHandler)(msg,h->param);
-					if (rsp) peer_send_msg(p,rsp);
-				}
-				else (h->handler.responseHandler)(msg,h->param);
-			}
-		}		
-	lock_release(handlers_lock);
-	
-	if (!is_req(msg)){		
-		/* take care of transactional callback if any */
-		t = take_trans(msg);
-		if (t){
-			t->ans = msg;
-			auto_drop = t->auto_drop;
-			if (t->cb){
-				(t->cb)(0,*(t->ptr),msg);
-			}
-			if (auto_drop) free_trans(t);
-		}
-	}
-	return 1;
-}
+#include "../../sr_module.h"
+#include "mod.h"
+#include "../cdp/cdp_load.h"
+#include "sdp_util.h"
 
 
+
+#define PCC_MAX_Char 64
+#define PCC_MAX_Char4 256
+/* Maximum Number of characters to represent some AVP datas*/
+/*and ipv6 addresses in character*/
+#define PCC_Media_Sub_Components 10
+
+#include <string.h>
+#include <stdio.h>
+
+
+/** NO DATA WILL BE DUPLICATED OR FREED - DO THAT AFTER SENDING THE MESSAGE!!! */
+
+typedef struct _bandwidth {
+		int bAS;
+		int bRS;
+		int bRR;		
+} bandwidth;
+
+
+
+
+/*just headers*/
+
+int PCC_add_destination_realm(AAAMessage *msg, str data);
+int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
+AAA_AVP *PCC_create_media_subcomponent(int number,
+									char *proto, char *ipA,
+									char *portA, char *ipB,
+									char *portB ,char *options,int atributes);
+inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
+											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
+											
+inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
+AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
+
+int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number);
+int extract_token(char *line,char *token,int max,int number);
+int extract_bandwidth(bandwidth *bw,str sdp,char *start);
+int extract_id(struct sip_msg *r,int tag,str *identification);
+int check_atributes(str sdpbody,char *mline);
+int is_a_port(char *port);
+/*int is_an_address(char *ad);*/
+inline int PCC_get_result_code(AAAMessage *msg, int *data);
+#endif /*__PCC_AVP_H*/

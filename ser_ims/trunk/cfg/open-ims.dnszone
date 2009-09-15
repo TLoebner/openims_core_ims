@@ -55,3 +55,7 @@ hss                     1D IN A         127.0.0.1
 ue                      1D IN A         127.0.0.1
 
 presence                1D IN A         127.0.0.1
+
+pcrf					1D IN A			127.0.0.1
+clf					1D IN A			127.0.0.1
+

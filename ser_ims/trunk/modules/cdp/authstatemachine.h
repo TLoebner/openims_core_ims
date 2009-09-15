@@ -1,6 +1,7 @@
-/*
- *  
- * Copyright (C) 2004-2006 FhG Fokus
+/**
+ * $Id$
+ *   
+ * Copyright (C) 2004-2007 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -41,58 +42,38 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
- 
 
 /**
- * \file release_call.h
+ * \file
  * 
- *	P-CSCF initiated call release (for confirmed dialogs and QoS relevant cases)
+ * CDiameterPeer Session Handling - Authorization State Machine
  * 
- *  \author Alberto Diez     albertowhiterabbit at yahoo dot es
+ * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
+ * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  * 
  */
 
 
-#ifndef RELEASE_CALL_H_
-#define RELEASE_CALL_H_
-#include "../../modules/tm/tm_load.h"
-#include "dlg_state.h"
-#ifdef SER_MOD_INTERFACE
-	#include "../../modules_s/dialog/dlg_mod.h"
-#else 
-	#include "../../modules/dialog/dlg_mod.h"
+#ifndef __AUTHSTATEMACHINE_H
+#define __AUTHSTATEMACHINE_H
+
+#include "diameter_api.h"
+#include "session.h"
+#include "config.h"
+
+inline int auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
+inline void auth_server_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
+
+void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg);
+void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
+
+void Send_ASA(cdp_session_t* s, AAAMessage* msg);
+
+void Send_STR(cdp_session_t* s, AAAMessage* msg);
+void Send_ASR(cdp_session_t* s, AAAMessage* msg);
+
+void Session_Cleanup(cdp_session_t* s, AAAMessage* msg);
+
 #endif
-#include "sip.h"
 
-
-enum release_call_situation{
-	RELEASE_CALL_EARLY=0,
-	RELEASE_CALL_WEIRD=1,
-	 /*Weird state is the technical name of the state in which a
-	  * sip session is when the callee has already sent a 200 OK for INVITE
-	  * and the caller hasn't yet recieved this response
-	  * In Weird state the session can only be released by sending an ACK followed
-	  * by a  BYE to the callee and a reply >400 to the caller
-	  * a CANCEL wouldn't be understood by the callee!*/
-	  RELEASE_CALL_CONFIRMED=2
-};
-#define MAX_TIMES_TO_TRY_TO_RELEASE 2
-#define TIME_TO_EXPIRE 30
-/*
- * When a release_call process it started , if it goes good, the dialog is deleted when the answers
- * are recieved.
- * If no answers, then what happens?
- * 	---> Every dialog wich is called is set to expire in TIME_TO_EXPIRE secs if its expire time is bigger
- * Then when it expires , the functions are called again, when that happens 3 times, the dialogs are 
- * deleted silently from the table...  (but the UA had enough time to reply!!!)
- * */
-
-
-int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2);
-
-int release_call(str callid,int reason_code,str reason_text);
-
-int release_call_p(p_dialog *d,int reason_code,str reason_text);
-
-
-#endif /*RELEASE_CALL_H_*/

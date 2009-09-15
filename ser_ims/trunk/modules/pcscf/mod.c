@@ -94,6 +94,9 @@
 #include "emerg.h"
 
 
+#include "policy_control.h"
+#include "pcc.h"
+
 MODULE_VERSION
 
 static int mod_init(void);
@@ -166,8 +169,8 @@ int rtpproxy_retr = 5;						/**< Retry count 									*/
 int rtpproxy_tout = 1;						/**< Timeout 										*/
 
 /* e2 interface with CLF */
-char* forced_clf_peer="";		/**< FQDN of the forced CLF Diameter Peer (CLF) */
-int pcscf_use_e2=0;								/**< if to enable usage of e2 or not			*/ 
+char* forced_clf_peer="";					/**< FQDN of the forced CLF Diameter Peer (CLF) */
+int pcscf_use_e2=0;							/**< if to enable usage of e2 or not			*/ 
 
 
 /* fixed parameter storage */
@@ -209,12 +212,20 @@ int* registrar_step_version; /**< the step version within the current registrar 
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
+int * callback_singleton;				/**< Callback singleton 								*/
 
 #ifdef WITH_IMS_PM
 	/** IMS PM parameters storage */
 	char* ims_pm_node_type="P-CSCF";
 	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
 #endif /* WITH_IMS_PM */
+
+
+int pcscf_use_pcc = 0;								/**< whether to enable or disable pcc */
+char* pcscf_forced_qos_peer = "pdf.open-ims.test";	/**< FQDN of Policy Dicision Function (PDF) for policy control */
+str forced_qos_peer; 
+int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
+int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
 
 
 /** 
@@ -367,6 +378,13 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
 
+
+	/* For Gq or Rx*/
+	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
+	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
+	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"P_generates_aar",				P_generates_aar,			1, 0, ONREPLY_ROUTE},
+
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -428,6 +446,11 @@ static cmd_export_t pcscf_cmds[]={
  *  <p>
  *  - ecscf_uri - the E-CSCF URI to forward the Emergency calls
  *  - emerg_support - if the P-CSCF has support for Emrgency Services or not
+ *  <p>
+ *  - use_pcc - if to use the Policy and Charging Control part
+ *  - qos_side - on which side does this P-CSCF work (0 1 2)
+ *  - qos_release7 - whether to use Rx or Gq
+ *  - forced_qos_peer - the address of the forced qos peer
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -491,7 +514,13 @@ static param_export_t pcscf_params[]={
 	
 	{"forced_clf_peer",					STR_PARAM, &forced_clf_peer},
 	{"use_e2",							INT_PARAM, &pcscf_use_e2},
-	
+
+
+    {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
+	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
+	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
+	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
+
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
 
@@ -640,6 +669,10 @@ int fix_parameters()
 	/* fix the parameters */
 	forced_clf_peer_str.s = forced_clf_peer;
 	forced_clf_peer_str.len = strlen(forced_clf_peer);
+
+	/* Address initialization of PDF for policy control */
+	forced_qos_peer.s = pcscf_forced_qos_peer;
+	forced_qos_peer.len = strlen(pcscf_forced_qos_peer);
 	
 	if(emerg_support){
 		ecscf_uri_str.s = ecscf_uri;
@@ -663,6 +696,8 @@ static int mod_init(void)
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
+	callback_singleton=shm_malloc(sizeof(int));
+	*callback_singleton=0;
 	
 	
 	/* fix the parameters */
@@ -770,12 +805,13 @@ static int mod_init(void)
 	}
 
 	/* bind to the cdp module */
-	if (pcscf_use_e2){
+	if (pcscf_use_e2||pcscf_use_pcc){
 		if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
 			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module.\n");
 			
-			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface has been disabled.\n");			
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface as well as the PCC ones have been disabled.\n");			
 			pcscf_use_e2 = 0;
+			pcscf_use_pcc = 0;
 		}
 		if (load_cdp(&cdpb) == -1)
 			goto error;
@@ -862,8 +898,15 @@ static int mod_child_init(int rank)
 			
 	/* Init the user data parser */
 	if (!parser_init(pcscf_reginfo_dtd)) return -1;
-		
-
+	
+	if (pcscf_use_pcc){
+		lock_get(process_lock);
+			if((*callback_singleton)==0){
+				*callback_singleton=1;
+				cdpb.AAAAddRequestHandler(PCCRequestHandler,NULL);
+			}
+		lock_release(process_lock);
+	}
 	/* rtpproxy child init */
 	if (pcscf_nat_enable && rtpproxy_enable) 
 		if (!rtpproxy_child_init(rank)) return -1;

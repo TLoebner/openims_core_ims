@@ -118,11 +118,16 @@ struct cdp_binds cdp_binding={
 	AAACreateSession,
 	AAADropSession,
 
+	AAACreateAuthSession,
+	AAADropAuthSession,
+	AAATerminateAuthSession,
+
 	AAACreateTransaction,
 	AAADropTransaction,
 	
 	AAACreateAVP,
 	AAAAddAVPToMessage,
+	AAAAddAVPToList,	
 	AAAFindMatchingAVP,
 	AAAFindMatchingAVPList,
 	AAAGetNextAVP,
@@ -132,7 +137,11 @@ struct cdp_binds cdp_binding={
 	AAAUngroupAVPS,
 	
 	AAAAddRequestHandler,
-	AAAAddResponseHandler
+	AAAAddResponseHandler,
+	
+	get_session,
+	sessions_unlock,
+	sessions_lock,
 };
 
 

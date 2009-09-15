@@ -57,11 +57,14 @@
 
 #include "peerstatemachine.h"
 #include "diameter_api.h"
+#include "diameter_ims.h"
 
+#include "utils.h"
 #include "receiver.h"
 #include "peermanager.h"
 #include "config.h"
 #include "worker.h"
+#include "authstatemachine.h"
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
@@ -92,7 +95,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 	int msg_received=0;
 		
 	if (!peer_locked) lock_get(p->lock);
-	LOG(L_INFO,"DBG:sm_process(): Peer %.*s \tState %s \tEvent %s\n",
+	LOG(L_DBG,"DBG:sm_process(): Peer %.*s \tState %s \tEvent %s\n",
 		p->fqdn.len,p->fqdn.s,dp_states[p->state],dp_events[event-101]);
 
 	switch (p->state){
@@ -504,12 +507,12 @@ static inline void Snd_CE_add_applications(AAAMessage *msg,peer *p)
 		}else{
 			set_4bytes(x,app->vendor);
 			avp1 = AAACreateAVP(AVP_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,x,4, AVP_DUPLICATE_DATA);			
-			AAAAddAVPToAVPList(&list,avp1);
+			AAAAddAVPToList(&list,avp1);
 			
 			set_4bytes(x,app->id);
 			avp2 = AAACreateAVP((app->type==DP_AUTHORIZATION?AVP_Auth_Application_Id:AVP_Acct_Application_Id),
 				AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);			
-			AAAAddAVPToAVPList(&list,avp2);
+			AAAAddAVPToList(&list,avp2);
 		
 			group = AAAGroupAVPS(list);	
 			AAAFreeAVPList(&list);
@@ -990,8 +993,61 @@ int Elect(peer *p,AAAMessage *cer)
  */
 void Snd_Message(peer *p, AAAMessage *msg)
 {
+	AAASession *session=0;
+	int rcode;
+	int send_message_before_session_sm=0;
 	touch_peer(p);
-	peer_send_msg(p,msg);
+	if (msg->sessionId) session = get_session(msg->sessionId->data);
+	
+	if (session){
+		switch (session->type){
+			case AUTH_CLIENT_STATEFULL:
+				if (is_req(msg))
+					auth_client_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
+				else {
+					if (msg->commandCode == IMS_ASA){
+						if (!msg->res_code){
+							msg->res_code = AAAFindMatchingAVP(msg,0,AVP_Result_Code,0,0);
+						}
+						if (!msg->res_code) auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+						else {
+							rcode = get_4bytes(msg->res_code->data.s);
+							if (rcode>=2000 && rcode<3000) {
+								peer_send_msg(p,msg);
+								send_message_before_session_sm=1;
+								auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_SUCCESS,msg);
+							}
+							else auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+						}
+						
+					}else
+						auth_client_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+				}
+				break;
+			case AUTH_SERVER_STATEFULL:
+				if (is_req(msg))
+				{
+					if (msg->commandCode== IMS_ASR)
+					{
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ASR,msg);
+					} else {
+						//would be a RAR but ok!
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
+					}
+				} else {
+					if (msg->commandCode == IMS_STR)
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_STA,msg);
+					else
+						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+				}
+				break;				 
+			default:
+				break;
+		}
+		sessions_unlock(session->hash);
+	}
+	if (!send_message_before_session_sm) peer_send_msg(p,msg);
+	
 }
 
 /**
@@ -1004,13 +1060,64 @@ void Snd_Message(peer *p, AAAMessage *msg)
  */ 
 void Rcv_Process(peer *p, AAAMessage *msg)
 {
-	LOG(L_DBG,"DBG:Rcv_Process(): Received a message\n");
-	if (!put_task(p,msg)){
-		LOG(L_ERR,"ERROR:Rcv_Process(): Queue refused task\n");
-		AAAFreeMessage(&msg);
-	}
-	LOG(L_DBG,"DBG:Rcv_Process(): task added to queue\n");
+	AAASession *session=0;
+	unsigned int hash; // we need this here because after the sm_processing , we might end up
+					   // with no session any more
+	int nput=0;
+	if (msg->sessionId) session = get_session(msg->sessionId->data);
 
+	if (session){
+		hash=session->hash;
+		switch (session->type){
+			case AUTH_CLIENT_STATEFULL:
+				if (is_req(msg)){
+					if (msg->commandCode==IMS_ASR)
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ASR,msg);
+					else 
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+				}else {
+					if (msg->commandCode==IMS_STA)
+						nput=auth_client_statefull_sm_process(session,AUTH_EV_RECV_STA,msg);
+					else
+						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
+				}
+				break;
+			 case AUTH_SERVER_STATEFULL:
+			 	if (is_req(msg))
+			 	{
+			 		auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+			 	}else{
+			 		if (msg->commandCode==IMS_ASA)
+			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ASA,msg);
+			 		else
+			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
+			 	}
+			 	break;
+			default:
+				break;			 
+		}
+		sessions_unlock(hash);
+	}else{
+		if (msg->sessionId){
+			if (msg->commandCode == IMS_ASR) 
+				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg);
+			if (msg->commandCode == IMS_AAR)
+			{
+				session=AAACreateAuthSession(0,0,1,0,0);
+				
+				shm_str_dup(session->id,msg->sessionId->data); 
+				auth_server_statefull_sm_process(0,AUTH_EV_RECV_REQ,msg);				
+			}
+			// Any other cases to think about?	 
+		} 
+				 
+	}
+	if (!nput && !put_task(p,msg)){
+		LOG(L_ERR,"ERROR:Rcv_Process(): Queue refused task\n");
+		if (msg) AAAFreeMessage(&msg); 
+	}
+	//if (msg) LOG(L_ERR,"DBG:Rcv_Process(): task added to queue command %d, flags %#1x endtoend %u hopbyhop %u\n",msg->commandCode,msg->flags,msg->endtoendId,msg->hopbyhopId);
+	
 //	AAAPrintMessage(msg);
 	
 }

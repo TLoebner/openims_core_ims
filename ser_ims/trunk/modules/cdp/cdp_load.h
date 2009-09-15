@@ -58,6 +58,7 @@
 #include "utils.h"
 #include "diameter.h"
 #include "diameter_ims.h"
+#include "session.h"
 #include "peer.h"
 
 #define NO_SCRIPT	-1
@@ -66,11 +67,15 @@
 typedef AAAMessage* (*AAACreateRequest_f)(AAAApplicationId app_id,
 							AAACommandCode command_code,
 							AAAMsgFlag flags,
-							AAASessionId *sessId);
+							AAASession *session);
 typedef AAAMessage* (*AAACreateResponse_f)(AAAMessage *request);
 
-typedef AAASessionId (*AAACreateSession_f)();
-typedef int (*AAADropSession_f)(AAASessionId *s);
+typedef AAASession* (*AAACreateSession_f)(void *generic_data);
+typedef void (*AAADropSession_f)(AAASession *s);
+
+typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
+typedef void (*AAADropAuthSession_f)(AAASession *s);
+typedef void (*AAATerminateAuthSession_f)(AAASession *s);
 
 typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
 typedef int (*AAADropTransaction_f)(AAATransaction *trans);
@@ -88,6 +93,8 @@ typedef AAAReturnCode (*AAAAddAVPToMessage_f)(
 												AAAMessage *msg,
 												AAA_AVP *avp,
 												AAA_AVP *position);
+
+typedef void (*AAAAddAVPToList_f)(AAA_AVP_LIST *list,AAA_AVP *avp);											
 
 typedef AAA_AVP* (*AAAFindMatchingAVP_f)(
 										AAAMessage *msg,
@@ -137,7 +144,9 @@ typedef AAAReturnCode (*AAAFreeMessage_f)(
 
 typedef int (*AAAAddRequestHandler_f)(AAARequestHandler_f *f,void *param);
 typedef int (*AAAAddResponseHandler_f)(AAAResponseHandler_f *f,void *param);
-
+typedef cdp_session_t* (*get_session_f)(str id);
+typedef void (*sessions_unlock_f) (unsigned int hash);
+typedef void (*sessions_lock_f) (unsigned int hash);
 
 struct cdp_binds {
 	AAASendMessage_f AAASendMessage;
@@ -152,11 +161,16 @@ struct cdp_binds {
 	AAACreateSession_f AAACreateSession;
 	AAADropSession_f AAADropSession;
 
+	AAACreateAuthSession_f AAACreateAuthSession;
+	AAADropAuthSession_f AAADropAuthSession;
+	AAATerminateAuthSession_f AAATerminateAuthSession;
+
 	AAACreateTransaction_f AAACreateTransaction;
 	AAADropTransaction_f AAADropTransaction;
 	
 	AAACreateAVP_f AAACreateAVP;
 	AAAAddAVPToMessage_f AAAAddAVPToMessage;
+	AAAAddAVPToList_f AAAAddAVPToList;
 	AAAFindMatchingAVP_f AAAFindMatchingAVP;
 	AAAFindMatchingAVPList_f AAAFindMatchingAVPList;
 	AAAGetNextAVP_f AAAGetNextAVP;
@@ -167,6 +181,10 @@ struct cdp_binds {
 	
 	AAAAddRequestHandler_f AAAAddRequestHandler;
 	AAAAddResponseHandler_f AAAAddResponseHandler;
+
+	get_session_f			get_session;
+	sessions_unlock_f		sessions_unlock;
+	sessions_lock_f 		sessions_lock;
 };
 
 
