@@ -483,7 +483,7 @@ void AAADropAuthSession(AAASession *s)
  */
 AAASession* AAACreateAccSession(void *generic_data)
 {
-	
+	return 0;
 }
 
 /**
