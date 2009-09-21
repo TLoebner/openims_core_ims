@@ -62,8 +62,6 @@
 #define DPNAME "CDiameterPeer"
 #define DPVERSION "0.0.2"
 
-/** timer interval for the peer manager to re-evaluate the peer situation */
-#define PEER_MANAGER_TIMER 3
 
 #ifdef CDP_FOR_SER
 #else
