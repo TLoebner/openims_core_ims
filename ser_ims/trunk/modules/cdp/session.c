@@ -355,7 +355,7 @@ void session_timer(time_t now, void* ptr)
 	int hash;
 	cdp_session_t *x;
 	AAASessionCallback_f *cb;
-	LOG(L_INFO,"-------session timer --------\n");
+	LOG(L_DBG,"-------session timer --------\n");
 	for(hash=0;hash<sessions_hash_size;hash++){		
 		sessions_lock(hash);
 		for(x = sessions[hash].head;x;x=x->next) {
@@ -363,7 +363,7 @@ void session_timer(time_t now, void* ptr)
 			
 			LOG(L_INFO,"session of type [%i] with id %.*s",x->type,x->id.len,x->id.s);
 			if (x->type==AUTH_CLIENT_STATEFULL) {
-				LOG(L_INFO,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
+				LOG(L_DBG,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
 			} else LOG(L_INFO,"\n");
 			
 			
@@ -396,7 +396,7 @@ void session_timer(time_t now, void* ptr)
 		}
 		sessions_unlock(hash);
 	}
-	LOG(L_INFO,"-------------------------------\n");
+	LOG(L_DBG,"-------------------------------\n");
 					
 }
 
