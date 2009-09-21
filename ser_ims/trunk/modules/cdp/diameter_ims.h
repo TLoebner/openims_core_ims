@@ -419,7 +419,9 @@ enum {
 	AVP_IMS_Data_Reference_MSISDN						= 17,	
 	AVP_IMS_Data_Reference_PSI_Activation				= 18,	
 	AVP_IMS_Data_Reference_DSAI							= 19,	
-	AVP_IMS_Data_Reference_Aliases_Repository_Data		= 20	
+	AVP_IMS_Data_Reference_Aliases_Repository_Data		= 20,
+	AVP_IMS_Data_Reference_Service_Level_Trace_Info		= 21,
+	AVP_IMS_Data_Reference_IP_Address_Secure_Binding_Information = 22,	
 };
 
 /** Subs-Req-Type AVP */
@@ -500,6 +502,7 @@ enum {
 	AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer					= 4,
 	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5
 };
+
 /** Media-Type AVP */
 enum {
 	AVP_IMS_Media_Type_Audio					= 0,
@@ -517,6 +520,16 @@ enum {
 	AVP_ETSI_Latching_Indication_Latch 			= 0,
 	AVP_ETSI_Latching_Indication_Relatch		= 1
 };
+
+/** Send-Data-Indication AVP **/
+enum {
+	AVP_IMS_Send_Data_Indication_User_Data_Not_Requested 	= 0,
+	AVP_IMS_Send_Data_Indication_User_Data_Requested		= 1
+};
+
+
+
+
 /**	Diameter Result Codes				*/
 enum {
 	DIAMETER_SUCCESS									= 2001,//7D1

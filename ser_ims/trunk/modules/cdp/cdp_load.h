@@ -58,6 +58,7 @@
 #include "utils.h"
 #include "diameter.h"
 #include "diameter_ims.h"
+#include "diameter_epc.h"
 #include "session.h"
 #include "peer.h"
 
