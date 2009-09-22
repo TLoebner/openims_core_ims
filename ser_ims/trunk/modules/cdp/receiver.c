@@ -679,6 +679,13 @@ int receive_loop()
 			if (n==-1){
 				if (shutdownx&&*shutdownx) return 0;
 				LOG(L_ERR,"ERROR:select_recv(): %s\n",strerror(errno));
+				for(sp=serviced_peers;sp;sp=sp2){
+					sp2 = sp->next;
+					disconnect_serviced_peer(sp,0);
+					if (sp->p && sp->p->is_dynamic)
+						drop_serviced_peer(sp,0);
+				}
+				sleep(1);
 				break;
 			}else
 				if (n){
