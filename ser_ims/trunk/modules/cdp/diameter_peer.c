@@ -427,6 +427,8 @@ int diameter_peer_start(int blocking)
 		dp_add_pid(pid);
 	}
 	
+	/* run the peermanager timer once to start connecting */
+	peer_timer(time(0),0);
 	
 	/* fork/become timer */
 	if (blocking) {
@@ -458,6 +460,7 @@ int diameter_peer_start(int blocking)
 			dp_add_pid(pid);
 		}
 	}
+	
 	
 	return 1;
 }
