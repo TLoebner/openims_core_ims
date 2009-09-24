@@ -177,6 +177,10 @@ int parse_geoloc_body(str body, struct geoloc_body * geo_body){
 
 }
 
+/* parses the Geolocation header, see http://tools.ietf.org/html/draft-ietf-sipcore-location-conveyance
+ * @param msg - the INVITE request that might contain a Geolocation header
+ * @returns 1 if not found, 0 if correctly parsed and -1 in case of error parsing
+ */
 int parse_geoloc(struct sip_msg * msg){
 
 	struct geoloc_body * geo_body;
