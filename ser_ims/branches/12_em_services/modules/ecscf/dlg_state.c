@@ -460,6 +460,7 @@ e_dialog * is_e_dialog_dir(struct sip_msg * msg, str call_id,enum e_dialog_direc
 	if(dir == DLG_MOBILE_ORIGINATING){
 			d = e_dialogs[hash].head;
 			while(d){
+				//if(d->state==
 				if (d->call_id.len == call_id.len &&
 					strncasecmp(d->call_id.s,call_id.s,call_id.len)==0 &&
 					is_dialog_to_callee(sip_msg_type, d, from_uri, to_uri)) {
@@ -1563,6 +1564,39 @@ ret_false:
 		pkg_free(from.s);
 	return CSCF_RETURN_FALSE;
 }
+
+/*
+ * Find out if a the initial INVITE was forwarded
+ * @param msg - the SIP message
+ * @param str1 - "orig"/"term", depending on the direction of the message
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if true, #CSCF_RETURN_FALSE else or #CSCF_RETURN_BREAK on error
+ */
+int E_fwded_dialog(struct sip_msg* msg, char* str1, char* str2)
+{
+	str call_id;
+	e_dialog* d=NULL;
+	int ret;
+
+	enum e_dialog_direction dir = get_dialog_direction(str1);
+		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len){
+		return CSCF_RETURN_FALSE;
+	}
+	
+	if (!(d = is_e_dialog_dir(msg, call_id,dir))){
+		LOG(L_ERR, "ERR:"M_NAME":E_local_rpl_dialog: could not find the dialog "
+				"with the callid %.*s and dir %s\n", call_id.len, call_id.s, str1);
+		return CSCF_RETURN_BREAK;
+	}
+	if(d->forwarded)
+		ret = CSCF_RETURN_TRUE;
+	else ret = CSCF_RETURN_FALSE;	
+	d_unlock(d->hash);
+	return ret;
+}
+
 
 /**
  * Drop all dialogs belonging to one AOR.
