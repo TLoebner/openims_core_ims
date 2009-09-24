@@ -57,7 +57,7 @@ typedef enum {LOST_OK=0, LOST_WRNG, LOST_ERR, LOST_REDIR} lost_resp_type;
 typedef enum {EXP_NO_CACHE, EXP_NO_EXP, EXP_TIME} expire_type;
 
 #define name_compar(str1, str2, len)\
-	((str1[len] == '\0') && (strncmp(str1, str2, len)==0))
+	(strncmp(str1, str2, len)==0)
 
 //parse a string using the libxml2 library
 xmlNode * xml_parse_string(str response);
