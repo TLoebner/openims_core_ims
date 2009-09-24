@@ -112,6 +112,7 @@ typedef struct _e_dialog {
 											released or not, or its peer, with count on 
 											tries 										*/	
 	unsigned char is_cancelled;
+	unsigned char forwarded;
 	dlg_t *dialog_c;					/**< dialog in direction to callee           	*/
 	dlg_t *dialog_s;					/**< dialog in direction to caller 				*/
 	/*flag for anonymous call*/
@@ -185,5 +186,7 @@ int E_422_session_expires(struct sip_msg* msg, char* str1, char* str2);
 int E_replace_to_header(struct sip_msg* msg, char* str1, char* str2);
 
 int E_replace_from_header(struct sip_msg* msg, char* str1, char* str2);
+
+int E_fwded_dialog(struct sip_msg* msg, char* str1, char* str2);
 		
 #endif

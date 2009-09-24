@@ -196,20 +196,25 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 
 	if(code >= 300){
 		//send error response to INVITE and update the dialog
-		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: received an error response %i\n", code);
+		LOG(L_DBG, "ERR:"M_NAME":E_process_options_repl: received an error response %i\n", code);
 
 		if(tmb.t_reply(inv_trans->uas.request, 404, NO_PSAP)<0){
 			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not reply to the INVITE request\n");
 			goto error;
 		}
-		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: sent a 404 no available PSAP error response\n");
+		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: sent a 404 no available PSAP error response\n");
 
 		d->state = DLG_STATE_TERMINATED;
+		d->expires = 0;
+		d->lr_session_expires = 0;
+
 		d_unlock(d->hash);				
-		if(inv_trans->nr_of_outgoings < 2){
+		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: setting the dialog a 0 expire interval\n");
+		print_e_dialogs(L_INFO);
+		/*if(inv_trans->nr_of_outgoings < 2){
 			del_e_dialog(d);
 			print_e_dialogs(L_INFO);
-		}
+		}*/
 
 	}else{
 		if(E_set_em_info(d, opt_repl) != CSCF_RETURN_TRUE)
@@ -228,7 +233,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not relay the INVITE request\n");
 			goto error;
 		}
-		
+		d->forwarded  = 1;
 		cscf_del_nonshm_lumps(inv_trans->uas.request);
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:forward the INVITE request\n");
 	}
@@ -306,7 +311,7 @@ error:
 
 /**
  * Send an OPTIONS to lrf
- * @returns true if OK, false if not, error on failure
+ * @returns 0 if OK, -1 if failure
  */
 int send_options_req(str req_uri, str location, str service, struct initial_tr * inv_tr){
 
@@ -320,19 +325,19 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 
 	if(!inv_tr){
 		LOG(L_ERR, "ERR:"M_NAME":send_options_req:invalid initial trans argument\n");
-		return 0;
+		return -1;
 	}
 
 	if(!req_uri.len || req_uri.s[0] == '\0'){
 		LOG(L_ERR, "ERR:"M_NAME":send_options_req:invalid req_uri argument\n");
-		return 0;
+		return -1;
 	}
 
 	content_len = location.len;
 	content_len_str.s = int2str((unsigned int) content_len, &content_len_str.len);
-	if(content_len_str.len <=0 || content_len_str.len > (INT2STR_MAX_LEN)){
+	if(content_len_str.len <0 || content_len_str.len > (INT2STR_MAX_LEN)){
 		LOG(L_ERR, "ERR:"M_NAME":send_options_req: could not encode the content length, %i\n", content_len);
-		return 0;
+		return -1;
 	}
 
 	h.len = accept_hdr.len+max_fwds_hdr.len;
@@ -448,11 +453,12 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		return CSCF_RETURN_ERROR;
 	}
 
-	location_str.s = d->location_str.s;
-	location_str.len = d->location_str.len;
-	if(!location_str.len || !location_str.s){
-		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:the message contained no supported location information, not handled for the moment\n");
-		goto ret_false;
+	if(location_str.len && location_str.s){
+		LOG(L_DBG, "DBG:"M_NAME":E_query_LRF:the message contained supported location information\n");
+		location_str.s = d->location_str.s;
+		location_str.len = d->location_str.len;
+	}else{
+		LOG(L_DBG, "DBG:"M_NAME":E_query_LRF:the message did not contain supported location information\n");
 	}
 
 
@@ -490,7 +496,7 @@ ret_false:
  * @param msg - the SIP request
  * @param str1 - not used
  * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if no location-conveyance info is found or #CSCF_RETURN_ERROR on error 
+ * @returns #CSCF_RETURN_TRUE if ok (no Geolocation found or msg successfully parsed), #CSCF_RETURN_FALSE if no location-conveyance info is found or #CSCF_RETURN_ERROR on error 
  */
 int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	
@@ -522,11 +528,19 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 		return CSCF_RETURN_ERROR;
 	}
 
-	if(parse_geoloc(msg)){
-		
-		LOG(L_ERR, "ERR:"M_NAME":E_get_location: error while parsing the Geolocation header\n");
-		goto error_loc;
-	}	
+	ret = parse_geoloc(msg);
+	switch(ret){
+		case -1:
+			LOG(L_ERR, "ERR:"M_NAME":E_get_location: error while parsing the Geolocation header\n");
+			goto error_loc;
+		case 0: break;
+		case 1: 
+			LOG(L_ERR, "ERR:"M_NAME":E_get_location: no Geolocation header found => emergency call without location information\n");
+			goto no_geoloc;
+		default:  	
+			LOG(L_ERR, "ERR:"M_NAME":E_get_location: unhandled return value\n");
+			goto error_loc;
+	}
 
 	print_geoloc((struct geoloc_body*)msg->geolocation->parsed);
 	if(!((struct geoloc_body*)msg->geolocation)->retrans_par){
@@ -556,7 +570,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 		goto error_loc;
 	}
 
-	//print_element_names(presence);
+	print_element_names(presence);
 
 	if(!(loc = has_loc_info(&ret, presence, &crt_loc_fmt))){
 	
@@ -586,9 +600,10 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 	d->location_str.s = pidf_body.s;
 	d->location_str.len = pidf_body.len;
 	d->d_loc_fmt = crt_loc_fmt;
-
+no_geoloc:
 	d_unlock(d->hash);
 	return CSCF_RETURN_TRUE;
+	
 error_loc:
 	d_unlock(d->hash);
 	return CSCF_RETURN_FALSE;
