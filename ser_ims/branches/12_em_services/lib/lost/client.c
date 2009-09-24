@@ -53,7 +53,7 @@
 
 static struct curl_slist *headers=NULL;
 static char errorBuffer[CURL_ERROR_SIZE];
-char* map_profile[] = {"geodetic-2D", "geodetic-2D", "not standard format", "civic", "civic", "not defined"};
+char* map_profile[] = {"geodetic-2d", "geodetic-2d", "not standard format", "civic", "civic", "not defined"};
 
 static xmlFreeFunc defaultXmlFreeFunc;
 static xmlMallocFunc defaultXmlMallocFunc;

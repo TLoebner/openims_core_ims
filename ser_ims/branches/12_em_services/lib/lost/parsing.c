@@ -179,6 +179,7 @@ xmlNs* get_ns_prfx_len(xmlNode * node, char* prfx, int prfx_len){
 	for(ns=node->ns; ns ; ns= ns->next){
 	
 		name = (char*)ns->prefix;
+		DEBUG("namespace %s compared to %.*s\n", name, prfx_len, prfx);
 		if(name && name_compar(name, prfx, prfx_len))
 			return ns;
 	}
@@ -194,6 +195,7 @@ xmlNs* get_ns_href_len(xmlNode* node, char* href, int href_len){
 	for(ns=node->ns; ns ; ns= ns->next){
 	
 		name = (char*)ns->href;
+		//DEBUG_LOG("compare ns %s with %.*s", name, href_len, href);
 		if(name && name_compar(name, href, href_len)){
 			DEBUG_LOG("found namespace with href %.*s\n",
 					href_len, href);
@@ -201,7 +203,7 @@ xmlNs* get_ns_href_len(xmlNode* node, char* href, int href_len){
 		}
 	}
 
-	ERROR_LOG("could not found namespace with href %.*s\n",
+	DEBUG("could not found namespace with href %.*s\n",
 			href_len, href);
 	return NULL;
 }
