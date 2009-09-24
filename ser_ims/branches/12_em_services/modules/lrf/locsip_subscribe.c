@@ -322,8 +322,9 @@ error:
 
 }
 
-/**
+/*
  * Response callback for subscribe
+ * TODO: when no reply send an error response to the E-CSCF?
  */
 void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 {
@@ -357,8 +358,8 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 	}
 	if (ps->code>=200 && ps->code<300){
 		expires = cscf_get_expires_hdr(ps->rpl);
-		update_loc_subscription(s,expires);
 		tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
+		update_loc_subscription(s,expires);
 	}else{
 		update_loc_subscription(s,0);
 		subscription_err_resp(t, ps);
@@ -488,8 +489,8 @@ int update_loc_subscription(loc_subscription *s,int expires)
 	LOG(L_DBG,"DBG:"M_NAME":update_loc_subscription: refreshing subscription for <%.*s> [%d]\n",
 		s->req_uri.len,s->req_uri.s,expires);
 	s->attempts_left = -1;
-	if (expires == 0) del_loc_subscription_nolock(s);
-	else s->expires = expires+time_now;;
+	//if (expires == 0) del_loc_subscription_nolock(s);
+	//else s->expires = expires+time_now;;
 	subs_unlock(s->hash);	
 	return 1;
 }
@@ -612,7 +613,7 @@ void free_loc_subscription(loc_subscription *s)
 {
 	if (s){
 		if (s->req_uri.s) shm_free(s->req_uri.s);
-		if (s->dialog) tmb.free_dlg(s->dialog);
+		//if (s->dialog) tmb.free_dlg(s->dialog);
 		shm_free(s);
 	}
 }

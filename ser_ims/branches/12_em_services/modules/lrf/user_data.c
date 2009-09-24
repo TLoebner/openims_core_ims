@@ -512,14 +512,14 @@ int get_options_resp_body(str * body, user_d * d){
 	
 	body->s = NULL;
 	body->len = 0;
-
+		
 	body->s = pkg_malloc(d->psap_uri.len+1);
 	if (!body->s){
 		LOG(L_ERR,"ERR:"M_NAME":get_options_resp_body: Error allocating %d bytes\n", d->psap_uri.len);
 		body->len = 0;
 		goto out_of_memory;
 	}else{
-		body->len = d->psap_uri.len;\
+		body->len = d->psap_uri.len;
 		memcpy(body->s, d->psap_uri.s, d->psap_uri.len);
 		body->s[body->len] = '\0';
 	}
@@ -558,7 +558,8 @@ int get_options_resp_headers(str * headers, user_d * d){
 	STR_APPEND(*headers, esqk_hdr_s);
 	STR_APPEND(*headers, d->esqk);
 	STR_APPEND(*headers, esqk_hdr_e);
-	STR_APPEND(*headers, content_type_hdr);
+	if(d->psap_uri.s && d->psap_uri.len)
+		STR_APPEND(*headers, content_type_hdr);
 	headers->s[headers->len] = '\0';
 
 	return 0;
@@ -615,6 +616,11 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 				user_uri.len, user_uri.s, service.len, service.s);
 		goto error;
 	}
+
+	if(!d->psap_uri.len || !d->psap_uri.s){
+		LOG(L_DBG, "ERR: "M_NAME":LRF_call_query_resp: null psap uri\n");
+		goto error;
+	}
 	
 	if(get_options_resp_body(&resp_body, d)){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp:could not get the OPTIONS response body\n");
@@ -653,13 +659,46 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 
 error2:
 	tmb.t_unref_ident(trans->hash_index, trans->label);
+
 error:
+	LOG(L_DBG, "DBG: "M_NAME":LRF_call_query_resp: error label\n");
 	if(d)
 		lrf_unlock(d->hash);
-	if(resp_body.s)
-		pkg_free(resp_body.s);
-	if(headers.s)
-		pkg_free(headers.s);
+	LOG(L_DBG, "DBG: "M_NAME":LRF_call_query_resp: error label\n");
+	//if(resp_body.s) pkg_free(resp_body.s);
+	LOG(L_DBG, "DBG: "M_NAME":LRF_call_query_resp: error label\n");
+	//if(headers.s)	pkg_free(headers.s);
+	LOG(L_DBG, "DBG: "M_NAME":LRF_call_query_resp: error label\n");
 
 	return CSCF_RETURN_FALSE;
 }
+
+/* Send a transaction reply
+ * could be used after to send replies to the OPTIONS trans
+ * @param msg  - (possible)the OPTIONS request from the ECSCF
+ * @param str1 - reply code 
+ * @param str2 - reply reason
+ * @return CSCF_RETURN_TRUE if ok, or CSCF_RETURN_FALSE if error
+ */
+int LRF_options_empty_repl(struct sip_msg* msg, char*str1, char*str2){
+
+	LOG(L_INFO, "INFO:"M_NAME":LRF_options_empty_repl\n");
+
+	if (msg->first_line.u.request.method.len!=7||
+		memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+		LOG(L_WARN,"WARN:"M_NAME":LRF_options_empty_repl: The method is not an OPTIONS, trying to replace the message\n");
+
+		msg = cscf_get_request_from_reply(NULL);
+		if(! msg || msg->first_line.type!=SIP_REQUEST || msg->first_line.u.request.method.len!=7||
+			memcmp(msg->first_line.u.request.method.s,"OPTIONS",7)!=0){
+					
+			LOG(L_ERR,"BUG:"M_NAME":LRF_options_empty_repl: The new message is not an OPTIONS request either\n");
+			return CSCF_RETURN_ERROR;
+		}
+	}
+
+	cscf_reply_transactional(msg, 400, str2);
+	return CSCF_RETURN_TRUE;
+}
+
+

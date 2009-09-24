@@ -60,7 +60,7 @@ int LRF_uses_LOCSIP(struct sip_msg* msg, char * str1, char* str2);
 int LRF_subscribe_LOCSIP(struct sip_msg* msg, char * str1, char* str2);
 int LRF_return_default_PSAP(struct sip_msg* msg, char * str1, char* str2);
 int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2);
-int LRF_sw_notif_2_options_tr(struct sip_msg* msg, char * str1, char* str2);
+int LRF_sw2options(struct sip_msg* msg, char * str1, char* str2);
 
 int LRF_deref_crt_trans(struct sip_msg* msg, char * str1, char* str2);
 

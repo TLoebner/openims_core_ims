@@ -158,6 +158,8 @@ static cmd_export_t lrf_cmds[]={
 	{"LRF_uses_LOCSIP",			LRF_uses_LOCSIP,			0, 0, REQUEST_ROUTE},
 	{"LRF_subscribe_LOCSIP",		LRF_subscribe_LOCSIP,			0, 0, REQUEST_ROUTE},
 	{"LRF_process_loc_notify", 		LRF_process_notification, 		0, 0, REQUEST_ROUTE},
+	{"LRF_options_empty_repl",		LRF_options_empty_repl,			2, 0, REQUEST_ROUTE},
+	{"LRF_sw2options",			LRF_sw2options,				0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
