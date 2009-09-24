@@ -101,5 +101,6 @@ void user_data_timer(unsigned int ticks, void* param);
 int LRF_alloc_user_data(struct sip_msg* msg, char*str1, char*str2);
 int LRF_del_user_data(struct sip_msg* msg, char* str1, char* str2);
 int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2);
+int LRF_options_empty_repl(struct sip_msg* msg, char*str1, char*str2);
 
 #endif

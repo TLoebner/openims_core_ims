@@ -322,7 +322,7 @@ xmlNode * verify_pidf_xml_body(str pidf_body, loc_fmt * crt_loc_fmt){
 		goto error;
 	}
 
-	//print_element_names(presence);
+	print_element_names(presence);
 
 	if(!(loc = has_loc_info(&ret, presence, crt_loc_fmt))){
 	

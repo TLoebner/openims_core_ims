@@ -252,10 +252,7 @@ int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 
 	user_data->loc = loc;
 	user_data->l_fmt = crt_loc_fmt;
-	//switch to the options transaction
-	if(sw_tr_2_options_tr(msg, user_data)<0)
-		goto internal_error;
-	
+		
 	lrf_unlock(user_data->hash);
 	subs_unlock(subscr->hash);
 	return CSCF_RETURN_TRUE;
@@ -271,8 +268,62 @@ subscr_error:
 
 internal_error:
 	if(subscr) subs_unlock(subscr->hash);
+	//TODO: locking the user data
 	if(user_data) lrf_unlock(user_data->hash);
 	return CSCF_RETURN_ERROR;
+}
+
+
+/* Switch to the OPTIONS transaction from the NOTIFY trans
+ * @returns #CSCF_RETURN_ERROR in case of error or #CSCF_RETURN_TRUE if ok
+ */
+int LRF_sw2options(struct sip_msg* msg, char* str1, char* str2){
+
+	str user_uri;
+	loc_subscription * subscr = NULL;
+	user_d * user_data = NULL;
+	int ret = CSCF_RETURN_ERROR;
+
+	LOG(L_INFO,"INFO:"M_NAME":LRF_sw2options: trying to switch to the OPTIONS transaction\n");
+
+	if(!cscf_get_from_uri(msg, &user_uri) || !user_uri.len || !user_uri.s){
+		LOG(L_ERR,"ERR:"M_NAME":LRF_sw2options: could not retrieve the From uri\n");
+		goto end;
+	}
+
+	str callid = cscf_get_call_id(msg, NULL);
+	if(!callid.len || !callid.s){
+		LOG(L_ERR,"ERR:"M_NAME":LRF_sw2options: could not retrieve the callid header\n");
+		goto end;
+	}
+
+	subscr = get_loc_subscription_callid(user_uri, callid);
+	if(!subscr){
+
+		LOG(L_ERR,"ERR:"M_NAME":LRF_sw2options: could not retrieve the location "
+				"subscription for uri %.*s\n", user_uri.len, user_uri.s);
+		goto end;		
+	}
+	
+	user_data = subscr->user_data;
+	if(!user_data){
+		LOG(L_ERR,"BUG:"M_NAME":LRF_sw2options: null user_data in the subscription info "
+			"for uri %.*s\n", user_uri.len, user_uri.s);
+		goto end;		
+	}
+
+	//switch to the options transaction
+	if(sw_tr_2_options_tr(msg, user_data)<0){
+		
+		LOG(L_ERR,"BUG:"M_NAME":LRF_sw2options: could not switch to the options trans\n");
+		goto end;
+	}
+
+	ret = CSCF_RETURN_TRUE;
+end:
+	if(subscr) subs_unlock(subscr->hash);
+	return ret;
+
 }
 
 int sw_tr_2_options_tr(struct sip_msg * msg, user_d * user_data){
@@ -295,10 +346,10 @@ int sw_tr_2_options_tr(struct sip_msg * msg, user_d * user_data){
 		return -1;
 	}
 	//dereference the options transaction
-	if(tmb.t_exit_ctx(options_trans, MODE_REQUEST)<0){
+	/*if(tmb.t_exit_ctx(options_trans, MODE_REQUEST)<0){
 		LOG(L_ERR, "ERR:"M_NAME":sw_tr_2_options_tr: could not dereference the OPTIONS transaction\n");
 		return -1;
-	}
+	}*/
 
 	return 0;
 }
