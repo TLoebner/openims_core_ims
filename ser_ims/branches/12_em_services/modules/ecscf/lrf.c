@@ -453,7 +453,7 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		return CSCF_RETURN_ERROR;
 	}
 
-	if(location_str.len && location_str.s){
+	if(d->location_str.len && d->location_str.s){
 		LOG(L_DBG, "DBG:"M_NAME":E_query_LRF:the message contained supported location information\n");
 		location_str.s = d->location_str.s;
 		location_str.len = d->location_str.len;
@@ -570,7 +570,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 		goto error_loc;
 	}
 
-	print_element_names(presence);
+	//print_element_names(presence);
 
 	if(!(loc = has_loc_info(&ret, presence, &crt_loc_fmt))){
 	
