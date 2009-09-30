@@ -265,6 +265,7 @@ typedef enum {
 	AVP_Origin_Host                   =  264,
 	AVP_Supported_Vendor_Id           =  265,
 	AVP_Vendor_Id                     =  266,
+	AVP_Firmware_Revision             =  267,
 	AVP_Result_Code                   =  268,
 	AVP_Product_Name                  =  269,
 	AVP_Session_Binding               =  270,
