@@ -393,6 +393,7 @@ enum {
 	AVP_EPC_Data_Reference_Subscription_Id_IMSI					= 102,
 	AVP_EPC_Data_Reference_Subscription_Id_IMPU					= 103,
 	AVP_EPC_Data_Reference_Subscription_Data					= 104,
+	AVP_EPC_Data_Reference_APN_Configuration					= 105,
 	
 };
 
