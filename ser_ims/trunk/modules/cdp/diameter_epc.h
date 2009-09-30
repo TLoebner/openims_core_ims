@@ -113,7 +113,10 @@ enum {
 /** 300 to 399 reserved for TS29.234											*/
 	
 /** 400 to 499 reserved for TS29.109 */
-	 AVP_EPC_Service_Identifier							= 439,
+	AVP_EPC_Service_Identifier							= 439,
+	AVP_EPC_Subscription_Id								= 443,
+	AVP_EPC_Subscription_Id_Data						= 444,
+	AVP_EPC_Subscription_Id_Type						= 450,
 	AVP_EPC_User_Equipment_Info							= 458,
 	AVP_EPC_User_Equipment_Info_Type					= 459,
 	AVP_EPC_User_Equipment_Info_Data					= 460,
@@ -148,6 +151,10 @@ enum {
 /** 700 to 799 reserved for TS29.329											*/
 	
 /** 800 to 899 reserved for TS29.299											*/
+
+/** 32.299 Partial																*/
+	AVP_EPC_Served_Party_IP_Address						= 848,
+	
 /** 1000   from TS29.212 */
 	AVP_EPC_Bearer_Usage								= 1000,
  	AVP_EPC_Charging_Rule_Install						= 1001,
@@ -212,11 +219,31 @@ enum {
 	AVP_EPC_Packet_Filter_Content						= 1059,
 	AVP_EPC_Packet_Filter_Identifier					= 1060,
 	AVP_EPC_Packet_Filter_Information					= 1061,
-	AVP_EPC_Packet_Filter_Operation						= 1062
+	AVP_EPC_Packet_Filter_Operation						= 1062,
  	
+/** TS 29.272 - selection */
+	AVP_EPC_Subscription_Data							= 1400,
+	AVP_EPC_Context_Identifier							= 1423,
+	AVP_EPC_Operator_Determined_Barring					= 1425,
+	AVP_EPC_Access_Restriction_Data						= 1426,
+	AVP_EPC_APN_OI_Replacement							= 1427,
+	AVP_EPC_APN_Configuration_Profile					= 1429,
+	AVP_EPC_APN_Configuration							= 1430,
+	AVP_EPC_EPS_Subscribed_QoS_Profile					= 1431,
+	AVP_EPC_VPLMN_Dynamic_Address_Allowed				= 1432,
+	AVP_EPC_AMBR										= 1435,
+	AVP_EPC_PDN_Gw_Allocation_Type						= 1438,
+	AVP_EPC_PDN_Type									= 1456,
+	AVP_EPC_PDN_Context									= 1469,
+	
+/** Not yet allocated */	
+	AVP_EPC_Service_Selection							= 42001, /**< http://tools.ietf.org/html/draft-ietf-dime-mip6-split-17#section-6.2 */
+	AVP_EPC_PDN_Gw_Address								= 42002, 
+	AVP_EPC_PDN_Gw_Name									= 42003, 
+	AVP_EPC_PDN_Gw_Identity								= 42004, 
 };
 
-/* 3GPP TS 29.212*/
+/** 3GPP TS 29.212	*/
 enum {
 	AVP_EPC_Metering_Method_Duration			=0,
 	AVP_EPC_Metering_Method_Volume				=1,
@@ -358,6 +385,24 @@ enum {
 	AVP_EPC_Packet_Filter_Operation_Deletion					=0,
 	AVP_EPC_Packet_Filter_Operation_Addition					=1,
 	AVP_EPC_Packet_Filter_Operation_Modification				=2
+};
+
+/* This extends the AVP_IMS_Data_Reference_* for Sh to Sp which is not yet standardized */
+enum {
+	AVP_EPC_Data_Reference_Subscription_Id_MSISDN				= 101,
+	AVP_EPC_Data_Reference_Subscription_Id_IMSI					= 102,
+	AVP_EPC_Data_Reference_Subscription_Id_IMPU					= 103,
+	AVP_EPC_Data_Reference_Subscription_Data					= 104,
+	
+};
+
+/* from RFC4006 */
+enum {
+	AVP_EPC_Subscription_Id_Type_End_User_E164					= 0,
+	AVP_EPC_Subscription_Id_Type_End_User_IMSI					= 1,
+	AVP_EPC_Subscription_Id_Type_End_User_SIP_URI				= 2,
+	AVP_EPC_Subscription_Id_Type_End_User_NAI					= 3,	
+	AVP_EPC_Subscription_Id_Type_End_User_Private				= 4,	
 };
 
 enum {
