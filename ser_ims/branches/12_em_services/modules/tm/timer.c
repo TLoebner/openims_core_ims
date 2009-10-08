@@ -227,6 +227,7 @@ inline static ticks_t  delete_cell( struct cell *p_cell, int unlock )
 		DBG("DEBUG: delete transaction %p\n", p_cell );
 #endif
 		free_cell( p_cell );
+		p_cell = NULL;
 		return 0;
 	}
 }

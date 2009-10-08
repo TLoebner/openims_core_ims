@@ -1981,11 +1981,18 @@ int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
 		enum route_mode * crt_rmode, enum route_mode new_rmode, 
 		struct cell** crt_trans, struct cell** new_trans){
 	
+	struct cell * t;
 	if(!crt_rmode || !crt_trans || !new_trans){
 		ERR("t_enter_ctx: NULL parameters\n");
 		return -1;
 	}
-	*crt_trans = get_t(); 
+	
+	t = get_t();
+	if(t == NULL || t == T_UNDEFINED)
+		ERR("t_enter_ctx: null crt trans\n");
+	else {DEBUG("t_enter_ctx: ref number is %i\n", t->ref_count);
+		*crt_trans = get_t(); 
+	}
 	*crt_rmode = get_rmode();
 
 	if(t_lookup_ident(new_trans, new_hash_index, new_label) < 0 ) {
@@ -1993,7 +2000,9 @@ int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
 		return -1;
 	}
 
+	t = get_t();
 	set_rmode(new_rmode);
+	global_msg_id = t->uas.request->id;
 	
 	return 0;
 }
