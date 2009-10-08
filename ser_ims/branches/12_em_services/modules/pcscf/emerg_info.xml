@@ -6,6 +6,6 @@
 	</sos_number>
 	<sos_number>
 		<number>911</number>
-		<urn>urn:service:sos</urn>
+		<urn>urn:service:sos.police</urn>
 	</sos_number>
 </emergency>

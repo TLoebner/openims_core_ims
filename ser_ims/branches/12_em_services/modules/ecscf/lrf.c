@@ -431,6 +431,7 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	str location_str = {0, 0};
 	str service, req_uri;
 	struct initial_tr inv_tr;
+	str contact = {0, 0};
 
 	enum e_dialog_direction dir = get_dialog_direction(str1);
 	if(dir == DLG_MOBILE_UNKNOWN){
@@ -439,12 +440,22 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	}
 		
 	call_id = cscf_get_call_id(msg,0);
-	if (!call_id.len)
+	if (!call_id.len){
+		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Call-ID header\n");
 		return CSCF_RETURN_FALSE;
+	}
 
-	if(cscf_get_from_uri(msg, &from_uri)==0)
+	if(cscf_get_from_uri(msg, &from_uri)==0){
+		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid From header\n");
 		return CSCF_RETURN_FALSE;
-	
+	}
+
+	contact = cscf_get_contact(msg);
+	if(contact.s == NULL || contact.len == 0){
+		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Contact header\n");
+		return CSCF_RETURN_FALSE;
+	}
+
 	LOG(L_DBG,"DBG:"M_NAME":E_query_LRF: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(msg, call_id,dir);
@@ -474,8 +485,8 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		req_uri.s = anonym_user.s;
 		req_uri.len = anonym_user.len;
 	}else {
-		req_uri.s = from_uri.s;
-		req_uri.len = from_uri.len;
+		req_uri.s = contact.s;
+		req_uri.len = contact.len;
 	}
 
 	if(!send_options_req(req_uri, location_str, service, &inv_tr)){
