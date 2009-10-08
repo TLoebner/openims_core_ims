@@ -581,6 +581,7 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	str resp_body = {0,0};
 	str headers = {0,0};
 	unsigned int hash_index, label;
+	struct cell *t;
 
 	LOG(L_INFO, "INFO:"M_NAME":LRF_call_query_resp\n");
 
@@ -621,7 +622,8 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 		LOG(L_DBG, "ERR: "M_NAME":LRF_call_query_resp: null psap uri\n");
 		goto error;
 	}
-	
+
+
 	if(get_options_resp_body(&resp_body, d)){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp:could not get the OPTIONS response body\n");
 		goto error;
@@ -642,12 +644,14 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not get the trans from the hash and index\n");
 		goto error;
 	}
-
-
+	
 	if(tmb.t_reply_with_body(trans, 200, "OK - PSAP found", resp_body.s, headers.s, "lrf" )!= 1){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not send the response\n");
 		goto error2;
 	}
+	
+	LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: options ref count %i\n", trans->ref_count);
+	
 
 	lrf_unlock(d->hash);
 	if(resp_body.s)
@@ -658,7 +662,7 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	return CSCF_RETURN_TRUE;
 
 error2:
-	tmb.t_unref_ident(trans->hash_index, trans->label);
+	//tmb.t_unref_ident(trans->hash_index, trans->label);
 
 error:
 	LOG(L_DBG, "DBG: "M_NAME":LRF_call_query_resp: error label\n");

@@ -280,6 +280,7 @@ error:
 	return 0;
 }
 
+void lrf_lock(unsigned int hash);
 
 //get the OPTIONS transaction
 //send an error response
@@ -288,8 +289,11 @@ void subscription_err_resp(struct cell * t, struct tmcb_params *ps){
 	user_d * user_data;
 	struct cell* options_trans, * crt_trans;
 	enum route_mode crt_rmode;
+	unsigned int hash_d;
 
 	user_data = *((user_d **)ps->param);
+	hash_d = user_data->hash;
+	lrf_lock(hash_d);
 
 	LOG(L_DBG, "DBG:"M_NAME":subscription_err_resp: user_data: %p, user_uri %.*s, OPTIONS trans index: %u label: %u callid: %.*s\n", 
 			user_data, user_data->user_uri.len, user_data->user_uri.s,
@@ -311,12 +315,14 @@ void subscription_err_resp(struct cell * t, struct tmcb_params *ps){
 	}
 	LOG(L_ERR, "ERR:"M_NAME":subscription_err_resp: sent a 405 no available location error response\n");
 
-	//set the SUBSCRIBE trans as the current one
-	tmb.t_exit_ctx(t, crt_rmode);
-	//TODO: clean user data
-
+	tmb.t_release(options_trans->uas.request);
 error:
-	shm_free(user_data);
+	//clean user data
+	if(user_data->loc_subscr)
+		del_loc_subscription((loc_subscription*)user_data->loc_subscr);
+	del_user_data(user_data);
+	lrf_unlock(hash_d);
+	//set the SUBSCRIBE trans as the current one
 	ps->param = NULL;
 	return;
 
@@ -335,7 +341,11 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 	LOG(L_DBG,"DBG:"M_NAME":loc_subscribe_response: code %d\n",ps->code);
 	if (!ps->rpl || ps->rpl==(void*) -1) {
 		LOG(L_ERR,"INF:"M_NAME":loc_subscribe_response: No reply\n");
-		return;	
+		if(ps->code == 408){
+			LOG(L_DBG,"INF:"M_NAME":loc_subscribe_response: timeout\n");
+			subscription_err_resp(t, ps);
+		}	
+		return;
 	}
 
 	if(!cscf_get_to_uri(ps->rpl, &req_uri)){
@@ -360,11 +370,19 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 		expires = cscf_get_expires_hdr(ps->rpl);
 		tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
 		update_loc_subscription(s,expires);
-	}else{
+	}else if(ps->code >= 300){
+		LOG(L_INFO,"INF:"M_NAME":loc_subscribe_response: SUBSCRIRE error response code %d\n",ps->code);				
 		update_loc_subscription(s,0);
 		subscription_err_resp(t, ps);
-		LOG(L_INFO,"INF:"M_NAME":loc_subscribe_response: SUBSCRIRE error response code %d\n",ps->code);				
-	}	
+	}else
+		goto end;
+
+	if(tmb.t_release(ps->rpl) == -1){
+		LOG(L_ERR,"ERR:"M_NAME":loc_subscribe_response: could not release the subscribe transaction\n");
+	}else
+		LOG(L_ERR,"ERR:"M_NAME":loc_subscribe_response: released the subscribe transaction\n");
+
+end:	
 	if (s) subs_unlock(s->hash);		
 }
 

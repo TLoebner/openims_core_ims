@@ -345,11 +345,6 @@ int sw_tr_2_options_tr(struct sip_msg * msg, user_d * user_data){
 		LOG(L_ERR, "ERR:"M_NAME":sw_tr_2_options_tr: could not switch to the OPTIONS transaction\n");
 		return -1;
 	}
-	//dereference the options transaction
-	/*if(tmb.t_exit_ctx(options_trans, MODE_REQUEST)<0){
-		LOG(L_ERR, "ERR:"M_NAME":sw_tr_2_options_tr: could not dereference the OPTIONS transaction\n");
-		return -1;
-	}*/
 
 	return 0;
 }
