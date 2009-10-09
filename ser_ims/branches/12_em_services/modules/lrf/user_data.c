@@ -57,6 +57,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
 
 #include "../tm/tm_load.h"
 #include "../tm/t_lookup.h"
@@ -78,7 +80,8 @@ user_d_hash_slot * user_datas = 0;
 static str service_hdr_name = {"Service",7};
 static str esqk_hdr_s = {"Esqk: ",6};
 static str esqk_hdr_e = {"\r\n",2};
-static str content_type_hdr=  {"Content-Type: application/route+xml\r\n",36};
+static str content_type_hdr=  {"Content-Type: application/pidf+xml\r\n",35};
+static str psap_uri_hdr_s=  {"PSAP-URI: ",10};
 
 void del_loc_subscription(loc_subscription *s);
 
@@ -512,22 +515,23 @@ int get_options_resp_body(str * body, user_d * d){
 	
 	body->s = NULL;
 	body->len = 0;
-		
-	body->s = pkg_malloc(d->psap_uri.len+1);
-	if (!body->s){
-		LOG(L_ERR,"ERR:"M_NAME":get_options_resp_body: Error allocating %d bytes\n", d->psap_uri.len);
-		body->len = 0;
-		goto out_of_memory;
-	}else{
-		body->len = d->psap_uri.len;
-		memcpy(body->s, d->psap_uri.s, d->psap_uri.len);
-		body->s[body->len] = '\0';
+	xmlChar * req_body = NULL;
+	int req_body_len = 0;
+
+	xmlNode * loc = d->loc;
+
+	xmlDocDumpFormatMemoryEnc(loc->doc, &req_body, &req_body_len, "UTF-8", 1);
+	body->s = (char*)req_body;
+	body->len = req_body_len;
+
+	if(!body->s || !body->len){
+		LOG(L_ERR, "ERR:"M_NAME":get_options_resp_body: could not output the xml location document\n");
+		return -1;
 	}
+
 	LOG(L_DBG, "DBG:"M_NAME":get_options_resp_body: body of the OPTIONS response is %.*s\n",
 			body->len, body->s);
 	return 0;
-out_of_memory:
-	return -1;
 }
 
 /* build the extra headers for the OPTIONS reply : containing Content-type and ESQK
@@ -547,7 +551,8 @@ int get_options_resp_headers(str * headers, user_d * d){
 		return -1;
 	}
 	
-	headers->len = esqk_hdr_s.len + d->esqk.len + esqk_hdr_e.len + content_type_hdr.len +1;
+	headers->len = esqk_hdr_s.len + d->esqk.len + esqk_hdr_e.len + content_type_hdr.len +
+			psap_uri_hdr_s.len+d->psap_uri.len+esqk_hdr_e.len+1;
 	headers->s = pkg_malloc(headers->len* sizeof(char));
 	if(!headers->s){
 		LOG(L_ERR, "ERR:"M_NAME":get_options_resp_headers: out of pkg memory\n");
@@ -558,7 +563,10 @@ int get_options_resp_headers(str * headers, user_d * d){
 	STR_APPEND(*headers, esqk_hdr_s);
 	STR_APPEND(*headers, d->esqk);
 	STR_APPEND(*headers, esqk_hdr_e);
-	if(d->psap_uri.s && d->psap_uri.len)
+	STR_APPEND(*headers, psap_uri_hdr_s);
+	STR_APPEND(*headers, d->psap_uri);
+	STR_APPEND(*headers, esqk_hdr_e);
+	if(d->loc && d->locsip_loc)
 		STR_APPEND(*headers, content_type_hdr);
 	headers->s[headers->len] = '\0';
 
@@ -581,7 +589,6 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	str resp_body = {0,0};
 	str headers = {0,0};
 	unsigned int hash_index, label;
-	struct cell *t;
 
 	LOG(L_INFO, "INFO:"M_NAME":LRF_call_query_resp\n");
 
@@ -619,14 +626,16 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 	}
 
 	if(!d->psap_uri.len || !d->psap_uri.s){
-		LOG(L_DBG, "ERR: "M_NAME":LRF_call_query_resp: null psap uri\n");
+		LOG(L_ERR, "ERR: "M_NAME":LRF_call_query_resp: null psap uri\n");
 		goto error;
 	}
 
-
-	if(get_options_resp_body(&resp_body, d)){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp:could not get the OPTIONS response body\n");
-		goto error;
+	if(d->loc && d->locsip_loc){
+		LOG(L_DBG, "DBG: "M_NAME":LRF_call_query_resp: LRF has location information from the LOCSIP server\n");
+		if(get_options_resp_body(&resp_body, d)){
+			LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp:could not get the OPTIONS response body\n");
+			goto error;
+		}
 	}
 	
 	if(get_options_resp_headers(&headers, d)){

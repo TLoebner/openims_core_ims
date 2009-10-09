@@ -251,6 +251,7 @@ int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 	}
 
 	user_data->loc = loc;
+	user_data->locsip_loc = 1;
 	user_data->l_fmt = crt_loc_fmt;
 		
 	lrf_unlock(user_data->hash);

@@ -72,6 +72,7 @@ typedef struct user_d_cell{
 	str psap_uri;
 	str loc_str;
 	xmlNode * loc;
+	unsigned int locsip_loc;
 	loc_fmt l_fmt;
 	struct trans_info options_tr;
 	void * loc_subscr;

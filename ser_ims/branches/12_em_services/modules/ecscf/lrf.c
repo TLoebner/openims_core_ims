@@ -88,6 +88,7 @@ static str service_hdr_s=     {"Service: ", 9};
 static str service_hdr_e=     {"\r\n", 2};
 static str content_type_hdr=  {"Content-Type: application/pidf+xml\r\n",36};
 static str esqk_hdr_name=  {"ESQK",4};
+static str psap_uri_hdr_name=  {"PSAP-URI",8};
 
 extern int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 
@@ -114,9 +115,17 @@ int E_del_ESQK_info(struct sip_msg * inv_repl, char* str1, char* str2){
 	return CSCF_RETURN_TRUE;
 
 }
+
+int E_add_loc_info(e_dialog * d, struct sip_msg * inv_req, struct sip_msg* opt_repl){
+	
+	LOG(L_DBG, "DBG:"M_NAME":E_add_loc_info: trying to add the location information from the LRF, if present\n");
+	return CSCF_RETURN_TRUE;
+}
+
 int E_set_em_info(e_dialog * d, struct sip_msg * opt_repl){
 
 	struct hdr_field* esqk_header;
+	struct hdr_field* psap_uri_hdr;
 	str esqk = {NULL, 0};
 	str psap_uri = {NULL, 0};
 	
@@ -135,9 +144,15 @@ int E_set_em_info(e_dialog * d, struct sip_msg * opt_repl){
 		goto error;
 	}
 psap_set:	
-	psap_uri = cscf_get_body(opt_repl);
+	if(!(psap_uri_hdr = cscf_get_header(opt_repl, psap_uri_hdr_name))){
+		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: could not found the header %.*s in the OPTIONS reply\n", 
+				psap_uri_hdr_name.len, psap_uri_hdr_name.s);
+		goto error;
+	}
+	psap_uri.s = psap_uri_hdr->body.s;
+	psap_uri.len = psap_uri_hdr->body.len;
 	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: empty OPTIONS reply body\n");
+		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: empty PSAP-URI header in the OPTIONS reply \n");
 		goto error;
 	}
 
@@ -218,6 +233,9 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 
 	}else{
 		if(E_set_em_info(d, opt_repl) != CSCF_RETURN_TRUE)
+			goto error;
+
+		if(!d->location && E_add_loc_info(d, inv_trans->uas.request, opt_repl) != CSCF_RETURN_TRUE)
 			goto error;
 		
 		if(E_fwd_to_psap(inv_trans->uas.request, d->psap_uri) != CSCF_RETURN_TRUE)
