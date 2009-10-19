@@ -104,9 +104,29 @@
 enum {
 /**   1 to 255 reserved for backward compatibility with Radius TS29.061	*/
 
-
-	AVP_EPC_User_Location_Info							= 22,
-	AVP_EPC_RAI											= 909, //TS29.061
+	AVP_EPC_3GPP_IMSI									= 1,
+	AVP_EPC_3GPP_Charging_Id							= 2,
+	AVP_EPC_3GPP_PDP_Type								= 3,
+	AVP_EPC_3GPP_CG_Address								= 4,
+	AVP_EPC_3GPP_GPRS_Negotiated_QoS_Profile			= 5,
+	AVP_EPC_3GPP_SGSN_Address							= 6,
+	AVP_EPC_3GPP_GGSN_Address							= 7,
+	AVP_EPC_3GPP_IMSI_MCC_MNC							= 8,
+	AVP_EPC_3GPP_GGSN_MCC_MNC							= 9,
+	AVP_EPC_3GPP_NSAPI									= 10,
+	AVP_EPC_3GPP_Selection_Mode							= 12,
+	AVP_EPC_3GPP_Charging_Characteristics				= 13,
+	AVP_EPC_3GPP_CG_IPv6_Address						= 14,
+	AVP_EPC_3GPP_SGSN_IPv6_Address						= 15,
+	AVP_EPC_3GPP_GGSN_IPv6_Address						= 16,
+	AVP_EPC_3GPP_IPv6_DNS_Servers						= 17,
+	AVP_EPC_3GPP_SGSN_MCC_MNC							= 18,
+	AVP_EPC_3GPP_IMEISV									= 20,
+	AVP_EPC_3GPP_RAT_Type								= 21,
+	AVP_EPC_3GPP_User_Location_Info						= 22,
+	AVP_EPC_3GPP_MS_TimeZone							= 23,
+	AVP_EPC_3GPP_Allocate_IP_Type						= 27,
+	AVP_EPC_3GPP_RAI									= 909, //TS29.061
 /** 256 to 299 reserved for future use										*/
 
 
@@ -147,6 +167,9 @@ enum {
 	AVP_EPC_RS_Bandwidth								= 522,
 	AVP_EPC_SIP_Forking_Indication						= 523,
 	AVP_EPC_Codec_Data									= 524,
+	AVP_EPC_Service_URN									= 525,
+	AVP_EPC_Acceptable_Service_Info						= 526,
+	AVP_EPC_Service_Info_Status							= 527,
 /** 600 to 699 reserved for TS29.229											*/
 /** 700 to 799 reserved for TS29.329											*/
 	
@@ -202,12 +225,12 @@ enum {
  	AVP_EPC_Rule_Activation_Time						= 1043,
  	AVP_EPC_Rule_Deactivation_Time						= 1044,
  	AVP_EPC_Session_Release_Cause						= 1045,
- 	AVP_EPC_ARP_Value									= 1046,
+ 	AVP_EPC_ARP_Value									= 1046, //Depends on the version
+ 	AVP_EPC_Priority_Level								= 1046,
  	AVP_EPC_PreEmption_Capability						= 1047,
  	AVP_EPC_PreEmption_Vulnerability					= 1048,
  	AVP_EPC_Default_EPS_Bearer_QoS						= 1049,
  	AVP_EPC_ANGw_Address								= 1050,
- 	AVP_EPC_Resource_Allocation_Notification			= 1051, //Gx
  	AVP_EPC_QoS_Rule_Install							= 1051, //Gxx
  	AVP_EPC_QoS_Rule_Remove								= 1052,
  	AVP_EPC_QoS_Rule_Definition							= 1053,
@@ -220,6 +243,8 @@ enum {
 	AVP_EPC_Packet_Filter_Identifier					= 1060,
 	AVP_EPC_Packet_Filter_Information					= 1061,
 	AVP_EPC_Packet_Filter_Operation						= 1062,
+	AVP_EPC_Resource_Allocation_Notification			= 1063, //Gx
+	AVP_EPC_Session_Linking_Indicator					= 1064,
  	
 /** TS 29.272 - selection */
 	AVP_EPC_Subscription_Data							= 1400,
@@ -243,7 +268,15 @@ enum {
 	AVP_EPC_PDN_Gw_Identity								= 42004, 
 };
 
-/** 3GPP TS 29.212	*/
+/** Flow-Usage AVP */
+enum {
+	AVP_EPC_Flow_Usage_No_Information					= 0,
+	AVP_EPC_Flow_Usage_Rtcp								= 1,
+	AVP_EPC_Flow_Usage_AF_Signaling						= 2,
+
+};
+
+/* 3GPP TS 29.212*/
 enum {
 	AVP_EPC_Metering_Method_Duration			=0,
 	AVP_EPC_Metering_Method_Volume				=1,
@@ -378,13 +411,20 @@ enum {
 	AVP_EPC_Event_Trigger_DEFAULT_EPS_BEARER_QOS_CHANGE			=20,
 	AVP_EPC_Event_Trigger_AN_GW_CHANGE							=21,
 	AVP_EPC_Event_Trigger_Successful_Resource_Allocation		=22,
-	AVP_EPC_Event_Trigger_Resource_Modification_Request			=23
+	AVP_EPC_Event_Trigger_Resource_Modification_Request			=23,
+	//AVP_EPC_Event_Trigger_PGW_Trace_Control					=24,
+	//AVP_EPC_Event_Trigger_UE_Time_Zone_Change					= 25,
 };
 
 enum {
 	AVP_EPC_Packet_Filter_Operation_Deletion					=0,
 	AVP_EPC_Packet_Filter_Operation_Addition					=1,
 	AVP_EPC_Packet_Filter_Operation_Modification				=2
+};
+
+enum {
+	AVP_EPC_Session_Linking_Indicator_Immediate					= 0,
+	AVP_EPC_Session_Linking_Indicator_Deferred					= 1,
 };
 
 /* This extends the AVP_IMS_Data_Reference_* for Sh to Sp which is not yet standardized */
@@ -394,7 +434,6 @@ enum {
 	AVP_EPC_Data_Reference_Subscription_Id_IMPU					= 103,
 	AVP_EPC_Data_Reference_Subscription_Data					= 104,
 	AVP_EPC_Data_Reference_APN_Configuration					= 105,
-	
 };
 
 /* from RFC4006 */
@@ -409,7 +448,25 @@ enum {
 enum {
 	RC_EPC_DIAMETER_QOS_RULE_EVENT								= 5145,
 	RC_EPC_DIAMETER_BEARER_EVENT								= 5146,
-	RC_EPC_DIAMETER_PCC_RULE_EVENT								= 5142
+	RC_EPC_DIAMETER_PCC_RULE_EVENT								= 5142,
+	RC_EPC_DIAMETER_ERROR_INITIAL_PARAMETERS					= 5140,
+	RC_EPC_DIAMETER_ERROR_TRAFFIC_MAPPING_INFO_REJECTED			= 5144,
+	RC_EPC_DIAMETER_ERROR_CONFLICTING_REQUEST					= 5147
+};
 
+enum {
+	RC_EPC_INVALID_SERVICE_INFORMATION							= 5061,
+	RC_EPC_FILTER_RESTRICTIONS									= 5062,
+	RC_EPC_REQUESTED_SERVICE_NOT_AUTHORIZED						= 5063
+};
+/**29.214 */
+enum {
+	AVP_EPC_Specific_Action_Charging_Correlation_Exchange			= 1,
+	AVP_EPC_Specific_Action_Indication_of_Loss_of_Bearer			= 2,
+	AVP_EPC_Specific_Action_Indication_of_Recovery_of_Bearer		= 3,
+	AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer			= 4,
+	AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer	= 5,
+	AVP_EPC_Specific_Action_IPCAN_Change							= 6,
+	AVP_EPC_Specific_Action_Indication_of_Out_of_Credit				= 7
 };
 #endif /*DIAMETER_EPC_H_*/
