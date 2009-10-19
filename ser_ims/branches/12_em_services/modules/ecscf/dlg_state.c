@@ -1214,8 +1214,6 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		if (msg->first_line.u.request.method.len == 6 && 
 				strncasecmp(msg->first_line.u.request.method.s, "CANCEL", 6)==0){
 			d->is_cancelled = 1;
-			//get the options transaction and cancel it
-			//tmb.cancel_uacs();
 		}
 
 

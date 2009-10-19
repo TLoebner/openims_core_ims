@@ -303,6 +303,7 @@ void options_resp_cb(struct cell* t, int type, struct tmcb_params* ps){
 	if(tmb.t_enter_ctx(cb_par->hash_index, cb_par->label,
 		&crt_rmode, MODE_REQUEST, &crt_trans, &inv_trans)!=0){
 		LOG(L_ERR, "ERR:"M_NAME":options_resp_cbp: could not switch to the INVITE transaction\n");
+		tmb.t_unref_ident(t->hash_index, t->label);
 		goto error;
 	}
 
