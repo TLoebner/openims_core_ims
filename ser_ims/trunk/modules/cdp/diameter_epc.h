@@ -266,6 +266,7 @@ enum {
 	AVP_EPC_PDN_Gw_Address								= 42002, 
 	AVP_EPC_PDN_Gw_Name									= 42003, 
 	AVP_EPC_PDN_Gw_Identity								= 42004, 
+	AVP_EPC_QoS_Profile_Name							= 42005, 
 };
 
 /** Flow-Usage AVP */
