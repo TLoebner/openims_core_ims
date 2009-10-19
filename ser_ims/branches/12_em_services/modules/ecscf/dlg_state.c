@@ -1213,6 +1213,8 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		//cancel the options transaction, if ongoing
 		if (msg->first_line.u.request.method.len == 6 && 
 				strncasecmp(msg->first_line.u.request.method.s, "CANCEL", 6)==0){
+			if(d->forwarded==0)
+				E_drop_dialog(msg, str1, str2);
 			d->is_cancelled = 1;
 		}
 
