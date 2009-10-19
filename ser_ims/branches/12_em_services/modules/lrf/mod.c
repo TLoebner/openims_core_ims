@@ -89,8 +89,9 @@ extern user_d_hash_slot * user_datas;
 /* parameters storage */
 int user_d_hash_size=1024;
 char* lrf_name="sip:lrf.open-ims.test:8060";	/**< SIP URI of this LRF */
-char* local_psap_uri="sip:bob@open-ims.test";	/**< SIP URI of the local default PSAP */
+char* local_psap_uri="sip:default_psap@open-ims.test";	/**< SIP URI of the local default PSAP */
 int using_lost_srv = 1;				/* by default, a LoST server will be contacted*/
+int no_psap_use_def_psap = 1;			/* use the default */
 char * lost_server_url= "http://lost.open-ims.test:8180/lost/LoSTServlet";
 str lrf_name_str={0,0};				
 lost_server_info lost_server;			/**< info from the http URL of the lost server>*/
@@ -179,6 +180,7 @@ static param_export_t lrf_params[]={
 	{"max_dialog_count",		INT_PARAM,		&lrf_max_dialog_count},
 	{"enable_locsip",		INT_PARAM,		&use_locsip},
 	{"locsip_srv_uri",		STR_PARAM,		&locsip_srv_uri_s},
+	{"no_psap_use_def_psap",	INT_PARAM,		&no_psap_use_def_psap},
 	{0,0,0} 
 };
 
