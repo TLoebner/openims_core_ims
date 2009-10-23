@@ -547,6 +547,10 @@ loc_subscription* get_loc_subscription(str aor, user_d * user_data)
 loc_subscription* get_loc_subscription_callid(str aor, str callid)
 {
 	loc_subscription *s;
+
+	LOG(L_DBG, "DBG:"M_NAME": get_loc_subscription: aor: %.*s callid %.*s\n",
+		aor.len, aor.s, callid.len, callid.s);
+
 	unsigned int hash = get_subscription_hash(aor);
 	subs_lock(hash);
 		s = subscriptions[hash].head;

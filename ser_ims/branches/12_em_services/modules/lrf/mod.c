@@ -89,9 +89,7 @@ extern user_d_hash_slot * user_datas;
 /* parameters storage */
 int user_d_hash_size=1024;
 char* lrf_name="sip:lrf.open-ims.test:8060";	/**< SIP URI of this LRF */
-char* local_psap_uri="sip:default_psap@open-ims.test";	/**< SIP URI of the local default PSAP */
 int using_lost_srv = 1;				/* by default, a LoST server will be contacted*/
-int no_psap_use_def_psap = 1;			/* use the default */
 char * lost_server_url= "http://lost.open-ims.test:8180/lost/LoSTServlet";
 str lrf_name_str={0,0};				
 lost_server_info lost_server;			/**< info from the http URL of the lost server>*/
@@ -99,7 +97,6 @@ lost_server_info lost_server;			/**< info from the http URL of the lost server>*
   to the appropriate LRF, using the ESQK including this prefix*/
 char * esqk_prefix = "123";
 str esqk_prefix_str = {0,0};
-str local_psap_uri_str = {0,0};
 int * shutdown_singleton;				/**< Shutdown singleton 	*/
 dlg_func_t dialogb;								/**< Structure with pointers to dialog funcs			*/
 extern lrf_dialog_hash_slot *lrf_dialogs;	/**< the dialogs hash table				*/
@@ -172,7 +169,6 @@ static param_export_t lrf_params[]={
 	{"name", 			STR_PARAM, 		&lrf_name},
 	{"lost_server",			STR_PARAM, 		&lost_server_url},
 	{"esqk_prefix",			STR_PARAM, 		&esqk_prefix},
-	{"default_psap",		STR_PARAM, 		&local_psap_uri},
 	{"using_lost_srv",		INT_PARAM, 		&using_lost_srv},
 	{"dialogs_hash_size",		INT_PARAM,		&lrf_dialogs_hash_size},
 	{"dialogs_expiration_time",	INT_PARAM,		&lrf_dialogs_expiration_time},
@@ -180,7 +176,6 @@ static param_export_t lrf_params[]={
 	{"max_dialog_count",		INT_PARAM,		&lrf_max_dialog_count},
 	{"enable_locsip",		INT_PARAM,		&use_locsip},
 	{"locsip_srv_uri",		STR_PARAM,		&locsip_srv_uri_s},
-	{"no_psap_use_def_psap",	INT_PARAM,		&no_psap_use_def_psap},
 	{0,0,0} 
 };
 
@@ -219,31 +214,6 @@ int fix_parameters()
 	esqk_prefix_str.s = esqk_prefix;
 	esqk_prefix_str.len = strlen(esqk_prefix);
 
-	local_psap_uri_str.s = local_psap_uri;
-	local_psap_uri_str.len = strlen(local_psap_uri);
-
-
-	if(!using_lost_srv)
-		return 1;
-
-	if(strncmp(lost_server_url, "http://", 7) == 0){
-		lost_server.type   = HTTP_TYPE;
-		lost_server.host.s = lost_server_url;
-		lost_server.host.len = strlen(lost_server_url);
-		car = lost_server_url+7;
-		lost_server.port   = 80;
-	}else if(strncmp(lost_server_url, "https://", 8) == 0){
-		lost_server.type   = HTTPS_TYPE;
-		lost_server.host.s = lost_server_url;
-		lost_server.host.len = strlen(lost_server_url);
-		car = lost_server_url+8;
-		lost_server.port   = 433;
-	}else {
-		LOG(L_ERR, "ERR"M_NAME":fix_parameters: invalid URL for the lost server %s\n",
-				lost_server_url);
-		return 0;
-	}
-			
 	car = strchr(car, ':');
 	if(car != NULL){
 		port.s = car+1;
@@ -277,6 +247,28 @@ int fix_parameters()
 		LOG(L_DBG, "DBG:"M_NAME":fix_parameters: locsip server uri %.*s\n", 
 				locsip_srv_uri.len, locsip_srv_uri.s);
 	}
+	
+	if(!using_lost_srv)
+		return 1;
+
+	if(strncmp(lost_server_url, "http://", 7) == 0){
+		lost_server.type   = HTTP_TYPE;
+		lost_server.host.s = lost_server_url;
+		lost_server.host.len = strlen(lost_server_url);
+		car = lost_server_url+7;
+		lost_server.port   = 80;
+	}else if(strncmp(lost_server_url, "https://", 8) == 0){
+		lost_server.type   = HTTPS_TYPE;
+		lost_server.host.s = lost_server_url;
+		lost_server.host.len = strlen(lost_server_url);
+		car = lost_server_url+8;
+		lost_server.port   = 433;
+	}else {
+		LOG(L_ERR, "ERR"M_NAME":fix_parameters: invalid URL for the lost server %s\n",
+				lost_server_url);
+		return 0;
+	}
+
 	return 1;
 }
 
