@@ -98,6 +98,9 @@ gen_lock_t* ecscf_dialog_count_lock=0; 		/**< Lock for the dialog counter					*/
 int * shutdown_singleton;				/**< Shutdown singleton 	*/
 char* lrf_sip_uri = "sip:lrf.open-ims.test:8060";	/**< sip uri or the LRF>*/
 str lrf_sip_uri_str={NULL, 0};
+int use_default_psap = 1;				/* policy to enable/disable using a default PSAP */
+char * default_psap_uri = "sip:default_psap@open-ims.test";	/* the URI for the default PSAP */
+str default_psap_uri_str = {0,0};
 
 str ecscf_name_str;					/**< SIP URI of the node>*/
 str ecscf_record_route_mo;					/**< Record-route for originating case 				*/
@@ -149,6 +152,8 @@ static param_export_t ecscf_params[]={
 	{"max_dialog_count",		INT_PARAM,		&ecscf_max_dialog_count},
 	{"min_se", 			INT_PARAM, 		&ecscf_min_se},
 	{"lrf_sip_uri",			STR_PARAM, 		&lrf_sip_uri},
+	{"use_default_psap",		INT_PARAM, 		&use_default_psap},
+	{"default_psap_uri",		STR_PARAM, 		&default_psap_uri},
 	{0,0,0} 
 };
 
@@ -241,6 +246,11 @@ int fix_parameters()
 	STR_APPEND(ecscf_record_route_mt,s_record_route_e);
 	ecscf_record_route_mt_uri.s = ecscf_record_route_mt.s + s_record_route_s.len;
 	ecscf_record_route_mt_uri.len = ecscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
+
+	if(use_default_psap){
+		default_psap_uri_str.s = default_psap_uri;
+		default_psap_uri_str.len = strlen(default_psap_uri);
+	}
 
 	return 1;
 }

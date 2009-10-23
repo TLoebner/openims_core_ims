@@ -90,6 +90,33 @@ xmlNode * retrieve_pidf_lo(struct sip_msg * msg, str * pidf_body, loc_fmt * crt_
 
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
 
+static int str_trim(str *s)
+{
+	int i;
+	for (i = 0;i < s->len; i++)
+	{
+		if (s->s[i] != '\r' && s->s[i] != '\t' && s->s[i] != ' ')
+		{
+			break;
+		}
+	}
+	s->s = s->s + i;	
+	s->len -= i;
+
+	for (i = s->len;i >=0; i--)
+	{
+		if (s->s[i] == '\r' && s->s[i] == '\t' && s->s[i] == ' ')
+		{
+			s->len--;
+		}
+		else
+		{
+			break;
+		}
+	}
+	return 1;
+}
+
 /*
  * check if the LRF was configured to use the LOCSIP interface
  * @param msg - not used
@@ -183,6 +210,11 @@ static fparam_t fp_bad_req = FParam_STRING("Bad request");
 static fparam_t fp_200 = FParam_INT(200);
 static fparam_t fp_ok = FParam_STRING("OK - Notification processed");
 
+static str s_subscription_state={"Subscription-State",18};
+//static str s_active={"active",6};
+//static str s_pending={"pending",7};
+static str s_terminated={"terminated",10};
+
 /* process the notification for the location event, received from the LOCSIP server
  *	sends the appropriate reply to the LOCSIP server
  *	releases the NOTIFY transaction and switches to the OPTIONS transaction
@@ -193,13 +225,15 @@ static fparam_t fp_ok = FParam_STRING("OK - Notification processed");
  */
 int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 
-	int expires, ret;
+	int ret;
 	str user_uri;
 	loc_subscription * subscr = NULL;
 	user_d * user_data = NULL;
 	xmlNode *loc = NULL;
 	loc_fmt crt_loc_fmt;
 	str pidf_body;
+	str subscr_state_val = {0,0};
+	int terminated = 0;
 
 
 	LOG(L_INFO,"INFO:"M_NAME":LRF_process_notification: Checking NOTIFY\n");
@@ -214,7 +248,7 @@ int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 		LOG(L_ERR,"ERR:"M_NAME":LRF_process_notification: could not retrieve the callid header\n");
 		goto parse_error;
 	}
-
+	
 	subscr = get_loc_subscription_callid(user_uri, callid);
 	if(!subscr){
 
@@ -224,14 +258,28 @@ int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 	}
 	
 	/* update the subscription state */
-	expires = cscf_get_subscription_state(msg);
+	subscr_state_val = cscf_get_headers_content(msg, s_subscription_state);
+	if(!subscr_state_val.len || !subscr_state_val.s){
+		LOG(L_ERR, "ERR:"M_NAME"LRF_process_notification: could not retrieve the Subscription-State header\n");
+		goto parse_error;
+	}
+	str_trim(&subscr_state_val);
+	LOG(L_DBG,"DBG:"M_NAME":LRF_process_notification: subscription state field %.*s\n", 
+		subscr_state_val.len, subscr_state_val.s);
+	
+	if(strncasecmp(subscr_state_val.s, s_terminated.s, s_terminated.len) == 0){
+		LOG(L_DBG,"DBG:"M_NAME":LRF_process_notification: subscription in state terminated\n"); 
+		terminated = 1;
+		goto reply;
+	}
+	
 	/* treat event */	
 	loc = retrieve_pidf_lo(msg, &pidf_body, &crt_loc_fmt);
 	if(!loc){
 		LOG(L_ERR, "ERR:"M_NAME"LRF_process_notification: could not retrieve the PIDF-LO\n");
 		goto parse_error;
 	}
-
+reply:
 	if((ret = sl_reply(msg, (char *)&fp_200, (char *)&fp_ok)) == -1){
 		LOG(L_ERR,"ERR:"M_NAME":LRF_process_notification: could not send the 200 ok reply\n");
 		goto internal_error;
@@ -242,6 +290,9 @@ int LRF_process_notification(struct sip_msg* msg, char * str1, char* str2){
 		LOG(L_ERR,"ERR:"M_NAME":LRF_process_notification: could not release the notify transaction\n");
 		goto internal_error;
 	}
+	
+	if(terminated >0)
+		goto terminated_exit;
 
 	user_data = subscr->user_data;
 	if(!user_data){
@@ -268,6 +319,7 @@ subscr_error:
 	return CSCF_RETURN_ERROR;
 
 internal_error:
+terminated_exit:
 	if(subscr) subs_unlock(subscr->hash);
 	//TODO: locking the user data
 	if(user_data) lrf_unlock(user_data->hash);

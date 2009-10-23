@@ -73,6 +73,8 @@
 extern struct tm_binds tmb;   
 extern str ecscf_name_str;	
 extern str lrf_sip_uri_str;
+extern int use_default_psap;
+extern str default_psap_uri_str;
 
 static str options_method=    {"OPTIONS",7};
 static str accept_hdr=        {"Accept: application/route+xml\r\n",31};
@@ -122,12 +124,28 @@ int E_add_loc_info(e_dialog * d, struct sip_msg * inv_req, struct sip_msg* opt_r
 	return CSCF_RETURN_TRUE;
 }
 
+/* set a value for the PSAP
+ * @param d - the dialog to be used
+ * @param psap_uri - the psap uri to be set
+ */
+int E_set_psap(e_dialog * d, str psap_uri){
+
+	if(!psap_uri.s || !psap_uri.len){
+		LOG(L_ERR, "ERR:"M_NAME":E_set_psap: empty PSAP-URI header in the OPTIONS reply \n");
+		goto error;
+	}
+
+	STR_SHM_DUP(d->psap_uri, psap_uri, "E_set_psap");
+	return CSCF_RETURN_TRUE;
+error:
+out_of_memory:
+	return CSCF_RETURN_FALSE;
+}
+
 int E_set_em_info(e_dialog * d, struct sip_msg * opt_repl){
 
-	struct hdr_field* esqk_header;
-	struct hdr_field* psap_uri_hdr;
-	str esqk = {NULL, 0};
-	str psap_uri = {NULL, 0};
+	struct hdr_field* esqk_header = NULL;
+	struct hdr_field* psap_uri_hdr = NULL;
 	
 	if(d->anonymous)
 		goto psap_set;
@@ -137,40 +155,36 @@ int E_set_em_info(e_dialog * d, struct sip_msg * opt_repl){
 				esqk_hdr_name.len, esqk_hdr_name.s);
 		goto error;
 	}
-	esqk.s = esqk_header->body.s;	
-	esqk.len = esqk_header->body.len;	
-	if(!esqk.s || !esqk.len){
+	if(!esqk_header->body.s || !esqk_header->body.len){
 		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: empty Esqk header\n");
 		goto error;
 	}
+	STR_SHM_DUP(d->esqk, esqk_header->body, "E_set_em_info");
+
 psap_set:	
 	if(!(psap_uri_hdr = cscf_get_header(opt_repl, psap_uri_hdr_name))){
 		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: could not found the header %.*s in the OPTIONS reply\n", 
 				psap_uri_hdr_name.len, psap_uri_hdr_name.s);
 		goto error;
 	}
-	psap_uri.s = psap_uri_hdr->body.s;
-	psap_uri.len = psap_uri_hdr->body.len;
-	if(!psap_uri.s || !psap_uri.len){
-		LOG(L_ERR, "ERR:"M_NAME":E_set_em_info: empty PSAP-URI header in the OPTIONS reply \n");
+	
+	if(E_set_psap(d, psap_uri_hdr->body) == CSCF_RETURN_FALSE)
 		goto error;
-	}
+
 
 	LOG(L_DBG, "DBG:"M_NAME":E_set_em_info: psap_uri is %.*s and esqk value is %.*s\n",
-			psap_uri.len, psap_uri.s, esqk.len, esqk.s);
-
-	STR_SHM_DUP(d->psap_uri, psap_uri, "E_set_em_info");
-	STR_SHM_DUP(d->esqk, esqk, "E_set_em_info");
+			d->psap_uri.len, d->psap_uri.s, d->esqk.len, d->esqk.s);
 
 	return CSCF_RETURN_TRUE;
 error:
 out_of_memory:
-	if(d->psap_uri.s){
-		shm_free(d->psap_uri.s);
-		d->psap_uri.s = NULL;
+	if(d->esqk.s){
+		shm_free(d->esqk.s);
+		d->esqk.s = NULL;
 	}
 	return CSCF_RETURN_FALSE;
 }
+
 
 /* take actions according to the response code of the OPTIONS reply from the LRF
  * @param opt_repl - the OPTIONS reply
@@ -213,6 +227,14 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		//send error response to INVITE and update the dialog
 		LOG(L_DBG, "ERR:"M_NAME":E_process_options_repl: received an error response %i\n", code);
 
+		if(use_default_psap){
+			if(E_set_psap(d, default_psap_uri_str) != CSCF_RETURN_TRUE)
+				goto error;
+			
+			LOG(L_DBG, "ERR:"M_NAME":E_process_options_repl: trying to use the defautl PSAP\n");
+			goto fwd_invite;
+		}
+
 		if(tmb.t_reply(inv_trans->uas.request, 404, NO_PSAP)<0){
 			LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl:Could not reply to the INVITE request\n");
 			goto error;
@@ -235,13 +257,14 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		if(E_set_em_info(d, opt_repl) != CSCF_RETURN_TRUE)
 			goto error;
 
+		if(!d->anonymous && E_add_esqk(inv_trans->uas.request, d->esqk) != CSCF_RETURN_TRUE)
+			goto error;
+
+fwd_invite:
 		if(!d->location && E_add_loc_info(d, inv_trans->uas.request, opt_repl) != CSCF_RETURN_TRUE)
 			goto error;
 		
 		if(E_fwd_to_psap(inv_trans->uas.request, d->psap_uri) != CSCF_RETURN_TRUE)
-			goto error;
-
-		if(!d->anonymous && E_add_esqk(inv_trans->uas.request, d->esqk) != CSCF_RETURN_TRUE)
 			goto error;
 
 		if(E_add_record_route(inv_trans->uas.request, 0, 0) != CSCF_RETURN_TRUE)
@@ -302,8 +325,9 @@ void options_resp_cb(struct cell* t, int type, struct tmcb_params* ps){
 
 	if(tmb.t_enter_ctx(cb_par->hash_index, cb_par->label,
 		&crt_rmode, MODE_REQUEST, &crt_trans, &inv_trans)!=0){
+		
 		LOG(L_ERR, "ERR:"M_NAME":options_resp_cbp: could not switch to the INVITE transaction\n");
-		tmb.t_unref_ident(t->hash_index, t->label);
+		//tmb.t_unref_ident(t->hash_index, t->label);
 		goto error;
 	}
 

@@ -66,9 +66,7 @@
 #include "user_data.h"
 
 extern lost_server_info lost_server;	
-extern str local_psap_uri_str;
 extern int using_lost_srv;
-extern int no_psap_use_def_psap;
 
 static str service_hdr_name = {"Service",7};
 
@@ -240,18 +238,16 @@ int LRF_get_psap(struct sip_msg* msg, char* str1, char* str2){
 	}
 
 	//if not using a LoST server
-	if(using_lost_srv)
+	if(using_lost_srv){
+		LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: LoST server enabled");
 		psap_uri = get_psap_by_LoST(d);
+	}else{
+		LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: LoST server disabled");
+	}
+
 	if(!psap_uri.s || !psap_uri.len){
-		if(no_psap_use_def_psap >0){
-			//setting a local SIP URI
-			psap_uri.s = local_psap_uri_str.s;
-			psap_uri.len = local_psap_uri_str.len;
-		}else{
-			LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: no PSAP available, configuration "
-				"with disabled default PSAP");
-			goto error;
-		}
+		LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap: no PSAP available");
+		goto error;
 	}
 	LOG(L_DBG, "DBG:"M_NAME":LRF_get_psap:psap uri is %.*s\n", psap_uri.len, psap_uri.s);
 
