@@ -208,12 +208,33 @@ int fix_parameters()
 	str port;
 	struct sip_uri locsip_srv_parsed_uri;
 	
+	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	lrf_name_str.s = lrf_name;
 	lrf_name_str.len = strlen(lrf_name);
 
 	esqk_prefix_str.s = esqk_prefix;
 	esqk_prefix_str.len = strlen(esqk_prefix);
 
+	if(!using_lost_srv)
+		return 1;
+
+	if(strncmp(lost_server_url, "http://",7) == 0){
+		lost_server.type = HTTP_TYPE;
+		lost_server.host.s = lost_server_url;
+		lost_server.host.len = strlen(lost_server_url);
+		car = lost_server_url + 7;
+		lost_server.port = 80;
+	}else if(strncmp(lost_server_url, "https://", 8) == 0){
+		lost_server.type = HTTPS_TYPE;
+		lost_server.host.s = lost_server_url;
+		lost_server.host.len = strlen(lost_server_url);
+		car = lost_server_url + 8;
+		lost_server.port = 443;
+	}else{
+		LOG(L_ERR, "ERR:"M_NAME":fix_parameters: invalid URL for the lost server %s\n", 
+			lost_server_url);
+		return 0;
+	}
 	car = strchr(car, ':');
 	if(car != NULL){
 		port.s = car+1;
@@ -248,27 +269,6 @@ int fix_parameters()
 				locsip_srv_uri.len, locsip_srv_uri.s);
 	}
 	
-	if(!using_lost_srv)
-		return 1;
-
-	if(strncmp(lost_server_url, "http://", 7) == 0){
-		lost_server.type   = HTTP_TYPE;
-		lost_server.host.s = lost_server_url;
-		lost_server.host.len = strlen(lost_server_url);
-		car = lost_server_url+7;
-		lost_server.port   = 80;
-	}else if(strncmp(lost_server_url, "https://", 8) == 0){
-		lost_server.type   = HTTPS_TYPE;
-		lost_server.host.s = lost_server_url;
-		lost_server.host.len = strlen(lost_server_url);
-		car = lost_server_url+8;
-		lost_server.port   = 433;
-	}else {
-		LOG(L_ERR, "ERR"M_NAME":fix_parameters: invalid URL for the lost server %s\n",
-				lost_server_url);
-		return 0;
-	}
-
 	return 1;
 }
 
