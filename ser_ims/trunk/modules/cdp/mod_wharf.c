@@ -91,16 +91,17 @@ int cdp_child_init(int rank)
  */
 void cdp_destroy(int rank)
 {
-//	switch (rank){
+	switch (rank){
 //		case WHARF_PROCESS_CDP_WORKER:
 //		case WHARF_PROCESS_CDP_RECEIVER:
 //		case WHARF_PROCESS_CDP_ACCEPTOR:
-//		case WHARF_PROCESS_CDP_TIMER:		 	
+//		case WHARF_PROCESS_CDP_TIMER:
+		case WHARF_PROCESS_TIMER:
 			LOG(L_INFO,"CDiameterPeer stoping ...\n");		
 			diameter_peer_destroy();
 			LOG(L_INFO,"... CDiameterPeer stoped\n");
-//			break;
-//	}
+			break;
+	}
 }
 
 
