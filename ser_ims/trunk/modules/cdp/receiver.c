@@ -209,7 +209,10 @@ static serviced_peer_t* add_serviced_peer(peer *p)
 	sp->p = p;	
 	sp->tcp_socket = -1;
 	sp->prev = 0;
-	if (serviced_peers) serviced_peers->prev = sp;
+	if (serviced_peers) {
+		serviced_peers->prev = sp;
+		sp->next = serviced_peers;
+	}
 	serviced_peers = sp;
 	
 	if (!make_send_pipe(sp)){
