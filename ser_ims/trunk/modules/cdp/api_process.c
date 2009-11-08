@@ -75,6 +75,7 @@ int api_callback(peer *p,AAAMessage *msg,void* ptr)
 	cdp_trans_t *t;
 	int auto_drop;	
 	handler *h;
+	handler x;
 	enum handler_types type;
 	AAAMessage *rsp;
 	if (is_req(msg)) type = REQUEST_HANDLER;
@@ -83,11 +84,18 @@ int api_callback(peer *p,AAAMessage *msg,void* ptr)
 	lock_get(handlers_lock);
 		for(h=handlers->head;h;h=h->next){
 			if (h->type==type){
-				if (h->type == REQUEST_HANDLER) {					
-					rsp = (h->handler.requestHandler)(msg,h->param);
+				x.handler = h->handler;
+				if (h->type == REQUEST_HANDLER) {
+					lock_release(handlers_lock);
+					rsp = (x.handler.requestHandler)(msg,h->param);
 					if (rsp) peer_send_msg(p,rsp);
+					lock_get(handlers_lock);
 				}
-				else (h->handler.responseHandler)(msg,h->param);
+				else {
+					lock_release(handlers_lock);
+					(x.handler.responseHandler)(msg,h->param);
+					lock_get(handlers_lock);
+				}
 			}
 		}		
 	lock_release(handlers_lock);
