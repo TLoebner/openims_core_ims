@@ -41,6 +41,8 @@
 #include "../../str.h"
 #include "../../ut.h"
 #include "parse_content.h"
+#include "mod.h"
+#include "sip.h"
 
 
 #define is_mime_char(_c_) \
@@ -378,27 +380,26 @@ int ecscf_parse_content_type_hdr( struct sip_msg *msg )
 	char *end;
 	char *ret;
 	unsigned int  mime;
+	
+	LOG(L_DBG, "DBG:"M_NAME":ecscf_parse_content_type_hdr:searching for content type\n");
+	str content_type = cscf_get_content_type(msg);
+	if(!content_type.s || !content_type.len){
 
-	/* is the header already found? */
-	if ( msg->content_type==0 ) {
-		/* if not, found it */
-		if ( parse_headers(msg, HDR_CONTENTTYPE_F, 0)==-1)
-			goto error;
-		if ( msg->content_type==0 ) {
-			LOG(L_DBG, "missing Content-Type header\n");
-			return 0;
-		}
+		LOG(L_ERR, "ERR:"M_NAME":ecscf_parse_content_type_hdr:could not find the content-type header\n");
+		goto error;
 	}
 
-	/* maybe the header is already parsed! */
-	if ( msg->content_type->parsed!=0)
-		return get_content_type(msg);
-
 	/* it seams we have to parse it! :-( */
-	end = msg->content_type->body.s + msg->content_type->body.len;
-	ret = ecscf_decode_mime_type(msg->content_type->body.s, end , &mime);
-	if (ret==0)
+	end = content_type.s + content_type.len;
+	LOG(L_DBG, "DBG:"M_NAME":ecscf_parse_content_type_hdr:content type of the message is %.*s\n",
+		content_type.len, content_type.s);
+	ret = ecscf_decode_mime_type(content_type.s, end , &mime);
+	if (ret==0){
+		LOG(L_ERR, "ecscf_parse_content_type_hdr: could not decode"
+			       " content type header with value: %.*s\n",
+			        content_type.len, content_type.s);
 		goto error;
+	}
 	if (ret!=end) {
 		LOG(L_ERR, "the header CONTENT_TYPE contains "
 			"more then one mime type :-(!\n");
