@@ -80,7 +80,7 @@ user_d_hash_slot * user_datas = 0;
 static str service_hdr_name = {"Service",7};
 static str esqk_hdr_s = {"Esqk: ",6};
 static str esqk_hdr_e = {"\r\n",2};
-static str content_type_hdr=  {"Content-Type: application/pidf+xml\r\n",35};
+static str content_type_hdr=  {"Content-Type: application/pidf+xml\r\n",36};
 static str psap_uri_hdr_s=  {"PSAP-URI: ",10};
 
 void del_loc_subscription(loc_subscription *s);
@@ -569,6 +569,8 @@ int get_options_resp_headers(str * headers, user_d * d){
 	if(d->loc && d->locsip_loc)
 		STR_APPEND(*headers, content_type_hdr);
 	headers->s[headers->len] = '\0';
+
+	LOG(L_DBG, "DBG:"M_NAME":get_options_resp_headers: headers are: %s\n", headers->s);
 
 	return 0;
 }

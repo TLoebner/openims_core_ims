@@ -28,10 +28,11 @@
 #include "mod.h"
 
 #include "../../parser/parser_f.h"
-
+#include "../mem/mem.h"
 #include "sdp_helpr_funcs.h"
 #include "parse_content.h"
 #include "multipart_parse.h"
+#include "sip.h"
 
 static int str_trim_newline(str *s);
 static int get_body_content(struct sip_msg * _m, str * body_content, unsigned int type, unsigned int subtype);
@@ -87,6 +88,7 @@ int get_body_content(struct sip_msg * _m, str * body_content, unsigned int type,
 
 	mime = ecscf_parse_content_type_hdr(_m);
 	if (mime <= 0) {
+		LOG(L_ERR, "ERR:"M_NAME":get_body_content:could not parse the content type properly\n");
 		return -1;
 	}
 
@@ -231,4 +233,6 @@ static int str_trim_newline(str *s)
 	}
 	return 1;
 }
+
+
 
