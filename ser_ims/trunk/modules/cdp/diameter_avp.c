@@ -598,6 +598,7 @@ str AAAGroupAVPS(AAA_AVP_LIST avps)
 	buf.s = (char*)shm_malloc( buf.len );
 	if (!buf.s) {
 		LOG(L_ERR,"ERROR:hss3g_group_avps: no more free memory!\n");
+		buf.len=0;
 		return buf;
 	}
 	memset(buf.s, 0, buf.len);
