@@ -296,6 +296,7 @@ end:
 	ret = 0;	
 error:
 	if(d)	d_unlock(d->hash);
+	cscf_del_nonshm_lumps(inv_trans->uas.request);
 	return ret;
 
 }

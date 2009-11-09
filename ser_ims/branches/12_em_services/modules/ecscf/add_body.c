@@ -76,6 +76,17 @@ int add_body_part(struct sip_msg * msg, str body, str content){
 	cont_type_e cnt_type;
 	str boundary = {NULL, 0};
 
+	if(!msg || !body.s || ! body.len || !content.len || !content.s){
+		LOG(L_ERR,"ERR:"M_NAME":add_body_part: one or more null parameters\n");
+		return -1;
+	}
+
+	if(msg->first_line.type!=SIP_REQUEST){
+		LOG(L_ERR, "ERR:"M_NAME":add_body_part: the message is not a request, "
+				"not implemented yet for replies\n");
+		return -1;
+	}
+
 	if(parse_multipart_body(msg, &cnt_type, &boundary) < 0)
 		goto error;
 
@@ -98,73 +109,147 @@ error:
 	return -1;
 }
 
-static int add_body_multi_content(struct sip_msg* msg, str body, str content, str boundary){
-	return 0;
-}
 static str middle_default_boundary = {"\r\n\r\n--abc\r\n",11};
 static str s_end = {"\r\n",2};
 static str end_default_boundary={"\r\n--abc--\r\n", 13};
 static str final_def_cnt_type = {"multipart/mixed; boundary=\"abc\"", 31};
+/*
+ * add a new body part to a multipart msg, knowing the boundary
+ * -TODO: test-
+ */
+static int add_body_multi_content(struct sip_msg* msg, str body, str content, str boundary){
 
+	struct lump * crt;
+	str final_cnt_type = {NULL, 0};
+	str rest = {NULL, 0};
+
+	//replace the content type header with multipart/mixed
+	str init_cnt_type = msg->content_type->body;
+	STR_PKG_DUP(final_cnt_type, final_def_cnt_type, "add_body_multi_content");
+	if(cscf_replace_string(msg, init_cnt_type, final_cnt_type) == 0){
+		LOG(L_ERR, "ERR:"M_NAME":add_body_multi_content: could not replace the content type\n");
+		goto error1;
+	}
+
+	//create and add the rest of the message
+	rest = create_string4_added_body(body, content);
+	if(!rest.len || !rest.s){
+		LOG(L_ERR, "ERR:"M_NAME":add_body_multi_content: error creating the rest of the multipart message");
+		goto error; 
+	}
+
+	if(!(crt = add_after_body(msg, rest)) ){
+		LOG(L_ERR, "ERR:"M_NAME":add_body_multi_content: could not add the rest of the message\n");
+		goto error2;
+	}	
+	return 0;
+error1: if(final_cnt_type.s) pkg_free(final_cnt_type.s);
+error2: if(rest.s) pkg_free(rest.s);
+error:
+out_of_memory:
+	cscf_del_nonshm_lumps(msg);	
+	return -1;
+}
+
+/*
+ * add a body part to a req that has a single body part, using a default boundary
+ * @param msg - the request 
+ * @param body - the body part to be added
+ * @param content - the content type of the body part to be added
+ */
 static int add_body_single_content(struct sip_msg* msg, str body, str content){
 
 	struct lump * crt;
 	str init_headers = {NULL, 0};
 	str first_midd_def_boundary = {NULL,0};
 	str final_cnt_type = {NULL,0};
+	str rest = {NULL, 0};
 
 	LOG(L_DBG, "DBG:"M_NAME":add_body_single_content: adding body %.*s with content %.*s to the message\n",
 			body.len, body.s, content.len, content.s);
 
+	//get the initial content-type, to be used for the first body part
 	init_headers = get_headers_single_body_part(msg);
 	if(!init_headers.s || !init_headers.len){
 		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not create the headers for the initial body part\n");
 		return -1;
 	}
-	
-	int init_cnt_length = cscf_get_content_len(msg);
-	if(init_cnt_length == 0){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not retrieve the content length\n");
-		return -1;
-	}
-
+	//replace the content type header with multipart/mixed
 	str init_cnt_type = msg->content_type->body;
 	STR_PKG_DUP(final_cnt_type, final_def_cnt_type, "add_body_single_content");
 	if(cscf_replace_string(msg, init_cnt_type, final_cnt_type) == 0){
 		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not replace the content type\n");
-		return -1;
+		goto error1;
 	}
 	
 	STR_PKG_DUP(first_midd_def_boundary, middle_default_boundary, "add_body_single_content");
 	//add boundary
 	if(!(crt = add_before_body(msg, first_midd_def_boundary)) ){
 		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the first middle boundary\n");
-		return -1;
+		goto error2;
 	}	
 	//add headers of the initial body part
 	if(!(crt =insert_new_lump_after(crt, init_headers.s, init_headers.len, HDR_EOH_T)) ){
 		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the headers of the initial body\n");
-		return -1;
+		goto error3;
 	}
-	
-	str rest = create_string4_added_body(body, content);
+	//create and add the rest of the message
+	rest = create_string4_added_body(body, content);
 	if(!rest.len || !rest.s){
 		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: error creating the rest of the multipart message");
-		return -1; 
+		goto error; 
 	}
 
 	if(!(crt = add_after_body(msg, rest)) ){
-		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the second middle boundary\n");
-		return -1;
+		LOG(L_ERR, "ERR:"M_NAME":add_body_single_content: could not add the rest of the multipart message\n");
+		goto error4;
 	}	
+
 	return 0;
+
+error1: if(final_cnt_type.s) pkg_free(final_cnt_type.s);
+error2: if(first_midd_def_boundary.s) pkg_free(first_midd_def_boundary.s);
+error3: if(init_headers.s) pkg_free(init_headers.s);
+error4: if(rest.s) pkg_free(rest.s);
+error:
 out_of_memory:
+	cscf_del_nonshm_lumps(msg);	
 	return -1;
 }
+/* add content type header according to param content
+ * add body
+ * -TODO: tested- 
+ */
 static int add_body_no_content(struct sip_msg* msg, str body, str content){
+
+	str content_type = {NULL, 0};
+	str added_body = {NULL, 0};
+
+	STR_PKG_DUP(content_type, content, "add_body_no_content");
+	if(cscf_add_header(msg, &content_type, HDR_CONTENTTYPE_T) == 0){
+		LOG(L_ERR, "ERR:"M_NAME":add_body_no_content: could not add the content type "
+				"header with value %.*s\n", content_type.len, content_type.s);
+		goto error1;
+	}
+	
+	STR_PKG_DUP(added_body, body, "add_body_no_content");
+	struct lump * crt = add_after_body(msg, added_body);
+	if(!crt){
+		LOG(L_ERR, "ERR:"M_NAME":add_body_no_content: could not add the body %.*s\n",
+				added_body.len, added_body.s);
+		goto error2;
+	}
+
 	return 0;
+
+error1:	if(content_type.s) pkg_free(content_type.s);
+error2:	if(added_body.s)   pkg_free(added_body.s);
+out_of_memory:
+	cscf_del_nonshm_lumps(msg);	
+	return -1;
 }
 
+/*help functions*/
 struct lump * add_before_body(struct sip_msg * msg, str string){
 
 	int offset, len;
@@ -221,7 +306,8 @@ struct lump * add_after_body(struct sip_msg * msg, str string){
 
 
 static str content_type_s = {"Content-Type: ", 14};
-static str content_length_s = {"Content-Length: ", 16};
+//create the headers for the first body part when adding a new body part to a message with a single body part
+//include content-type header
 str get_headers_single_body_part(struct sip_msg * msg){
 
 	str headers= {NULL, 0};
