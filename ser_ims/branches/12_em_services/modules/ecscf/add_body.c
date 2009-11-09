@@ -101,7 +101,7 @@ error:
 static int add_body_multi_content(struct sip_msg* msg, str body, str content, str boundary){
 	return 0;
 }
-static str middle_default_boundary = {"\r\n\n--abc\r\n",10};
+static str middle_default_boundary = {"\r\n\r\n--abc\r\n",11};
 static str s_end = {"\r\n",2};
 static str end_default_boundary={"\r\n--abc--\r\n", 13};
 static str final_def_cnt_type = {"multipart/mixed; boundary=\"abc\"", 31};
@@ -225,7 +225,7 @@ static str content_length_s = {"Content-Length: ", 16};
 str get_headers_single_body_part(struct sip_msg * msg){
 
 	str headers= {NULL, 0};
-	str content_type = {NULL, 0}, content_len={NULL, 0};
+	str content_type = {NULL, 0};
 
 	content_type = cscf_get_content_type(msg);
 	if(!content_type.s || !content_type.len){
@@ -233,15 +233,7 @@ str get_headers_single_body_part(struct sip_msg * msg){
 		return headers;
 	}
 
-	int length = cscf_get_content_len(msg);
-	if(length == 0){
-		LOG(L_ERR, "ERR:"M_NAME":get_headers_single_body_part: invalid content-len header\n");
-		return headers;
-	}
-	content_len = msg->content_length->body;
-	
-	int len = content_type_s.len + content_type.len + 
-		content_length_s.len + content_len.len + s_end.len*2;
+	int len = content_type_s.len + content_type.len + s_end.len*2;
 	headers.s = (char*)pkg_malloc(len*sizeof(char));
 	if(!headers.s)
 		return headers;
@@ -249,8 +241,6 @@ str get_headers_single_body_part(struct sip_msg * msg){
 	STR_APPEND(headers, content_type_s);
 	STR_APPEND(headers, content_type);
 	STR_APPEND(headers, s_end);
-	STR_APPEND(headers, content_length_s);
-	STR_APPEND(headers, content_len);
 	STR_APPEND(headers, s_end);
 	
 	LOG(L_DBG, "DBG:"M_NAME":get_headers_single_body_part: the headers are: %.*s\n", headers.len, headers.s);
@@ -262,18 +252,9 @@ str get_headers_single_body_part(struct sip_msg * msg){
 str create_string4_added_body(str body, str content){
 
 	str res = {NULL, 0};
-	str cont_len = {NULL, 0};
-	/* returns a pointer to a static buffer containing l in asciiz & sets len */
-	cont_len.s = int2str((unsigned int)body.len, &cont_len.len);
-	if(!cont_len.s || !cont_len.len){
-		LOG(L_ERR, "ERR:"M_NAME":create_string4_added_body: error while "
-				"converting the body len into string");
-		return res;
-	}
 	int len = middle_default_boundary.len+ end_default_boundary.len +
 		content_type_s.len + content.len + 
-		content_length_s.len + cont_len.len + s_end.len*4 + 
-		body.len;
+		s_end.len*3 + body.len;
 	res.s = (char*)pkg_malloc(len*sizeof(char));
 	if(!res.s)
 		return res;
@@ -282,9 +263,6 @@ str create_string4_added_body(str body, str content){
 	STR_APPEND(res, middle_default_boundary);
 	STR_APPEND(res, content_type_s);
 	STR_APPEND(res, content);
-	STR_APPEND(res, s_end);
-	STR_APPEND(res, content_length_s);
-	STR_APPEND(res, cont_len);
 	STR_APPEND(res, s_end);
 	STR_APPEND(res, s_end);
 	STR_APPEND(res, body);
