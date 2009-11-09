@@ -1117,17 +1117,24 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 				if (msg->commandCode == IMS_AAR)
 				{
 					//an AAR starts the Authorization State Machine for the server
-					STR_SHM_DUP(id,msg->sessionId->data,"Rcv_process");
-					session=new_session(id,AUTH_SERVER_STATEFULL);
-					if (session)
-					{
-						hash=session->hash;
-						add_session(session);
-						sessions_lock(hash);
-						//create an auth session with the id of the message!!!
-						//and get from it the important data
-						auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
-						sessions_unlock(hash);
+					id.s = shm_malloc(msg->sessionId->data.len);
+					if (!id.s){
+						LOG(L_ERR,"Error allocating %d bytes of shm!\n",msg->sessionId->data.len);
+						id.len = 0;
+					}else{
+						id.len = msg->sessionId->data.len;
+						memcpy(id.s,msg->sessionId->data.s,id.len);
+						session=new_session(id,AUTH_SERVER_STATEFULL);
+						if (session)
+						{
+							hash=session->hash;
+							add_session(session);
+							sessions_lock(hash);
+							//create an auth session with the id of the message!!!
+							//and get from it the important data
+							auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+							sessions_unlock(hash);
+						}
 					}
 				}
 
