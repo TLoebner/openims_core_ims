@@ -361,7 +361,9 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state=AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					break;
 				case AUTH_EV_SEND_STA:
+					LOG(L_ERR,"SENDING STA!!!\n");
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
 					break;

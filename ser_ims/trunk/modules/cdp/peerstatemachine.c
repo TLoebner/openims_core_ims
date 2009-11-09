@@ -996,10 +996,13 @@ void Snd_Message(peer *p, AAAMessage *msg)
 	AAASession *session=0;
 	int rcode;
 	int send_message_before_session_sm=0;
+	LOG(L_DBG,"Snd_Message called to peer [%.*s] for %s with code %d \n",
+		p->fqdn.len,p->fqdn.s,is_req(msg)?"request":"response",msg->commandCode);
 	touch_peer(p);
 	if (msg->sessionId) session = get_session(msg->sessionId->data);
 	
 	if (session){
+		LOG(L_DBG,"There is a session of type %d\n",session->type);
 		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
 				if (is_req(msg))
@@ -1025,20 +1028,27 @@ void Snd_Message(peer *p, AAAMessage *msg)
 				}
 				break;
 			case AUTH_SERVER_STATEFULL:
+				LOG(L_DBG,"this message is matched here to see what request or reply it is\n");
 				if (is_req(msg))
 				{
 					if (msg->commandCode== IMS_ASR)
 					{
+						LOG(L_DBG,"ASR\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ASR,msg);
 					} else {
 						//would be a RAR but ok!
+						LOG(L_DBG,"other request\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
 					}
 				} else {
 					if (msg->commandCode == IMS_STR)
+					{
+						LOG(L_DBG,"STA\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_STA,msg);
-					else
+					} else {
+						LOG(L_DBG,"other reply\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+					}
 				}
 				break;				 
 			default:
@@ -1061,6 +1071,7 @@ void Snd_Message(peer *p, AAAMessage *msg)
 void Rcv_Process(peer *p, AAAMessage *msg)
 {
 	AAASession *session=0;
+	str id={0,0};
 	unsigned int hash; // we need this here because after the sm_processing , we might end up
 					   // with no session any more
 	int nput=0;
@@ -1101,13 +1112,34 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 		if (msg->sessionId){
 			if (msg->commandCode == IMS_ASR) 
 				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg);
-			if (msg->commandCode == IMS_AAR)
+			else
 			{
-				session=AAACreateAuthSession(0,0,1,0,0);
-				
-				shm_str_dup(session->id,msg->sessionId->data); 
-				auth_server_statefull_sm_process(0,AUTH_EV_RECV_REQ,msg);				
+				if (msg->commandCode == IMS_AAR)
+				{
+					//an AAR starts the Authorization State Machine for the server
+					STR_SHM_DUP(id,msg->sessionId->data,"Rcv_process");
+					session=new_session(id,AUTH_SERVER_STATEFULL);
+					if (session)
+					{
+						hash=session->hash;
+						add_session(session);
+						sessions_lock(hash);
+						//create an auth session with the id of the message!!!
+						//and get from it the important data
+						auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+						sessions_unlock(hash);
+					}
+				}
+
 			}
+			//this is quite a big error
+			//if (msg->commandCode == IMS_AAR)
+			//{
+				//session=AAACreateAuthSession(0,0,1,0,0);
+				
+				//shm_str_dup(session->id,msg->sessionId->data);
+
+			//}
 			// Any other cases to think about?	 
 		} 
 				 
