@@ -491,7 +491,8 @@ enum {
 /** Flow-Usage AVP */
 enum {
 	AVP_IMS_Flow_Usage_No_Information					= 0,
-	AVP_IMS_Flow_Usage_Rtcp								= 1
+	AVP_IMS_Flow_Usage_Rtcp								= 1,
+	AVP_IMS_Flow_Usage_AF_Signalling					= 2
 };
 /** Specific-Action AVP */
 enum {
@@ -532,7 +533,10 @@ enum {
 	AVP_IMS_Send_Data_Indication_User_Data_Requested		= 1
 };
 
-
+enum {
+	AVP_IMS_Service_Info_Status_Final					=	0,
+	AVP_IMS_Service_Info_Status_Preliminary				=   1
+};
 
 
 /**	Diameter Result Codes				*/
