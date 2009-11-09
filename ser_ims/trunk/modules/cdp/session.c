@@ -91,29 +91,7 @@ inline void sessions_unlock(unsigned int hash)
 	lock_release(sessions[hash].lock);
 }
 
-/**
- * Create a new session structure 
- * @param id - the session id string, already allocated in shm
- * @param type - the session type
- * @returns the new cdp_session_t on success or 0 on failure
- */
-cdp_session_t* new_session(str id,cdp_session_type_t type)
-{
-	cdp_session_t *x=0;
-	
-	x = shm_malloc(sizeof(cdp_session_t));
-	if (!x){
-		LOG_NO_MEM("shm",sizeof(cdp_session_t));
-		goto error;
-	}
-	memset(x,0,sizeof(cdp_session_t));
-	x->id = id;
-	x->type = type;
-	
-	return x;
-error:
-	return 0;	
-}
+
 
 /**
  * Free a session structure
@@ -130,6 +108,8 @@ void free_session(cdp_session_t *x)
 				}
 				break;
 			case AUTH_CLIENT_STATEFULL:
+				break;
+			case AUTH_SERVER_STATEFULL:
 				break;
 			default:
 				LOG(L_ERR,"ERR:free_session(): Unknown session type %d!\n",x->type);
@@ -253,23 +233,48 @@ inline unsigned int get_str_hash(str x,int hash_size)
 }
 
 /**
+ * Create a new session structure
+ * @param id - the session id string, already allocated in shm
+ * @param type - the session type
+ * @returns the new cdp_session_t on success or 0 on failure
+ */
+cdp_session_t* new_session(str id,cdp_session_type_t type)
+{
+	cdp_session_t *x=0;
+
+	x = shm_malloc(sizeof(cdp_session_t));
+	if (!x){
+		LOG_NO_MEM("shm",sizeof(cdp_session_t));
+		goto error;
+	}
+	memset(x,0,sizeof(cdp_session_t));
+	x->id = id;
+	x->type = type;
+	x->hash = get_str_hash(x->id,sessions_hash_size);
+	return x;
+error:
+	return 0;
+}
+
+/**
  * Adds the session to the session list.
  * \note If you use x after this then lock first!!!
  * @param x - the session to add
  */
 void add_session(cdp_session_t *x)
 {
-	unsigned int hash;
+//	unsigned int hash;
 	if (!x) return;
-	hash = get_str_hash(x->id,sessions_hash_size);
-	x->hash = hash;
-	sessions_lock(hash);
+//	hash = get_str_hash(x->id,sessions_hash_size);
+//	x->hash = hash;
+	LOG(L_DBG,"adding a session with id %.*s\n",x->id.len,x->id.s);
+	sessions_lock(x->hash);
 		x->next = 0;
-		x->prev = sessions[hash].tail;
-		if (sessions[hash].tail) sessions[hash].tail->next = x;
-		sessions[hash].tail = x;
-		if (!sessions[hash].head) sessions[hash].head = x;
-	sessions_unlock(hash);
+		x->prev = sessions[x->hash].tail;
+		if (sessions[x->hash].tail) sessions[x->hash].tail->next = x;
+		sessions[x->hash].tail = x;
+		if (!sessions[x->hash].head) sessions[x->hash].head = x;
+	sessions_unlock(x->hash);
 }
 
 /**
@@ -283,11 +288,15 @@ cdp_session_t* get_session(str id)
 	unsigned int hash;
 	cdp_session_t *x;
 	hash = get_str_hash(id,sessions_hash_size);
+	LOG(L_DBG,"calling get session with id %.*s and hash %u\n",id.len,id.s,hash);
 	sessions_lock(hash);
 		for(x = sessions[hash].head;x;x=x->next)
+		{
+			LOG(L_DBG,"looking for |%.*s| in |%.*s|\n",id.len,id.s,x->id.len,x->id.s);
 			if (x->id.len == id.len &&
 				strncasecmp(x->id.s,id.s,id.len)==0)
 					return x;
+		}
 	sessions_unlock(hash);		
 	return 0;
 }
@@ -361,7 +370,7 @@ void session_timer(time_t now, void* ptr)
 		for(x = sessions[hash].head;x;x=x->next) {
 			
 			
-			LOG(L_INFO,"session of type [%i] with id %.*s",x->type,x->id.len,x->id.s);
+			LOG(L_DBG,"session of type [%i] with id %.*s in hash %u",x->type,x->id.len,x->id.s,hash);
 			if (x->type==AUTH_CLIENT_STATEFULL) {
 				LOG(L_DBG,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
 			} else LOG(L_INFO,"\n");
@@ -455,8 +464,10 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 		s->u.auth.timeout=time(0)+config->tc*30; 
 		s->u.auth.lifetime=time(0)+config->tc*32;
 		s->u.auth.grace_period=config->tc*2;
+		LOG(L_DBG,"id is %.*s",s->id.len,s->id.s);
+		LOG(L_DBG,"hash is %u",s->hash);
+		add_session(s);
 	}
-	add_session(s);
 	return s;
 }
 
