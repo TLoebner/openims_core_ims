@@ -118,9 +118,20 @@ int E_del_ESQK_info(struct sip_msg * inv_repl, char* str1, char* str2){
 
 }
 
+int add_loc_info_body_part(struct sip_msg * msg, str loc_info);
 int E_add_loc_info(e_dialog * d, struct sip_msg * inv_req, struct sip_msg* opt_repl){
 	
+	str pidf_body = {NULL, 0};
+
 	LOG(L_DBG, "DBG:"M_NAME":E_add_loc_info: trying to add the location information from the LRF, if present\n");
+	
+	if(get_pidf_lo_body(opt_repl, &pidf_body)){
+		LOG(L_ERR, "ERR:"M_NAME":E_add_loc_info:could not get the pidf+xml body from the LRF response\n");
+		return CSCF_RETURN_FALSE;
+	}
+
+	if(add_loc_info_body_part(inv_req, pidf_body)!=0)
+		return CSCF_RETURN_FALSE;
 	return CSCF_RETURN_TRUE;
 }
 
@@ -199,6 +210,9 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 	e_dialog * d = NULL;
 	str call_id;
 
+	if(code<200)
+		return 0;
+
 	if(!inv_trans->uas.request){
 		LOG(L_ERR, "ERR:"M_NAME":E_process_options_repl: the INVITE message is not set in the INVITE trans\n");
 		goto error;
@@ -227,7 +241,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 		//send error response to INVITE and update the dialog
 		LOG(L_DBG, "ERR:"M_NAME":E_process_options_repl: received an error response %i\n", code);
 
-		if(use_default_psap){
+		if(code != 408 && use_default_psap){
 			if(E_set_psap(d, default_psap_uri_str) != CSCF_RETURN_TRUE)
 				goto error;
 			
