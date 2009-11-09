@@ -370,7 +370,7 @@ void session_timer(time_t now, void* ptr)
 		for(x = sessions[hash].head;x;x=x->next) {
 			
 			
-			LOG(L_DBG,"session of type [%i] with id %.*s in hash %u",x->type,x->id.len,x->id.s,hash);
+			LOG(L_DBG,"session of type [%i] with id %.*s in hash %u\n",x->type,x->id.len,x->id.s,hash);
 			if (x->type==AUTH_CLIENT_STATEFULL) {
 				LOG(L_DBG,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
 			} else LOG(L_INFO,"\n");
