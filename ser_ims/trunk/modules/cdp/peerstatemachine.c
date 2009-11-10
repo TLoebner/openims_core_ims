@@ -1096,7 +1096,12 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 			 case AUTH_SERVER_STATEFULL:
 			 	if (is_req(msg))
 			 	{
-			 		auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+			 		if (msg->commandCode==IMS_STR)
+			 		{
+			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_STR,msg);
+			 		} else {
+			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+			 		}
 			 	}else{
 			 		if (msg->commandCode==IMS_ASA)
 			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ASA,msg);

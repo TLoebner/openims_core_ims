@@ -316,6 +316,8 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	switch(x->state){
 		case AUTH_ST_IDLE:
 			switch (event) {
+				case AUTH_EV_RECV_STR:
+					break;
 				case AUTH_EV_RECV_REQ:
 					// The RequestHandler will generate a Send event for the answer
 					// and we will only then now if the user is authorised or not
@@ -347,6 +349,8 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 		
 		
 			switch (event) {
+				case AUTH_EV_RECV_STR:
+					break;
 				case AUTH_EV_SEND_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
 					break;
@@ -375,13 +379,18 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 		
 		case AUTH_ST_DISCON:
 			switch (event) {
+				case AUTH_EV_RECV_STR:
+					break;
+				case AUTH_EV_RECV_ASA:
 				case AUTH_EV_RECV_ASA_SUCCESS:
 					x->state=AUTH_ST_IDLE;
-					Session_Cleanup(s,msg);
+					//Session_Cleanup(s,msg);
+					break;
 				case AUTH_EV_RECV_ASA_UNSUCCESS:
 					Send_ASR(s,msg);
 					// how many times will this be done?
 					x->state=AUTH_ST_DISCON;
+					break;
 				case AUTH_EV_SEND_STA:
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
