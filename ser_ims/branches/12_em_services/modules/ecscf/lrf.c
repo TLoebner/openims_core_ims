@@ -122,13 +122,16 @@ int add_loc_info_body_part(struct sip_msg * msg, str loc_info);
 int E_add_loc_info(e_dialog * d, struct sip_msg * inv_req, struct sip_msg* opt_repl){
 	
 	str pidf_body = {NULL, 0};
+	int ret;
 
 	LOG(L_DBG, "DBG:"M_NAME":E_add_loc_info: trying to add the location information from the LRF, if present\n");
 	
-	if(get_pidf_lo_body(opt_repl, &pidf_body)){
+	ret = get_pidf_lo_body(opt_repl, &pidf_body);
+	if(ret == -1){
 		LOG(L_ERR, "ERR:"M_NAME":E_add_loc_info:could not get the pidf+xml body from the LRF response\n");
 		return CSCF_RETURN_FALSE;
-	}
+	}else if (ret == 1)
+		return CSCF_RETURN_TRUE;
 
 	if(add_loc_info_body_part(inv_req, pidf_body)!=0)
 		return CSCF_RETURN_FALSE;

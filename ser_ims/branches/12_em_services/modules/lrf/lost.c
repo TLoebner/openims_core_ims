@@ -298,9 +298,10 @@ int LRF_has_loc(struct sip_msg* msg, char * str1, char* str2){
 		return CSCF_RETURN_FALSE;
 	}
 
-	if(get_pidf_lo_body(msg, &pidf_body)<0){
-		LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
-
+	int ret = get_pidf_lo_body(msg, &pidf_body);
+	if(ret != 0){
+		LOG(ret==-1?L_ERR:L_DBG, ret==-1?"ERR:":"DBG:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
+	
 		lrf_unlock(d->hash);
 		return NO_LOC_FOUND;
 	}
