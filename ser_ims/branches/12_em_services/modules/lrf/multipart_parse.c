@@ -42,24 +42,27 @@ static int get_mixed_body_content(str* mixed_body, str delimiter, unsigned int t
 /* get the PIDF-LO body of a request
  * @param msg - the SIP request
  * @param pidf_body - the PIDF-LO body part
- * @returns -1 if not found  or error, 0 if found
+ * @returns -1 if not found  or error, 0 if found, 1 if no body content
  */
 int get_pidf_lo_body(struct sip_msg* msg, str * pidf_body){
 
 	unsigned int type, subtype;
+	int ret;
 
 	type = TYPE_APPLICATION;
 	subtype = SUBTYPE_PIDFXML;
 
-	if(get_body_content(msg, pidf_body, type, subtype)){
-	
+	ret = get_body_content(msg, pidf_body, type, subtype);
+	if(ret == -1){
 		LOG(L_ERR, "ERR: "M_NAME":get_pidf_lo_body:an error has occured while retrieving the pidf+xml information\n");
-		return -1;
-	}
+	}else if (ret == 1){
+		LOG(L_DBG, "DBG: "M_NAME":no body found\n");
+	}else{
 	
-	LOG(L_DBG, "DBG: "M_NAME":get_pidf_lo_body:content body for pidf+xml object is %.*s\n",
+		LOG(L_DBG, "DBG: "M_NAME":get_pidf_lo_body:content body for pidf+xml object is %.*s\n",
 			pidf_body->len, pidf_body->s);
-	return 0;
+	}
+	return ret;
 }
 
 /* get the body with a specific type and subtype from the multipart body
@@ -67,7 +70,7 @@ int get_pidf_lo_body(struct sip_msg* msg, str * pidf_body){
  * @param delimiter - the string that is delimiting the different body parts
  * @param type and subtype - e.g. application and pdf+xml for a PIDF-LO body (application/pdf+xml)
  * @param body_content - the requested body part
- * @returns -1 if not found or error, 0 if found
+ * @returns -1 if not found or error, 0 if found, 1 if no body is present
  */
 int get_body_content(struct sip_msg * _m, str * body_content, unsigned int type, unsigned int subtype){
 
