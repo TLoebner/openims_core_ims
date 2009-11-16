@@ -77,6 +77,7 @@ typedef struct {
 	pid_list_t *head,*tail;
 } pid_list_head_t;
 
+int diameter_peer_init_str(str config_str);
 int diameter_peer_init(char *cfg_filename);
 
 int diameter_peer_start(int blocking);

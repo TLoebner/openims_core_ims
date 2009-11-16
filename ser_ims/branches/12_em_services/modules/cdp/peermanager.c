@@ -106,7 +106,9 @@ int peer_manager_init(dp_config *config)
 		add_peer(p);
 	}
 	
-	add_timer(PEER_MANAGER_TIMER,0,&peer_timer,0);
+	i = config->tc/5;
+	if (i<=0) i=1;
+	add_timer(i,0,&peer_timer,0);
 	
 	return 1;
 }
@@ -148,11 +150,18 @@ void log_peer_list(int level)
 	/* must have lock on peer_list_lock when calling this!!! */
 	peer *p;
 	int i;
+#ifdef SER_MOD_INTERFACE
+	if (!is_printable(level))
+#else		
+	if (debug<level)
+#endif
+		return;
+	
 	LOG(level,"--- Peer List: ---\n");
 	for(p = peer_list->head;p;p = p->next){
 		LOG(level,ANSI_GREEN" S["ANSI_YELLOW"%s"ANSI_GREEN"] "ANSI_BLUE"%.*s:%d"ANSI_GREEN" D["ANSI_RED"%c"ANSI_GREEN"]\n",dp_states[p->state],p->fqdn.len,p->fqdn.s,p->port,p->is_dynamic?'X':' ');
 		for(i=0;i<p->applications_cnt;i++)
-			LOG(level,ANSI_YELLOW"\t [%d,%d]\n",p->applications[i].id,p->applications[i].vendor);
+			LOG(level,ANSI_YELLOW"\t [%d,%d]"ANSI_GREEN"\n",p->applications[i].id,p->applications[i].vendor);
 	}
 	LOG(level,"------------------\n");		 
 }

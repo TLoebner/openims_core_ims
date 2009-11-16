@@ -53,6 +53,7 @@
  
 #include "cdp_load.h"
 
+#ifdef CDP_FOR_SER
 #include "../../sr_module.h"
 
 
@@ -85,11 +86,16 @@ int load_cdp( struct cdp_binds *cdpb)
 	FIND_EXP(AAACreateSession,"AAACreateSession",AAACreateSession_f);
 	FIND_EXP(AAADropSession,"AAADropSession",AAADropSession_f);
 
+	FIND_EXP(AAACreateAuthSession,"AAACreateAuthSession",AAACreateAuthSession_f);
+	FIND_EXP(AAADropAuthSession,"AAADropAuthSession",AAADropAuthSession_f);
+	FIND_EXP(AAATerminateAuthSession,"AAATerminateAuthSession",AAATerminateAuthSession_f);
+
 	FIND_EXP(AAACreateTransaction,"AAACreateTransaction",AAACreateTransaction_f);
 	FIND_EXP(AAADropTransaction,"AAADropTransaction",AAADropTransaction_f);
 	
 	FIND_EXP(AAACreateAVP,"AAACreateAVP",AAACreateAVP_f);
 	FIND_EXP(AAAAddAVPToMessage,"AAAAddAVPToMessage",AAAAddAVPToMessage_f);
+	FIND_EXP(AAAAddAVPToList,"AAAAddAVPToList",AAAAddAVPToList_f);
 	FIND_EXP(AAAFindMatchingAVP,"AAAFindMatchingAVP",AAAFindMatchingAVP_f);
 	FIND_EXP(AAAFindMatchingAVPList,"AAAFindMatchingAVPList",AAAFindMatchingAVPList_f);
 	FIND_EXP(AAAGetNextAVP,"AAAGetNextAVP",AAAGetNextAVP_f);
@@ -101,5 +107,11 @@ int load_cdp( struct cdp_binds *cdpb)
 	FIND_EXP(AAAAddRequestHandler,"AAAAddRequestHandler",AAAAddRequestHandler_f);
 	FIND_EXP(AAAAddResponseHandler,"AAAAddResponseHandler",AAAAddResponseHandler_f);
 	
+	
+	FIND_EXP(get_session,"get_session",get_session_f);
+	FIND_EXP(sessions_unlock,"sessions_unlock",sessions_unlock_f);
+	FIND_EXP(sessions_lock,"sessions_lock",sessions_lock_f);
 	return 1;
 }
+
+#endif /* CDP_FOR_SER */

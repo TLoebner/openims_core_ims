@@ -71,7 +71,7 @@
 #include "../../mem/mem.h"
 
 #include "../scscf/scscf_load.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 /** debug flag for IFC matching */
 #define IFC_DEBUG 1

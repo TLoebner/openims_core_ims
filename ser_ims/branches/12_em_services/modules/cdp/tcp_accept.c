@@ -173,7 +173,6 @@ inline static int accept_connection(int server_sock,int *new_sock)
 {
 	unsigned int length;
 	struct sockaddr_in remote;
-	int pid;
 		
 	/* do accept */
 	length = sizeof( struct sockaddr_in);
@@ -187,31 +186,7 @@ inline static int accept_connection(int server_sock,int *new_sock)
 		
 	}
 	
-	receiver_init(*new_sock,0);
-
-	#ifdef CDP_FOR_SER
-		pid = fork_process(server_sock,"receiver R",0);
-	#else
-		pid = fork();
-	#endif	
-	if (pid<0){
-		LOG(L_ERR,"ERROR:accept_connection(): fork() failed > %s\n",strerror(errno));
-		goto error;
-	}
-	if (pid==0){		
-		/* child */
-		if (listening_socks) {
-			pkg_free(listening_socks);
-			listening_socks=0;
-		}
-		dp_add_pid(pid);
-		receiver_process(*new_sock);
-		LOG(L_CRIT,"ERROR:accept_connection(): receiver_process finished without exit!\n");
-		exit(-1);
-	}else{
-		/* parent */
-		LOG(L_INFO,"INFO:accept_connection(): Receiver process forked [%d]\n",pid);
-	}
+	receiver_send_socket(*new_sock,0);
 	
 	return 1;
 error:

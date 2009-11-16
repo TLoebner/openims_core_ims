@@ -61,8 +61,7 @@
 #include "../../parser/parse_from.h"
 #include "../../parser/parse_content.h"
 #include "../../parser/parse_disposition.h"
-#include "../../db/db.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #include "mark.h"
 

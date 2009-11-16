@@ -53,7 +53,7 @@
  * 
  */
 
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../../dset.h"
 
 #include "isc.h"
@@ -70,6 +70,9 @@ extern str isc_my_uri_sip;			/**< Uri of myself to loop the message in str with 
 extern int isc_fr_timeout;			/**< default ISC response timeout in ms */
 extern int isc_fr_inv_timeout;		/**< default ISC INVITE response timeout in ms */
 
+#ifdef SER_MOD_INTERFACE
+	extern int route_type;
+#endif	
 
 /**
  *	Forwards the message to the application server.
@@ -101,7 +104,13 @@ int isc_forward( struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	memcpy(msg->dst_uri.s,m->server_name.s,m->server_name.len);
 
 	/* append branch if last trigger failed */
-	if (*isc_tmb.route_mode == MODE_ONFAILURE) 
+	if (
+#ifdef SER_MOD_INTERFACE
+	is_route_type(FAILURE_ROUTE)
+#else
+	*isc_tmb.route_mode==MODE_ONFAILURE
+#endif
+		)
 		append_branch(msg,msg->first_line.u.request.uri.s,msg->first_line.u.request.uri.len,
 			msg->dst_uri.s,msg->dst_uri.len,0,0);
 	

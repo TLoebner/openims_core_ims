@@ -61,7 +61,7 @@
 #include "../../dprint.h"
 #include "../../mem/mem.h"
 #include "../scscf/scscf_load.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 
 #include "sip.h"

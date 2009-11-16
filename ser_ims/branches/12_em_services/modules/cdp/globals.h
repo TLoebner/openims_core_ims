@@ -62,8 +62,6 @@
 #define DPNAME "CDiameterPeer"
 #define DPVERSION "0.0.2"
 
-/** timer interval for the peer manager to re-evaluate the peer situation */
-#define PEER_MANAGER_TIMER 3
 
 #ifdef CDP_FOR_SER
 #else
@@ -85,6 +83,7 @@ extern gen_lock_t *shutdownx_lock; /**< lock used on shutdown				*/
 
 extern pid_t *dp_first_pid;		/**< first pid that we started from		*/
 
+#ifndef WHARF
 /* ANSI Terminal colors */
 #define ANSI_GRAY		"\033[01;30m"
 #define ANSI_BLINK_RED 	"\033[00;31m"
@@ -95,6 +94,7 @@ extern pid_t *dp_first_pid;		/**< first pid that we started from		*/
 #define ANSI_MAGENTA	"\033[01;35m"
 #define ANSI_CYAN		"\033[01;36m"
 #define ANSI_WHITE		"\033[01;37m"
+#endif
 
 #endif
 
