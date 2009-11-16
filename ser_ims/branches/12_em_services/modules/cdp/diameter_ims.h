@@ -133,20 +133,41 @@
 /** 3GPP AVP Codes */ 
 enum {
 /**   1 to 255 reserved for backward compatibility with IMS Radius TS29.061	*/
+	AVP_IMS_Digest_Realm								= 104,
+	AVP_IMS_Digest_QoP									= 110,
+	AVP_IMS_Digest_Algorithm							= 111,
+	AVP_IMS_Digest_Auth_Param							= 117,
+	AVP_IMS_Digest_Domain								= 119,
+	AVP_IMS_Digest_HA1									= 121,
 /** 256 to 299 reserved for future use										*/
 	AVP_IMS_Vendor_Id									= 266,
 	AVP_IMS_Experimental_Result_Code					= 298,
 	AVP_IMS_Experimental_Result							= 297,
 /** 300 to 399 reserved for TS29.234											*/
-	
+
 /** 400 to 499 reserved for TS29.109											*/
 	AVP_IMS_CCR_Number									= 415,
 	AVP_IMS_CCR_Type									= 416,
-
-/**  or   RFC 4006 							*/
+ 	AVP_IMS_Service_Identifier							= 439,
+ /**  or   RFC 4006 															*/
  	AVP_IMS_Subscription_Id								= 443,
- 	AVP_IMS_Subscription_Id_Type						= 450,
  	AVP_IMS_Subscription_Id_Data						= 444,
+ 	AVP_IMS_Subscription_Id_Type						= 450,
+ /* This require ETSI vendor id and are from ETSI TS 183 017*/
+ 	AVP_ETSI_Binding_Information						= 450,
+ 	AVP_ETSI_Binding_Input_List							= 451,
+ 	AVP_ETSI_Binding_Output_List						= 452,
+ 	AVP_ETSI_V6_transport_address						= 453,
+ 	AVP_ETSI_V4_transport_address						= 454,
+ 	AVP_ETSI_Port_Number								= 455,
+ 	AVP_ETSI_Reservation_Class							= 456,
+ 	AVP_ETSI_Latching_Indication						= 457,
+ 	AVP_ETSI_Reservation_Priority						= 458,
+	AVP_ETSI_Service_Class								= 459,
+	AVP_ETSI_Overbooking_Indication						= 460,
+	AVP_ETSI_Authorization_Package_Id  					= 461,
+	AVP_ETSI_Media_Authorization_Context_Id 			= 462,
+
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_IMS_Abort_Cause									= 500,
 	AVP_IMS_Access_Network_Charging_Address				= 501,
@@ -171,7 +192,10 @@ enum {
 	AVP_IMS_RR_Bandwidth								= 521,
 	AVP_IMS_RS_Bandwidth								= 522,
 	AVP_IMS_SIP_Forking_Indication						= 523,
+/** Codec-Data is from TS 29.214*/
 	AVP_IMS_Codec_Data									= 524,
+	AVP_IMS_Acceptable_Service_Info						= 526,
+	AVP_IMS_Service_Info_Status							= 527,
 /** 600 to 699 reserved for TS29.229											*/
 	AVP_IMS_Visited_Network_Identifier					= 600,
 	AVP_IMS_Public_Identity								= 601,
@@ -207,6 +231,7 @@ enum {
 	AVP_IMS_Supported_Applications						= 631,
 	AVP_IMS_Associated_Identities						= 632,
 	AVP_IMS_Originating_Request							= 633,
+	AVP_IMS_SIP_Digest_Authenticate 					= 635,
 	AVP_IMS_UAR_Flags									= 637,
 /** 700 to 799 reserved for TS29.329											*/
 	AVP_IMS_User_Identity								= 700,
@@ -269,22 +294,23 @@ enum {
 	AVP_IMS_IMS_Information								= 876,
 	AVP_IMS_Expires										= 888,
 	AVP_IMS_Message_Body								= 889,
-	AVP_IMS_Service_Specific_Info						= 1249,
-	AVP_IMS_Requested_Party_Address						= 1251,
-	AVP_IMS_Access_Network_Information					= 1263,
 /** 1000   from TS29.212 */
- 	AVP_IMS_Bearer_Identifier							= 1020,
  	AVP_IMS_Charging_Rule_Install						= 1001,
  	AVP_IMS_Charging_Rule_Remove						= 1002,
  	AVP_IMS_Charging_Rule_Definition					= 1003,
  	AVP_IMS_Charging_Rule_Base_Name						= 1004,
  	AVP_IMS_Charging_Rule_Name							= 1005,
- 	AVP_IMS_Charging_Rule_Report						= 1018,
  	AVP_IMS_Event_Trigger								= 1006,
- 	AVP_IMS_Pcc_Rule_Status								= 1019,
  	AVP_IMS_QoS_Information								= 1016,
+ 	AVP_IMS_Charging_Rule_Report						= 1018,
+ 	AVP_IMS_Pcc_Rule_Status								= 1019,
+ 	AVP_IMS_Bearer_Identifier							= 1020,
  	AVP_IMS_QoS_Class_Identifier						= 1028,
- 	AVP_IMS_Service_Identifier							= 439,
+
+	AVP_IMS_Service_Specific_Info						= 1249,
+	AVP_IMS_Requested_Party_Address						= 1251,
+	AVP_IMS_Access_Network_Information					= 1263,
+
 };
 
 /** ETSI AVP Codes */ 
@@ -393,13 +419,15 @@ enum {
 	AVP_IMS_Data_Reference_MSISDN						= 17,	
 	AVP_IMS_Data_Reference_PSI_Activation				= 18,	
 	AVP_IMS_Data_Reference_DSAI							= 19,	
-	AVP_IMS_Data_Reference_Aliases_Repository_Data		= 20	
+	AVP_IMS_Data_Reference_Aliases_Repository_Data		= 20,
+	AVP_IMS_Data_Reference_Service_Level_Trace_Info		= 21,
+	AVP_IMS_Data_Reference_IP_Address_Secure_Binding_Information = 22,	
 };
 
 /** Subs-Req-Type AVP */
 enum {
 	AVP_IMS_Subs_Req_Type_Subscribe						= 0,
-	AVP_IMS_Subs_Req_Type_Unubscribe					= 1
+	AVP_IMS_Subs_Req_Type_Unsubscribe					= 1
 };
 
 /** Requested-Domain AVP */
@@ -463,7 +491,8 @@ enum {
 /** Flow-Usage AVP */
 enum {
 	AVP_IMS_Flow_Usage_No_Information					= 0,
-	AVP_IMS_Flow_Usage_Rtcp								= 1
+	AVP_IMS_Flow_Usage_Rtcp								= 1,
+	AVP_IMS_Flow_Usage_AF_Signalling					= 2
 };
 /** Specific-Action AVP */
 enum {
@@ -472,8 +501,14 @@ enum {
 	AVP_IMS_Specific_Action_Indication_Of_Loss_Of_Bearer					= 2,
 	AVP_IMS_Specific_Action_Indication_Of_Recovery_Of_Bearer				= 3,
 	AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer					= 4,
-	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5
+	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5,
+	AVP_IMS_Specific_Action_IPCAN_Change									= 6,
+	AVP_IMS_Specific_Action_Indication_Of_Out_Of_Credit						= 7,
+	AVP_IMS_Specific_Action_Successful_Resources_Allocation					= 8,
+	AVP_IMS_Specific_Action_Indication_of_Failed_Resources_Allocation		= 9,
+	AVP_IMS_Specific_Action_Limited_PCC_Deployment							= 10
 };
+
 /** Media-Type AVP */
 enum {
 	AVP_IMS_Media_Type_Audio					= 0,
@@ -485,6 +520,25 @@ enum {
 	AVP_IMS_Media_Type_Message					= 6,
 	AVP_IMS_Media_Type_Other					= 0xFFFFFFFF
 };
+
+/** Latching Indication AVP **/
+enum {
+	AVP_ETSI_Latching_Indication_Latch 			= 0,
+	AVP_ETSI_Latching_Indication_Relatch		= 1
+};
+
+/** Send-Data-Indication AVP **/
+enum {
+	AVP_IMS_Send_Data_Indication_User_Data_Not_Requested 	= 0,
+	AVP_IMS_Send_Data_Indication_User_Data_Requested		= 1
+};
+
+enum {
+	AVP_IMS_Service_Info_Status_Final					=	0,
+	AVP_IMS_Service_Info_Status_Preliminary				=   1
+};
+
+
 /**	Diameter Result Codes				*/
 enum {
 	DIAMETER_SUCCESS									= 2001,//7D1
@@ -540,7 +594,10 @@ enum{
 	RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_READ		= 5102,
 	RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_MODIFIED	= 5103,
 	RC_IMS_DIAMETER_ERROR_USER_DATA_CANNOT_BE_NOTIFIED	= 5104,
-	RC_IMS_DIAMETER_ERROR_TRANSPARENT_DATA_OUT_OF_SYNC	= 5105
+	RC_IMS_DIAMETER_ERROR_TRANSPARENT_DATA_OUT_OF_SYNC	= 5105,
+	RC_IMS_DIAMETER_ERROR_SUBS_DATA_ABSENT				= 5106,
+	RC_IMS_DIAMETER_ERROR_NO_SUBSCRIPTION_TO_DATA		= 5107,
+	RC_IMS_DIAMETER_ERROR_DSAI_NOT_AVAILABLE 			= 5108
 /** 5400 to 5419 Reserved for TS29.109	*/
 };
 

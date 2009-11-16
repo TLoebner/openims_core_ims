@@ -1069,7 +1069,9 @@ int loose_route(struct sip_msg* _m, char* _s1, char* _s2)
 		return -1;
 	}
 
-	if (is_myself(&_m->parsed_uri.host, _m->parsed_uri.port_no)) {
+	if (is_myself(&_m->parsed_uri.host, _m->parsed_uri.port_no)||
+			_m->parsed_uri.type == TEL_URI_T ||
+			_m->parsed_uri.type == TELS_URI_T) {
 		DBG("loose_route: RURI is myself (or tel URI)\n");
 		if ((ret = is_myself(&puri.host, puri.port_no)) == 1 &&
 			!(enable_double_rr && is_2rr(&puri.params))) {

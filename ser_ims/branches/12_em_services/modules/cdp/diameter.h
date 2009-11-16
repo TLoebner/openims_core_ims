@@ -265,6 +265,7 @@ typedef enum {
 	AVP_Origin_Host                   =  264,
 	AVP_Supported_Vendor_Id           =  265,
 	AVP_Vendor_Id                     =  266,
+	AVP_Firmware_Revision             =  267,
 	AVP_Result_Code                   =  268,
 	AVP_Product_Name                  =  269,
 	AVP_Session_Binding               =  270,
@@ -284,6 +285,8 @@ typedef enum {
 	AVP_Destination_Host              =  293,
 	AVP_Termination_Cause             =  295,
 	AVP_Origin_Realm                  =  296,
+	AVP_Experimental_Result			  =  297,
+	AVP_Experimental_Result_Code      =  298
 }AAA_AVPCodeNr;
 
 
@@ -293,6 +296,11 @@ typedef enum {
         Server_Change                   = 2,
         Remove_S_CSCF                   = 3,
 }AAA_AVPReasonCode;
+
+typedef enum {
+	STATE_MAINTAINED			= 0,
+	NO_STATE_MAINTAINED			= 1
+} AAA_AVP_Auth_Session_State;
 
 
 
@@ -348,8 +356,7 @@ typedef struct _message_t {
 	AAAApplicationId    applicationId;	/**< application identifier */
 	AAAMsgIdentifier    endtoendId;		/**< End-to-end identifier */
 	AAAMsgIdentifier    hopbyhopId;		/**< Hop-by-hop identitfier */
-	AAASessionId        *sId;			/**< Session identifier */
-	AAA_AVP             *sessionId;		/**< shortcut to SessionId AVP */
+	AAA_AVP		       	*sessionId;		/**< SessionId 				*/
 	AAA_AVP             *orig_host;		/**< shortcut to Origin Host AVP */
 	AAA_AVP             *orig_realm;	/**< shortcut to Origin Realm AVP */
 	AAA_AVP             *dest_host;		/**< shortcut to Destination Host AVP */
@@ -374,7 +381,7 @@ typedef struct _message_t {
 
 
 
-
+/*************************** AAA Transactions ********************************/
 /**
  * This structure defines a Diameter Transaction.
  * This is used to link a response to a request

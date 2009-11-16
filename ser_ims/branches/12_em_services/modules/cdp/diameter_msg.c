@@ -169,12 +169,13 @@ error:
 AAAMessage *AAANewMessage(
 	AAACommandCode commandCode,
 	AAAApplicationId applicationId,
-	AAASessionId *sessionId,
+	AAASession *session,
 	AAAMessage *request)
 {
 	AAAMessage   *msg;
 	AAA_AVP      *avp;
 	AAA_AVP      *avp_t;
+	str *sessionId=0;
 #if 0
 	unsigned int code;
 #endif
@@ -183,18 +184,17 @@ AAAMessage *AAANewMessage(
 
 	msg = 0;
 
-	if (!sessionId||!sessionId->s) {
-		if (request && request->sessionId){
-			/* copy old session id */
-			avp = request->sessionId;
-			if (avp) {
-				sessionId = &(avp->data);
-			}
+	if (!session||!session->id.s) {
+		if (request){
+			/* copy old session id from AVP */
+			if (request->sessionId) 
+				sessionId = &(request->sessionId->data);
 		}else{
-//because of diameter base messages etc
-//			LOG(L_ERR,"ERROR:AAANewMessage: param session-ID received null and it's a request!!\n");
-//			goto error;
+			if (commandCode!=Code_DW)
+				LOG(L_DBG,"ERROR:AAANewMessage: param session received null and it's a request!!\n");
 		}
+	}else{
+		sessionId = &(session->id);
 	}
 
 	/* allocated a new AAAMessage structure and set it to 0 */
@@ -250,11 +250,7 @@ AAAMessage *AAANewMessage(
 	if (!request) {
 		/* it's a new request -> set the flag */
 		msg->flags = 0x80;
-		/* keep track of the session -> SendMessage will need it! */
-		msg->sId = sessionId;
 	} else {
-		/* it'a an answer -> it will have the same session Id */
-		msg->sId = request->sId;
 		/* link the incoming peer to the answer */
 		msg->in_peer = request->in_peer;
 		/* set the P flag as in request */
@@ -263,35 +259,36 @@ AAAMessage *AAANewMessage(
 		msg->endtoendId = request->endtoendId;
 		msg->hopbyhopId = request->hopbyhopId;
 
-	/* Mirror the old originhost/realm to destinationhost/realm*/
-	avp = AAAFindMatchingAVP(request,0,AVP_Origin_Host,0,0);
-	if (avp) dest_host = avp->data;
-	/* add destination host and destination realm */
-	avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
-		dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
-	if (!avp) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
-		return 0;
-	}
-	if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
-		AAAFreeAVP(&avp);
-		return 0;
-	}
-	avp = AAAFindMatchingAVP(request,0,AVP_Origin_Realm,0,0);
-	if (avp) dest_realm = avp->data;
+		/* Mirror the old originhost/realm to destinationhost/realm*/
+		avp = AAAFindMatchingAVP(request,0,AVP_Origin_Host,0,0);
+		if (avp) dest_host = avp->data;
+		/* add destination host and destination realm */
+		avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
+			dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
+			return 0;
+		}
+		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
+			AAAFreeAVP(&avp);
+			return 0;
+		}
+		avp = AAAFindMatchingAVP(request,0,AVP_Origin_Realm,0,0);
+		if (avp) dest_realm = avp->data;
+	
+		avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
+			dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
+			return 0;
+		}
+		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
+			AAAFreeAVP(&avp);
+			return 0;
+		}		
 
-	avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
-		dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
-	if (!avp) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
-		return 0;
-	}
-	if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-		LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
-		AAAFreeAVP(&avp);
-		return 0;
-	}		
 
 
 		msg->res_code=0;
@@ -323,10 +320,10 @@ error:
 AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 							AAACommandCode command_code,
 							AAAMsgFlag flags,
-							AAASessionId *sessId)
+							AAASession *session)
 {
 	AAAMessage *msg;
-	msg = AAANewMessage(command_code,app_id,sessId,0);
+	msg = AAANewMessage(command_code,app_id,session,0);
 	if (!msg) return 0;
 	msg->hopbyhopId = next_hopbyhop();
 	msg->endtoendId = next_endtoend();
@@ -342,7 +339,7 @@ AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 AAAMessage *AAACreateResponse(AAAMessage *request)
 {
 	AAAMessage *msg;
-	msg = AAANewMessage(request->commandCode,request->applicationId,request->sId,request);
+	msg = AAANewMessage(request->commandCode,request->applicationId,0,request);
 		
 	return msg;
 }
@@ -549,6 +546,8 @@ AAAMessage* AAATranslateMessage( unsigned char* source, unsigned int sourceLen,
 		msg->buf.s = (char*) source;
 		msg->buf.len = msg_len;
 	}
+
+	msg->sessionId = AAAFindMatchingAVP(msg,0,AVP_Session_Id,0,0);
 
 	//AAAPrintMessage( msg );
 	return  msg;

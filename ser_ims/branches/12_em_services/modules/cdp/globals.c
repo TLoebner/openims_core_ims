@@ -60,6 +60,11 @@
 #ifdef CDP_FOR_SER
 
 #else
+
+#ifdef WHARF
+
+#else
+
 	unsigned long shm_mem_size = SHM_MEM_SIZE;
 	int memlog = L_ERR;
 	int memdbg = L_MEM;
@@ -67,6 +72,9 @@
 	int log_facility = 1;
 	int log_stderr = 1;
 	int process_no=0;
+	
+#endif
+	
 #endif
 
 
@@ -88,7 +96,12 @@ int init_memory(int show_status)
 #endif
 
 #ifdef SHM_MEM
-	if (init_shm_mallocs()==-1)
+	
+	if (init_shm_mallocs(
+#ifdef SER_MOD_INTERFACE
+				1
+#endif
+		)==-1)
 		goto error;
 	if (show_status){
 		LOG(memlog, "Memory status (shm):\n");
@@ -112,16 +125,24 @@ void destroy_memory(int show_status)
 	if (show_status){
 		LOG(memlog, "Memory status (shm):\n");
 		//shm_status();
+#ifndef SER_MOD_INTERFACE
 		shm_sums();
+#endif		
 	}
 	/* zero all shmem alloc vars that we still use */
+#ifdef WHARF	
+
+#else
 	shm_mem_destroy();
+#endif	
 #endif
 #ifdef PKG_MALLOC
 	if (show_status){
 		LOG(memlog, "Memory status (pkg):\n");
 		//pkg_status();
+#ifndef SER_MOD_INTERFACE
 		pkg_sums();
+#endif
 	}
 #endif
 }

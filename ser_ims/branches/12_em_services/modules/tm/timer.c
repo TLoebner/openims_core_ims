@@ -218,6 +218,17 @@ inline static ticks_t  delete_cell( struct cell *p_cell, int unlock )
 		if (unlock) UNLOCK_HASH(p_cell->hash_index);
 		DBG("DEBUG: delete_cell %p: can't delete -- still reffed (%d)\n",
 				p_cell, p_cell->ref_count);
+		if(p_cell->uas.request){
+			DBG("DEBUG: delete_cell : request %.*s\n",
+				p_cell->uas.request->first_line.u.request.method.len,
+				p_cell->uas.request->first_line.u.request.method.s);
+		}
+		if(p_cell->uac[0].reply){
+			DBG("DEBUG: delete_cell : reply %.*s\n",
+				p_cell->uac[0].reply->first_line.u.reply.reason.len,
+				p_cell->uac[0].reply->first_line.u.reply.reason.s);
+			
+		}
 		/* delay the delete */
 		/* TODO: change refcnts and delete on refcnt==0 */
 		return delete_timeout;

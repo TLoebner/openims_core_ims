@@ -68,6 +68,7 @@ extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 int peer_handles_application(peer *p,int app_id,int vendor_id)
 {
 	int i;
+	LOG(L_DBG,"DBG: Checking if peer %.*s handles application %d for vendord %d\n",p->fqdn.len,p->fqdn.s,app_id,vendor_id);
 	if (!p || !p->applications || !p->applications_cnt) return 0;
 	for(i=0;i<p->applications_cnt;i++)
 		if (p->applications[i].id==app_id && p->applications[i].vendor==vendor_id) return 1;		
@@ -83,9 +84,20 @@ peer* get_first_connected_route(routing_entry *r,int app_id,int vendor_id)
 {
 	routing_entry *i;
 	peer *p;
+	LOG(L_DBG,"get_first_connected_route in list %p for app_id %d and vendor_id %d\n",
+		r,app_id,vendor_id);
 	for(i=r;i;i=i->next){
 		p = get_peer_by_fqdn(&(r->fqdn));
-		if (p && (p->state==I_Open || p->state==R_Open) && peer_handles_application(p,app_id,vendor_id)) return p;
+		if (!p)
+			LOG(L_DBG,"The peer %.*s does not seem to be connected or configured\n",
+				r->fqdn.len,r->fqdn.s);
+		else
+			LOG(L_DBG,"The peer %.*s state is %s\n",r->fqdn.len,r->fqdn.s,
+				(p->state==I_Open||p->state==R_Open)?"opened":"closed");
+		if (p && (p->state==I_Open || p->state==R_Open) && peer_handles_application(p,app_id,vendor_id)) {			
+			LOG(L_DBG,"The peer %.*s matches - will forward there\n",r->fqdn.len,r->fqdn.s);
+			return p;
+		}
 	}
 	return 0;
 }
@@ -108,7 +120,7 @@ peer* get_routing_peer(AAAMessage *m)
 	routing_realm *rr;
 	int app_id=0,vendor_id=0;
 	
-	app_id = m->applicationId;
+	app_id = m->applicationId;	
 	avp = AAAFindMatchingAVP(m,0,AVP_Vendor_Specific_Application_Id,0,AAA_FORWARD_SEARCH);
 	if (avp){
 		group = AAAUngroupAVPS(avp->data);
@@ -126,6 +138,21 @@ peer* get_routing_peer(AAAMessage *m)
 		AAAFreeAVPList(&group);
 	}
 
+	avp_vendor = AAAFindMatchingAVP(m,0,AVP_Vendor_Id,0,AAA_FORWARD_SEARCH);				
+	avp = AAAFindMatchingAVP(m,0,AVP_Auth_Application_Id,0,AAA_FORWARD_SEARCH);
+	if (avp){
+		if (avp_vendor) vendor_id = get_4bytes(avp_vendor->data.s);
+		else vendor_id = 0;
+		app_id = get_4bytes(avp->data.s);		
+	}
+	
+	avp = AAAFindMatchingAVP(m,0,AVP_Acct_Application_Id,0,AAA_FORWARD_SEARCH);
+	if (avp){
+		if (avp_vendor) vendor_id = get_4bytes(avp_vendor->data.s);
+		else vendor_id = 0;
+		app_id = get_4bytes(avp->data.s);		
+	}
+	
 	avp = AAAFindMatchingAVP(m,0,AVP_Destination_Host,0,AAA_FORWARD_SEARCH);
 	if (avp) destination_host = avp->data;
 	
@@ -161,7 +188,8 @@ peer* get_routing_peer(AAAMessage *m)
 	 * get the first connected host in default routes */
 	p = get_first_connected_route(config->r_table->routes,app_id,vendor_id);
 	if (!p){
-		LOG(L_ERR,"ERROR:get_routing_peer(): No connected DefaultRoute peer found.\n");
+		LOG(L_ERR,"ERROR:get_routing_peer(): No connected DefaultRoute peer found for app_id %d and vendor id %d.\n",
+				app_id,vendor_id);
 	}
 	return p;
 }
