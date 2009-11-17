@@ -1,7 +1,7 @@
-/*
+/**
  * $Id$
- *  
- * Copyright (C) 2004-2009 FhG Fokus
+ *   
+ * Copyright (C) 2004-2007 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -45,67 +45,64 @@
  
 /**
  * \file
+ *
+ * P-CSCF Policy and Charging Control interfaces AVPs
  * 
- * Service-CSCF -Emergency Related Operations
- * 
- * 
- *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
- */
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
+ */ 
+ 
+#ifndef __PCC_AVP_H
+#define __PCC_AVP_H
 
-#include <time.h>
-
-#include "../../parser/contact/contact.h"
-#include "../../parser/contact/parse_contact.h"
-#include "../../ut.h"
-#include "../../modules/tm/tm_load.h"
-#include "../cdp/cdp_load.h"
-#include "../../dset.h"
-
-#include "emerg.h"
-#include "registrar.h"
-#include "registration.h"
+#include "../../sr_module.h"
 #include "mod.h"
-#include "registrar_parser.h"
-#include "registrar_storage.h"
-#include "sip.h"
-#include "cx.h"
-#include "cx_avp.h"
-#include "sip_messages.h"
-#include "dlg_state.h"
+#include "../cdp/cdp_load.h"
+#include "sdp_util.h"
 
 
-/**
- * Finds if the message comes from a user that made an Emergency Registration
- * @param msg - the SIP message
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if sos uri parameter in Contact header, #CSCF_RETURN_FALSE if not, or #CSCF_RETURN_FALSE
- */
-int S_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
-{
-	contact_t *c;
-	struct hdr_field *h;
-	int sos_reg;
-	int x;
 
-	sos_reg = 0;
+#define PCC_MAX_Char 64
+#define PCC_MAX_Char4 256
+/* Maximum Number of characters to represent some AVP datas*/
+/*and ipv6 addresses in character*/
+#define PCC_Media_Sub_Components 10
 
-	LOG(L_INFO,"DBG:"M_NAME":S_emergency_flag: Check if the user made an Emergency Registration\n");
-	
-	for(h=msg->contact;h;h=h->next)
-		if (h->type==HDR_CONTACT_T && h->parsed)
-		 for(c=((contact_body_t*)h->parsed)->contacts;c;c=c->next){
-			LOG(L_DBG,"DBG:"M_NAME":S_emergency_flag: contact <%.*s>\n",c->uri.len,c->uri.s);
-			
-			x = cscf_get_sos_uri_param(c->uri);
-			if(x < 0)
-				return CSCF_RETURN_ERROR;
-			sos_reg += x;
-		}
-	
-	if(sos_reg)
-		return CSCF_RETURN_TRUE;
+#include <string.h>
+#include <stdio.h>
 
-	return CSCF_RETURN_FALSE;
-}
 
+/** NO DATA WILL BE DUPLICATED OR FREED - DO THAT AFTER SENDING THE MESSAGE!!! */
+
+typedef struct _bandwidth {
+		int bAS;
+		int bRS;
+		int bRR;		
+} bandwidth;
+
+
+
+
+/*just headers*/
+
+int PCC_add_destination_realm(AAAMessage *msg, str data);
+int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
+AAA_AVP *PCC_create_media_subcomponent(int number,
+									char *proto, char *ipA,
+									char *portA, char *ipB,
+									char *portB ,char *options,int atributes);
+inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
+											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
+											
+inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
+AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
+
+int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number);
+int extract_token(char *line,char *token,int max,int number);
+int extract_bandwidth(bandwidth *bw,str sdp,char *start);
+int extract_id(struct sip_msg *r,int tag,str *identification);
+int check_atributes(str sdpbody,char *mline);
+int is_a_port(char *port);
+/*int is_an_address(char *ad);*/
+inline int PCC_get_result_code(AAAMessage *msg, int *data);
+#endif /*__PCC_AVP_H*/

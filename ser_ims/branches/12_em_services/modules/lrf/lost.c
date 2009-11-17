@@ -55,7 +55,6 @@
 
 #include "../../locking.h"
 #include "../tm/tm_load.h"
-#include "../cdp/cdp_load.h"
 #include <lost/client.h>
 #include <lost/parsing.h>
 #include <lost/pidf_loc.h>

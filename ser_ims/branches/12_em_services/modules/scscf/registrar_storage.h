@@ -59,7 +59,7 @@
 
 #include "../../sr_module.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../../qvalue.h"
 
 
@@ -106,6 +106,8 @@ typedef struct _r_contact {
 	str path;					/**< path headers (P-CSCF to route to)	*/
 	qvalue_t qvalue;			/**< q-value of contact					*/
 	int sos_flag;				/**< 1 if Emergency, 0 otherwise		*/
+	
+	str pub_gruu;				/**< value of the gr parameter in the public gruu */
 	
 	r_contact_param *parameters;	/**< header parameters (not in the uri!)*/
 

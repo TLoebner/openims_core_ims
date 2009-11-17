@@ -60,7 +60,7 @@
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_uri.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "sip.h"
 #include "ims_pm.h"
 
@@ -592,7 +592,7 @@ static str r_rejected={"rejected",8};
 static str contact_s={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\">\n",59};
 static str contact_s_q={"\t\t<contact id=\"%p\" state=\"%.*s\" event=\"%.*s\" expires=\"%d\" q=\"%.3f\">\n",69};
 static str contact_e={"\t\t</contact>\n",13};
-static str unknown_param_s={"\t\t\t<unknown-param name=\"%.*s\">",30};
+static str unknown_param_s={"\t\t\t<unknown-param name=\"%.*s\">\n",31};
 static str unknown_param_e={"</unknown-param>",16};
 
 
@@ -911,7 +911,10 @@ void send_notification(r_notification *n)
 {
 	str h={0,0};
 	int k=0;
-
+#ifdef SER_MOD_INTERFACE
+        uac_req_t req;
+#endif
+        
 	LOG(L_DBG,"DBG:"M_NAME":send_notification: NOTIFY about <%.*s>\n",n->uri.len,n->uri.s);
 	
 	//tmb.print_dlg(stdout,n->dialog);
@@ -950,10 +953,35 @@ void send_notification(r_notification *n)
 	#ifdef WITH_IMS_PM
 		k = n->is_scscf_dereg;
 	#endif 
-	if (n->content.len)	
-		tmb.t_request_within(&method, &h, &(n->content), n->dialog, uac_request_cb, (void*)k);		
-	else 
-		tmb.t_request_within(&method, &h, 0, n->dialog, uac_request_cb, (void*)k);		
+	if (n->content.len)	{
+#ifdef SER_MOD_INTERFACE
+		set_uac_req(&req,
+					&method,
+					&h,
+					&(n->content),
+					n->dialog,
+					TMCB_RESPONSE_IN|TMCB_ON_FAILURE|TMCB_LOCAL_COMPLETED,
+					uac_request_cb,
+					(void*)k);
+		tmb.t_request_within(&req);
+#else	
+		tmb.t_request_within(&method, &h, &(n->content), n->dialog, uac_request_cb, (void*)k);
+#endif		
+	} else { 
+#ifdef SER_MOD_INTERFACE
+		set_uac_req(&req,
+					&method,
+					0,
+					&(n->content),
+					n->dialog,
+					TMCB_RESPONSE_IN|TMCB_ON_FAILURE|TMCB_LOCAL_COMPLETED,
+					uac_request_cb,
+					(void*)k);
+		tmb.t_request_within(&req);
+#else	
+		tmb.t_request_within(&method, &h, 0, n->dialog, uac_request_cb, (void*)k);
+#endif		
+	}
 	if (h.s) pkg_free(h.s);
 	
 	#ifdef WITH_IMS_PM

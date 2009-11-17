@@ -73,7 +73,6 @@
 #include "../../locking.h"
 #include "../tm/tm_load.h"
 #include "../dialog/dlg_mod.h"
-#include "../cdp/cdp_load.h"
 #include <lost/client.h>
 
 #include "dlg_state.h"

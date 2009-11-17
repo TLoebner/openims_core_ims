@@ -58,7 +58,6 @@
 #include "../tm/h_table.h"
 #include "../tm/t_reply.h"
 #include "../dialog/dlg_mod.h"
-#include "../cdp/cdp_load.h"
 #include "../../parser/parse_geoloc.h"
 #include <lost/client.h>
 #include <lost/parsing.h>

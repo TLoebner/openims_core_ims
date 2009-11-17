@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: p_persistency.h 236 2007-04-18 12:53:40 +0000 (Wed, 18 Apr 2007) vingarzan $
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -46,31 +46,42 @@
 /**
  * \file
  *
- * S-CSCF persistency operations
+ * P-CSCF Policy and Charging Control interface ops
  *
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
- *
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */
+ 
+#ifndef __PCC_H_
+#define __PCC_H_
+
+#include "mod.h"
+#include "../cdp/cdp_load.h"
+
+#include "dlg_state.h"
+
+typedef struct authdata {
+	str callid;
+	str host;
+	int port,transport;
+	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
+
+	//for Gqprima only
+	int latch;
+} t_authdata;
+
+
+int cscf_get_mobile_side(struct sip_msg *msg);
+void terminate_pcc_session(cdp_session_t *);
+
+
+AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1);
+AAAMessage* PCC_STR(struct sip_msg *msg, char *str1);
+AAAMessage* PCC_ASA(AAAMessage *request);
+int PCC_AAA(AAAMessage *msg);
 
 
 
-#ifndef _SCSCF_PERSITENCY_H
-#define _SCSCF_PERSITENCY_H
-
-#include "bin_scscf.h"
-#include "bin_db_scscf.h"
+AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);
 
 
-int make_snapshot_authdata();
-int load_snapshot_authdata();
-void persistency_timer_authdata(unsigned int ticks, void* param);
-
-int make_snapshot_dialogs();
-int load_snapshot_dialogs();
-void persistency_timer_dialogs(unsigned int ticks, void* param);
-
-int make_snapshot_registrar();
-int load_snapshot_registrar();
-void persistency_timer_registrar(unsigned int ticks, void* param);
-
-#endif
+#endif /*__PCC_H_*/

@@ -8,14 +8,20 @@
 include ../../Makefile.defs
 auto_gen=
 NAME=ecscf.so
-LIBS=
 
-# DEFS+=-I/usr/include/libxml2 -I$(LOCALBASE)/include/libxml2
-# LIBS+=-L/usr/include/lib  -L$(LOCALBASE)/lib -lxml2
+ifeq ($(CFG_NAME),sip-router)
+	DEFS += -DSER_MOD_INTERFACE
+	SERLIBPATH=../../lib
+	SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
+	LIBS += -L../../libs/cds -L../../lib/lost -l_ser_cds -l_lost_client
+else
+	LIBS += -L../../libs/cds -L../../lib/lost -l_ser_cds -l_lost_client
+endif	
+DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
+LIBS += -lxml2 -L../../lib/cds -l_ser_cds -L../../lib/lost -l_lost_client
 
-# experimental (vku)
-DEFS += -I/usr/include/libxml2 -I$(LOCALBASE)/include/libxml2 -I$(LOCALBASE)/include -Wall -I../../lib -DSER -I../..
-# LIBS += -L$(LOCALBASE)/lib -L/usr/pkg/lib -L../../lib/xcap -L../../lib/presence -L../../lib/cds -lxcap -lpresence -lcds -lxml2 -lcurl 
-LIBS += -L$(LOCALBASE)/lib -L/usr/pkg/lib -L../../lib/xcap -L../../lib/presence -L../../lib/cds -L../../lib/lost -l_ser_xcap -l_ser_presence -l_ser_cds -l_lost_client
+DEFS += -DCDP_FOR_SER
+DEFS += -I/usr/include/libxml2 
+LIBS += -L$(LOCALBASE)/lib -lxml2
 
 include ../../Makefile.modules

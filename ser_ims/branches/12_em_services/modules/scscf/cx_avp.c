@@ -1068,6 +1068,24 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	}
 	
 	
+	/* SIP Digest */
+
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Digest_Authenticate,IMS_vendor_id_3GPP,0);
+	if (avp  && avp->data.s) 
+	{
+		list2 = cdpb.AAAUngroupAVPS(avp->data);
+		
+		avp2 = cdpb.AAAFindMatchingAVPList(list2,0,AVP_IMS_Digest_HA1,0,0);
+		if (!avp2||!avp2->data.s) {
+			ha1->s = 0; ha1->len = 0;
+			cdpb.AAAFreeAVPList(&list2);
+			return 0;
+		}
+		*ha1 = avp2->data;
+		cdpb.AAAFreeAVPList(&list2);
+	}
+	
+	
 	/* AKA, MD5 */
 	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_IMS_SIP_Authenticate,
 		IMS_vendor_id_3GPP,0);

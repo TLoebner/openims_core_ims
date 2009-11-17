@@ -94,9 +94,11 @@ enum authorization_types {
 	AUTH_MD5				= 4,
 /* CableLabs */	
 	AUTH_DIGEST				= 5,
+/* 3GPP */	
+	AUTH_SIP_DIGEST			= 6,
 /* TISPAN */	
-	AUTH_HTTP_DIGEST_MD5	= 6,	
-	AUTH_NASS_BUNDLED		= 7
+	AUTH_HTTP_DIGEST_MD5	= 7,	
+	AUTH_NASS_BUNDLED		= 8
 };
 
 #define AUTH_TYPE_MAX AUTH_NASS_BUNDLED
