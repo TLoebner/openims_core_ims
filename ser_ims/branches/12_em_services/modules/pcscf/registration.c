@@ -61,7 +61,7 @@
 #include "../../data_lump.h"
 #include "../../mem/mem.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "mod.h"
 #include "sip.h"
 #include "registrar.h"
@@ -547,7 +547,8 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	r_reg_type reg_type;
 
 	fparam_t * param = (fparam_t*)str1;
-	
+
+	LOG(L_INFO,"INF:"M_NAME":P_assert_identity: Asserting Identity\n");
 //	print_r(L_INFO);
 	
 	reg_type = param->v.i;

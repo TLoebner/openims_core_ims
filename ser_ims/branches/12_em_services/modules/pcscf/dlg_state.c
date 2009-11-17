@@ -59,9 +59,16 @@
 #include "../../mem/shm_mem.h"
 #include "../sl/sl_funcs.h"
 
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/sl/sl_funcs.h"
+#else
+	#include "../../modules/sl/sl_funcs.h"
+#endif
+
 #include "sip.h"
 #include "release_call.h"
 #include "ims_pm.h"
+#include "pcc.h"
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -486,6 +493,34 @@ p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir)
 	return 0;
 }
 
+
+/**
+ * Returns the p_dialog_direction from the direction string.
+ * @param direction - "orig" or "term"
+ * @returns the p_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
+ */
+inline enum p_dialog_direction get_dialog_direction(char *direction)
+{
+	if (!direction) {
+		LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction NULL");
+		return DLG_MOBILE_UNKNOWN;
+	}
+	switch(direction[0]){
+		case 'o':
+		case 'O':
+		case '0':
+			return DLG_MOBILE_ORIGINATING;
+		case 't':
+		case 'T':
+		case '1':
+			return DLG_MOBILE_TERMINATING;
+		default:
+			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
+			return DLG_MOBILE_UNKNOWN;
+	}
+}
+
+
 str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
 /** 
  * Terminates a dialog - called before del_p_dialog to send out terminatination messages.
@@ -495,6 +530,7 @@ str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
  */
 int terminate_p_dialog(p_dialog *d)
 {
+	LOG(L_DBG,"terminate_p_dialog(): called for dialog %.*s and direction %u\n",d->call_id.len,d->call_id.s,d->direction);
 	if (!pcscf_dialogs_enable_release) return 0;
 	switch (d->method){
 		case DLG_METHOD_INVITE:
@@ -560,7 +596,12 @@ void print_p_dialogs(int log_level)
 {
 	p_dialog *d;
 	int i,j;
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */
+#ifdef SER_MOD_INTERFACE
+	if (!is_printable(log_level))
+#else
+	if (debug<log_level)
+#endif
+		return; /* to avoid useless calls when nothing will be printed */
 	d_act_time();
 	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List begin --------------\n");
 	for(i=0;i<p_dialogs_hash_size;i++){
@@ -591,31 +632,6 @@ void print_p_dialogs(int log_level)
 	LOG(log_level,"INF:"M_NAME":----------  P-CSCF Dialog List end   --------------\n");	
 }
 
-/**
- * Returns the p_dialog_direction from the direction string.
- * @param direction - "orig" or "term"
- * @returns the p_dialog_direction if ok or #DLG_MOBILE_UNKNOWN if not found
- */
-static inline enum p_dialog_direction get_dialog_direction(char *direction)
-{
-	if (!direction) {
-		LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction NULL");
-		return DLG_MOBILE_UNKNOWN;
-	}
-	switch(direction[0]){
-		case 'o':
-		case 'O':
-		case '0':
-			return DLG_MOBILE_ORIGINATING;
-		case 't':
-		case 'T':
-		case '1':
-			return DLG_MOBILE_TERMINATING;
-		default:
-			LOG(L_CRIT,"ERR:"M_NAME":get_dialog_direction(): Unknown direction %s",direction);
-			return DLG_MOBILE_UNKNOWN;
-	}
-}
 
 /**
  * Finds the contact host/port/transport for a dialog.
@@ -644,43 +660,6 @@ inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,s
 			return 0;
 	}
 	return 1;
-}
-
-/*
- *check if the current message is a request and part of a transaction that has been processed
- * @param d - the dialog to be checked
- * @param dir - direction of the message
- * @param msg - current request
- * @return CSCF_RETURN_FALSE if already processed, CSCF_RETURN_TRUE if it is a new transaction
- * CSCF_RETURN_ERROR if error
- */
-int not_yet_processed(p_dialog *d, enum p_dialog_direction dir, struct sip_msg * msg){
-	
-	dlg_t * dialog;
-	int msg_cseq;
-	
-	if(dir == DLG_MOBILE_ORIGINATING)
-	       dialog = d->dialog_c;
-	else if(dir == DLG_MOBILE_TERMINATING)
-	       dialog = d->dialog_s;
-	else return CSCF_RETURN_ERROR;
-
-	msg_cseq = cscf_get_cseq(msg, NULL);
-	LOG(L_DBG, "DBG:"M_NAME":not_yet_processed: msg crt cseq is %i\n", msg_cseq);
-	
-	dlg_seq_t cseq = dialog->loc_seq;
-	if(cseq.is_set > 0){
-	
-		LOG(L_DBG, "DBG:"M_NAME":not_yet_processed: the local cseq is set and is %u\n", 
-				cseq.value);
-		if(cseq.value >= ((unsigned int)msg_cseq)){
-			LOG(L_DBG, "DBG:"M_NAME":not_yet_processed: already processed\n");
-			return CSCF_RETURN_TRUE;
-		}
-	}	
-
-
-	return CSCF_RETURN_FALSE;
 }
 
 
@@ -1086,6 +1065,7 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 	{
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
+			if (!d->is_releasing){
 			expires = cscf_get_expires_hdr(msg);
 			if (expires >= 0)
 			{
@@ -1095,6 +1075,7 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 			{
 				d->expires = d_act_time()+pcscf_dialogs_expiration_time;	
 			}
+		}
 		}
 		else// uac supports timer, but no session-expires header found in response
 		{
@@ -1228,7 +1209,16 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		LOG(L_DBG,"DBG:"M_NAME":P_update_dialog(%s): Method <%.*s> \n",str1,
 			msg->first_line.u.request.method.len,msg->first_line.u.request.method.s);
 		cseq = cscf_get_cseq(msg,&h);
-		if (cseq>d->last_cseq) d->last_cseq = cseq;
+		if (cseq>d->last_cseq) 
+		{	
+			d->last_cseq = cseq;
+			d->dialog_c->loc_seq.value=cseq;
+			//This is not optimal but is going to work
+			// because d->last_cseq is actually the last one we saw... then if its bigger..
+			// soo..
+			//d->dialog_s->loc_seq.is_set=1;
+			//d->dialog_s->loc_seq.value=cseq; 	
+		}	
 		if (get_dialog_method(msg->first_line.u.request.method) == DLG_METHOD_INVITE)
 		{
 			d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
@@ -1236,10 +1226,10 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			ses_exp = cscf_get_session_expires_body(msg, &h);
 			t_time = cscf_get_session_expires(ses_exp, &refresher);
 			if (!t_time){
-				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+				if (!d->is_releasing) d->expires = d_act_time()+pcscf_dialogs_expiration_time;
 				d->lr_session_expires = 0;
 			} else {
-				d->expires = d_act_time() + t_time;
+				if (!d->is_releasing) d->expires = d_act_time() + t_time;
 				d->lr_session_expires = t_time;
 				if (refresher.len)
 					STR_SHM_DUP(d->refresher, refresher, "DIALOG_REFRESHER");
@@ -1262,6 +1252,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		}
 		else
 		{
+			if(!d->is_releasing) {
 			expires = cscf_get_expires_hdr(msg);
 			if (expires >= 0) 
 			{
@@ -1272,6 +1263,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			{
 				LOG(L_INFO,"INF:"M_NAME": update_dialog(%.*s): d->expires+=pcscf_dialogs_expiration_time 4\n",call_id.len,call_id.s);
 				d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+			}
 			}
 			d->lr_session_expires = 0;		
 		}
@@ -1316,6 +1308,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
+					if(!d->is_releasing) {
 					expires = cscf_get_expires_hdr(msg);
 					if (expires >= 0)
 					{
@@ -1324,6 +1317,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					else
 					{
 						d->expires = d_act_time()+pcscf_dialogs_expiration_time;
+					}
 					}
 					d->lr_session_expires = 0;
 					break;
@@ -1358,6 +1352,14 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					break;
 			}
 			if (cseq>d->last_cseq) d->last_cseq = cseq;
+			/*
+			 *  Alberto 14 November
+			 *  please update the cseq in the tm dialog structures too
+			 * 
+			 * */
+
+
+
 		}
 	}
 	
@@ -1415,6 +1417,12 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}
 
 	hash = d->hash;
+
+	if (d->pcc_session)
+	{
+		terminate_pcc_session(d->pcc_session);
+		d->pcc_session=0;
+	}
 	
 	del_p_dialog(d);
 		

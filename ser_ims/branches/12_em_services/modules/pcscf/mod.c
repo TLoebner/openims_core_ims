@@ -68,16 +68,18 @@
 
 #include "mod.h"
 
-#include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../socket_info.h"
 #include "../../timer.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
+#include "../../modules/tm/tm_load.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
 #include "../cdp/cdp_load.h"
 
-//#include "db.h"
 #include "registration.h"
 #include "registrar_storage.h"
 #include "registrar_subscribe.h"
@@ -90,6 +92,8 @@
 #include "release_call.h"
 #include "ims_pm_pcscf.h"
 #include "emerg.h"
+#include "policy_control.h"
+#include "pcc.h"
 
 
 MODULE_VERSION
@@ -209,12 +213,19 @@ int* registrar_step_version; /**< the step version within the current registrar 
 gen_lock_t* db_lock; /**< lock for db access*/ 
 
 int * shutdown_singleton;				/**< Shutdown singleton 								*/
+int * callback_singleton;				/**< Callback singleton 								*/
 
 #ifdef WITH_IMS_PM
 	/** IMS PM parameters storage */
 	char* ims_pm_node_type="P-CSCF";
 	char* ims_pm_logfile="/opt/OpenIMSCore/default_ims_pm.log";
 #endif /* WITH_IMS_PM */
+
+int pcscf_use_pcc = 0;								/**< whether to enable or disable pcc */
+char* pcscf_forced_qos_peer = "pdf.open-ims.test";	/**< FQDN of Policy Dicision Function (PDF) for policy control */
+str forced_qos_peer; 
+int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
+int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
 
 
 /** 
@@ -237,6 +248,8 @@ int * shutdown_singleton;				/**< Shutdown singleton 								*/
  * - P_security_200() - create/drop IPSec Security Associations for the 200 OK response to REGISTER
  * - P_is_integrity_protected() - checks if the message was received over a secure channel
  * - P_security_relay() - forward a message through TLS/IPSec
+ * <p>
+ * - P_route_to_IBCF() - add a Route header to IBCF and set dst_uri to IBCF uri
  * <p>
  * - P_save_location() - save the contacts for the 200 OK response to REGISTER in the local registrar
  * - P_subscribe() - subscribe to the reg event to the S-CSCF for the 200 OK response to REGISTER
@@ -312,7 +325,9 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_is_integrity_protected",	P_is_integrity_protected, 	0, 0, REQUEST_ROUTE},	
 	{"P_security_relay", 			P_security_relay, 			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	
-	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
+	{"P_route_to_IBCF",				P_route_to_IBCF,			1, 0, REQUEST_ROUTE},
+
+ 	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
 	{"P_is_registered",				P_is_registered, 			0, 0, REQUEST_ROUTE},
 	{"P_assert_identity",			P_assert_identity, 			1, fixup_assert_id, REQUEST_ROUTE},
@@ -365,6 +380,13 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_select_ecscf", 			P_select_ecscf,			0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
 	{"P_is_em_registered",			P_is_em_registered, 		0, 0, REQUEST_ROUTE},
+
+
+	/* For Gq or Rx*/
+	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
+	{"P_AAR",						P_AAR,						1, 0, ONREPLY_ROUTE},
+	{"P_STR",						P_STR,						1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"P_generates_aar",				P_generates_aar,			1, 0, ONREPLY_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -426,6 +448,11 @@ static cmd_export_t pcscf_cmds[]={
  *  <p>
  *  - ecscf_uri - the E-CSCF URI to forward the Emergency calls
  *  - emerg_support - if the P-CSCF has support for Emrgency Services or not
+ *  <p>
+ *  - use_pcc - if to use the Policy and Charging Control part
+ *  - qos_side - on which side does this P-CSCF work (0 1 2)
+ *  - qos_release7 - whether to use Rx or Gq
+ *  - forced_qos_peer - the address of the forced qos peer
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -489,7 +516,11 @@ static param_export_t pcscf_params[]={
 	
 	{"forced_clf_peer",					STR_PARAM, &forced_clf_peer},
 	{"use_e2",							INT_PARAM, &pcscf_use_e2},
-	
+	{"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
+	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
+	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
+	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
+
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
 	{"anonym_em_call_support",				INT_PARAM, &anonym_em_call_support},
@@ -524,9 +555,6 @@ extern r_hash_slot *registrar;			/**< the contacts */
 
 extern p_dialog_hash_slot *p_dialogs;	/**< the dialogs hash table				*/
 
-/** database */
-db_con_t* pcscf_db = NULL; /**< Database connection handle */
-db_func_t pcscf_dbf;	/**< Structure with pointers to db functions */
 
 static str path_str_s={"Path: <",7};
 static str path_str_1={"sip:term@",9};
@@ -642,17 +670,18 @@ int fix_parameters()
 	/* fix the parameters */
 	forced_clf_peer_str.s = forced_clf_peer;
 	forced_clf_peer_str.len = strlen(forced_clf_peer);
+
+	/* Address initialization of PDF for policy control */
+	forced_qos_peer.s = pcscf_forced_qos_peer;
+	forced_qos_peer.len = strlen(pcscf_forced_qos_peer);
 	
+	if(emerg_support){
+		ecscf_uri_str.s = ecscf_uri;
+		ecscf_uri_str.len = strlen(ecscf_uri);
+		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
+	}
 	
 	return 1;
-}
-
-db_con_t* create_pcscf_db_connection()
-{
-	if (pcscf_persistency_mode!=WITH_DATABASE_BULK && pcscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
-	if (!pcscf_dbf.init) return NULL;
-
-	return pcscf_dbf.init(pcscf_db_url);
 }
 
 /**
@@ -667,7 +696,9 @@ static int mod_init(void)
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
 	*shutdown_singleton=0;
-	
+	callback_singleton=shm_malloc(sizeof(int));
+	*callback_singleton=0;
+
 	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
@@ -696,18 +727,7 @@ static int mod_init(void)
 				"(pcscf_persistency_mode=%d\n", pcscf_persistency_mode);
 			return -1;
 		}
-		if (bind_dbmod(pcscf_db_url, &pcscf_dbf) < 0) { /* Find database module */
-			LOG(L_ERR, "ERR"M_NAME":mod_init: Can't bind database module via url %s\n", pcscf_db_url);
-			return -1;
-		}
-
-		if (!DB_CAPABILITY(pcscf_dbf, DB_CAP_ALL)) {
-			LOG(L_ERR, "ERR:"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
-			return -1;
-		}
-		
-		pcscf_db = create_pcscf_db_connection();
-		if (!pcscf_db) {
+		if (!pcscf_db_init(pcscf_db_url)<0){
 			LOG(L_ERR, "ERR:"M_NAME": mod_init: Error while connecting database\n");
 			return -1;
 		}
@@ -784,12 +804,13 @@ static int mod_init(void)
 	}
 
 	/* bind to the cdp module */
-	if (pcscf_use_e2){
+	if (pcscf_use_e2||pcscf_use_pcc){
 		if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
 			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module.\n");
 			
-			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface has been disabled.\n");			
-			pcscf_use_e2 = 0;
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface as well as the PCC ones have been disabled.\n");			
+ 			pcscf_use_e2 = 0;
+			pcscf_use_pcc = 0;
 		}
 		if (load_cdp(&cdpb) == -1)
 			goto error;
@@ -848,7 +869,11 @@ static int mod_init(void)
 			goto error;
 		}
 	}
-
+	/* initializing the variables needed for the Emergency Services support*/
+	if (init_emergency_cntxt()<0){
+		LOG(L_ERR,"ERR:"M_NAME":mod_init: error on init_emergency_cntxt()\n");
+		goto error;	
+	}
 		
 	return 0;
 error:
@@ -857,10 +882,6 @@ error:
 
 extern gen_lock_t* process_lock;		/* lock on the process table */
 
-void close_pcscf_db_connection(db_con_t* db)
-{
-	if (db && pcscf_dbf.close) pcscf_dbf.close(db);
-}
 
 /**
  * Initializes the module in child.
@@ -873,15 +894,18 @@ static int mod_child_init(int rank)
 	if ( rank == PROC_MAIN || rank == PROC_TCP_MAIN )
 		return 0;
 
-	/* initializing the variables needed for the Emergency Services support*/
-	if (init_emergency_cntxt()<0){
-		LOG(L_ERR,"ERR:"M_NAME":mod_child: error on init_emergency_cntxt()\n");
-		return -1;	
-	}
-
 	/* Init the user data parser */
 	if (!parser_init(pcscf_reginfo_dtd)) return -1;
-		
+
+	if (pcscf_use_pcc){
+		lock_get(process_lock);
+			if((*callback_singleton)==0){
+				*callback_singleton=1;
+				cdpb.AAAAddRequestHandler(PCCRequestHandler,NULL);
+		}
+		lock_release(process_lock);
+	}
+
 
 	/* rtpproxy child init */
 	if (pcscf_nat_enable && rtpproxy_enable) 
@@ -921,11 +945,10 @@ static void mod_destroy(void)
         lock_destroy(pcscf_dialog_count_lock);
 	}
 	
-	if ( (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) && pcscf_db) {
-		DBG("INFO:"M_NAME": ... closing db connection\n");
-		close_pcscf_db_connection(pcscf_db);
+	if (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) {
+ 		DBG("INFO:"M_NAME": ... closing db connection\n");
+		pcscf_db_close();
 	}
-	pcscf_db = NULL;
 
 	#ifdef WITH_IMS_PM
 		ims_pm_destroy();	

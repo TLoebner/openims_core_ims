@@ -158,9 +158,11 @@
 
 #include "../../sr_module.h"
 
+#include "auth_api.h"
+
 #define M_NAME "P-CSCF"
 
-/** Return and break the execution of routng script */
+/** Return and break the execution of routing script */
 #define CSCF_RETURN_BREAK	0 
 /** Return true in the routing script */
 #define CSCF_RETURN_TRUE	1

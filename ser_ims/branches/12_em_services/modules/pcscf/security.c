@@ -57,6 +57,7 @@
  * Added TLS support
  * 
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Laurent Etiemble laurent dot etiemble -at- inexbee dot com
  * 
  */
  
@@ -91,7 +92,7 @@ extern str pcscf_record_route_mt_uri;	/**< URI for Record-route terminating */
 extern r_hash_slot *registrar;			/**< the contacts */
 extern int r_hash_size;					/**< records tables parameters 	*/
 
-int current_spi=5000;					/**< current SPI value */
+unsigned int current_spi=5000;					/**< current SPI value */
 extern int pcscf_use_tls;				/**< whether to use or not tls */
 extern int pcscf_tls_port;				/**< PORT for TLS server */
 extern int tls_disable;
@@ -101,7 +102,7 @@ extern int tls_disable;
  * \todo - make sure that this SPI is not used at the moment
  * @returns the next SPI
  */
-int get_next_spi()
+unsigned int get_next_spi()
 {
 	return current_spi++;
 }
@@ -346,152 +347,154 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 		goto error; 
 	}
 	
-	c = b->contacts;
+	if(b) c = b->contacts;
 			
 	r_act_time();
 	/* the Security works for just 1 contact/registration! */
-	LOG(L_DBG,"DBG:"M_NAME":save_contact_security: <%.*s>\n",c->uri.len,c->uri.s);
+	if(c){
+		LOG(L_DBG,"DBG:"M_NAME":save_contact_security: <%.*s>\n",c->uri.len,c->uri.s);
 		
-	expires = time_now+pending_expires;
+		expires = time_now+pending_expires;
 		
-	if (parse_uri(c->uri.s,c->uri.len,&puri)<0){
-		LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
-		goto error;			
-	}
-	if (puri.port_no==0) puri.port_no=5060;
-	LOG(L_DBG,"DBG:"M_NAME":save_contact_security: %d %.*s : %d\n",
-		puri.proto, puri.host.len,puri.host.s,puri.port_no);
-
-	sos_reg = cscf_get_sos_uri_param(c->uri);
-	if(sos_reg < 0)
-		return 0;
-
-		
-	if (type == SEC_TLS) 
-		puri.proto = PROTO_TLS;
-
-	/* create the r_security structure */
-	s = new_r_security(sec_hdr,type,q);
-	if (!s) goto error;	
-
-	switch(type) {
-		case SEC_NONE:
-			break;
-		case SEC_TLS:
-			// r_tls creation happens on 200
-			break;
-		case SEC_IPSEC:
-		{
-			/* then parse the parameters */
-			r_ipsec *ipsec;	
-			str prot, mod, prot_set, mod_set;
-			str ck,ik,ealg,alg,tmp;
-			str alg_setkey,ealg_setkey;
-			unsigned int spi_uc,spi_us;
-			unsigned int spi_pc,spi_ps;
-			int port_uc,port_us;
-			char ck_c[64],ik_c[64];
-			str ck_esp={ck_c,0},ik_esp={ik_c,0};
-
-			get_param(sec_hdr,s_prot,prot);
-			get_param(sec_hdr,s_mod,mod);
-
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot.len,prot.s);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod.len,mod.s);
-			if (prot.len == s_esp_inout.len && strncasecmp(prot.s,s_esp_inout.s,prot.len)==0) {
-				prot_set = s_esp_inout;
-			} else {
-				prot_set = s_ah_inout;
-			}
-			if (mod.len == s_tun_inout.len && strncasecmp(mod.s,s_tun_inout.s,mod.len)==0) {
-				mod_set = s_tun_inout;
-			} else {
-				mod_set = s_trans_inout;
-			}
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot_set.len,prot_set.s);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod_set.len,mod_set.s);
-								
-			get_qparam(auth,s_ck,ck);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: CK: <%.*s>\n",
-				ck.len,ck.s);
-			get_qparam(auth,s_ik,ik);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: IK: <%.*s>\n",
-				ik.len,ik.s);		
-			get_param(sec_hdr,s_ealg,ealg);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Enc Algorithm: <%.*s>\n",
-				ealg.len,ealg.s);
-			get_param(sec_hdr,s_alg,alg);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Int Algorithm: <%.*s>\n",
-				alg.len,alg.s);
-			/* and for spis */
-			get_param(sec_hdr,s_spi_c,tmp);
-			strtoint(tmp,spi_uc);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-C: %d\n",
-				spi_uc);
-			get_param(sec_hdr,s_spi_s,tmp);
-			strtoint(tmp,spi_us);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-S: %d\n",
-				spi_us);
-			/* and for ports */
-			get_param(sec_hdr,s_port_c,tmp);
-			strtoint(tmp,port_uc);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Port-C: %d\n",
-				port_uc);
-			get_param(sec_hdr,s_port_s,tmp);
-			strtoint(tmp,port_us);
-			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Port-S: %d\n",
-				port_us);
-		
-			ck_esp.s[ck_esp.len++]='0';
-			ck_esp.s[ck_esp.len++]='x';	
-			if (ealg.len == s_des_in.len && strncasecmp(ealg.s,s_des_in.s,ealg.len)==0) {
-				memcpy(ck_esp.s+ck_esp.len,ck.s,32);ck_esp.len+=32;
-				memcpy(ck_esp.s+ck_esp.len,ck.s,16);ck_esp.len+=16;
-				ealg_setkey = s_des_out;
-			}
-			else
-			if (ealg.len == s_aes_in.len && strncasecmp(ealg.s,s_aes_in.s,ealg.len)==0) {
-				memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
-				ealg_setkey = s_aes_out;
-			}else {
-				memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
-				ealg_setkey = s_null_out;
-					ealg = s_null_out;
-			}
-		
-			ik_esp.s[ik_esp.len++]='0';
-			ik_esp.s[ik_esp.len++]='x';		
-			if (alg.len == s_md5_in.len && strncasecmp(alg.s,s_md5_in.s,alg.len)==0) {
-				memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
-					alg_setkey = s_md5_out;
-			}
-			else
-			if (alg.len == s_sha_in.len && strncasecmp(alg.s,s_sha_in.s,alg.len)==0) {		
-				memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
-				memcpy(ik_esp.s+ik_esp.len,"00000000",8);ik_esp.len+=8;
-				alg_setkey = s_sha_out;
-			}else{
-				LOG(L_ERR,"ERR:"M_NAME":save_contact_security: Unknown Integrity algorithm <%.*s>\n",alg.len,alg.s);
-				goto error;
-			}
-				
-			spi_pc=get_next_spi();	
-			spi_ps=get_next_spi();	
-
-			ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
-				ealg_setkey,ealg, ck_esp,alg_setkey,alg, ik_esp, prot_set, mod_set);
-
-			if (!ipsec) goto error;
-			s->data.ipsec = ipsec;
-			
-			puri.port_no = ipsec->port_us;
-			/*
-			 * this should actually be port_uc... then the cscf_get_ue_via should be 
-			 * changed to give rport and not the port in the via. but this would
-			 * break NATed clients...
-			 */
+		if (parse_uri(c->uri.s,c->uri.len,&puri)<0){
+			LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
+			goto error;			
 		}
-		break;
+		if (puri.port_no==0) puri.port_no=5060;
+		LOG(L_DBG,"DBG:"M_NAME":save_contact_security: %d %.*s : %d\n",
+			puri.proto, puri.host.len,puri.host.s,puri.port_no);
+
+		sos_reg = cscf_get_sos_uri_param(c->uri);
+		if(sos_reg < 0)
+			return 0;
+
+			
+		if (type == SEC_TLS) 
+			puri.proto = PROTO_TLS;
+
+		/* create the r_security structure */
+		s = new_r_security(sec_hdr,type,q);
+		if (!s) goto error;	
+
+		switch(type) {
+			case SEC_NONE:
+				break;
+			case SEC_TLS:
+				// r_tls creation happens on 200
+				break;
+			case SEC_IPSEC:
+			{
+				/* then parse the parameters */
+				r_ipsec *ipsec;	
+				str prot, mod, prot_set, mod_set;
+				str ck,ik,ealg,alg,tmp;
+				str alg_setkey,ealg_setkey;
+				unsigned int spi_uc,spi_us;
+				unsigned int spi_pc,spi_ps;
+				int port_uc,port_us;
+				char ck_c[64],ik_c[64];
+				str ck_esp={ck_c,0},ik_esp={ik_c,0};
+
+				get_param(sec_hdr,s_prot,prot);
+				get_param(sec_hdr,s_mod,mod);
+
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot.len,prot.s);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod.len,mod.s);
+				if (prot.len == s_ah_inout.len && strncasecmp(prot.s,s_ah_inout.s,prot.len)==0) {
+					prot_set = s_ah_inout;
+				}else{
+					prot_set = s_esp_inout;
+				}
+				if (mod.len == s_tun_inout.len && strncasecmp(mod.s,s_tun_inout.s,mod.len)==0) {
+					mod_set = s_tun_inout;
+				} else {
+					mod_set = s_trans_inout;
+				}
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Protocol: <%.*s>\n", prot_set.len,prot_set.s);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Mode: <%.*s>\n", mod_set.len,mod_set.s);
+									
+				get_qparam(auth,s_ck,ck);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: CK: <%.*s>\n",
+					ck.len,ck.s);
+				get_qparam(auth,s_ik,ik);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: IK: <%.*s>\n",
+					ik.len,ik.s);		
+				get_param(sec_hdr,s_ealg,ealg);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Enc Algorithm: <%.*s>\n",
+					ealg.len,ealg.s);
+				get_param(sec_hdr,s_alg,alg);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Int Algorithm: <%.*s>\n",
+					alg.len,alg.s);
+				/* and for spis */
+				get_param(sec_hdr,s_spi_c,tmp);
+				strtoint(tmp,spi_uc);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-C: %u\n",
+					spi_uc);
+				get_param(sec_hdr,s_spi_s,tmp);
+				strtoint(tmp,spi_us);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: SPI-S: %u\n",
+					spi_us);
+				/* and for ports */
+				get_param(sec_hdr,s_port_c,tmp);
+				strtoint(tmp,port_uc);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Port-C: %d\n",
+					port_uc);
+				get_param(sec_hdr,s_port_s,tmp);
+				strtoint(tmp,port_us);
+				LOG(L_DBG,"DBG:"M_NAME":save_contact_security: Port-S: %d\n",
+					port_us);
+			
+				ck_esp.s[ck_esp.len++]='0';
+				ck_esp.s[ck_esp.len++]='x';	
+				if (ealg.len == s_des_in.len && strncasecmp(ealg.s,s_des_in.s,ealg.len)==0) {
+					memcpy(ck_esp.s+ck_esp.len,ck.s,32);ck_esp.len+=32;
+					memcpy(ck_esp.s+ck_esp.len,ck.s,16);ck_esp.len+=16;
+					ealg_setkey = s_des_out;
+				}
+				else
+				if (ealg.len == s_aes_in.len && strncasecmp(ealg.s,s_aes_in.s,ealg.len)==0) {
+					memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
+					ealg_setkey = s_aes_out;
+				}else {
+					memcpy(ck_esp.s+ck_esp.len,ck.s,ck.len);ck_esp.len+=ck.len;
+					ealg_setkey = s_null_out;
+						ealg = s_null_out;
+				}
+			
+				ik_esp.s[ik_esp.len++]='0';
+				ik_esp.s[ik_esp.len++]='x';		
+				if (alg.len == s_md5_in.len && strncasecmp(alg.s,s_md5_in.s,alg.len)==0) {
+					memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
+						alg_setkey = s_md5_out;
+				}
+				else
+				if (alg.len == s_sha_in.len && strncasecmp(alg.s,s_sha_in.s,alg.len)==0) {		
+					memcpy(ik_esp.s+ik_esp.len,ik.s,ik.len);ik_esp.len+=ik.len;
+					memcpy(ik_esp.s+ik_esp.len,"00000000",8);ik_esp.len+=8;
+					alg_setkey = s_sha_out;
+				}else{
+					LOG(L_ERR,"ERR:"M_NAME":save_contact_security: Unknown Integrity algorithm <%.*s>\n",alg.len,alg.s);
+					goto error;
+				}
+					
+				spi_pc=get_next_spi();	
+				spi_ps=get_next_spi();	
+
+				ipsec = new_r_ipsec(spi_uc,spi_us,spi_pc,spi_ps,port_uc,port_us,
+					ealg_setkey,ealg, ck_esp,alg_setkey,alg, ik_esp, prot_set, mod_set);
+
+				if (!ipsec) goto error;
+				s->data.ipsec = ipsec;
+				
+				puri.port_no = ipsec->port_us;
+				/*
+				* this should actually be port_uc... then the cscf_get_ue_via should be 
+				* changed to give rport and not the port in the via. but this would
+				* break NATed clients...
+				*/
+			}
+			break;
+		}
 	}
 
 	
@@ -709,7 +712,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 			 */
 			ipsec = c->security_temp->data.ipsec;
 			/* try to add the Security-Server header */
-			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%d; spi-s=%d; port-c=%d; port-s=%d; prot=%.*s; mod=%.*s; q=0.1\r\n",
+			sprintf(cmd,"Security-Server: ipsec-3gpp; ealg=%.*s; alg=%.*s; spi-c=%u; spi-s=%u; port-c=%d; port-s=%d; prot=%.*s; mod=%.*s; q=0.1\r\n",
 				ipsec->r_ealg.len,ipsec->r_ealg.s,
 				ipsec->r_alg.len,ipsec->r_alg.s,
 				ipsec->spi_pc,ipsec->spi_ps,
@@ -732,7 +735,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 	
 			/* run the IPSec script */	
 			/* P_Inc_Req */
-			sprintf(cmd,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(cmd,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Inc_Req,
 				c->host.len,c->host.s,
 				ipsec->port_uc,
@@ -864,7 +867,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 			i = c->security->data.ipsec;
 			
 			/* P_Out_Rpl */
-			sprintf(out_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(out_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Out_Rpl,
 				c->host.len,c->host.s,
 				i->port_uc,
@@ -879,7 +882,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->mod.len,i->mod.s);					
 	
 			/* P_Out_Req */
-			sprintf(out_req,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(out_req,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Out_Req,
 				c->host.len,c->host.s,
 				i->port_us,
@@ -894,7 +897,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				i->mod.len,i->mod.s);								
 
 			/* P_Out_Inc_Rpl */
-			sprintf(inc_rpl,"%s %.*s %d %s %d %d %.*s %.*s %.*s %.*s %.*s %.*s",
+			sprintf(inc_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
 				pcscf_ipsec_P_Inc_Rpl,
 				c->host.len,c->host.s,
 				i->port_us,
@@ -955,7 +958,7 @@ void P_security_drop(r_contact *c,r_security *s)
 		case SEC_IPSEC:
 			i = s->data.ipsec;
 			if (!i) return;
-			sprintf(drop,"%s %.*s %d %d %s %d %d %d %d %d %d %.*s",
+			sprintf(drop,"%s %.*s %hu %hu %s %d %d %u %u %u %u %.*s",
 				pcscf_ipsec_P_Drop,
 				c->host.len,c->host.s,
 				i->port_uc,
@@ -1515,3 +1518,73 @@ int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2)
 	if (r1==CSCF_RETURN_TRUE&&r2==CSCF_RETURN_TRUE) return CSCF_RETURN_TRUE;
 	else return CSCF_RETURN_FALSE;
 }
+
+
+
+static str route_s={"Route: <",8};
+static str route_e={">\r\n",3};
+/**
+ * Inserts the Route header containing the Service-Route to be enforced
+ * @param msg - the SIP message to add to
+ * @param str1 - the value to insert (IBCF URI here) - !!! quoted if needed
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_ERROR on error
+ */
+int P_route_to_IBCF(struct sip_msg *msg,char *str1,char*str2)
+{
+	str newuri={0,0};
+	str uri;
+	str x;
+	int add_lr=0;
+	static str lr_param={";lr",3};
+
+	/* Get char *str1 into str uri */
+	uri.s = str1;
+	uri.len = strlen(str1);
+
+	x.len = route_s.len + uri.len + route_e.len;
+	/* Add ;lr if there's not in the URI */
+	if (!strstr(str1,";lr")){
+		add_lr=1;
+		x.len+=lr_param.len;
+	}
+
+	x.s = pkg_malloc(x.len);
+	if (!x.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_route_to_IBCF: Error allocating %d bytes\n",x.len);
+		x.len=0;
+		return CSCF_RETURN_ERROR;
+	}
+	
+	/* Get complete Route header into x */
+	x.len=0;
+	STR_APPEND(x,route_s);
+	STR_APPEND(x,uri);
+	if (add_lr)
+		STR_APPEND(x,lr_param);
+	STR_APPEND(x,route_e);
+
+	/* Set dst_uri to the topmost Route URI */
+	newuri.s = pkg_malloc(uri.len);
+	if (!newuri.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_route_to_IBCF: Error allocating %d bytes\n",uri.len);
+		return CSCF_RETURN_ERROR;
+	}
+	newuri.len = uri.len;
+	memcpy(newuri.s,uri.s,newuri.len);
+	if (msg->dst_uri.s)
+		pkg_free(msg->dst_uri.s);
+	msg->dst_uri = newuri;
+
+	/* Add those Route header in x into msg */
+	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T))
+		return CSCF_RETURN_TRUE;
+	else {
+		LOG(L_ERR,"ERR:"M_NAME":P_route_to_IBCF: Failed to add new Route.\n");
+		if (x.s) pkg_free(x.s);
+		return CSCF_RETURN_ERROR;
+	}
+
+}
+
+

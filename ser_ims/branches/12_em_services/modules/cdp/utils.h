@@ -58,8 +58,8 @@
 #ifndef __CDP_UTILS_H_
 #define __CDP_UTILS_H_
 
-#ifdef CDP_FOR_SER
-
+/*#ifdef CDP_FOR_SER
+*/
 #include "../../dprint.h"
 #include "../../str.h"
 #include "../../mem/mem.h"
@@ -67,7 +67,7 @@
 #include "../../locking.h"
 #include "../../pt.h"
 #include <libxml/parser.h>
-
+/*
 #else
 
 #ifdef WHARF
@@ -86,7 +86,7 @@
 #endif
 
 #endif
-
+*/
 #ifndef LOG_NO_MEM
 #define LOG_NO_MEM(mem_type,data_len) \
 	LOG(L_ERR,"ERROR:%s:%s()[%d]: Out of %s memory allocating %d bytes\n",\

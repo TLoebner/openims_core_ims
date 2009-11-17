@@ -1,3 +1,57 @@
+/*
+ * $Id$
+ *  
+ * Copyright (C) 2004-2006 FhG Fokus
+ *
+ * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+ * implementation
+ *
+ * Open IMS Core is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * For a license to use the Open IMS Core software under conditions
+ * other than those described here, or to purchase support for this
+ * software, please contact Fraunhofer FOKUS by e-mail at the following
+ * addresses:
+ *     info@open-ims.org
+ *
+ * Open IMS Core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * It has to be noted that this Open Source IMS Core System is not 
+ * intended to become or act as a product in a commercial context! Its 
+ * sole purpose is to provide an IMS core reference implementation for 
+ * IMS technology testing and IMS application prototyping for research 
+ * purposes, typically performed in IMS test-beds.
+ * 
+ * Users of the Open Source IMS Core System have to be aware that IMS
+ * technology may be subject of patents and licence terms, as being 
+ * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+ * standards. Thus all Open IMS Core users have to take notice of this 
+ * fact and have to agree to check out carefully before installing, 
+ * using and extending the Open Source IMS Core System, if related 
+ * patents and licences may become applicable to the intended usage 
+ * context.  
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ */
+ 
+/**
+ * \file
+ * 
+ * P-CSCF - SDP Util functions
+ * 
+ * 
+ */
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,7 +80,6 @@
 #include "mod.h"
 #include "nat_helper.h"
 #include "sip.h"
-#include "sip_body.h"
 
 extern int pcscf_nat_enable;
 extern struct rtpp_head rtpp_list;
@@ -142,6 +195,37 @@ other:
 	LOG(L_ERR,"ERROR:check_content_type: invalid type for a message\n");
 	return -1;
 }
+
+int extract_body(struct sip_msg *msg, str *body )
+{
+	
+	body->s = get_body(msg);
+	if (body->s==0) {
+		LOG(L_ERR, "ERROR: extract_body: failed to get the message body\n");
+		goto error;
+	}
+	body->len = msg->len -(int)(body->s-msg->buf);
+	if (body->len==0) {
+		LOG(L_ERR, "ERROR: extract_body: message body has length zero\n");
+		goto error;
+	}
+	
+	/* no need for parse_headers(msg, EOH), get_body will 
+	 * parse everything */
+	/*is the content type correct?*/
+	if (check_content_type(msg)==-1)
+	{
+		LOG(L_ERR,"ERROR: extract_body: content type mismatching\n");
+		goto error;
+	}
+	
+	/*DBG("DEBUG:extract_body:=|%.*s|\n",body->len,body->s);*/
+
+	return 1;
+error:
+	return -1;
+}
+
 
 static int isnulladdr(str *sx, int pf)
 {
@@ -496,7 +580,7 @@ static int alter_mediaport(struct sip_msg *msg, str *body, str *oldport, str *ne
 	return 0;
 }
 
-static char * find_sdp_line(char* p, char* plimit, char linechar)
+char * find_sdp_line(char* p, char* plimit, char linechar)
 {
 	static char linehead[3] = "x=";
 	char *cp, *cp1;
@@ -528,7 +612,7 @@ static char * find_sdp_line(char* p, char* plimit, char linechar)
 	return NULL;
 }
 
-static char * find_next_sdp_line(char* p, char* plimit, char linechar, char* defptr)
+char * find_next_sdp_line(char* p, char* plimit, char linechar, char* defptr)
 {
 	char *t;
 	if (p >= plimit || plimit - p < 3)
@@ -897,9 +981,6 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 	char **ap, *argv[10];
 	struct lump* anchor;
 	struct rtpp_node *node;
-	str new_part;
-	str body_content_type = cscf_get_content_type(msg);
-	str init_body;
 
 	struct iovec v[14] = {
 		{NULL, 0},	/* command */
@@ -997,22 +1078,13 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 	} else {
 		return -1;
 	}
-	/* get_body will also parse all the headers in the message as
+	/* extract_body will also parse all the headers in the message as
 	 * a side effect => don't move get_callid/get_to_tag in front of it
 	 * -- andrei/ancuta */
 	
-	init_body.s = get_body(msg);
-	if (init_body.s==0) {
+	if (extract_body(msg, &body) == -1) {	
 		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't extract body "
-				"from message\n");
-		return -1;
-	}
-	init_body = cscf_get_body(msg);
-	body = cscf_get_body_with_type_from_body(init_body, body_content_type,
-			app_sdp_s, &new_part);
-	if (!body.s){
-		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't extract sdp body "
-		    "from the message\n");
+			 "from the message\n");
 		return -1;
 	}
 
@@ -1432,44 +1504,27 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 	int had_sdp_in_invite = 0;
 	str body;
 	struct sip_msg *req=0;
-	str sdp_body_part = {0,0};
-	str new_body = {0,0};
-	str body_content_type;
-
-	LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: searching for sdp content\n");
-       	body_content_type = cscf_get_content_type(msg);
 
 	if (!pcscf_nat_enable || !rtpproxy_enable) return CSCF_RETURN_FALSE;
-	new_body = cscf_get_body_with_type_from_body(cscf_get_body(msg), body_content_type, 
-			app_sdp_s, &sdp_body_part);
-	if (!new_body.s){
-		LOG(L_ERR,"ERROR:"M_NAME":P_SDP_manipulate: content-type %.*s "
-				"not found in body.\n",app_sdp_s.len, app_sdp_s.s);			
-		response = -1;
-		return response ;
-	}
 
+	if( check_content_type(msg) ) 
+	{
+		if (msg->first_line.type == SIP_REQUEST)
+			req = msg;
+		else
+			req = cscf_get_request_from_reply(msg);
 
-	if (msg->first_line.type == SIP_REQUEST)
-		req = msg;
-	else
-		req = cscf_get_request_from_reply(msg);
-	if (req)
-		method = req->first_line.u.request.method_value;
-	else
-		method=METHOD_UNDEF;
-	switch(method)
-	{	
-	    case METHOD_INVITE:
-		had_sdp_in_invite = 1; 
-	    	if (req != msg){
-			new_body = cscf_get_body_with_type_from_body(cscf_get_body(req), body_content_type, 
-					app_sdp_s, &sdp_body_part);
-			if(!new_body.s)
-				had_sdp_in_invite = 0;
-		}
-		
-		if (msg->first_line.type == SIP_REQUEST){
+		if (req)
+			method = req->first_line.u.request.method_value;
+		else
+			method=METHOD_UNDEF;
+
+		switch(method)
+		{	
+		    case METHOD_INVITE:
+			if (extract_body(req,&body)<0) had_sdp_in_invite = 0;
+			else had_sdp_in_invite = 1; 
+			if (msg->first_line.type == SIP_REQUEST){
 			 		/* on INVITE */
 					/* check the sdp if it has a 1918 */
 					if(1)
@@ -1531,8 +1586,13 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 		    	response = CSCF_RETURN_FALSE;
 				break; 
 		}    
-return response;
-
+	}else {
+		LOG(L_ERR, "ERROR:check_content_type: parse error:"
+			"see the content_type block\n");
+		response = -1 ;
+	}	
+ 
+	return response ;
 }
 
 

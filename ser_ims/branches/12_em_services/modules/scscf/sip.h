@@ -179,6 +179,7 @@ int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport);
 
 int cscf_get_terminating_identity(struct sip_msg *msg,str *uri);
+int cscf_get_terminating_identity_gr(struct sip_msg *msg,str *gr);
 
 int cscf_add_p_charging_vector(struct sip_msg *msg);
 
@@ -190,6 +191,6 @@ int cscf_get_to_tag(struct sip_msg* msg, str* tag);
 int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
 int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
 
-int cscf_get_sos_uri_param(str contact_uri);
+int cscf_get_sos_uri_param(str uri);
 
 #endif /* PIS_CSCF_SIP_H */

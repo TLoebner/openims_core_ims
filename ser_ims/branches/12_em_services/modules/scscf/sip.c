@@ -71,10 +71,9 @@
 #include "../../parser/contact/contact.h"
 #include "../../parser/contact/parse_contact.h"
 
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #include "mod.h"
-//#include "auth_api.h"
 
 #define strtotime(src,dest) \
 {\
@@ -157,17 +156,21 @@ int cscf_add_header(struct sip_msg *msg, str *hdr,int type)
 {
 	struct hdr_field *last;
 	struct lump* anchor;
+	if (parse_headers(msg,HDR_EOH_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_add_header: Error parsing until end of headers: \n");
+		return 0;
+	}
 	last = msg->headers;
 	while(last->next) 
 		last = last->next;
 	anchor = anchor_lump(msg, last->name.s + last->len - msg->buf, 0 , 0);
 	if (anchor == NULL) {
-		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header_first: anchor_lump failed\n");
+		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header: anchor_lump failed\n");
 		return 0;
 	}
 
 	if (!insert_new_lump_after(anchor, hdr->s,hdr->len,type)){
-		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header_first: error creting lump for header\n" );
+		LOG(L_ERR, "ERR:"M_NAME":cscf_add_header: error creting lump for header\n" );
 		return 0;
 	}	
  	return 1;
@@ -1571,7 +1574,7 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 
 static str s_called_party_id={"P-Called-Party-ID",17};
 /**
- * Looks for the P-Preferred-Identity header and extracts its content.
+ * Looks for the P-Called-Party-ID header and extracts its content.
  * @param msg - the sip message
  * @param hr - ptr to return the found hdr_field 
  * @returns the P-Called_Party-ID
@@ -2576,8 +2579,15 @@ str cscf_get_content_type(struct sip_msg *msg)
 {
 	str ct={0,0};
 	if (!msg) return ct;
-	if (parse_headers(msg, HDR_CONTENTTYPE_F, 0) != -1 && msg->content_type)
-		ct = msg->content_type->body;		
+	if (parse_headers(msg, HDR_CONTENTTYPE_F, 0) != -1 && msg->content_type){
+		ct = msg->content_type->body;
+		while(ct.s[0]==' '||ct.s[0]=='\t'){
+			ct.s++;
+			ct.len--;
+		}
+		while(ct.s[ct.len-1]==' '||ct.s[ct.len-1]=='\t')
+			ct.len--;
+	}
 	return ct;
 }
 
@@ -2683,7 +2693,6 @@ int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 
 /**
  * Returns the terminating contact.
- * @param msg sip message
  * @param msg - the SIP message to look into
  * @param host - the host string to be filled with the result
  * @param port - the port number to be filled with the result 
@@ -2722,11 +2731,8 @@ int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 
 /**
  * Returns the terminating contact.
- * @param msg sip message
  * @param msg - the SIP message to look into
- * @param host - the host string to be filled with the result
- * @param port - the port number to be filled with the result 
- * @param transport - the transport type to be filled with the result
+ * @param uri - the uri str to be filled
  * @returns 1 on success
  */
 int cscf_get_terminating_identity(struct sip_msg *msg,str *uri)
@@ -2753,6 +2759,64 @@ int cscf_get_terminating_identity(struct sip_msg *msg,str *uri)
 	
 	LOG(L_INFO,"DBG:"M_NAME":cscf_get_terminating_identity: <%.*s> \n",uri->len,uri->s);	
 	return 1;
+}
+
+static str s_gr={"gr",2};
+/**
+ * Returns the gr parameter (GRUU id) from the terminating contact.
+ * @param msg - the SIP message to look into
+ * @param gr - the gr str to fill in the value of the parameter
+ * @returns 1 on success
+ */
+int cscf_get_terminating_identity_gr(struct sip_msg *msg,str *gr)
+{
+	struct sip_msg *req;	
+	str uri;
+	struct sip_uri puri;
+	param_hooks_t h;
+	param_t *p=0, *crt;
+	enum pclass p_class = CLASS_URI;
+	
+	gr->s=0;
+	gr->len=0;
+
+	req = msg;	
+	if (!req){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_terminating_identity_gr: NULL message!!!\n");
+		return 0;
+	}
+ 	if (req->first_line.type!=SIP_REQUEST){
+ 		req = cscf_get_request_from_reply(req);
+ 	}
+	
+	if (msg->new_uri.s) uri = msg->new_uri;
+	else uri = msg->first_line.u.request.uri;
+	
+	if(parse_uri(uri.s, uri.len, &puri)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_terminating_identity_gr: failed to parse URI <%.*s>\n",
+				uri.len, uri.s);
+		return 0;
+	}
+	if(puri.params.len <= 0)
+		return 0;
+			
+	if(parse_params(&(puri.params), p_class, &h, &p)){
+		LOG(L_ERR, "ERR:"M_NAME":cscf_get_terminating_identity_gr:error while parsing uri parameters\n");
+		if(p) free_params(p);
+		return 0;
+	}
+	
+	for(crt = p ; crt ; crt=crt->next){
+		if((crt->name.len == s_gr.len) &&
+				(strncmp(crt->name.s, s_gr.s, s_gr.len) == 0)){
+			*gr = crt->body;			
+			LOG(L_INFO,"DBG:"M_NAME":cscf_get_terminating_identity_gr: <%.*s> \n",gr->len,gr->s);	
+			if(p) free_params(p);
+			return 1;
+		}	
+	}
+	if(p) free_params(p);
+	return 0;
 }
 
 
@@ -2971,7 +3035,7 @@ static str sos_uri_par={"sos", 3};
  * @param contact - contact to be checked
  * @return 1 if found, 0 if not, -1 on error
  */
-int cscf_get_sos_uri_param(str contact_uri)
+int cscf_get_sos_uri_param(str uri)
 {
 	struct sip_uri puri;
 	param_hooks_t h;
@@ -2982,9 +3046,9 @@ int cscf_get_sos_uri_param(str contact_uri)
 	ret = 0;
 	p = NULL;
 	
-	if(parse_uri(contact_uri.s, contact_uri.len, &puri)<0){
+	if(parse_uri(uri.s, uri.len, &puri)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_sos_uri_param: failed to parse %.*s\n",
-				contact_uri.len, contact_uri.s);
+				uri.len, uri.s);
 		return -1;
 	}
 	if(puri.params.len <= 0)
@@ -2992,8 +3056,6 @@ int cscf_get_sos_uri_param(str contact_uri)
 	
 	LOG(L_DBG, "DBG:"M_NAME":cscf_get_sos_uri_param: searching through the uri parameters:%.*s\n", 
 			puri.params.len, puri.params.s);        
-	if(puri.params.len == 0)
-		return 0;
 		
 	if(parse_params(&(puri.params), p_class, &h, &p)){
 		LOG(L_ERR, "ERR:"M_NAME":cscf_get_sos_uri_param:error while parsing uri parameters\n");

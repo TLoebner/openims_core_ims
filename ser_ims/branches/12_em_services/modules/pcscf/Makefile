@@ -9,9 +9,23 @@ include ../../Makefile.defs
 auto_gen=
 NAME=pcscf.so
 
-include ../../Makefile.modules
+
+ifeq ($(CFG_NAME),sip-router)
+	DEFS+=-DSER_MOD_INTERFACE
+	SERLIBPATH=../../lib
+	SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
+	LIBS+=-L../../lib/cds -lser_cds
+else
+	LIBS+=-L../../lib/cds -l_ser_cds
+endif
 
 DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
 LIBS += -lxml2 -L../../lib/cds -l_ser_cds -L../../lib/lost -l_lost_client
 
+DEFS += -DCDP_FOR_SER
+DEFS += -I/usr/include/libxml2 
+LIBS += -L$(LOCALBASE)/lib -lxml2
+
 #DEFS += -DWITH_IMS_PM
+
+include ../../Makefile.modules
