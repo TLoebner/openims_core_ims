@@ -293,6 +293,7 @@ static cmd_export_t cmds[]={
 	{T_IS_LOCAL,           (cmd_function)t_is_local,        NO_SCRIPT,   0, 0},
 	{T_GET_TI,             (cmd_function)t_get_trans_ident, NO_SCRIPT,   0, 0},
 	{T_LOOKUP_IDENT,       (cmd_function)t_lookup_ident,    NO_SCRIPT,   0, 0},
+	{T_LOOKUP_CALLID,      (cmd_function)t_lookup_callid,   NO_SCRIPT,   0, 0},
 	{T_ADDBLIND,           (cmd_function)add_blind_uac,     NO_SCRIPT,   0, 0},
 	{"t_request_within",   (cmd_function)req_within,        NO_SCRIPT,   0, 0},
 	{"t_request_outside",  (cmd_function)req_outside,       NO_SCRIPT,   0, 0},

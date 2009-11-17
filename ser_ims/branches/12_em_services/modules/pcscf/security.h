@@ -56,7 +56,7 @@
 #define P_CSCF_SECURITY_H
 
 #include "../../sr_module.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #include "registration.h"
 #include "registrar_storage.h"
@@ -83,5 +83,7 @@ int P_enforce_record_routes(struct sip_msg *rpl,char *str1, char *str2);
 int P_remove_security_client(struct sip_msg *msg,char *str1,char*str2);
 int P_remove_security_verify(struct sip_msg *msg,char *str1,char*str2);
 int P_remove_security_headers(struct sip_msg *msg,char *str1,char*str2);
+
+int P_route_to_IBCF(struct sip_msg *msg,char *str1,char*str2);
 
 #endif /* P_CSCF_SECURITY_H */

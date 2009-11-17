@@ -96,6 +96,11 @@ int load_tm( struct tm_binds *tmb)
 		LOG( L_ERR, LOAD_ERROR "'t_lookup_ident' not found\n");
 		return -1;
 	}
+	if (!(tmb->t_lookup_callid=(tlookup_callid_f)find_export
+	(T_LOOKUP_CALLID, NO_SCRIPT, 0)) ) {
+		LOG( L_ERR, LOAD_ERROR "'t_lookup_ident' not found\n");
+		return -1;
+	}
 	if (!(tmb->t_addblind=(taddblind_f)find_export(T_ADDBLIND,NO_SCRIPT,0))) {
 		LOG( L_ERR, LOAD_ERROR "'addblind' not found\n");
 		return -1;

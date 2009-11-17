@@ -508,6 +508,11 @@ int nat_send_ping(r_contact *c) {
 	}
 	if (dst.proto==PROTO_UDP) udp_send(&dst, (char *)udp_ping, sizeof(udp_ping));
 	else
-	if (dst.proto==PROTO_TCP) tcp_send(&dst, (char *)tcp_ping, sizeof(tcp_ping));
+	if (dst.proto==PROTO_TCP)
+#ifdef SER_MOD_INTERFACE		
+		tcp_send(&dst, 0, (char *)tcp_ping, sizeof(tcp_ping));
+#else
+		tcp_send(&dst, (char *)tcp_ping, sizeof(tcp_ping));
+#endif	
 	return 1; 
 }

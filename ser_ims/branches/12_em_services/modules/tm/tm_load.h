@@ -68,6 +68,7 @@
 #define T_FORWARD_NONACK_TLS "t_forward_nonack_tls"
 #define T_GET_TI             "t_get_trans_ident"
 #define T_LOOKUP_IDENT       "t_lookup_ident"
+#define T_LOOKUP_CALLID		 "t_lookup_callid"
 #define T_IS_LOCAL           "t_is_local"
 #define T_REQUEST_WITHIN     "request_within"
 #define T_REQUEST_OUTSIDE    "request_outside"
@@ -86,6 +87,7 @@ struct tm_binds {
 	tislocal_f       t_is_local;
 	tget_ti_f        t_get_trans_ident;
 	tlookup_ident_f  t_lookup_ident;
+	tlookup_callid_f t_lookup_callid;
 	taddblind_f      t_addblind;
 	treply_f         t_reply_unsafe;
 	tfwd_f           t_forward_nonack;

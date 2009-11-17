@@ -60,7 +60,7 @@
 #include "../../parser/contact/contact.h"
 #include "../../parser/contact/parse_contact.h"
 #include "../../ut.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../../dset.h"
 
 #include "registrar.h"
@@ -271,7 +271,7 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				return 0;
 
 			if(sos_reg>0)
-				LOG(L_DBG,"DBG:"M_NAME":update_contact: with sos uri param\n");
+				LOG(L_DBG,"DBG:"M_NAME":update_contacts: with sos uri param\n");
 			
 			if (expires>local_time_now) {
 				if (requires_nat &&				/* only if NAT was enabled */ 

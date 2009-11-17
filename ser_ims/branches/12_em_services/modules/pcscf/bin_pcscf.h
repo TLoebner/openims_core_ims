@@ -46,9 +46,9 @@
 /**
  * \file
  *
- * Binary codec operations for the P-CSCF
+ * Binary codec operations extension for the P-CSCF
  *
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  *
  */
 
@@ -58,12 +58,20 @@
 #define _BIN_PCSCF_H
 
 #include "bin.h"
+#include "bin_file.h"
 #include "registrar_storage.h"
 #include "dlg_state.h"
 #include "registrar_subscribe.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 
 #define BIN_INITIAL_ALLOC_SIZE 256
+
+typedef enum {
+	P_REGISTRAR=1,
+	P_DIALOGS=2,
+	P_SUBSCRIPTIONS=3
+} data_type_t;
+
 
 int bin_encode_r_contact(bin_data *x,r_contact *c);
 r_contact* bin_decode_r_contact(bin_data *x);

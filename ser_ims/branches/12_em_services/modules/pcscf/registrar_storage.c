@@ -68,7 +68,6 @@
 #include "nat_helper.h"
 #include "security.h"
 #include "dlg_state.h"
-#include "sip.h"
 
 time_t time_now;				/**< current time 							*/
 r_hash_slot *registrar=0;		/**< the actual registrar					*/
@@ -371,8 +370,8 @@ void free_r_public(r_public *p)
  * @param mod - The IPSec mode (either 'transport' or 'tunnel')
  * @returns the new r_ipsec* container or NULL on error
  */
-r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp, str prot, str mod)
+r_ipsec* new_r_ipsec(unsigned int spi_uc,unsigned int spi_us,unsigned int spi_pc,unsigned int spi_ps,unsigned short int port_uc,unsigned short int port_us,
+ 	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp, str prot, str mod)
 {
 	r_ipsec *ipsec;
 	
@@ -825,8 +824,13 @@ void print_r(int log_level)
 	r_contact *c;
 	int i,j;
 
-	if (debug<log_level) return; /* to avoid useless calls when nothing will be printed */	
-	r_act_time();
+#ifdef SER_MOD_INTERFACE
+	if (!is_printable(log_level))
+#else		
+	if (debug<log_level)
+#endif	
+		return; /* to avoid useless calls when nothing will be printed */	r_act_time();
+
 	LOG(log_level,"INF:"M_NAME":----------  Registrar Contents begin --------\n");
 	if (!registrar) return;
 	for(i=0;i<r_hash_size;i++){

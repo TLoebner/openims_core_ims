@@ -59,8 +59,9 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../../locking.h"
-#include "../tm/dlg.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/dlg.h"
+#include "../../modules/tm/tm_load.h"
+#include "../cdp/cdp_load.h"
 
 enum p_dialog_method {
 	DLG_METHOD_OTHER=0,
@@ -117,6 +118,9 @@ typedef struct _p_dialog {
 	  										released or not, or its peer, with count on 
 											tries 										*/	
 	p_dialog_em_info em_info;
+
+	AAASession *pcc_session;
+
 	dlg_t *dialog_s;  /* dialog as UAS*/
 	dlg_t *dialog_c;  /* dialog as UAC*/
 			
@@ -138,7 +142,7 @@ void p_dialogs_destroy();
 inline void d_lock(unsigned int hash);
 inline void d_unlock(unsigned int hash);
 
-inline int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport);
+int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport);
 int fixup_save_dialog(void** param, int param_no);
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
@@ -147,6 +151,7 @@ int is_p_dialog_dir(str call_id,enum p_dialog_direction dir);
 p_dialog* get_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);
 p_dialog* get_p_dialog_dir(str call_id,enum p_dialog_direction dir);
 p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir);
+enum p_dialog_direction get_dialog_direction(char *direction);
 int terminate_p_dialog(p_dialog *d);
 void del_p_dialog(p_dialog *d);
 void free_p_dialog(p_dialog *d);

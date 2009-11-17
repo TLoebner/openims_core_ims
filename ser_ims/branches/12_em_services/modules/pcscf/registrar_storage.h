@@ -86,10 +86,10 @@ enum Reg_States {
 
 /** IPSec SA Information */
 typedef struct _r_ipsec {
-	int spi_uc;					/**< SPI Client to use					*/
-	int spi_us;					/**< SPI Server to use					*/	
-	int spi_pc;					/**< SPI Client to use					*/
-	int spi_ps;					/**< SPI Server to use					*/
+	unsigned int spi_uc;					/**< SPI Client to use					*/
+	unsigned int spi_us;					/**< SPI Server to use					*/	
+	unsigned int spi_pc;					/**< SPI Client to use					*/
+	unsigned int spi_ps;					/**< SPI Server to use					*/
 	unsigned short port_uc;		/**< Port UE Client						*/
 	unsigned short port_us;		/**< Port UE Server						*/
 	
@@ -189,8 +189,8 @@ r_public* update_r_public(r_contact *c,str aor,int *is_default);
 void del_r_public(r_contact *c,r_public *p);
 void free_r_public(r_public *p);
 
-r_ipsec* new_r_ipsec(int spi_uc,int spi_us,int spi_pc,int spi_ps,int port_uc,int port_us,
-	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp, str prot, str mod);
+r_ipsec* new_r_ipsec(unsigned int spi_uc,unsigned int spi_us,unsigned int spi_pc,unsigned int spi_ps,unsigned short int port_uc,unsigned short int port_us,
+ 	str ealg_setkey,str r_ealg, str ck_esp,str alg_setkey,str r_alg, str ik_esp, str prot, str mod);
 void free_r_ipsec(r_ipsec *ipsec);
 
 r_tls* new_r_tls(int port_tls, unsigned long session_hash);

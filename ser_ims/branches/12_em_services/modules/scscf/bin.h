@@ -104,8 +104,12 @@ Basic datatype representations:
 
 #include "mod.h"
 #include "../../mem/mem.h"
-#include "../dialog/dlg_mod.h"
 
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
 
 typedef struct _bin_data {
 	char* s; /*string*/
@@ -118,9 +122,9 @@ typedef struct _bin_data {
  *		Binary encoding functions
  */
 /* memory allocation and initialization macros */
-#define BIN_ALLOC_METHOD    pkg_malloc
-#define BIN_REALLOC_METHOD  pkg_realloc
-#define BIN_FREE_METHOD     pkg_free
+#define BIN_ALLOC_METHOD    shm_malloc
+#define BIN_REALLOC_METHOD  shm_realloc
+#define BIN_FREE_METHOD     shm_free
 
 inline int bin_alloc(bin_data *x, int max_len);
 inline int bin_realloc(bin_data *x, int delta);
@@ -163,15 +167,6 @@ typedef enum {
 	WITH_DATABASE_BULK=2,
 	WITH_DATABASE_CACHE=3
 } persistency_mode_t;
-
-/* Dumping functions */
-
-
-int bin_dump_to_file(bin_data *x,char *location,char *prepend_fname);
-int bin_load_from_file(bin_data *x,char *location,char *prepend_fname);
-
-int bin_dump(bin_data *x,int mode,char *location,char* prepend_fname);
-int bin_load(bin_data *x,int mode,char *location,char* prepend_fname);
 
 
 
