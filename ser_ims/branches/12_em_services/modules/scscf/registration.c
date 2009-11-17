@@ -56,7 +56,7 @@
 
 #include "registration.h"
 
-#include "../tm/tm_load.h"
+#include "../modules/tm/tm_load.h"
 #include "../cdp/cdp_load.h"
 #include "sip.h"
 #include "cx.h"
@@ -93,6 +93,7 @@ str algorithm_types[] = {
 	{"Early-IMS",9},
 	{"MD5",3},
 	{"CableLabs-Digest",16},
+	{"3GPP-Digest",11},
 	{"TISPAN-HTTP_DIGEST_MD5",22},
 	{"NASS-Bundled",12},
 	{0,0}
@@ -105,6 +106,7 @@ str auth_scheme_types[] = {
 	{"Early-IMS-Security",18},
 	{"Digest-MD5",10},
 	{"Digest",6},
+	{"SIP Digest",10},
 	{"HTTP_DIGEST_MD5",15},
 	{"NASS-Bundled",12},
 	{0,0}	
@@ -698,6 +700,7 @@ int S_is_authorized(struct sip_msg *msg,char *str1,char *str2 )
 				response16.len,response16.s,/*av->authorization.len,av->authorization.s,*/32,expected,32,ha1);
 			break;		
 		case AUTH_DIGEST:
+		case AUTH_SIP_DIGEST:
 		case AUTH_HTTP_DIGEST_MD5:
 //			LOG(L_CRIT,"A1: %.*s:%.*s:%.*s\n",private_identity.len,private_identity.s,
 //				realm.len,realm.s,av->authorization.len,av->authorization.s);
@@ -903,6 +906,9 @@ int pack_challenge(struct sip_msg *msg,str realm,auth_vector *av)
 			/* this one continues into the next one */			
 		case AUTH_DIGEST:
 			/* Cable-Labs MD5 */
+			/* this one continues into the next one */			
+		case AUTH_SIP_DIGEST:
+			/* 3GPP MD5 */
 			/* this one continues into the next one */			
 		case AUTH_MD5:
 			/* FOKUS MD5 */
@@ -1273,6 +1279,7 @@ auth_vector *new_auth_vector(int item_number,str auth_scheme,str authenticate,
 			x->authorization.len = authorization.len;		
 			break;
 		case AUTH_DIGEST:
+		case AUTH_SIP_DIGEST:
 			{
 				int i;
 				char y[NONCE_LEN];				

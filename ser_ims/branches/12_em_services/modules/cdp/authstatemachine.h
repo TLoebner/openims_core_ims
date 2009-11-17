@@ -1,7 +1,7 @@
-/*
- * $Id$
- *  
- * Copyright (C) 2004-2009 FhG Fokus
+/**
+ * $Id: authstatemachine.h 747 2009-10-19 13:26:35Z vingarzan $
+ *   
+ * Copyright (C) 2004-2007 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -42,70 +42,38 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
- 
+
 /**
  * \file
  * 
- * Service-CSCF -Emergency Related Operations
+ * CDiameterPeer Session Handling - Authorization State Machine
  * 
+ * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \author Shengyao Chen shc -at- fokus dot fraunhofer dot de
+ * \author Joao Filipe Placido joao-f-placido -at- ptinovacao dot pt
  * 
- *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
 
-#include <time.h>
 
-#include "../../parser/contact/contact.h"
-#include "../../parser/contact/parse_contact.h"
-#include "../../ut.h"
-#include "../../modules/tm/tm_load.h"
-#include "../cdp/cdp_load.h"
-#include "../../dset.h"
+#ifndef __AUTHSTATEMACHINE_H
+#define __AUTHSTATEMACHINE_H
 
-#include "emerg.h"
-#include "registrar.h"
-#include "registration.h"
-#include "mod.h"
-#include "registrar_parser.h"
-#include "registrar_storage.h"
-#include "sip.h"
-#include "cx.h"
-#include "cx_avp.h"
-#include "sip_messages.h"
-#include "dlg_state.h"
+#include "diameter_api.h"
+#include "session.h"
+#include "config.h"
 
+inline int auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
+inline void auth_server_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 
-/**
- * Finds if the message comes from a user that made an Emergency Registration
- * @param msg - the SIP message
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if sos uri parameter in Contact header, #CSCF_RETURN_FALSE if not, or #CSCF_RETURN_FALSE
- */
-int S_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
-{
-	contact_t *c;
-	struct hdr_field *h;
-	int sos_reg;
-	int x;
+void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg);
+void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 
-	sos_reg = 0;
+void Send_ASA(cdp_session_t* s, AAAMessage* msg);
 
-	LOG(L_INFO,"DBG:"M_NAME":S_emergency_flag: Check if the user made an Emergency Registration\n");
-	
-	for(h=msg->contact;h;h=h->next)
-		if (h->type==HDR_CONTACT_T && h->parsed)
-		 for(c=((contact_body_t*)h->parsed)->contacts;c;c=c->next){
-			LOG(L_DBG,"DBG:"M_NAME":S_emergency_flag: contact <%.*s>\n",c->uri.len,c->uri.s);
-			
-			x = cscf_get_sos_uri_param(c->uri);
-			if(x < 0)
-				return CSCF_RETURN_ERROR;
-			sos_reg += x;
-		}
-	
-	if(sos_reg)
-		return CSCF_RETURN_TRUE;
+void Send_STR(cdp_session_t* s, AAAMessage* msg);
+void Send_ASR(cdp_session_t* s, AAAMessage* msg);
 
-	return CSCF_RETURN_FALSE;
-}
+void Session_Cleanup(cdp_session_t* s, AAAMessage* msg);
+
+#endif
 

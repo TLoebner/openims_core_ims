@@ -55,7 +55,7 @@
 
 #include "cx.h"
 
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "cx_avp.h"
 #include "sip.h"
 #include "registrar_storage.h"
@@ -170,14 +170,14 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 					unsigned int count,str algorithm,str authorization,str server_name,str realm)
 {
 	AAAMessage *mar=0,*maa=0;
-	AAASessionId sessId={0,0};
+	AAASession *session=0;
 	AAATransaction *trans=0;
 	unsigned int hash=0,label=0;	
 	
-	sessId = cdpb.AAACreateSession();
+	session = cdpb.AAACreateSession(0);
 	trans=cdpb.AAACreateTransaction(IMS_Cx,IMS_MAR);
 
-	mar = cdpb.AAACreateRequest(IMS_Cx,IMS_MAR,Flag_Proxyable,&sessId);
+	mar = cdpb.AAACreateRequest(IMS_Cx,IMS_MAR,Flag_Proxyable,session);
 	if (!mar) goto error;
 
 	if (!Cx_add_destination_realm(mar,realm)) goto error;
@@ -220,7 +220,7 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 		ims_pm_diameter_answer(maa);
 	#endif			
 	
-	cdpb.AAADropSession(&sessId);
+	cdpb.AAADropSession(session);
 	cdpb.AAADropTransaction(trans);
 	
 	return maa;
@@ -228,7 +228,7 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 error:
 	//free stuff
 	if (trans) cdpb.AAADropTransaction(trans);
-	if (sessId.s) cdpb.AAADropSession(&sessId);
+	if (session) cdpb.AAADropSession(session);
 	if (mar) cdpb.AAAFreeMessage(&mar);
 	return 0;	
 }
@@ -249,15 +249,15 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 					str server_name,str realm,int assignment_type, int data_available)
 {
 	AAAMessage *sar=0,*saa=0;
-	AAASessionId sessId={0,0};
+	AAASession *session=0;
 	AAATransaction *trans=0;
 //	struct cell* t;
 	unsigned int hash=0,label=0;	
 	
-	sessId = cdpb.AAACreateSession();
+	session = cdpb.AAACreateSession(0);
 	trans=cdpb.AAACreateTransaction(IMS_Cx,IMS_SAR);
 
-	sar = cdpb.AAACreateRequest(IMS_Cx,IMS_SAR,Flag_Proxyable,&sessId);
+	sar = cdpb.AAACreateRequest(IMS_Cx,IMS_SAR,Flag_Proxyable,session);
 	if (!sar) goto error;
 
 	if (!Cx_add_destination_realm(sar,realm)) goto error;
@@ -294,7 +294,7 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 		ims_pm_diameter_answer(saa);
 	#endif				
 	
-	cdpb.AAADropSession(&sessId);
+	cdpb.AAADropSession(session);
 	cdpb.AAADropTransaction(trans);
 	
 	return saa;
@@ -302,7 +302,7 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 error:
 	//free stuff
 	if (trans) cdpb.AAADropTransaction(trans);
-	if (sessId.s)	cdpb.AAADropSession(&sessId);
+	if (session)	cdpb.AAADropSession(session);
 	if (sar) cdpb.AAAFreeMessage(&sar);
 	return 0;	
 }

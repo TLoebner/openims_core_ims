@@ -58,13 +58,17 @@
 
 #include "mod.h"
 
-#include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../timer.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "../cdp/cdp_load.h"
-#include "../dialog/dlg_mod.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+#endif
+
 
 #include "registration.h"
 #include "registrar.h"
@@ -413,9 +417,6 @@ extern r_notification_list *notification_list; 	/**< list of notifications for r
 
 extern s_dialog_hash_slot *s_dialogs;			/**< the dialogs hash table								*/
 
-/** database */
-db_con_t* scscf_db = NULL; /**< Database connection handle */
-db_func_t scscf_dbf;	/**< Structure with pointers to db functions */
 
 static str s_qop_s={", qop=\"",7};
 static str s_qop_e={"\"",1};
@@ -544,13 +545,7 @@ static inline int build_record_service_route()
 	return 1;
 }
 
-db_con_t* create_scscf_db_connection()
-{
-	if (scscf_persistency_mode!=WITH_DATABASE_BULK && scscf_persistency_mode!=WITH_DATABASE_CACHE) return NULL;
-	if (!scscf_dbf.init) return NULL;
 
-	return scscf_dbf.init(scscf_db_url);
-}
 
 /**
  * Initializes the module.
@@ -593,27 +588,15 @@ static int mod_init(void)
 		goto error;
 	}
 	
-//	/* bind to the db module */
-//	if ( cscf_db_bind( scscf_db_url ) < 0 ) goto error;
-
+	/* bind to the db module */
 	if(scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE){
 		if (!scscf_db_url) {
 			LOG(L_ERR, "ERR:"M_NAME":mod_init: no db_url specified but DB has to be used "
 				"(scscf_persistency_mode=%d\n", scscf_persistency_mode);
 			return -1;
 		}
-		if (bind_dbmod(scscf_db_url, &scscf_dbf) < 0) { /* Find database module */
-			LOG(L_ERR, "ERR"M_NAME":mod_init: Can't bind database module via url %s\n", scscf_db_url);
-			return -1;
-		}
-
-		if (!DB_CAPABILITY(scscf_dbf, DB_CAP_ALL)) {
-			LOG(L_ERR, "ERR:"M_NAME":mod_init: Database module does not implement all functions needed by the module\n");
-			return -1;
-		}
 		
-		scscf_db = create_scscf_db_connection();
-		if (!scscf_db) {
+		if (!scscf_db_init(scscf_db_url)<0){
 			LOG(L_ERR, "ERR:"M_NAME": mod_init: Error while connecting database\n");
 			return -1;
 		}
@@ -757,11 +740,6 @@ error:
 extern gen_lock_t* process_lock;		/* lock on the process table */
 
 
-void close_scscf_db_connection(db_con_t* db)
-{
-	if (db && scscf_dbf.close) scscf_dbf.close(db);
-}
-
 /**
  * Initializes the module in child.
  */
@@ -772,22 +750,7 @@ static int mod_child_init(int rank)
 	/* don't do anything for main process and TCP manager process */
 	if ( rank == PROC_MAIN || rank == PROC_TCP_MAIN )
 		return 0;
-	
-//	/* db child init */
-//	cscf_db_init( scscf_db_url, 
-//		scscf_db_nds_table,
-//		scscf_db_scscf_table,
-//		scscf_db_capabilities_table);
-	
-	/*if (scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) { 
-		scscf_db = create_scscf_db_connection();
-		if (!scscf_db) {
-			LOG(L_ERR, "ERR:"M_NAME":mod_child_init(%d): "
-					"Error while connecting database\n", rank);
-			return -1;
-		}
-	}*/
-	
+		
 	/* init the diameter callback - must be done just once */
 	lock_get(process_lock);
 		if((*callback_singleton)==0){
@@ -833,11 +796,11 @@ static void mod_destroy(void)
 		pkg_free(scscf_service_route.s);
 	}
 	
-	if ( (scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) && scscf_db) {
+	if ( scscf_persistency_mode==WITH_DATABASE_BULK || scscf_persistency_mode==WITH_DATABASE_CACHE) {
 		DBG("INFO:"M_NAME": ... closing db connection\n");
-		close_scscf_db_connection(scscf_db);
+		scscf_db_close();		
 	}
-	scscf_db = NULL;
+	
 	#ifdef WITH_IMS_PM
 		ims_pm_destroy();	
 	#endif /* WITH_IMS_PM */	

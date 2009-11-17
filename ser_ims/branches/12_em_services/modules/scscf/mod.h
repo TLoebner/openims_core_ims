@@ -1,7 +1,7 @@
 /**
  * $Id$
  *  
- * Copyright (C) 2004-2009 FhG Fokus
+ * Copyright (C) 2004-2006 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -127,6 +127,8 @@
 #include "../../sr_module.h"
 #include "../../mem/shm_mem.h"
 #include "../../mem/mem.h"
+
+#include "auth_api.h"
 
 #define M_NAME "S-CSCF"
 

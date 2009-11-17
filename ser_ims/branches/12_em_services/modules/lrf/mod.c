@@ -68,7 +68,6 @@
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../tm/tm_load.h"
-#include "../cdp/cdp_load.h"
 #include "../dialog/dlg_mod.h"
 #include <lost/client.h>
 

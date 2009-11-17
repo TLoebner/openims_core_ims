@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: bin_file.h 161 2007-03-01 14:06:01Z vingarzan $
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -46,31 +46,29 @@
 /**
  * \file
  *
- * S-CSCF persistency operations
+ * Binary codec operations - file dump/load
  *
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  *
  */
 
 
 
-#ifndef _SCSCF_PERSITENCY_H
-#define _SCSCF_PERSITENCY_H
-
-#include "bin_scscf.h"
-#include "bin_db_scscf.h"
+#ifndef _BIN_FILE_H
+#define _BIN_FILE_H
 
 
-int make_snapshot_authdata();
-int load_snapshot_authdata();
-void persistency_timer_authdata(unsigned int ticks, void* param);
+#include "bin.h"
 
-int make_snapshot_dialogs();
-int load_snapshot_dialogs();
-void persistency_timer_dialogs(unsigned int ticks, void* param);
+FILE* bin_dump_to_file_create(char *location,char *prepend_fname,time_t unique);
+int bind_dump_to_file_append(FILE* file, bin_data *x);
+int bind_dump_to_file_close(FILE* file,char *location,char *prepend_fname,time_t unique);
 
-int make_snapshot_registrar();
-int load_snapshot_registrar();
-void persistency_timer_registrar(unsigned int ticks, void* param);
+FILE* bin_load_from_file_open(char *location,char *prepend_fname);
+int bin_load_from_file_read(FILE* f,bin_data *x);
+void bin_load_from_file_close(FILE* f);
+
+
+
 
 #endif

@@ -52,7 +52,7 @@
  *
  */
 
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include "mod.h"
 #include "sip.h"
 #include "privacy.h"
@@ -134,8 +134,11 @@ int S_privacy_hook(struct sip_msg* msg, char* str1, char* str2) {
 	unsigned int a,b;
 	
 	cscf_get_transaction(msg,&a,&b);
+#ifdef SER_MOD_INTERFACE
+	tmb.register_tmcb(msg,0,TMCB_RESPONSE_IN,privacy_reply_cb,0,0);
+#else
 	tmb.register_tmcb(msg,0,TMCB_RESPONSE_IN,privacy_reply_cb,0);
-	
+#endif	
 	return CSCF_RETURN_TRUE;
 }
 
