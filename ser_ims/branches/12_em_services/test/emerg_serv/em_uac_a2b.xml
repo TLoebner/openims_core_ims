@@ -19,12 +19,11 @@ Supported: 100rel, geolocation
 Contact: <sip:alice@[local_ip]:[local_port]>
 User-Agent: Sipp v1.1-TLS, version 20061124
 Allow: ACK, BYE, CANCEL, INVITE, REFER, OPTIONS, INFO, REGISTER, NOTIFY, UPDATE, SUBSCRIBE, PRACK 
-content-type: multipart/mixed; boundary= abracadabra
+content-type: multipart/mixed; boundary=abracadabra
 Geolocation: <cid:alice@open-ims.test>;inserted-by="alice@open-ims.test";used-for-routing,routing-allowed="yes"
 Content-Length: [len]
 
 --abracadabra
-MIME-Version: 1.0
 Content-Type: application/sdp
 Content-Transfer-Encoding: 8 bit
 
@@ -38,7 +37,6 @@ a=rtpmap:0 PCMU/8000
 a=sendrecv
 
 --abracadabra
-MIME-Version: 1.0
 Content-Type: application/pidf+xml
 Content-ID: alice@open-ims.test
 Content-Transfer-Encoding: 8bit

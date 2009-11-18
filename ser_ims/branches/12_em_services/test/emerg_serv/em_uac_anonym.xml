@@ -18,7 +18,7 @@ Supported: 100rel, geolocation
 Contact: <sip:anonymous@[local_ip]:[local_port]>
 User-Agent: Sipp v1.1-TLS, version 20061124
 Allow: ACK, BYE, CANCEL, INVITE, REFER, OPTIONS, INFO, REGISTER, NOTIFY, UPDATE, SUBSCRIBE, PRACK 
-content-type: multipart/mixed; boundary= abracadabra
+content-type: multipart/mixed; boundary=abracadabra
 Geolocation: <cid:alice@open-ims.test>;inserted-by="alice@open-ims.test";used-for-routing,routing-allowed="yes"
 Content-Length: [len]
 

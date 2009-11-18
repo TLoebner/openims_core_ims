@@ -59,6 +59,7 @@
 #include "release_call.h" // for the ASR-ASA
 #include "../tm/tm_load.h"
 #include "gqprima.h"
+#include "sip_body.h"
 
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
@@ -329,12 +330,12 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	 * 									*[Codec-Data]
 	 */
 
-	if(extract_body(req,&sdpbodyinvite)==-1) 
+	if(extract_sdp_body(req,&sdpbodyinvite)==-1) 
 	{
 		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
 		goto error;
 	}
-	if(extract_body(res,&sdpbody200)==-1) 
+	if(extract_sdp_body(res,&sdpbody200)==-1) 
 	{
 		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
 		goto error;

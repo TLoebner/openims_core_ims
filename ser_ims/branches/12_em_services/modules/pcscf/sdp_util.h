@@ -134,4 +134,4 @@ int rtpproxy_child_init(int rank);
 int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2);
 char * find_next_sdp_line(char* p, char* plimit, char linechar, char* defptr);
 char * find_sdp_line(char* p, char* plimit, char linechar);
-int extract_body(struct sip_msg *msg, str *body );
+
