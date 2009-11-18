@@ -155,36 +155,4 @@ other:
 }
 
 
-/*
- * Get message body and check Content-Type header field
- */
-int extract_body(struct sip_msg *msg, str *body )
-{
-	
-	body->s = get_body(msg);
-	if (body->s==0) {
-		LOG(L_ERR, "ERROR: extract_body: failed to get the message body\n");
-		goto error;
-	}
-	body->len = msg->len -(int)(body->s-msg->buf);
-	if (body->len==0) {
-		LOG(L_ERR, "ERROR: extract_body: message body has length zero\n");
-		goto error;
-	}
-	
-	/* no need for parse_headers(msg, EOH), get_body will 
-	 * parse everything */
-	/*is the content type correct?*/
-	if (check_content_type(msg)==-1)
-	{
-		LOG(L_ERR,"ERROR: extract_body: content type mismatching\n");
-		goto error;
-	}
-	
-	/*DBG("DEBUG:extract_body:=|%.*s|\n",body->len,body->s);*/
-
-	return 1;
-error:
-	return -1;
-}
 

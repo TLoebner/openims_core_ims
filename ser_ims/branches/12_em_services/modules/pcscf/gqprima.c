@@ -6,6 +6,7 @@
  */
 #include "gqprima.h"
 #include "sip.h"
+#include "sip_body.h"
 #include "pcc_avp.h"
 #include "mod.h"
 
@@ -100,11 +101,11 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 	}
 	if (tag==DLG_MOBILE_ORIGINATING)
 	{
-		extract_body(req,&sdp);
+		extract_sdp_body(req,&sdp);
 		blist=get_binding_list(sdp);
 		version=get_ip_address(req,&ip);
 	} else {
-		extract_body(res,&sdp);
+		extract_sdp_body(res,&sdp);
 		blist=get_binding_list(sdp);
 		version=get_ip_address(res,&ip);
 	}

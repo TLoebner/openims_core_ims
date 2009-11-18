@@ -185,6 +185,7 @@
 #include "../../usr_avp.h"
 #include "../../socket_info.h"
 #include "../../select.h"
+#include "../pcscf/sip_body.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -841,7 +842,7 @@ sdp_1918(struct sip_msg* msg)
 	str body, ip;
 	int pf;
 
-	if (extract_body(msg, &body) == -1) {
+	if (extract_sdp_body(msg, &body) == -1) {
 		LOG(L_ERR,"ERROR: sdp_1918: cannot extract body from msg!\n");
 		return 0;
 	}
@@ -940,7 +941,7 @@ fix_nated_sdp_f(struct sip_msg* msg, char* str1, char* str2)
 
 	if (get_int_fparam(&level, msg, (fparam_t*) str1) < -1) return -1;
 	
-	if (extract_body(msg, &body) == -1) {
+	if (extract_sdp_body(msg, &body) == -1) {
 		LOG(L_ERR,"ERROR: fix_nated_sdp: cannot extract body from msg!\n");
 		return -1;
 	}
@@ -1853,7 +1854,7 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* param1, char* param2)
 	/* extract_body will also parse all the headers in the message as
 	 * a side effect => don't move get_callid/get_to_tag in front of it
 	 * -- andrei */
-	if (extract_body(msg, &body) == -1) {
+	if (extract_sdp_body(msg, &body) == -1) {
 		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't extract body "
 		    "from the message\n");
 		return -1;
