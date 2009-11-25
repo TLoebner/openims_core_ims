@@ -63,10 +63,11 @@
 #include "../../mem/mem.h"
 
 //emergency URNs from the RFC 5031 "A Uniform Resource Name (URN) for Emergency and Other Well-Known Services"
-#define SOS_URN   		"urn:service:sos"
-#define SOS_URN_LEN		(sizeof(SOS_URN)-1)
+#define GEN_URN_STR		"urn:service:"
+#define GEN_URN_STR_LEN		(sizeof(GEN_URN_STR)-1)
+
 #define SOS_URN_STR   		"urn:service:sos"
-#define SOS_URN_STR_LEN		(sizeof(SOS_URN)-1)
+#define SOS_URN_STR_LEN		(sizeof(SOS_URN_STR)-1)
 
 #define SOS_URN_AMB		"ambulance"
 #define SOS_URN_AMB_LEN		(sizeof(SOS_URN_AMB)-1)
@@ -114,8 +115,8 @@
 #define SOS_URN_POIS_STR_LEN	(sizeof(SOS_URN_POIS_STR)-1)
 
 
-typedef enum urn_type{URN_GEN =0, URN_AMB, URN_AN_CTRL, 
-	URN_FIRE, URN_GAS, URN_MAR, URN_MOUNT, URN_POL, URN_PHYS, URN_POIS, URN_ERROR, NOT_URN} urn_t;
+typedef enum urn_type{URN_GEN_SOS =0, URN_AMB, URN_AN_CTRL, 
+	URN_FIRE, URN_GAS, URN_MAR, URN_MOUNT, URN_POL, URN_PHYS, URN_POIS, NOT_URN, NOT_EM_URN} urn_t;
 
 typedef struct emerg_number{
 	str number;

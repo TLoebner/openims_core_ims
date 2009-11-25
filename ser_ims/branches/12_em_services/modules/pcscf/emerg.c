@@ -188,8 +188,9 @@ int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2){
 	sos = is_emerg_ruri(ruri, NULL);
 	switch(sos){
 	
-		case NOT_URN:	return CSCF_RETURN_FALSE;
-		case URN_ERROR:	return CSCF_RETURN_ERROR;
+		case NOT_URN:	
+		case NOT_EM_URN: 
+			return CSCF_RETURN_ERROR;
 		default: 
 				return CSCF_RETURN_TRUE;
 	}
@@ -394,7 +395,7 @@ int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 			msg->first_line.u.request.uri.len};
 
 	sos = is_emerg_ruri(ruri, &urn);
-	if(sos == NOT_URN || sos == URN_ERROR){
+	if(sos == NOT_URN || sos == NOT_EM_URN){
 		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: invalid use: no emergency request URI\n");
 		return CSCF_RETURN_ERROR;
 	}
@@ -548,7 +549,7 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
 		
 		
 		ret = is_emerg_ruri(uri, NULL);
-		if(ret == URN_ERROR)
+		if(ret == NOT_EM_URN)
 			return CSCF_RETURN_ERROR;
 	}
 

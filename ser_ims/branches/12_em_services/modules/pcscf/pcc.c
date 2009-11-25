@@ -60,7 +60,7 @@
 #include "../tm/tm_load.h"
 #include "gqprima.h"
 #include "sip_body.h"
-
+#include "registrar_storage.h"
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
 
@@ -151,7 +151,8 @@ void callback_for_pccsession(int event,void *param,void *session)
 {
 	t_authdata *g;
 	cdp_session_t *x=session;
-	p_dialog *dlg;
+	p_dialog *dlg=0;
+	r_contact *contact=0;
 	
 	LOG(L_DBG,"callback_for_pccsession(): called\n");
 	
@@ -179,6 +180,27 @@ void callback_for_pccsession(int event,void *param,void *session)
 					}
 					d_unlock(dlg->hash);
 					}
+				}else if (g->subscribed_to_signaling_path_status && g->host.s && g->port)
+				{
+					//its a registration that is being released
+					LOG(L_WARN,"WARN: received end of session for %.*s:%d\n",g->host.len,g->host.s,g->port);
+
+
+
+					contact=get_r_contact(g->host,g->port,g->transport, ANY_REG);
+					if (!contact)
+					{
+						LOG(L_ERR,"ERR:callback_for_pccsession:no contact associated\n");
+
+					} else {
+						if (contact->pcc_session)
+						{
+
+							contact->pcc_session=0;
+							//TODO //give this contact a grace time for expiration
+						}
+						r_unlock(contact->hash);
+					}
 				}
 					
 				if (g->callid.s) shm_free(g->callid.s);
@@ -202,6 +224,7 @@ void callback_for_pccsession(int event,void *param,void *session)
  * @param req - SIP request  
  * @param res - SIP response
  * @param str1 - 0 for originating side, 1 for terminating side
+
  * 
  * @returns AAA message or NULL on error  
  */
@@ -209,83 +232,139 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
-	p_dialog *dlg;
+	p_dialog *dlg=0;
 	AAASession* auth=0;
 	AAA_AVP* avp=0;
 	t_authdata *generic=0;
-	unsigned int hash;
-	str sdpbodyinvite,sdpbody200;
-	char *mline;
+	str data={0,0};
+	unsigned int hash=0;
+	str sdpbodyinvite={0,0},sdpbody200={0,0};
+	char *mline=0;
 	char x[4];
 	int i=0,relatch=0;
-	str host;
-	int port,transport;
+	str host={0,0};
+	int port=0,transport=0;
 	int tag=cscf_get_mobile_side(req);
-	enum p_dialog_direction dir = get_dialog_direction(str1);
-	if (tag==-1) tag=(int) dir;
-		
-	if (tag) 
-		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
-	else 
-		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
+	enum p_dialog_direction dir = 0;
+	r_contact *contact=0;
 
-		
-	/* Check for the existence of an auth session for this dialog */							
-	/* if not, create an authorization session */
-	
-	find_dialog_contact(res,dir,&host,&port,&transport);
-	str call_id = cscf_get_call_id(req, 0);
-	dlg = get_p_dialog(call_id,host,port,transport,&dir);
-	
-	LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
-	
-	if (!dlg)
+	if (str1[0]!='r' && str1[0]!='R')
 	{
-		find_dialog_contact(req,dir,&host,&port,&transport);
+		dir=get_dialog_direction(str1);
+		if (tag==-1) tag=(int) dir;
+
+		if (tag)
+			LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
+		else
+			LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
+	
+
+		/* Check for the existence of an auth session for this dialog */
+		/* if not, create an authorization session */
+
+		find_dialog_contact(res,dir,&host,&port,&transport);
+		str call_id = cscf_get_call_id(req, 0);
 		dlg = get_p_dialog(call_id,host,port,transport,&dir);
+
 		LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
-	}
-	
-	if (!dlg) goto error;
-	
-	
-	if (!dlg->pcc_session) {
-		 /*For the first time*/
-		 
-		 generic=shm_malloc(sizeof(t_authdata));
-		 generic->callid.s=0; generic->callid.len=0;
-		 STR_SHM_DUP(generic->callid,call_id,"shm");
-		 generic->direction=tag;
-		 generic->host.s=0; generic->host.len=0;
-		 STR_SHM_DUP(generic->host,host,"shm");
-		 generic->port=port;
-		 generic->transport=transport;
-		 if (pcscf_qos_release7==-1)
-		 {
-			 //LATCH default set to 1 , could be a config issue
-			 generic->latch = 1;
-		 }
-		 // i should set a callback for the expiration of the session
-		 auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
-		 //cdpb.sessions_lock(auth->hash);
-		 if (!auth)
-		 {
-		 	LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
-		 }		 
-		 LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
-		 dlg->pcc_session = auth;
-	}else
-	{
-		LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
-		auth = dlg->pcc_session;
-		if (pcscf_qos_release7==-1)
+
+		if (!dlg)
 		{
-			generic = (t_authdata *)auth->cb_param;
-			relatch = generic->latch;
+			find_dialog_contact(req,dir,&host,&port,&transport);
+			dlg = get_p_dialog(call_id,host,port,transport,&dir);
+			LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		}
-	}
+
+		if (!dlg) goto error;
+
 	
-	d_unlock(dlg->hash);
+
+		if (!dlg->pcc_session) {
+			 /*For the first time*/
+
+			 generic=shm_malloc(sizeof(t_authdata));
+			 generic->callid.s=0; generic->callid.len=0;
+			 STR_SHM_DUP(generic->callid,call_id,"shm");
+			 generic->direction=tag;
+			 generic->host.s=0; generic->host.len=0;
+			 STR_SHM_DUP(generic->host,host,"shm");
+			 generic->port=port;
+			 generic->transport=transport;
+			 if (pcscf_qos_release7==-1)
+			 {
+				 //LATCH default set to 1 , could be a config issue
+				 generic->latch = 1;
+			 }
+			 // i should set a callback for the expiration of the session
+			 auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
+			 //cdpb.sessions_lock(auth->hash);
+			 if (!auth)
+			 {
+				LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
+			 }
+			 LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
+			 dlg->pcc_session = auth;
+		}else
+		{
+			LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
+			auth = dlg->pcc_session;
+			if (pcscf_qos_release7==-1)
+			{
+				generic = (t_authdata *)auth->cb_param;
+				relatch = generic->latch;
+			}
+		}
+
+		d_unlock(dlg->hash);
+	} else {
+		//first find the dialog contact
+		dir = (int) DLG_MOBILE_ORIGINATING;
+		find_dialog_contact(req,dir,&host,&port,&transport);
+
+		contact=get_r_contact(host,port,transport, ANY_REG);
+		if (!contact)
+		{
+			LOG(L_ERR,"ERR:PCC_AAR: not sending subscription to path status, for unknown contact\n");
+			goto end;
+		} else {
+			if (contact->pcc_session)
+			{
+				LOG(L_DBG,"DBG:PCC_AAR: re-registration ignoring it\n");
+				//its a re-registration so maybe ignore it
+				r_unlock(contact->hash);
+				goto end;
+				//auth=contact->pcc_session;
+			} else {
+				LOG(L_DBG,"DBG:PCC_AAR: new registration sending AAR to PCRF for AF signaling path status subscription\n");
+				//its a registration so create a new cdp session
+				generic = shm_malloc(sizeof(t_authdata));
+				if(!generic)
+				{
+					LOG(L_ERR,"ERR:PCC_AAR: no memory left for generic\n");
+					goto out_of_memory;
+				}
+				memset(generic,0,sizeof(t_authdata));
+				generic->subscribed_to_signaling_path_status=1;
+
+
+				 STR_SHM_DUP(generic->host,host,"shm");
+				 generic->port=port;
+				 generic->transport=transport;
+
+				auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
+				 //cdpb.sessions_lock(auth->hash);
+				 if (!auth)
+				 {
+					LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
+				 }
+				 LOG(L_INFO,"PCC_AAR(): creating PCC Session for registration\n");
+				 contact->pcc_session=auth;
+			}
+			//unlock it
+			r_unlock(contact->hash);
+		}
+
+	}
 	
 	if (!auth) goto error;												 
 
@@ -311,7 +390,20 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	}else{
 		if (!PCC_add_auth_application_id(aar, IMS_Gq)) goto error;
 	} 
+
+	if (!res)
+	{
+		set_4bytes(x,AVP_IMS_Service_Info_Status_Preliminary);
+		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Service_Info_Status,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+	}
+
+
+	//AF Service is IMS Services although it should be the IMS Communication Services
+	data.s="IMS Services";
+	data.len=12;
+	cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_AF_Application_Identifier,AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,data.s,data.len,AVP_DUPLICATE_DATA),aar->avpList.tail);
 	
+
 	/*---------- 2. Create and add Media-Component-Description AVP ----------*/
 	
 	/*	
@@ -330,43 +422,52 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	 * 									*[Codec-Data]
 	 */
 
-	if(extract_sdp_body(req,&sdpbodyinvite)==-1) 
+	if(str1[0]!='r' && str1[0]!='R')
 	{
-		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
-		goto error;
-	}
-	if(extract_sdp_body(res,&sdpbody200)==-1) 
-	{
-		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
-		goto error;
-	}
-	/*Create and add 1 media-component-description AVP for each
-	 * m= line in the SDP body 
-	 */
-	
-	mline=find_sdp_line(sdpbodyinvite.s,(sdpbodyinvite.s+sdpbodyinvite.len),'m');
-	
-	if (mline==NULL) goto error;
-		
-	while(mline!=NULL)
-	{
-		i++;
-		
-		if (!PCC_add_media_component_description(aar,sdpbodyinvite,sdpbody200,mline,i,tag))
+		if(extract_sdp_body(req,&sdpbodyinvite)==-1) 
 		{
-			LOG(L_ERR,"ERROR: PCC_AAR() : unable to add media component description AVP for line %i\n",i);
-			goto error; /* Think about this*/
+			LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
+			goto error;
 		}
+		if(res && extract_sdp_body(res,&sdpbody200)==-1) 
+		{
+			LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
+			goto error;
+		}
+		/*Create and add 1 media-component-description AVP for each
+		 * m= line in the SDP body 
+		 */
 		
-		mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
-	}
+		mline=find_sdp_line(sdpbodyinvite.s,(sdpbodyinvite.s+sdpbodyinvite.len),'m');
 	
+		if (mline==NULL) goto error;
+		
+		while(mline!=NULL)
+		{
+			i++;
+		
+			if (!PCC_add_media_component_description(aar,sdpbodyinvite,sdpbody200,mline,i,tag))
+			{
+				LOG(L_ERR,"ERROR: PCC_AAR() : unable to add media component description AVP for line %i\n",i);
+				goto error; /* Think about this*/
+			}
+		
+			mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
+		}
+	} else {
+
+		PCC_add_media_component_description_for_register(aar,req,res);
+		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
+		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+		set_4bytes(x,AVP_IMS_Specific_Action_IPCAN_Change);
+		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+	}
 
 	if (pcscf_qos_release7!=-1)
 	{
 		PCC_add_subscription_ID(aar,req,tag);
-		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
-		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+		/*set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
+		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);*/
 
 		set_4bytes(x,0);
 		avp = cdpb.AAACreateAVP(AVP_ETSI_Reservation_Priority,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,x,4,AVP_DUPLICATE_DATA);
@@ -376,14 +477,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 					PCC_add_Framed_IP_Address(dia_aar,ipv4);
 					PCC_add_Framed_IPv6_Prefix(dia_aar,ipv6);
 					PCC_add_Service_URN(dia_aar,emergencysession);
-		 */
+		*/
 	} else {
 		gqprima_AAR(aar,req,res,str1,relatch);
 	}
-	
-
-	
-
 	
 	LOG(L_INFO,"PCC_AAR() : sending AAR to PCRF\n");
 	/*---------- 3. Send AAR to PCRF ----------*/
@@ -424,6 +521,7 @@ error1:
 		if (generic->host.s) shm_free(generic->host.s);
 		shm_free(generic);
 	}
+end:
 	return NULL;
 }
 
@@ -438,7 +536,7 @@ int PCC_AAA(AAAMessage *dia_msg)
 		PCC_get_result_code(dia_msg,&rc);
 		if (rc>2999)
 		{
-			LOG(L_DBG,"DBG:PCC_AAA: AAR request rejected with error cod %d\n",rc);
+			LOG(L_DBG,"DBG:PCC_AAA: AAR request rejected with error code %d\n",rc);
 			//TODO: look for Acceptable-Service-Info
 			avp=cdpb.AAAFindMatchingAVP(dia_msg,dia_msg->avpList.head,AVP_IMS_Acceptable_Service_Info,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
 			if (avp)
@@ -473,35 +571,57 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	struct sip_msg *req;
 	enum p_dialog_direction dir=get_dialog_direction(str1);
 	int tag = (int)dir;
+	r_contact* contact=0;
 	
 	LOG(L_DBG,"PCC_STR()\n");
-/** get Diameter session based on sip call_id */
-	str call_id = cscf_get_call_id(msg, 0);
-	find_dialog_contact(msg,dir,&host,&port,&transport);
-	dlg=get_p_dialog(call_id,host,port,transport,&dir);
-	if (!dlg && msg->first_line.type==SIP_REPLY) {
-		req = cscf_get_request_from_reply(msg);
-		find_dialog_contact(req,dir,&host,&port,&transport);
+	if (str1[0]!='r' && str1[0]!='R')
+	{
+	/** get Diameter session based on sip call_id */
+		str call_id = cscf_get_call_id(msg, 0);
+		find_dialog_contact(msg,dir,&host,&port,&transport);
 		dlg=get_p_dialog(call_id,host,port,transport,&dir);
-	}
-			
-	if (!dlg)	{
-		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,tag);
-		goto end;
+		if (!dlg && msg->first_line.type==SIP_REPLY) {
+			req = cscf_get_request_from_reply(msg);
+			find_dialog_contact(req,dir,&host,&port,&transport);
+			dlg=get_p_dialog(call_id,host,port,transport,&dir);
 		}
-	if (!dlg->pcc_session) {
-		LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,tag);
-		goto error_dlg;
+
+		if (!dlg)	{
+			LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,tag);
+			goto end;
+			}
+		if (!dlg->pcc_session) {
+			LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,tag);
+			goto error_dlg;
+		} else {
+
+			auth=dlg->pcc_session;
+		}
+		dlg->pcc_session=0; // done here , so that the callback doesnt call release_call
+		d_unlock(dlg->hash);
 	} else {
-	
-		auth=dlg->pcc_session;
+		//TODO De-registration
+		dir = (int) DLG_MOBILE_ORIGINATING;
+		find_dialog_contact(msg,dir,&host,&port,&transport);
+		contact=get_r_contact(host,port,transport,ANY_REG);
+		if (!contact)
+		{
+			LOG(L_ERR,"ERR:PCC_STR:no contact associated\n");
+			goto end;
+		} else {
+			if (contact->pcc_session)
+			{
+				auth=contact->pcc_session;
+				contact->pcc_session=0;
+			}
+			r_unlock(contact->hash);
+		}
+
 	}
-	dlg->pcc_session=0; // done here , so that the callback doesnt call release_call
-	d_unlock(dlg->hash);	
-	if (auth->u.auth.state==AUTH_ST_DISCON)
+	if (!auth || auth->u.auth.state==AUTH_ST_DISCON)
 	{
 		// If we are in DISCON is because an STR was already sent
-		// so just wait for STA or for Grace Timout to happen
+		// so just wait for STA or for Grace Timeout to happen
 		goto end;
 	} 
 
@@ -580,7 +700,7 @@ end:
 
 
 /*
- * Called upon reciept of an ASR terminates the user session and returns the ASA
+ * Called upon receipt of an ASR terminates the user session and returns the ASA
  * Terminates the corresponding dialog
  * @param request - the received request
  * @returns 0 always because ASA will be generated by the State Machine

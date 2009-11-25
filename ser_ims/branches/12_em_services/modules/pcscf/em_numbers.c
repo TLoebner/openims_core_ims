@@ -79,17 +79,22 @@ urn_t is_emerg_urn(str ruri, str * urn){
 
 	urn_t type;
 
-	if((len < SOS_URN_LEN ) || (strncmp(uri,SOS_URN, SOS_URN_LEN)!=0)){
-		get_urn(urn, SOS_URN);
+	if((len < GEN_URN_STR_LEN ) || (strncmp(uri, GEN_URN_STR, GEN_URN_STR_LEN)!=0)){
+		LOG(L_DBG, "DBG:"M_NAME":emergency_urn: %.*s is not an URN\n",
+			len, uri);
+		return NOT_URN;
+	}
+
+	if((len < SOS_URN_STR_LEN ) || (strncmp(uri,SOS_URN_STR, SOS_URN_STR_LEN)!=0)){
 		goto not_emerg;
 	}
 
-	if(len == SOS_URN_LEN){
-		type = URN_GEN;
+	if(len == SOS_URN_STR_LEN){
+		type = URN_GEN_SOS;
 		goto is_emerg;
 	}
 
-	char* p = uri+SOS_URN_LEN;
+	char* p = uri+SOS_URN_STR_LEN;
 	if(*p !='.'){	
 		goto error;
 	}
@@ -152,14 +157,14 @@ urn_t is_emerg_urn(str ruri, str * urn){
 	}
 
 error:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: invalid emergency URI %.*s\n",
+	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: invalid emergency URN %.*s\n",
 			len, uri);
-	return URN_ERROR;
+	return NOT_EM_URN;
 
 not_emerg:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: no emergency URI %.*s\n",
+	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: no emergency URN %.*s\n",
 			len, uri);
-	return NOT_URN;
+	return NOT_EM_URN;
 
 is_emerg:
 	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: we have a valid emergency URN for the URI %.*s\n",
@@ -194,6 +199,7 @@ urn_t check_emerg_number(str user, str* urn){
 urn_t is_emerg_ruri(str ruri, str* urn) {
 	
 	struct sip_uri puri;
+	
 	if(urn){
 	  urn->s = NULL; urn->len = 0;
 	}
@@ -201,7 +207,7 @@ urn_t is_emerg_ruri(str ruri, str* urn) {
 	if(parse_uri(ruri.s, ruri.len, &puri)<0){
 		LOG(L_ERR,"ERR:"M_NAME":is_emerg_ruri: failed to parse %.*s\n",	
 		  ruri.len, ruri.s);
-		return URN_ERROR;
+		return NOT_URN;
 	}
 	switch(puri.type){
 		case	SIP_URI_T:
@@ -213,11 +219,11 @@ urn_t is_emerg_ruri(str ruri, str* urn) {
 			LOG(L_DBG, "DBG:"M_NAME":is_emerg_ruri: tel URI\n");
 			return check_emerg_number(puri.user, urn);
 		case ERROR_URI_T:
-			return URN_ERROR;
 		case CID_T:
 			return NOT_URN;
 		case URN_T:
 			return is_emerg_urn(ruri, urn);
+
 	}	
 
 	return NOT_URN;
@@ -232,7 +238,7 @@ int add_em_number(str number, str urn){
 			number.len, number.s, urn.len, urn.s);
 
 	type = is_emerg_urn(urn, NULL);
-	if((type == NOT_URN) || (type == URN_ERROR)){
+	if((type == NOT_URN) || (type == NOT_EM_URN)){
 		LOG(L_ERR, "ERR:"M_NAME":add_em_number:invalid URN %.*s\n", urn.len, urn.s);
 		return -1;
 	}

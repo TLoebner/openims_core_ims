@@ -131,40 +131,72 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
  * respectively. It converts these SIP headers to corresponding AVPs and creates
  * a AAR and sends it to the PDF and waits for the answer returned by the PDF.
  * 
+ * P_AAR() is also called upon registration in that case parameter str1 should
+ * start with R or r so that the functions do appropriate
+ * Quite confusingly if its a deregistration P_AAR will send an STR to the PCRF
+ * to terminate the Diameter Auth Session established
+ *
  * @param msg - The SIP response  
- * @param str1 - not used
+ * @param str1 - orig/term/register
  * @param str2 - not used 
  * @returns 1 on Diameter success or 0 on failure   
  */
 int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 {	
 	struct cell *t;
+	int preliminary=0;
 	AAAMessage* aaa;
+	int reg=0,expires=0;
 	int result = AAA_SUCCESS;
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
 	
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR: CALLED\n");
 	if (msg->first_line.type == SIP_REQUEST) {
-		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: must be called on SIP reply\n");
-		return CSCF_RETURN_FALSE;
+		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: called upon request, preliminary information \n");
+		preliminary=1;
 	}
 
 	/* Get the SIP request from this transaction */
-	t=tmb.t_gett();
-	if (!t) {
-		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: cannot get the transaction\n"); 
-		return CSCF_RETURN_FALSE;
-	}
-	
-	if (!(strncmp(t->method.s,"INVITE",6)==0)&&!(strncmp(t->method.s,"UPDATE",6)==0)&&!(strncmp(t->method.s,"PRACK",5)==0))
+	if (!preliminary)
 	{
-		
-		//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
-		return CSCF_RETURN_TRUE;
+		t=tmb.t_gett();
+		if (!t) {
+			LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: cannot get the transaction\n");
+			return CSCF_RETURN_FALSE;
+		}
+		LOG(L_DBG,"DBG:P_AAR t->method is %.*s\n",t->method.len,t->method.s);
+		if ((strncmp(t->method.s,"INVITE",6)==0)||(strncmp(t->method.s,"UPDATE",6)==0)||(strncmp(t->method.s,"PRACK",5)==0))
+		{
+			//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
+			aaa = PCC_AAR(t->uas.request, msg, str1);
+
+		}else if ((strncmp(t->method.s,"REGISTER",8)==0))
+		{
+			//or at least a register to subscribe to signaling path status
+			reg=1;
+			expires=cscf_get_expires_hdr(t->uas.request);
+			LOG(L_DBG,"DBG:P_AAR: register with expires %i\n",expires);
+			if (expires > 0)
+				aaa = PCC_AAR(t->uas.request, msg, str1);
+			else {
+				//de-registration
+				LOG(L_DBG,"DBG:P_AAR: de-registration finishing auth session if any\n");
+				aaa = PCC_STR(msg,str1);
+			}
+		} else {
+			LOG(L_DBG,"DBG:P_AAR: Policy and Charging Control non-applicable\n");
+			return CSCF_RETURN_TRUE;
+		}
+	} else {
+		//preliminary
+		if ((strncmp(msg->first_line.u.request.method.s,"INVITE",6)==0))
+		{
+			aaa = PCC_AAR(msg,0,str1);
+		}
 	}
 
 	/* Create an AAR based on request and reply and send it to PDF */
-	aaa = PCC_AAR(t->uas.request, msg, str1);
+
 	//cdpb.AAAPrintMessage(aaa);
 	
 	if (!aaa) goto error;
@@ -172,12 +204,13 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	LOG(L_INFO,"recieved an AAA with result code %i\n",result);
 	if (aaa) cdpb.AAAFreeMessage(&aaa); // if frequency
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
-	if (result >= 2000 && result < 3000 ) {
+	if (reg || (result >= 2000 && result < 3000) ) {
 		return CSCF_RETURN_TRUE;
 	} else {
 		 return CSCF_RETURN_FALSE; // if its not a success then that means i want to reject this call!
 	} 
 	/*
+	 * TODO:
 	 * This behavior is wrong, if its a reINVITE  then the rules already exist, the PCRF may
 	 * not install the news but remain with the old ones and in that case it will send a DIAMETER_UNABLE_TO_COMPLY
 	 * so we need to catch that possibility here maybe looking at the Error-Message

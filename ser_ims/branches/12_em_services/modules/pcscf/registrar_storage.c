@@ -68,6 +68,10 @@
 #include "nat_helper.h"
 #include "security.h"
 #include "dlg_state.h"
+/* For PCC sessions*/
+#include "../cdp/cdp_load.h"
+/**< Structure with pointers to cdp funcs */
+extern struct cdp_binds cdpb;
 
 time_t time_now;				/**< current time 							*/
 r_hash_slot *registrar=0;		/**< the actual registrar					*/
@@ -809,6 +813,7 @@ void free_r_contact(r_contact *c)
 	}
 	if (c->security_temp) free_r_security(c->security_temp);
 	if (c->security) free_r_security(c->security);
+	if (c->pcc_session) cdpb.AAATerminateAuthSession(c->pcc_session);
 	shm_free(c);
 }
 
