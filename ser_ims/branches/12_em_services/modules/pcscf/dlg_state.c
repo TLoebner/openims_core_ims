@@ -69,6 +69,7 @@
 #include "release_call.h"
 #include "ims_pm.h"
 #include "pcc.h"
+#include "em_numbers.h"
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -582,8 +583,10 @@ void free_p_dialog(p_dialog *d)
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
 	if (d->refresher.s) shm_free(d->refresher.s);
-	if (d->em_info.em_dialog && d->em_info.ecscf_uri.s)
+	if (d->em_info.ecscf_uri.s)
 		shm_free(d->em_info.ecscf_uri.s);
+	if (d->em_info.service_urn.s)
+		shm_free(d->em_info.service_urn.s);
 	shm_free(d);
 	p_dialog_count_decrement(); 
 }
@@ -909,6 +912,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	unsigned int hash;
 	enum p_dialog_direction dir;
 	int em_dialog;
+	str service_urn = {NULL, 0};
 	
 	dir = get_dialog_direction(str1);
 	
@@ -940,6 +944,16 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
 	d->em_info.em_dialog = em_dialog;
+	if(em_dialog){
+		urn_t urn_type = is_emerg_ruri(msg->first_line.u.request.uri, &service_urn);
+		//maybe other services than emergency should be also prioritized
+		if(urn_type == NOT_URN || urn_type == NOT_EM_URN){
+			LOG(L_ERR,"BUG:"M_NAME":P_save_dialog: no corresponding "
+					"emergency URN for the emergency dialog\n");	
+			return CSCF_RETURN_BREAK;
+		}
+		STR_SHM_DUP(d->em_info.service_urn, service_urn, "P_save_dialog");
+	}
 
 	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
 

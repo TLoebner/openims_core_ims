@@ -99,8 +99,6 @@ static str sup_ptypes[] = {
 	{.s = NULL, .len = 0}
 };
 
-static str app_sdp_s = {"application/sdp", 15};
-
 
 extern network_t nets_1918[];
 

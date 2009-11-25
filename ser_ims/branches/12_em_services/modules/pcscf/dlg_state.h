@@ -90,6 +90,7 @@ enum p_dialog_direction {
 typedef struct _em_info{
 	int em_dialog; /*0 if not emergency, 1 if emergency*/
 	str ecscf_uri;
+	str service_urn;
 } p_dialog_em_info;
 
 typedef struct _p_dialog {

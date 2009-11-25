@@ -226,6 +226,8 @@ char* pcscf_forced_qos_peer = "pdf.open-ims.test";	/**< FQDN of Policy Dicision 
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
 int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
+char* ip_address_for_signaling_char="127.0.0.1";
+str ip_address_for_signaling;
 
 
 /** 
@@ -520,6 +522,7 @@ static param_export_t pcscf_params[]={
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
 	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
 	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
+	{"ip_address_for_signaling",			STR_PARAM,		&ip_address_for_signaling_char},
 
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
@@ -680,6 +683,9 @@ int fix_parameters()
 		ecscf_uri_str.len = strlen(ecscf_uri);
 		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
 	}
+
+	ip_address_for_signaling.s = ip_address_for_signaling_char;
+	ip_address_for_signaling.len = strlen(ip_address_for_signaling_char);
 	
 	return 1;
 }

@@ -76,7 +76,7 @@ extern struct cdp_binds cdpb;            /**< Structure with pointers to cdp fun
  * @param func - the name of the calling function, for debugging purposes
  * @returns 1 on success or 0 on failure
  */
-static inline int e2_add_avp(AAAMessage *m,char *d,int len,int avp_code,
+inline int e2_add_avp(AAAMessage *m,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
 {
 	AAA_AVP *avp;

@@ -59,12 +59,17 @@
 
 #include "dlg_state.h"
 
+
+
+
 typedef struct authdata {
 	str callid;
 	str host;
 	int port,transport;
 	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
 
+	//for registration session
+	int subscribed_to_signaling_path_status;
 	//for Gqprima only
 	int latch;
 } t_authdata;

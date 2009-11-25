@@ -9,7 +9,7 @@
 #define GQPRIMA_H_
 #include "dlg_state.h"
 #include "../cdp/cdp_load.h"
-
+#include "pcc_avp.h"
 
 #define FL_APPEND(list,add)                                                      \
 do {                                                                             \
@@ -26,10 +26,7 @@ do {                                                                            
 
 int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1,int relatch);
 int gqprima_AAA(AAAMessage *dia_msg);
-enum ip_type {
-	ip_type_v4 	= 1,
-	ip_type_v6	= 2
-};
+
 
 typedef struct _t_binding_unit
 {
