@@ -77,6 +77,7 @@ extern char * ecscf_uri;
 extern int emerg_support;
 extern str ecscf_uri_str;
 extern int anonym_em_call_support;
+extern str pcscf_path_orig_em_uri_str;
 
 /*global variables*/
 str ecscf_uri_str;
@@ -584,5 +585,103 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
 	return CSCF_RETURN_TRUE;
 }
 
+/* part of an own security solution for securing the interface between the P-CSCF and the E-CSCF
+ * using the Path header
+ */
+int P_add_em_path(struct sip_msg * msg, char* str1, char* str2){
+
+	urn_t sos;
+	str x={0,0};
+	str urn;
+
+	str ruri = {msg->first_line.u.request.uri.s,
+			msg->first_line.u.request.uri.len};
+
+	sos = is_emerg_ruri(ruri, &urn);
+	if(sos == NOT_URN || sos == NOT_EM_URN){
+		LOG(L_ERR, "ERR:"M_NAME":P_add_em_path: invalid use: no emergency request URI\n");
+		return CSCF_RETURN_ERROR;
+	}
 
 
+	STR_PKG_DUP(x, pcscf_path_orig_em_uri_str, "pkg");
+	if (!x.s) return CSCF_RETURN_ERROR;
+	if (cscf_add_header(msg,&x,HDR_OTHER_T)) return CSCF_RETURN_TRUE;
+	else {
+		pkg_free(x.s);
+		return CSCF_RETURN_ERROR;
+	}
+out_of_memory:
+	return CSCF_RETURN_ERROR;	
+}
+
+static str path_header_name = {"Path", 4};
+/* part of an own security solution for securing the interface between the P-CSCF and the E-CSCF
+ * using the Path header*/
+int P_check_em_path(struct sip_msg * msg, char * str1, char * str2){
+
+	struct hdr_field* hdr;
+	str path_body;
+	str call_id;
+	enum p_dialog_direction dir;
+	struct sip_msg * req;
+	str host;
+	int port,transport;
+	p_dialog *d;
+
+	if(msg->first_line.type == SIP_REQUEST){
+		if(msg->first_line.u.request.method.len == 3 && 
+			strncasecmp(msg->first_line.u.request.method.s,"ACK",3)==0)
+			return CSCF_RETURN_TRUE;
+		req = msg;
+		dir = DLG_MOBILE_TERMINATING;	
+	}else{
+		req = cscf_get_request_from_reply(msg);
+		dir = DLG_MOBILE_ORIGINATING;	
+	}
+	
+	if (!find_dialog_contact(req,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_check_em_path(): Error retrieving orig contact\n");
+		return CSCF_RETURN_BREAK;
+	}		
+		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":P_check_em_path(): Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if (!d)
+		d = get_p_dialog(call_id,host,port,transport,0);
+	if (!d){
+		LOG(L_CRIT,"ERR:"M_NAME":P_update_dialog: dialog does not exists!\n");
+		return CSCF_RETURN_FALSE;
+	}
+	if(!d->em_info.em_dialog){
+		d_unlock(d->hash);
+		return CSCF_RETURN_TRUE;
+	}
+
+	d_unlock(d->hash);
+
+	hdr = cscf_get_header(msg, path_header_name);
+	if(!hdr){
+		LOG(L_ERR, "ERR:"M_NAME":P_check_em_path: invalid use: no Path header\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	path_body = hdr->body;
+	if(!path_body.s || !path_body.len){
+		LOG(L_ERR, "ERR:"M_NAME":P_check_em_path: invalid use: null Path header body\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	if(path_body.len != pcscf_path_orig_em_uri_str.len ||
+			strncmp(path_body.s, pcscf_path_orig_em_uri_str.s, path_body.len)!=0){
+		LOG(L_ERR, "ERR:"M_NAME":P_check_em_path: invalid use: invalid Path header body\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	return CSCF_RETURN_TRUE;
+}

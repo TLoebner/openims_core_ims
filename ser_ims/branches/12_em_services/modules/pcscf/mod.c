@@ -185,6 +185,8 @@ str ecscf_uri_str;
 int emerg_support = 1;
 int anonym_em_call_support = 1;
 char* emerg_numbers_file="/opt/OpenIMSCore/ser_ims/modules/pcscf/emerg_info.xml";
+str pcscf_path_orig_em_uri_str={0,0};
+char * pcscf_path_orig_em_uri = "Path: sip:orig.em@pcscf.open-ims.test\r\n";
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -382,6 +384,8 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_select_ecscf", 			P_select_ecscf,			0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
 	{"P_is_em_registered",			P_is_em_registered, 		0, 0, REQUEST_ROUTE},
+	{"P_add_em_path", 			P_add_em_path,			0, 0, REQUEST_ROUTE},
+	{"P_check_em_path", 			P_check_em_path,		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 
 
 	/* For Gq or Rx*/
@@ -528,6 +532,7 @@ static param_export_t pcscf_params[]={
 	{"emerg_support",					INT_PARAM, &emerg_support},
 	{"anonym_em_call_support",				INT_PARAM, &anonym_em_call_support},
 	{"emerg_numbers_file",					STR_PARAM, &emerg_numbers_file},
+	{"pcscf_path_orig_em_uri",				STR_PARAM, &pcscf_path_orig_em_uri},
 	{0,0,0} 
 };
 
@@ -686,6 +691,9 @@ int fix_parameters()
 
 	ip_address_for_signaling.s = ip_address_for_signaling_char;
 	ip_address_for_signaling.len = strlen(ip_address_for_signaling_char);
+
+	pcscf_path_orig_em_uri_str.s = pcscf_path_orig_em_uri;
+	pcscf_path_orig_em_uri_str.len = strlen(pcscf_path_orig_em_uri);
 	
 	return 1;
 }

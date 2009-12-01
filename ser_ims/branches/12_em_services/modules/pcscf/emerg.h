@@ -96,4 +96,8 @@ int P_select_ecscf(struct sip_msg * msg, char* str1, char * str2);
 
 int fixup_380_alt_serv(void** param, int param_no);
 
+int P_add_em_path(struct sip_msg * msg, char* str1, char* str2);
+
+int P_check_em_path(struct sip_msg * msg, char * str1, char * str2);
+
 #endif
