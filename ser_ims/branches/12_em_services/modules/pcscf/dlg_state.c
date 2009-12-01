@@ -1208,7 +1208,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!d){
 		if (msg->first_line.type==SIP_REQUEST &&
 			msg->first_line.u.request.method.len == 3 && 
-			strncasecmp(msg->first_line.u.request.method.s,"ACK",3)){
+			strncasecmp(msg->first_line.u.request.method.s,"ACK",3) == 0){
 			/* to skip the ACK after a 4xx when the dialog was dropped already*/
 			return CSCF_RETURN_TRUE;
 		}else{
