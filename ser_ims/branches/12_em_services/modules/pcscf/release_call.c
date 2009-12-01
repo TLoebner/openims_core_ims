@@ -673,23 +673,26 @@ int alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_cal
 			break;
 		case DLG_MOBILE_TERMINATING:
 			p = pcscf_record_route_mt_uri;
+
+			/*LOG(L_CRIT,"before revert\n");
+			for(r=d->route_set;r!=NULL;r=r->next) 
+				LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);*/
+			
+			d->route_set=revert_route(d->route_set);
+		
+			/*LOG(L_CRIT,"after revert\n");
+			for(r=d->route_set;r!=NULL;r=r->next) 
+				LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+			*/
 	
 			break;
 		default:
 			return -1;
 	}
-	d->route_set=revert_route(d->route_set);
-		
-	if(!d->route_set){
-		LOG(L_ERR,"ERR:"M_NAME":alter_dialog_route_set: null dialog route set\n");
-		return -1;
-		
-	}
-	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
-	//for(r=d->route_set;r!=NULL;r=r->next) 
-		//LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
 	
 		
+	
+	LOG(L_CRIT,"looking for %.*s\n", p.len, p.s);
 	for(r=d->route_set;r!=NULL;r=r->next) {
 		if (r->nameaddr.uri.len>=p.len && 
 			strncasecmp(r->nameaddr.uri.s,p.s,r->nameaddr.uri.len)==0)
@@ -698,15 +701,16 @@ int alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_cal
 				r->next=NULL;
 				shm_free_rr(&d->route_set);
 				d->route_set = r_new;
-  	            		if(!d->route_set){
-					LOG(L_ERR,"ERR:"M_NAME":alter_dialog_route_set: null dialog route set\n");
-					return -1;				
-				}
+  	            		/*if(d->route_set){
+					LOG(L_DBG,"DBG:"M_NAME":alter_dialog_route_set: final route set\n");
+					for(r=d->route_set;r!=NULL;r=r->next) 
+						LOG(L_CRIT,"<%.*s>\n",r->nameaddr.uri.len,r->nameaddr.uri.s);
+				}*/
 				return 0;	
 			}
 					
 	}	
-	return -1;
+	return 0;
 }		
 
 
