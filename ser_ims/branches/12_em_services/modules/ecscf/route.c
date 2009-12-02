@@ -150,12 +150,12 @@ int E_fwd_to_psap(struct sip_msg * msg, str psap_uri){
 	STR_APPEND(x, psap_uri);
 	STR_APPEND(x,route_e);	
 
-	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)){
-		if(cscf_del_all_headers(msg, HDR_ROUTE_T)==0){
-			LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete all the existing route headers\n");
-			goto ret_false;
-		}
-	}else{	
+	if(cscf_del_all_headers(msg, HDR_ROUTE_T)==0){
+		LOG(L_ERR, "ERR:"M_NAME":E_fwd_to_psap:could not delete all the existing route headers\n");
+		goto ret_false;
+	}
+
+	if (!cscf_add_header_first(msg,&x,HDR_ROUTE_T)){
 		goto ret_false;
 	}
 	
@@ -180,7 +180,15 @@ ret_false:
 		pkg_free(to.s);
 		to.s = NULL;
 	}
-//TODO: clean the memory allocated at rewrite_uri
+	if (msg->new_uri.s) {
+                pkg_free(msg->new_uri.s);
+		msg->new_uri.s = NULL;
+        }
+	if (msg->dst_uri.s) {
+		pkg_free(msg->dst_uri.s);
+		msg->dst_uri.s = NULL;
+	}
+
 	return CSCF_RETURN_FALSE;
 
 }

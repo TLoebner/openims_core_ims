@@ -482,7 +482,6 @@ static str anonym_user = {"sip:anonymous@domain.org", 24};
  * @param str1 
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_BREAK on error 
- * TODO: special case: anonymous user
  */
 int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 
