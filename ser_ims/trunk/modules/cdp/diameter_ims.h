@@ -203,7 +203,7 @@ enum {
 	AVP_IMS_Server_Capabilities							= 603,
 	AVP_IMS_Mandatory_Capability						= 604,
 	AVP_IMS_Optional_Capability							= 605,
-	AVP_IMS_User_Data									= 606,
+	AVP_IMS_User_Data_Cx								= 606,
 	AVP_IMS_SIP_Number_Auth_Items						= 607,
 	AVP_IMS_SIP_Authentication_Scheme					= 608,
 	AVP_IMS_SIP_Authenticate							= 609,
@@ -231,12 +231,27 @@ enum {
 	AVP_IMS_Supported_Applications						= 631,
 	AVP_IMS_Associated_Identities						= 632,
 	AVP_IMS_Originating_Request							= 633,
+	AVP_IMS_Wildcarded_PSI								= 634,
 	AVP_IMS_SIP_Digest_Authenticate 					= 635,
+	AVP_IMS_Wildcarded_IMPU								= 636,
 	AVP_IMS_UAR_Flags									= 637,
+	AVP_IMS_Loose_Route_Indication						= 638,
+	AVP_IMS_SCSCF_Restoration_Info						= 639,
+	AVP_IMS_Path										= 640,
+	AVP_IMS_Contact										= 641,
+	AVP_IMS_Subscription_Info							= 642,
+	AVP_IMS_Call_ID_SIP_Header							= 643,
+	AVP_IMS_From_SIP_Header								= 644,
+	AVP_IMS_To_SIP_Header								= 645,
+	AVP_IMS_Record_Route								= 646,
+	AVP_IMS_Associated_Registered_Identities			= 647,
+	AVP_IMS_Multiple_Registration_Indication			= 648,
+	AVP_IMS_Restoration_Info							= 649,
+	
 /** 700 to 799 reserved for TS29.329											*/
 	AVP_IMS_User_Identity								= 700,
 	AVP_IMS_MSISDN										= 701,
-	AVP_IMS_User_Data_2									= 702,
+	AVP_IMS_User_Data_Sh								= 702,
 	AVP_IMS_Data_Reference								= 703,
 	AVP_IMS_Service_Indication							= 704,
 	AVP_IMS_Subs_Req_Type								= 705,
@@ -385,7 +400,9 @@ enum {
 	AVP_IMS_SAR_ADMINISTRATIVE_DEREGISTRATION			= 8,
 	AVP_IMS_SAR_AUTHENTICATION_FAILURE					= 9,
 	AVP_IMS_SAR_AUTHENTICATION_TIMEOUT					= 10,
-	AVP_IMS_SAR_DEREGISTRATION_TOO_MUCH_DATA			= 11
+	AVP_IMS_SAR_DEREGISTRATION_TOO_MUCH_DATA			= 11,
+	AVP_IMS_SAR_AAA_USER_DATA_REQUEST					= 12,
+	AVP_IMS_SAR_PGW_UPDATE								= 13,
 };
 
 /** User-Data-Already-Available Enumerated AVP */
@@ -436,10 +453,34 @@ enum {
 	AVP_IMS_Requested_Domain_PS							= 1
 };
 
-/** UAR Flags	*/
+/** UAR-Flags AVP	*/
 enum{
 	AVP_IMS_UAR_Flags_None								= 0,
-	AVP_IMS_UAR_Flags_Emergency_Registration			= 1
+	AVP_IMS_UAR_Flags_Emergency_Registration			= 1 /*(1<<0)*/
+};
+
+/** Loose-Route-Indication AVP */
+enum{
+	AVP_IMS_Loose_Route_Not_Required					= 0,
+	AVP_IMS_Loose_Route_Required						= 1
+};
+
+/** Feature-List-ID AVP for Cx */
+enum{
+	AVP_IMS_Feature_List_ID_Shared_iFC_Sets				= 1<<0,
+	AVP_IMS_Feature_List_ID_Alias_Indication			= 1<<1,
+	AVP_IMS_Feature_List_ID_IMS_Restoration_Indication  = 1<<2, 
+};
+
+/** Feature-List-ID AVP for Sh */
+enum{
+	AVP_IMS_Feature_List_ID_Notif_Eff					= 1<<0,
+};
+
+/** Multiple-Registration-Indication */
+enum{
+	AVP_IMS_Not_Multiple_Registration					= 0,
+	AVP_IMS_Multiple_Registration						= 1,
 };
 
 /** Current-Location AVP */
@@ -491,8 +532,7 @@ enum {
 /** Flow-Usage AVP */
 enum {
 	AVP_IMS_Flow_Usage_No_Information					= 0,
-	AVP_IMS_Flow_Usage_Rtcp								= 1,
-	AVP_IMS_Flow_Usage_AF_Signalling					= 2
+	AVP_IMS_Flow_Usage_Rtcp								= 1
 };
 /** Specific-Action AVP */
 enum {
@@ -501,12 +541,7 @@ enum {
 	AVP_IMS_Specific_Action_Indication_Of_Loss_Of_Bearer					= 2,
 	AVP_IMS_Specific_Action_Indication_Of_Recovery_Of_Bearer				= 3,
 	AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer					= 4,
-	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5,
-	AVP_IMS_Specific_Action_IPCAN_Change									= 6,
-	AVP_IMS_Specific_Action_Indication_Of_Out_Of_Credit						= 7,
-	AVP_IMS_Specific_Action_Successful_Resources_Allocation					= 8,
-	AVP_IMS_Specific_Action_Indication_of_Failed_Resources_Allocation		= 9,
-	AVP_IMS_Specific_Action_Limited_PCC_Deployment							= 10
+	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5
 };
 
 /** Media-Type AVP */
@@ -533,10 +568,7 @@ enum {
 	AVP_IMS_Send_Data_Indication_User_Data_Requested		= 1
 };
 
-enum {
-	AVP_IMS_Service_Info_Status_Final					=	0,
-	AVP_IMS_Service_Info_Status_Preliminary				=   1
-};
+
 
 
 /**	Diameter Result Codes				*/
