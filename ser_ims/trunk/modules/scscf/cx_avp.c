@@ -1191,7 +1191,7 @@ inline str Cx_get_destination_host(AAAMessage *msg)
 inline str Cx_get_user_data(AAAMessage *msg)
 {	
 	return Cx_get_avp(msg,
-		AVP_IMS_User_Data,
+		AVP_IMS_User_Data_Cx,
 		IMS_vendor_id_3GPP,
 		__FUNCTION__);
 }
