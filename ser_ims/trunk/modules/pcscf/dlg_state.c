@@ -903,6 +903,9 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	ruri.len = snprintf(buf2,256,"<%.*s>",x.len,x.s);
 	ruri.s = buf2;
 		
+	// parse rr before t_relay - just because this will be used later and the memory will be copied pkg->shm->pkg
+	cscf_get_first_route(msg,0);	
+	
 	tmb.new_dlg_uac(&call_id,
 					&tag,
 					d->first_cseq,
