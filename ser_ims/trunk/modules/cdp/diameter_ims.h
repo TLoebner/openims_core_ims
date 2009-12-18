@@ -534,15 +534,6 @@ enum {
 	AVP_IMS_Flow_Usage_No_Information					= 0,
 	AVP_IMS_Flow_Usage_Rtcp								= 1
 };
-/** Specific-Action AVP */
-enum {
-	AVP_IMS_Specific_Action_Service_Information_Request						= 0,
-	AVP_IMS_Specific_Action_Charging_Correlation_Exchange					= 1,
-	AVP_IMS_Specific_Action_Indication_Of_Loss_Of_Bearer					= 2,
-	AVP_IMS_Specific_Action_Indication_Of_Recovery_Of_Bearer				= 3,
-	AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer					= 4,
-	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5
-};
 
 /** Media-Type AVP */
 enum {
