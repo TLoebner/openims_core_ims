@@ -245,6 +245,7 @@ enum {
 	AVP_EPC_Packet_Filter_Operation						= 1062,
 	AVP_EPC_Resource_Allocation_Notification			= 1063, //Gx
 	AVP_EPC_Session_Linking_Indicator					= 1064,
+	AVP_EPC_PDN_Connection_ID							= 1065,
  	
 /** TS 29.272 - selection */
 	AVP_EPC_Subscription_Data							= 1400,
