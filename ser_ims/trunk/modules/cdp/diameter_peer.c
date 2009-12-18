@@ -209,6 +209,11 @@ int diameter_peer_init_real()
 
 	/* init the pid list */
 	pid_list = shm_malloc(sizeof(pid_list_head_t));
+	if (!pid_list){
+		LOG_NO_MEM("shm",sizeof(pid_list_head_t));
+		goto error;
+	}
+	bzero(pid_list,sizeof(pid_list_head_t));
 	pid_list_lock = lock_alloc();
 	pid_list_lock = lock_init(pid_list_lock);
 
