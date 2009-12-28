@@ -364,7 +364,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	if (pcscf_qos_release7!=-1)
 	{
 		PCC_add_subscription_ID(aar,req,tag);
-		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
+		set_4bytes(x,AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer);
 		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
 
 		set_4bytes(x,0);
@@ -696,23 +696,23 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 		code=get_4bytes(avp->data.s);
 		switch (code)
 		{
-			case AVP_IMS_Specific_Action_Charging_Correlation_Exchange:
+			case AVP_EPC_Specific_Action_Charging_Correlation_Exchange:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action charging correlation exchange not supported\n");
 				break;
-			case AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer:
+			case AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action establishment of bearer :\n\t pull mode until AF not supported\n");
 				break;
-			case AVP_IMS_Specific_Action_Indication_Of_Loss_Of_Bearer:
+			case AVP_EPC_Specific_Action_Indication_of_Loss_of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action loss of bearer\n");
 				break;
-			case AVP_IMS_Specific_Action_Indication_Of_Recovery_Of_Bearer:
+			case AVP_EPC_Specific_Action_Indication_of_Recovery_of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action recovery of bearer\n");
 				break;
-			case AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer:
+			case AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific-action release of bearer - termination\n");
 				goto terminate;
 				break;
-			case AVP_IMS_Specific_Action_Service_Information_Request:
+			case AVP_EPC_Specific_Action_Service_Information_Request:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action service information request :\n\t pull mode until AF not supported\n");
 				break;
 			default:
