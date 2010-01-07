@@ -120,8 +120,11 @@ struct cdp_binds cdp_binding={
 	AAADropSession,
 
 	AAACreateAuthSession,
+	AAAGetAuthSession,
 	AAADropAuthSession,
 	AAATerminateAuthSession,
+	AAASessionsUnlock,
+	AAASessionsLock,
 
 	AAACreateTransaction,
 	AAADropTransaction,
@@ -140,9 +143,6 @@ struct cdp_binds cdp_binding={
 	AAAAddRequestHandler,
 	AAAAddResponseHandler,
 	
-	get_session,
-	sessions_unlock,
-	sessions_lock,
 };
 
 

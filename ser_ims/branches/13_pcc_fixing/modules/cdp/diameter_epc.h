@@ -245,7 +245,6 @@ enum {
 	AVP_EPC_Packet_Filter_Operation						= 1062,
 	AVP_EPC_Resource_Allocation_Notification			= 1063, //Gx
 	AVP_EPC_Session_Linking_Indicator					= 1064,
-	AVP_EPC_PDN_Connection_ID							= 1065,
  	
 /** TS 29.272 - selection */
 	AVP_EPC_Subscription_Data							= 1400,
@@ -467,15 +466,14 @@ enum {
 	AVP_EPC_Specific_Action_Indication_of_Loss_of_Bearer			= 2,
 	AVP_EPC_Specific_Action_Indication_of_Recovery_of_Bearer		= 3,
 	AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer			= 4,
+	AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer	= 5,
 	AVP_EPC_Specific_Action_IPCAN_Change							= 6,
-	AVP_EPC_Specific_Action_Indication_of_Out_of_Credit				= 7,
-	AVP_EPC_Specific_Action_Indication_of_Successful_Resources_Allocation = 8,
-	AVP_EPC_Specific_Action_Indication_of_Failed_Resources_Allocation = 9,
-	AVP_EPC_Specific_Action_Indication_of_Limited_PCC_Deployment	= 10,
-
-	/* not defined */
-	AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer	= 100,
-	AVP_EPC_Specific_Action_Service_Information_Request				= 101,
-
+	AVP_EPC_Specific_Action_Indication_of_Out_of_Credit				= 7
 };
+
+enum {
+	AVP_EPC_Service_Info_Status_Final_Service_Information			= 0,
+	AVP_EPC_Service_Info_Status_Preliminary_Service_Information		= 1,
+};
+
 #endif /*DIAMETER_EPC_H_*/

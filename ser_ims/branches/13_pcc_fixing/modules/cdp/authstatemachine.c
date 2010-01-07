@@ -99,11 +99,8 @@ int get_result_code(AAAMessage* msg)
 							goto finish;
 						}
 			 	}
-				AAAFreeAVPList(&list);
-			 
-					
+				AAAFreeAVPList(&list);			 					
 			}
-	
 		}
 finish:
 		return rc;
@@ -136,6 +133,7 @@ error:
 
 /**
  * stateful client state machine
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
  * @param auth - AAAAuthSession which uses this state machine
  * @param ev   - Event
  * @param msg  - AAAMessage
@@ -222,33 +220,37 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 						s->u.auth.state = AUTH_ST_DISCON;
 					else
 						s->u.auth.state = AUTH_ST_OPEN;
-					break;				
+					break;		
+					
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
 					//LOG(L_INFO,"state machine: i was in open and i am going to open\n");
 					break;
+					
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
-					break;										
+					break;
+					
 				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SERVICE_TERMINATED:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
-					Send_STR(s,msg);
+					Send_STR(s,msg);					
+					break;
 					
-					break;		
 				case AUTH_EV_SEND_ASA_SUCCESS:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
-					Send_STR(s,msg);
-					
+					Send_STR(s,msg);					
 					break;
+					
 				case AUTH_EV_SEND_ASA_UNSUCCESS:
 					x->state = AUTH_ST_OPEN;
 					//LOG(L_INFO,"state machine: i was in open and i am going to open\n");
-					break;	
+					break;
+					
 				case AUTH_EV_RECV_ASR: 
 					// two cases , client will comply or will not
 					// our client is very nice and always complys.. because
@@ -257,7 +259,8 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					x->state = AUTH_ST_DISCON;
 					Send_ASA(s,msg);
 					Send_STR(s,msg);
-					break;			
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -271,6 +274,7 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					//LOG(L_INFO,"state machine: i was in discon and i am going to discon\n");
 					Send_ASA(s,msg);
 					break;
+					
 				// Just added this because it might happen if the other peer doesnt 
 				// send a valid STA, then the session stays open forever...
 				// We dont accept that... we have lifetime+grace_period for that
@@ -284,8 +288,10 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					// If I register a ResponseHandler then i Free the STA there not here..
 					// but i dont have interest in that now..				
 					Session_Cleanup(s,NULL);
+					s = 0;
 					rv=1;
-					break; 	
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -295,12 +301,17 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}
+	if (s) AAASessionsUnlock(s->hash);
 	return rv;
 }
 
 
 /**
  * Authorization Server State-Machine - Statefull
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
+ * @param s
+ * @param event
+ * @param msg
  */
 inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
@@ -329,6 +340,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SEND_STA:
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -356,7 +368,8 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					break;
 				case AUTH_EV_SEND_ANS_UNSUCCESS:
 					x->state = AUTH_ST_IDLE;
-					Session_Cleanup(s,msg);					
+					Session_Cleanup(s,msg);	
+					s = 0;
 					break;
 				case AUTH_EV_SEND_ASR:
 					x->state = AUTH_ST_DISCON;
@@ -365,11 +378,13 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state=AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				case AUTH_EV_SEND_STA:
 					LOG(L_ERR,"SENDING STA!!!\n");
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -394,6 +409,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SEND_STA:
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -405,6 +421,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}	
+	if (s) AAASessionsUnlock(s->hash);
 }
 
 
@@ -412,7 +429,11 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 
 /** 
  * Authorization Client State-Machine - Stateless
- */ 
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
+ * @param s
+ * @param event
+ * @param msg
+ */
 inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg)
 {
 	cdp_auth_session_t *x;
@@ -430,6 +451,7 @@ inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 						event,auth_states[x->state]);				
 			}
 			break;
+			
 		case AUTH_ST_PENDING:
 			if (!is_req(msg)){
 				rc = get_result_code(msg);
@@ -450,6 +472,7 @@ inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 						event,auth_states[x->state]);				
 			}
 			break;
+			
 		case AUTH_ST_OPEN:
 			switch(event){
 				case AUTH_EV_SESSION_TIMEOUT:
@@ -463,16 +486,23 @@ inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 						event,auth_states[x->state]);				
 			}
 			break;
+			
 		default:
 			LOG(L_ERR,"ERR:auth_client_stateless_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}	
+	if (s) AAASessionsUnlock(s->hash);
 }
 
 /**
  * Authorization Server State-Machine - Stateless
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
+ * 
+ * @param auth
+ * @param event
+ * @param msg
  */
-inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage* msg)
+inline void auth_server_stateless_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
 	/* empty - no state change, anyway */
 /*
@@ -493,6 +523,7 @@ inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAA
 				event,x->state);
 	}
 */
+	if (s) AAASessionsUnlock(s->hash);
 }
 
 void Send_ASA(cdp_session_t* s, AAAMessage* msg)

@@ -84,9 +84,11 @@ void AAADropSession(AAASession *s);
 
 
 AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
+AAASession* AAAGetAuthSession(str id);
 void AAADropAuthSession(AAASession *s);
 void AAATerminateAuthSession(AAASession *s);
-
+void AAASessionsLock(unsigned int hash);
+void AAASessionsUnlock(unsigned int hash);
 
 AAASession* AAACreateAccSession(void *generic_data);
 void AAADropAccSession(AAASession *s);

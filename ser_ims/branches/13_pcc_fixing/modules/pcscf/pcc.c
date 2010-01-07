@@ -59,7 +59,7 @@
 #include "release_call.h" // for the ASR-ASA
 #include "../tm/tm_load.h"
 #include "gqprima.h"
-
+#include "registrar_storage.h"
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
 
@@ -150,7 +150,8 @@ void callback_for_pccsession(int event,void *param,void *session)
 {
 	t_authdata *g;
 	cdp_session_t *x=session;
-	p_dialog *dlg;
+	p_dialog *dlg=0;
+	r_contact *contact=0;
 	
 	LOG(L_DBG,"callback_for_pccsession(): called\n");
 	
@@ -169,17 +170,45 @@ void callback_for_pccsession(int event,void *param,void *session)
 					dlg=get_p_dialog(g->callid,g->host,g->port,g->transport,&(g->direction));
 					
 					if (dlg) { 
-					if (dlg->pcc_session)
-					// if its not set, someone has handled this before us so...
-					{
-						dlg->pcc_session=0; // the session is going to be deleted
-						if (dlg->state>DLG_STATE_CONFIRMED)
-							release_call_p(dlg,503,reason_terminate_dialog_s);
-					}
-					d_unlock(dlg->hash);
+						if (dlg->pcc_session_id.s)
+						// if its not set, someone has handled this before us so...
+						{
+							// the session is going to be deleted
+							shm_free(dlg->pcc_session_id.s);
+							dlg->pcc_session_id.s=0; 
+							dlg->pcc_session_id.len=0; 
+							if (dlg->state>DLG_STATE_CONFIRMED)
+								release_call_p(dlg,503,reason_terminate_dialog_s);
+						}
+						d_unlock(dlg->hash);
 					}
 				}
-					
+				else if (g->subscribed_to_signaling_path_status && g->host.s && g->port)
+								{
+									//its a registration that is being released
+									LOG(L_WARN,"WARN: received end of session for %.*s:%d\n",g->host.len,g->host.s,g->port);
+
+
+
+									contact=get_r_contact(g->host,g->port,g->transport);
+									if (!contact)
+									{
+										LOG(L_ERR,"ERR:callback_for_pccsession:no contact associated\n");
+
+									} else {
+										if (contact->pcc_session_id.s)
+										// if its not set, someone has handled this before us so...
+										{
+											// the session is going to be deleted
+											shm_free(contact->pcc_session_id.s);
+											contact->pcc_session_id.s=0; 
+											contact->pcc_session_id.len=0; 
+											//TODO //give this contact a grace time for expiration
+										}
+										r_unlock(contact->hash);
+									}
+								}
+				
 				if (g->callid.s) shm_free(g->callid.s);
 				if (g->host.s) shm_free(g->host.s);
 				shm_free(g);
@@ -200,7 +229,8 @@ void callback_for_pccsession(int event,void *param,void *session)
  * Sends the Authorization Authentication Request.
  * @param req - SIP request  
  * @param res - SIP response
- * @param str1 - 0 for originating side, 1 for terminating side
+ * @param str1 - 0/o/orig for originating side, 1/t/term for terminating side, r/REGISTER for registration
+
  * 
  * @returns AAA message or NULL on error  
  */
@@ -208,47 +238,50 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
-	p_dialog *dlg;
+	p_dialog *dlg=0;
 	AAASession* auth=0;
 	AAA_AVP* avp=0;
 	t_authdata *generic=0;
-	unsigned int hash;
-	str sdpbodyinvite,sdpbody200;
-	char *mline;
+	str data={0,0};	
+//	unsigned int hash;
+	str sdpbodyinvite={0,0},sdpbody200={0,0};
+	char *mline=0;
 	char x[4];
 	int i=0,relatch=0;
-	str host;
-	int port,transport;
+	str host={0,0};
+	int port=0,transport=0;
 	int tag=cscf_get_mobile_side(req);
-	enum p_dialog_direction dir = get_dialog_direction(str1);
+	enum p_dialog_direction dir = 0;
+	r_contact *contact = 0;
+	
+if (str1[0]!='r' && str1[0]!='R')
+{
+	
+	dir = get_dialog_direction(str1);
 	if (tag==-1) tag=(int) dir;
-		
 	if (tag) 
 		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
 	else 
 		LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
 
-		
-	/* Check for the existence of an auth session for this dialog */							
+
+	/* Check for the existence of an auth session for this dialog */
 	/* if not, create an authorization session */
-	
 	find_dialog_contact(res,dir,&host,&port,&transport);
 	str call_id = cscf_get_call_id(req, 0);
-	dlg = get_p_dialog(call_id,host,port,transport,&dir);
-	
 	LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
-	
+	dlg = get_p_dialog(call_id,host,port,transport,&dir);	
+
 	if (!dlg)
 	{
 		find_dialog_contact(req,dir,&host,&port,&transport);
 		dlg = get_p_dialog(call_id,host,port,transport,&dir);
 		LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 	}
-	
 	if (!dlg) goto error;
 	
 	
-	if (!dlg->pcc_session) {
+	if (!dlg->pcc_session_id.len) {
 		 /*For the first time*/
 		 
 		 generic=shm_malloc(sizeof(t_authdata));
@@ -265,29 +298,78 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 			 generic->latch = 1;
 		 }
 		 // i should set a callback for the expiration of the session
+		 LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
 		 auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
-		 //cdpb.sessions_lock(auth->hash);
 		 if (!auth)
 		 {
 		 	LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
+		 	goto error;
 		 }		 
-		 LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
-		 dlg->pcc_session = auth;
-	}else
-	{
-		LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
-		auth = dlg->pcc_session;
-		if (pcscf_qos_release7==-1)
-		{
-			generic = (t_authdata *)auth->cb_param;
-			relatch = generic->latch;
+		 STR_SHM_DUP(dlg->pcc_session_id,auth->id,"shm") ;
+	} else {
+		auth = cdpb.AAAGetAuthSession(dlg->pcc_session_id);
+		if (!auth){
+			LOG(L_INFO,"PCC_AAR(): pcc session in dialog %.*s %i with id %.*s was not found in cdp\n",
+					call_id.len,call_id.s,tag,
+					dlg->pcc_session_id.len,dlg->pcc_session_id.s);
+		}else{
+			LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
+			if (pcscf_qos_release7==-1)
+			{
+				generic = (t_authdata *)auth->cb_param;
+				relatch = generic->latch;
+			}
 		}
 	}
-	
-	d_unlock(dlg->hash);
-	
-	if (!auth) goto error;												 
+}else{
+	// REGISTRATION
+	//first find the dialog contact
+	dir = (int) DLG_MOBILE_ORIGINATING;
+	find_dialog_contact(req,dir,&host,&port,&transport);
 
+	contact=get_r_contact(host,port,transport);
+	if (!contact) {
+		LOG(L_ERR,"ERR:PCC_AAR: not sending subscription to path status, for unknown contact\n");
+		goto end;
+	} else {
+		if (contact->pcc_session_id.len) {
+			LOG(L_DBG,"DBG:PCC_AAR: re-registration ignoring it\n");
+			//its a re-registration so maybe ignore it
+			r_unlock(contact->hash);
+			goto end;
+			//auth=contact->pcc_session;
+		} else {
+			LOG(L_DBG,"DBG:PCC_AAR: new registration sending AAR to PCRF for AF signaling path status subscription\n");
+			//its a registration so create a new cdp session
+			generic = shm_malloc(sizeof(t_authdata));
+			if(!generic) {
+				LOG(L_ERR,"ERR:PCC_AAR: no memory left for generic\n");
+				r_unlock(contact->hash);
+				goto out_of_memory;
+			}
+			memset(generic,0,sizeof(t_authdata));
+			generic->subscribed_to_signaling_path_status=1;
+
+			STR_SHM_DUP(generic->host,host,"shm");
+			generic->port=port;
+			generic->transport=transport;
+
+			LOG(L_INFO,"PCC_AAR(): creating PCC Session for registration\n");
+			auth = cdpb.AAACreateAuthSession((void *)generic,1,1,callback_for_pccsession,0);
+			if (!auth) {
+				LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
+				r_unlock(contact->hash);
+				goto error;
+			}
+			STR_SHM_DUP(contact->pcc_session_id,auth->id,"shm") ;
+			r_unlock(contact->hash);
+		}
+	}
+}
+
+	// will keep this locked until returning
+	//d_unlock(dlg->hash);
+	
 	/* Create an AAR prototype */
 	if (pcscf_qos_release7==1)
 		aar = cdpb.AAACreateRequest(IMS_Rx, IMS_AAR, Flag_Proxyable, auth);
@@ -310,7 +392,20 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	}else{
 		if (!PCC_add_auth_application_id(aar, IMS_Gq)) goto error;
 	} 
+
+	if (!res)
+	{
+		set_4bytes(x,AVP_EPC_Service_Info_Status_Preliminary_Service_Information);
+		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Service_Info_Status,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+	}
+
+
+	//AF Service is IMS Services although it should be the IMS Communication Services
+	data.s="IMS Services";
+	data.len=12;
+	cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_AF_Application_Identifier,AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,data.s,data.len,AVP_DUPLICATE_DATA),aar->avpList.tail);
 	
+
 	/*---------- 2. Create and add Media-Component-Description AVP ----------*/
 	
 	/*	
@@ -329,12 +424,14 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	 * 									*[Codec-Data]
 	 */
 
+if (str1[0]!='r' && str1[0]!='R') {
+	
 	if(extract_body(req,&sdpbodyinvite)==-1) 
 	{
 		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
 		goto error;
 	}
-	if(extract_body(res,&sdpbody200)==-1) 
+	if(res && extract_body(res,&sdpbody200)==-1) 
 	{
 		LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
 		goto error;
@@ -359,16 +456,35 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		
 		mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 	}
-	
+} else {
+//Registration
+	PCC_add_media_component_description_for_register(aar,req,res);
+	set_4bytes(x,AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer);
+	cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+	set_4bytes(x,AVP_EPC_Specific_Action_IPCAN_Change);
+	cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);	
+}
 
 	if (pcscf_qos_release7!=-1)
 	{
 		PCC_add_subscription_ID(aar,req,tag);
-		set_4bytes(x,AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer);
-		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
+//		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
+//		cdpb.AAAAddAVPToMessage(aar,
+//				cdpb.AAACreateAVP(
+//						AVP_IMS_Specific_Action,
+//						AAA_AVP_FLAG_VENDOR_SPECIFIC,
+//						IMS_vendor_id_3GPP,
+//						x,4,
+//						AVP_DUPLICATE_DATA),
+//						aar->avpList.tail);
 
 		set_4bytes(x,0);
-		avp = cdpb.AAACreateAVP(AVP_ETSI_Reservation_Priority,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,x,4,AVP_DUPLICATE_DATA);
+		avp = cdpb.AAACreateAVP(
+				AVP_ETSI_Reservation_Priority,
+				AAA_AVP_FLAG_VENDOR_SPECIFIC,
+				IMS_vendor_id_ETSI,
+				x,4,
+				AVP_DUPLICATE_DATA);
 		cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
 		/*
 					todo:
@@ -379,10 +495,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	} else {
 		gqprima_AAR(aar,req,res,str1,relatch);
 	}
-	
-
-	
-
 	
 	LOG(L_INFO,"PCC_AAR() : sending AAR to PCRF\n");
 	/*---------- 3. Send AAR to PCRF ----------*/
@@ -404,6 +516,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		goto error1;
 		
 	}
+	
+	if (auth) cdpb.AAASessionsUnlock(auth->hash);
+	if (dlg) d_unlock(dlg->hash);
+	
 	return aaa;
 out_of_memory:
 	LOG(L_CRIT,"PCC_AAR():out of memory\n");
@@ -411,18 +527,25 @@ error:
 	LOG(L_ERR,"PCC_AAR(): unexpected ERROR!!\n");
 	if (aar) cdpb.AAAFreeMessage(&aar);
 error1:
+	if(dlg&&dlg->pcc_session_id.s){        	
+		shm_free(dlg->pcc_session_id.s);
+		dlg->pcc_session_id.len = 0;
+		dlg->pcc_session_id.s = 0;
+		d_unlock(dlg->hash);
+		dlg = 0;
+		LOG(L_ERR,"PCC_AAR():  clear dlg->pcc_session to be zero !!\n");
+	}
 	if (auth) {
-		hash=auth->hash;
-		cdpb.sessions_lock(hash);
 	 	cdpb.AAADropAuthSession(auth);
-	 	cdpb.sessions_unlock(hash);
-	 	}
+	 	auth=0;	 	
+	}
 	if (generic)
 	{
 		if (generic->callid.s) shm_free(generic->callid.s);
 		if (generic->host.s) shm_free(generic->host.s);
 		shm_free(generic);
 	}
+end:
 	return NULL;
 }
 
@@ -437,7 +560,7 @@ int PCC_AAA(AAAMessage *dia_msg)
 		PCC_get_result_code(dia_msg,&rc);
 		if (rc>2999)
 		{
-			LOG(L_DBG,"DBG:PCC_AAA: AAR request rejected with error cod %d\n",rc);
+			LOG(L_DBG,"DBG:PCC_AAA: AAR request rejected with error code %d\n",rc);
 			//TODO: look for Acceptable-Service-Info
 			avp=cdpb.AAAFindMatchingAVP(dia_msg,dia_msg->avpList.head,AVP_IMS_Acceptable_Service_Info,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
 			if (avp)
@@ -465,7 +588,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	AAAMessage* dia_str = NULL;
 	//AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
-	p_dialog *dlg;
+	p_dialog *dlg=0;
 	char x[4];
 	str host;
 	int port,transport;
@@ -484,28 +607,29 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 		dlg=get_p_dialog(call_id,host,port,transport,&dir);
 	}
 			
-	if (!dlg)	{
+	if (!dlg) {
 		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,tag);
 		goto end;
-		}
-	if (!dlg->pcc_session) {
-		LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,tag);
-		goto error_dlg;
-	} else {
-	
-		auth=dlg->pcc_session;
 	}
-	dlg->pcc_session=0; // done here , so that the callback doesnt call release_call
-	d_unlock(dlg->hash);	
+	if (!dlg->pcc_session_id.len) {
+		LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,tag);
+		d_unlock(dlg->hash);
+		goto end;
+	} else {	
+		auth=cdpb.AAAGetAuthSession(dlg->pcc_session_id);
+		// done here , so that the callback doesnt call release_call
+		if (dlg->pcc_session_id.s) shm_free(dlg->pcc_session_id.s);		
+		dlg->pcc_session_id.len=0; 
+		dlg->pcc_session_id.s=0; 
+		d_unlock(dlg->hash);	
+	}
+
 	if (auth->u.auth.state==AUTH_ST_DISCON)
 	{
 		// If we are in DISCON is because an STR was already sent
 		// so just wait for STA or for Grace Timout to happen
 		goto end;
 	} 
-
-
-	//cdpb.sessions_lock(auth->hash);	
 	
 	LOG(L_INFO,"PCC_STR() : terminating auth session\n");
 	
@@ -565,21 +689,18 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	 * 
 	*/
 	
-	
+	if (auth) cdpb.AAASessionsUnlock(auth->hash);
 	return NULL;
-	//return dia_sta;
-error_dlg:
-		d_unlock(dlg->hash);
 error:
-	//cdpb.sessions_unlock(auth->hash);
 	//cdpb.AAADropAuthSession(auth);
+	if (auth) cdpb.AAASessionsUnlock(auth->hash);
 end:
 	return NULL;
 }
 
 
 /*
- * Called upon reciept of an ASR terminates the user session and returns the ASA
+ * Called upon receipt of an ASR terminates the user session and returns the ASA
  * Terminates the corresponding dialog
  * @param request - the received request
  * @returns 0 always because ASA will be generated by the State Machine
@@ -595,12 +716,12 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 	cdp_session_t* session;
 	unsigned int hash;
 	if (!request || !request->sessionId) return 0;
-	session=cdpb.get_session(request->sessionId->data);
+	session=cdpb.AAAGetAuthSession(request->sessionId->data);
 	
 	if (!session) {
 		LOG(L_DBG,"recovered an ASR but the session is already deleted\n");
 		return 0;
-		}
+	}
 	LOG(L_INFO,"PCC_ASA() : PCRF requested an ASR.. ok!, replying with ASA\n");
 	hash=session->hash;
 	data = (t_authdata *) session->u.auth.generic_data; //casting
@@ -612,15 +733,18 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 		if (p) {
 			release_call_p(p,503,reason_terminate_dialog_s);
 			//of course it would be nice to first have a look on the Abort-Cause AVP
-			p->pcc_session=0; // this is because if i deleted the dialog already 
-							//i want the callback of the pccsession to know it
+			// this is because if i deleted the dialog already 
+			//i want the callback of the pccsession to know it
+			if (p->pcc_session_id.s) shm_free(p->pcc_session_id.s);
+			p->pcc_session_id.s=0; 
+			p->pcc_session_id.len=0;
 			d_unlock(p->hash);
 		} else {
 			LOG(L_ERR,"PCC_ASA: got and Diameter ASR and I dont have the dialog with callid %.*s\n",data->callid.len,data->callid.s);
 		}
 	}
 	//LOG(L_DBG,"before unlocking in PCC_ASA\n");
-	cdpb.sessions_unlock(hash);
+	cdpb.AAASessionsUnlock(hash);
 	//LOG(L_DBG,"ending PCC_ASA\n");
 	return 0;
 }
@@ -654,7 +778,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 	char x[4];
 	str realm={0,0};
 	if (!request && !request->sessionId) return 0;
-	session = cdpb.get_session(request->sessionId->data);
+	session = cdpb.AAAGetAuthSession(request->sessionId->data);
 	if (!session)
 	{
 		LOG(L_DBG,"DBG:PCC_RAA: received a RAR for non existing session\n");
@@ -696,23 +820,23 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 		code=get_4bytes(avp->data.s);
 		switch (code)
 		{
-			case AVP_EPC_Specific_Action_Charging_Correlation_Exchange:
+			case AVP_IMS_Specific_Action_Charging_Correlation_Exchange:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action charging correlation exchange not supported\n");
 				break;
-			case AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer:
+			case AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action establishment of bearer :\n\t pull mode until AF not supported\n");
 				break;
-			case AVP_EPC_Specific_Action_Indication_of_Loss_of_Bearer:
+			case AVP_IMS_Specific_Action_Indication_Of_Loss_Of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action loss of bearer\n");
 				break;
-			case AVP_EPC_Specific_Action_Indication_of_Recovery_of_Bearer:
+			case AVP_IMS_Specific_Action_Indication_Of_Recovery_Of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action recovery of bearer\n");
 				break;
-			case AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer:
+			case AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer:
 				LOG(L_DBG,"DBG:PCC_RAA: specific-action release of bearer - termination\n");
 				goto terminate;
 				break;
-			case AVP_EPC_Specific_Action_Service_Information_Request:
+			case AVP_IMS_Specific_Action_Service_Information_Request:
 				LOG(L_DBG,"DBG:PCC_RAA: specific action service information request :\n\t pull mode until AF not supported\n");
 				break;
 			default:
@@ -724,9 +848,9 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 	//Flows, Subscription-Id,
 	//IP-CAN Type, RAT Type (this might have changed)
 
-	cdpb.sessions_unlock(session->hash);
+	cdpb.AAASessionsUnlock(session->hash);
 	rc=AAA_SUCCESS;
-create_raa:
+//create_raa:
 	if (rc)
 	{
 		set_4bytes(x,rc);
@@ -737,12 +861,17 @@ create_raa:
 		LOG(L_ERR,"ERR:PCC_RAA: experimental result code to be added here\n");
 	}
 	return raa;
+
+	
 terminate:
 	dlg=get_p_dialog(adata->callid,adata->host,adata->port,adata->transport,&adata->direction);
-	if (dlg->pcc_session) dlg->pcc_session=0;
+	if (dlg->pcc_session_id.s) {
+		shm_free(dlg->pcc_session_id.s);
+		dlg->pcc_session_id.s=0;
+		dlg->pcc_session_id.len=0;
+	}
 	release_call_p(dlg,503,reason_terminate_dialog_s);
 	d_unlock(dlg->hash);
-	cdpb.sessions_unlock(session->hash);
 	//first reply to the RAR
 	set_4bytes(x,AAA_SUCCESS);
 	cdpb.AAAAddAVPToMessage(raa,cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA),raa->avpList.tail);
@@ -761,6 +890,8 @@ terminate:
 		dia_str = cdpb.AAACreateRequest(IMS_Rx, IMS_STR, Flag_Proxyable, session);
 	else
 		dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, session);
+
+	cdpb.AAASessionsUnlock(session->hash);
 
 	if (!dia_str) goto error;
 
@@ -831,8 +962,10 @@ AAAMessage* PCCRequestHandler(AAAMessage *request,void *param)
 	return 0;		
 }
 
-void terminate_pcc_session(cdp_session_t *s)
+void terminate_pcc_session(str session_id)
 {
+	cdp_session_t *s=0;
+	s = cdpb.AAAGetAuthSession(session_id);
 	if (s)
 	{
 		LOG(L_DBG,"terminate_pcc_session calling AAATerminateAuthSession\n");

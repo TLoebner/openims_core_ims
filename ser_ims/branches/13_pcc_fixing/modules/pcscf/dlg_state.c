@@ -582,6 +582,9 @@ void free_p_dialog(p_dialog *d)
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
 	if (d->refresher.s) shm_free(d->refresher.s);
+	if (d->pcc_session_id.s) {
+		shm_free(d->pcc_session_id.s);
+	}
 	shm_free(d);
 	p_dialog_count_decrement(); 
 }
@@ -903,9 +906,6 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	ruri.len = snprintf(buf2,256,"<%.*s>",x.len,x.s);
 	ruri.s = buf2;
 		
-	// parse rr before t_relay - just because this will be used later and the memory will be copied pkg->shm->pkg
-	cscf_get_first_route(msg,0);	
-	
 	tmb.new_dlg_uac(&call_id,
 					&tag,
 					d->first_cseq,
@@ -1359,10 +1359,12 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	hash = d->hash;
 	
-	if (d->pcc_session)
+	if (d->pcc_session_id.s)
 	{
-		terminate_pcc_session(d->pcc_session);
-		d->pcc_session=0;
+		terminate_pcc_session(d->pcc_session_id);
+		shm_free(d->pcc_session_id.s);
+		d->pcc_session_id.s = 0;
+		d->pcc_session_id.len = 0;
 	}
 	
 	del_p_dialog(d);

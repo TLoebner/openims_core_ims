@@ -12,31 +12,10 @@
 extern struct cdp_binds cdpb;
 
 t_binding_list* get_binding_list(str sdp);
-int get_ip_address(struct sip_msg *r, str *ip);
 int free_binding_list(t_binding_list *list);
 int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list *outblist);
 
 
-AAA_AVP* create_framed_ip_address(str ip)
-{
-	char x[6];
-	int i,j,k;
-	if (ip.len>0)
-	{
-				memset(x,0,4);
-				x[1]=1;
-				i=2;k=0;
-				for(j=0;j<ip.len;j++){
-					if (ip.s[j]=='.') {x[i++]=k;k=0;}
-					else if (ip.s[j]>='0' && ip.s[j]<='9')
-							k = k*10 + ip.s[j]-'0';
-				}
-				x[i]=k;
-
-				return cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0,x,6,AVP_DUPLICATE_DATA);
-	}
-	return 0;
-}
 
 
 /**
@@ -55,7 +34,7 @@ inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip,enum ip_type ver
 
 	if (version==ip_type_v4)
 	{
-		cdpb.AAAAddAVPToList(&list,create_framed_ip_address(ip));
+		cdpb.AAAAddAVPToList(&list,pcc_create_framed_ip_address(ip));
 	} else
 	{
 		//TODO AVP_Framed_IPv6_Prefix
@@ -102,11 +81,11 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 	{
 		extract_body(req,&sdp);
 		blist=get_binding_list(sdp);
-		version=get_ip_address(req,&ip);
+		version=pcc_get_ip_address(req,&ip);
 	} else {
 		extract_body(res,&sdp);
 		blist=get_binding_list(sdp);
-		version=get_ip_address(res,&ip);
+		version=pcc_get_ip_address(res,&ip);
 	}
 
 	add_binding_information(aar,blist,NULL);
@@ -205,7 +184,7 @@ int gqprima_AAA(AAAMessage *dia_msg)
  */
 int get_ip_address(struct sip_msg *r, str *ip)
 {
-	enum ip_type version;
+	enum ip_type version=ip_type_v4;
 	char *p=0;
 	if (r)
 	{
@@ -252,7 +231,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 		{
 			if (bunit->v==ip_type_v4)
 			{
-				cdpb.AAAAddAVPToList(&subsublist,create_framed_ip_address(bunit->addr));
+				cdpb.AAAAddAVPToList(&subsublist,pcc_create_framed_ip_address(bunit->addr));
 
 			} else {
 				//TODO create_framed_ipv6_prefix
@@ -282,11 +261,11 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 			{
 				if (bunit->addr.len)
 				{
-					cdpb.AAAAddAVPToList(&subsublist,create_framed_ip_address(bunit->addr));
+					cdpb.AAAAddAVPToList(&subsublist,pcc_create_framed_ip_address(bunit->addr));
 				} else {
 					data.s="0.0.0.0";
 					data.len=7;
-					cdpb.AAAAddAVPToList(&subsublist,create_framed_ip_address(data));
+					cdpb.AAAAddAVPToList(&subsublist,pcc_create_framed_ip_address(data));
 					//wildcard
 				}
 			} else {
@@ -409,7 +388,7 @@ t_binding_list* get_binding_list(str sdp)
 	t_binding_list* blist=0;
 	t_binding_unit* bunit=0;
 	char *cline=0,*mline=0,*nmline=0;
-	enum ip_type version;
+	enum ip_type version=ip_type_v4;
 	char port[64];
 	char *aux=0;
 	str ip={0,0};

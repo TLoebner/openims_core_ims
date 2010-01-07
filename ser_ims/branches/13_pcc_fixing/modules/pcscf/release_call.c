@@ -75,7 +75,7 @@ static str reason_hdr_e={"\"\r\n",3};
 //static str _503_text_s={"Service Unavailable",28};
 static str _488_text_s={"Not Acceptable Here",19};
 
-static str method_CANCEL_s={"CANCEL",6};
+//static str method_CANCEL_s={"CANCEL",6};
 static str method_ACK_s={"ACK",3};
 static str method_BYE_s={"BYE",3};
 
@@ -571,7 +571,10 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 			} else {
 				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);		
 			}
-			d->pcc_session=0; // This means we already finished with the dialog
+			// This means we already finished with the dialog
+			if (d->pcc_session_id.s) shm_free(d->pcc_session_id.s);
+			d->pcc_session_id.s=0; 
+			d->pcc_session_id.len=0;
 			d_unlock(hash);
 			return CSCF_RETURN_BREAK;
 		} else {
