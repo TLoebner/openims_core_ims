@@ -59,19 +59,24 @@
 
 #include "dlg_state.h"
 
+
+
+
 typedef struct authdata {
 	str callid;
 	str host;
 	int port,transport;
 	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
 
+	//for registration session
+	int subscribed_to_signaling_path_status;
 	//for Gqprima only
 	int latch;
 } t_authdata;
 
 
 int cscf_get_mobile_side(struct sip_msg *msg);
-void terminate_pcc_session(cdp_session_t *);
+void terminate_pcc_session(str session_id);
 
 
 AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1);

@@ -113,7 +113,7 @@ typedef struct _p_dialog {
 	  										released or not, or its peer, with count on 
 											tries 										*/
 											
-	AAASession *pcc_session;
+	str pcc_session_id;
 													
 	dlg_t *dialog_s;  /* dialog as UAS*/
 	dlg_t *dialog_c;  /* dialog as UAC*/

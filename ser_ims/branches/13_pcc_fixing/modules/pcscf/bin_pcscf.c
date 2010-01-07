@@ -117,6 +117,9 @@ int bin_encode_p_dialog(bin_data *x,p_dialog *d)
 	if (!bin_encode_uchar(x,d->uac_supp_timer)) goto error;
 	
 	if (!bin_encode_uchar(x,d->is_releasing)) goto error;
+	
+	if (!bin_encode_str(x,&(d->pcc_session_id))) goto error;
+	
 	if (!bin_encode_dlg_t(x,d->dialog_c)) goto error;	
 	if (!bin_encode_dlg_t(x,d->dialog_s)) goto error;
 	
@@ -187,6 +190,9 @@ p_dialog* bin_decode_p_dialog(bin_data *x)
 	if (!bin_decode_uchar(x,&d->uac_supp_timer)) goto error;	
 
 	if (!bin_decode_uchar(x, &d->is_releasing)) goto error;
+	
+	if (!bin_decode_str(x,&s)||!str_shm_dup(&(d->pcc_session_id),&s)) goto error;
+	
 	if (!bin_decode_dlg_t(x,&(d->dialog_c))) goto error;
 	if (!bin_decode_dlg_t(x,&(d->dialog_s))) goto error;
 	
@@ -654,6 +660,11 @@ int bin_encode_r_contact(bin_data *x,r_contact *c)
 		
 	if (!bin_encode_pinhole(x,c->pinhole)) goto error;
 	
+	k = c->sos_flag;
+	if (!bin_encode_char(x,k)) goto error;
+	
+	if (!bin_encode_str(x,&(c->pcc_session_id))) goto error;
+	
 	us=0;
 	for(p=c->head;p;p=p->next)
 		us++;
@@ -718,6 +729,11 @@ r_contact* bin_decode_r_contact(bin_data *x)
 		if (!bin_decode_str(x,&st)||!str_shm_dup(c->service_route+i,&st)) goto error;
 	
 	if (!bin_decode_pinhole(x,&(c->pinhole ))) goto error;
+	
+	if (!bin_decode_char(x,&k)) goto error;
+	c->sos_flag = k;
+	
+	if (!bin_decode_str(x,&st)||!str_shm_dup(&(c->pcc_session_id),&st)) goto error;
 		
 	if (!bin_decode_ushort(x,&us)) goto error;
 	for(i=0;i<us;i++){

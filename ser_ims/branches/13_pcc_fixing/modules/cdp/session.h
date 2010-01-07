@@ -220,8 +220,7 @@ void session_timer(time_t now, void* ptr);
 cdp_session_t* get_session(str id);
 cdp_session_t* new_session(str id,cdp_session_type_t type); //this function is needed in the peerstatemachine
 void add_session(cdp_session_t *x);
-void sessions_lock(unsigned int hash);
-void sessions_unlock(unsigned int hash);
+
 
 
 #endif

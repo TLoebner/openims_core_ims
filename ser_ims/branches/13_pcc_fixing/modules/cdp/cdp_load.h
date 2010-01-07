@@ -75,8 +75,11 @@ typedef AAASession* (*AAACreateSession_f)(void *generic_data);
 typedef void (*AAADropSession_f)(AAASession *s);
 
 typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
+typedef AAASession* (*AAAGetAuthSession_f)(str id);
 typedef void (*AAADropAuthSession_f)(AAASession *s);
 typedef void (*AAATerminateAuthSession_f)(AAASession *s);
+typedef void (*AAASessionsUnlock_f) (unsigned int hash);
+typedef void (*AAASessionsLock_f) (unsigned int hash);
 
 typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
 typedef int (*AAADropTransaction_f)(AAATransaction *trans);
@@ -145,47 +148,46 @@ typedef AAAReturnCode (*AAAFreeMessage_f)(
 
 typedef int (*AAAAddRequestHandler_f)(AAARequestHandler_f *f,void *param);
 typedef int (*AAAAddResponseHandler_f)(AAAResponseHandler_f *f,void *param);
-typedef cdp_session_t* (*get_session_f)(str id);
-typedef void (*sessions_unlock_f) (unsigned int hash);
-typedef void (*sessions_lock_f) (unsigned int hash);
+
 
 struct cdp_binds {
-	AAASendMessage_f AAASendMessage;
-	AAASendMessageToPeer_f AAASendMessageToPeer;
-	AAASendRecvMessage_f AAASendRecvMessage;
-	AAASendRecvMessageToPeer_f AAASendRecvMessageToPeer;
-	AAAFreeMessage_f AAAFreeMessage;
+	AAASendMessage_f			AAASendMessage;
+	AAASendMessageToPeer_f		AAASendMessageToPeer;
+	AAASendRecvMessage_f		AAASendRecvMessage;
+	AAASendRecvMessageToPeer_f	AAASendRecvMessageToPeer;
+	AAAFreeMessage_f			AAAFreeMessage;
 	
-	AAACreateRequest_f AAACreateRequest;
-	AAACreateResponse_f AAACreateResponse;	
+	AAACreateRequest_f			AAACreateRequest;
+	AAACreateResponse_f			AAACreateResponse;	
 	
-	AAACreateSession_f AAACreateSession;
-	AAADropSession_f AAADropSession;
+	AAACreateSession_f			AAACreateSession;
+	AAADropSession_f			AAADropSession;
 
-	AAACreateAuthSession_f AAACreateAuthSession;
-	AAADropAuthSession_f AAADropAuthSession;
-	AAATerminateAuthSession_f AAATerminateAuthSession;
+	AAACreateAuthSession_f		AAACreateAuthSession;
+	AAAGetAuthSession_f			AAAGetAuthSession;
+	AAADropAuthSession_f		AAADropAuthSession;
+	AAATerminateAuthSession_f	AAATerminateAuthSession;
 
-	AAACreateTransaction_f AAACreateTransaction;
-	AAADropTransaction_f AAADropTransaction;
-	
-	AAACreateAVP_f AAACreateAVP;
-	AAAAddAVPToMessage_f AAAAddAVPToMessage;
-	AAAAddAVPToList_f AAAAddAVPToList;
-	AAAFindMatchingAVP_f AAAFindMatchingAVP;
-	AAAFindMatchingAVPList_f AAAFindMatchingAVPList;
-	AAAGetNextAVP_f AAAGetNextAVP;
-	AAAFreeAVP_f AAAFreeAVP;
-	AAAFreeAVPList_f AAAFreeAVPList;
-	AAAGroupAVPS_f AAAGroupAVPS;
-	AAAUngroupAVPS_f AAAUngroupAVPS;
-	
-	AAAAddRequestHandler_f AAAAddRequestHandler;
-	AAAAddResponseHandler_f AAAAddResponseHandler;
+	AAASessionsLock_f 			AAASessionsLock;
+	AAASessionsUnlock_f			AAASessionsUnlock;
 
-	get_session_f			get_session;
-	sessions_unlock_f		sessions_unlock;
-	sessions_lock_f 		sessions_lock;
+	AAACreateTransaction_f		AAACreateTransaction;
+	AAADropTransaction_f		AAADropTransaction;
+	
+	AAACreateAVP_f				AAACreateAVP;
+	AAAAddAVPToMessage_f		AAAAddAVPToMessage;
+	AAAAddAVPToList_f			AAAAddAVPToList;
+	AAAFindMatchingAVP_f		AAAFindMatchingAVP;
+	AAAFindMatchingAVPList_f	AAAFindMatchingAVPList;
+	AAAGetNextAVP_f				AAAGetNextAVP;
+	AAAFreeAVP_f				AAAFreeAVP;
+	AAAFreeAVPList_f			AAAFreeAVPList;
+	AAAGroupAVPS_f				AAAGroupAVPS;
+	AAAUngroupAVPS_f			AAAUngroupAVPS;
+	
+	AAAAddRequestHandler_f		AAAAddRequestHandler;
+	AAAAddResponseHandler_f		AAAAddResponseHandler;
+
 };
 
 

@@ -57,6 +57,7 @@
 
 #include "../../sr_module.h"
 #include "../../locking.h"
+#include "../cdp/cdp_load.h"
 
 /** NAT address */
 typedef struct _r_nat_dest{
@@ -145,8 +146,10 @@ typedef struct _r_contact {
 	str *service_route;			/**< service route entries				*/
 
 	r_nat_dest * pinhole;		/**< address of the receive				*/ 
-	int sos_flag;			/** address used to do an IMS Emergency Registration*/
+	int sos_flag;				/** address used to do an IMS Emergency Registration*/
 	
+	str pcc_session_id;			/** Session used for Subscription to Signaling Path status  when PCC applies*/
+
 	r_public *head;				/**< first (and default) public identity*/
 	r_public *tail;				/**< last public identity				*/
 

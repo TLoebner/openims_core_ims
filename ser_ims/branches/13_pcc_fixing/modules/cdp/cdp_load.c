@@ -87,8 +87,11 @@ int load_cdp( struct cdp_binds *cdpb)
 	FIND_EXP(AAADropSession,"AAADropSession",AAADropSession_f);
 
 	FIND_EXP(AAACreateAuthSession,"AAACreateAuthSession",AAACreateAuthSession_f);
+	FIND_EXP(AAAGetAuthSession,"AAAGetAuthSession",AAAGetAuthSession_f);
 	FIND_EXP(AAADropAuthSession,"AAADropAuthSession",AAADropAuthSession_f);
 	FIND_EXP(AAATerminateAuthSession,"AAATerminateAuthSession",AAATerminateAuthSession_f);
+	FIND_EXP(AAASessionsUnlock,"AAASessionsUnlock",AAASessionsUnlock_f);
+	FIND_EXP(AAASessionsLock,"AAASessionsLock",AAASessionsLock_f);
 
 	FIND_EXP(AAACreateTransaction,"AAACreateTransaction",AAACreateTransaction_f);
 	FIND_EXP(AAADropTransaction,"AAADropTransaction",AAADropTransaction_f);
@@ -106,11 +109,7 @@ int load_cdp( struct cdp_binds *cdpb)
 
 	FIND_EXP(AAAAddRequestHandler,"AAAAddRequestHandler",AAAAddRequestHandler_f);
 	FIND_EXP(AAAAddResponseHandler,"AAAAddResponseHandler",AAAAddResponseHandler_f);
-	
-	
-	FIND_EXP(get_session,"get_session",get_session_f);
-	FIND_EXP(sessions_unlock,"sessions_unlock",sessions_unlock_f);
-	FIND_EXP(sessions_lock,"sessions_lock",sessions_lock_f);
+		
 	return 1;
 }
 

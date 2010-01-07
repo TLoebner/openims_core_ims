@@ -79,9 +79,14 @@ typedef struct _bandwidth {
 		int bRR;		
 } bandwidth;
 
+enum ip_type {
+	ip_type_v4 	= 1,
+	ip_type_v6	= 2
+};
 
-
-
+/*helper*/
+int pcc_get_ip_address(struct sip_msg *r, str *ip);
+AAA_AVP* pcc_create_framed_ip_address(str ip);
 /*just headers*/
 
 int PCC_add_destination_realm(AAAMessage *msg, str data);
@@ -93,7 +98,7 @@ AAA_AVP *PCC_create_media_subcomponent(int number,
 									char *portB ,char *options,int atributes);
 inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
-											
+int PCC_add_media_component_description_for_register(AAAMessage *msg,struct sip_msg *req, struct sip_msg *res);
 inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
 AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 

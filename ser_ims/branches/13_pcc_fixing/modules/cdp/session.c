@@ -76,19 +76,28 @@ unsigned int *session_id2;		/**< counter for second part of the session id */
 /**
  * Lock a hash table row
  */
-inline void sessions_lock(unsigned int hash)
+inline void AAASessionsLock(unsigned int hash)
 {
-	
-	lock_get(sessions[hash].lock);
+	if ( hash >=0 && hash < sessions_hash_size ){
+		lock_get(sessions[hash].lock);
+	}
+	else {
+		LOG(L_ERR,"ERROR:AAASessionsLock: hash :%d out of range of sessions_hash_size: %d !\n", hash, sessions_hash_size);
+	}
 }
 
 /**
  * Unlock a hash table row
  */
-inline void sessions_unlock(unsigned int hash)
+inline void AAASessionsUnlock(unsigned int hash)
 {
 	
-	lock_release(sessions[hash].lock);
+	if ( hash >=0 && hash < sessions_hash_size ){
+		lock_release(sessions[hash].lock);
+	}
+	else {
+		LOG(L_ERR,"ERROR:AAASessionsLock: hash :%d out of range of sessions_hash_size: %d !\n", hash, sessions_hash_size);
+	}
 }
 
 
@@ -186,7 +195,7 @@ int sessions_destroy()
 		session_lock=0;
 	}	
 	for(i=0;i<sessions_hash_size;i++){
-		sessions_lock(i);
+		AAASessionsLock(i);
 		for(x = sessions[i].head; x; x = n){
 			n = x->next;
 			free_session(x);	
@@ -258,7 +267,7 @@ error:
 
 /**
  * Adds the session to the session list.
- * \note If you use x after this then lock first!!!
+ * \note This returns with a lock, so unlock when done
  * @param x - the session to add
  */
 void add_session(cdp_session_t *x)
@@ -268,13 +277,12 @@ void add_session(cdp_session_t *x)
 //	hash = get_str_hash(x->id,sessions_hash_size);
 //	x->hash = hash;
 	LOG(L_DBG,"adding a session with id %.*s\n",x->id.len,x->id.s);
-	sessions_lock(x->hash);
+	AAASessionsLock(x->hash);
 		x->next = 0;
 		x->prev = sessions[x->hash].tail;
 		if (sessions[x->hash].tail) sessions[x->hash].tail->next = x;
 		sessions[x->hash].tail = x;
-		if (!sessions[x->hash].head) sessions[x->hash].head = x;
-	sessions_unlock(x->hash);
+		if (!sessions[x->hash].head) sessions[x->hash].head = x;	
 }
 
 /**
@@ -289,29 +297,42 @@ cdp_session_t* get_session(str id)
 	cdp_session_t *x;
 	hash = get_str_hash(id,sessions_hash_size);
 	LOG(L_DBG,"calling get session with id %.*s and hash %u\n",id.len,id.s,hash);
-	sessions_lock(hash);
+	AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=x->next)
 		{
 			LOG(L_DBG,"looking for |%.*s| in |%.*s|\n",id.len,id.s,x->id.len,x->id.s);
 			if (x->id.len == id.len &&
 				strncasecmp(x->id.s,id.s,id.len)==0)
 					return x;
-		}
-	sessions_unlock(hash);		
+		}			
 	return 0;
 }
 
+
 /**
  * Removes and frees a session.
- * @param x - the session to remove;
+ * \note must be called with a lock on the x->hash and it will unlock on exit. Do not use x after calling this
+ * 
+ * @param x - the session to remove
  */
 void del_session(cdp_session_t *x)
 {
+	unsigned int hash;
+
 	if (!x) return;
+
+	hash = x->hash;
+	if (hash < 0 || hash >= sessions_hash_size) {
+		LOG(L_ERR,"ERROR:del_session: x->hash :%d out of range of sessions_hash_size: %d !\n",hash, sessions_hash_size);
+		return;
+	}
+
 	if (sessions[x->hash].head == x) sessions[x->hash].head = x->next;
 	else x->prev->next = x->next;
 	if (sessions[x->hash].tail == x) sessions[x->hash].tail = x->prev;
 	else x->next->prev = x->prev;
+	
+	AAASessionsUnlock(hash);
 	
 	free_session(x);
 }
@@ -366,7 +387,7 @@ void session_timer(time_t now, void* ptr)
 	AAASessionCallback_f *cb;
 	LOG(L_DBG,"-------session timer --------\n");
 	for(hash=0;hash<sessions_hash_size;hash++){		
-		sessions_lock(hash);
+		AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=x->next) {
 			
 			
@@ -403,7 +424,7 @@ void session_timer(time_t now, void* ptr)
 					
 			}
 		}
-		sessions_unlock(hash);
+		AAASessionsUnlock(hash);
 	}
 	LOG(L_DBG,"-------------------------------\n");
 					
@@ -440,6 +461,8 @@ void AAADropSession(AAASession *s)
 
 /**
  * Creates a Authorization Session.
+ * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
+ * @returns the new AAASession or null on error
  */
 AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param)
 {
@@ -471,6 +494,17 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 	return s;
 }
 
+
+/**
+ * Looks for a session with a given id and returns it if found
+ * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
+ * @returns the new AAASession or null on error
+ */
+AAASession* AAAGetAuthSession(str id)
+{
+	return get_session(id);
+}
+
 /**
  * Sends a Service terminated event to the session
  */
@@ -483,6 +517,7 @@ void AAATerminateAuthSession(AAASession *s)
 
 /**
  * Deallocates the memory taken by a Authorization Session
+ * \note Must be called with a lock on the s->hash - will unlock it, so don't use the session after this
  */
 void AAADropAuthSession(AAASession *s)
 {

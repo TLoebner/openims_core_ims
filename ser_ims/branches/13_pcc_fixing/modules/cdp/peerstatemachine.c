@@ -535,7 +535,11 @@ void I_Snd_CER(peer *p)
 	AAAMessage *cer=0;
 //	AAA_AVP *avp;
 	unsigned long ip;
-	struct sockaddr_in6 addr;
+	union {
+		struct sockaddr addr;
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+	} addr_u ;
 	socklen_t addrlen;
 	char x[18];
 	
@@ -543,24 +547,24 @@ void I_Snd_CER(peer *p)
 	if (!cer) return;
 	cer->hopbyhopId = next_hopbyhop();
 	cer->endtoendId = next_endtoend();
-	addrlen = sizeof(struct sockaddr_in6);
-	if (getsockname(p->I_sock,(struct sockaddr*) &addr, &addrlen) == -1) { 
+	addrlen = sizeof(addr_u);
+	if (getsockname(p->I_sock,&(addr_u.addr), &addrlen) == -1) { 
 		LOG(L_ERR,"ERROR:I_Snd_CER(): Error on finding local host address > %s\n",strerror(errno));
 	}else{
-		switch(addr.sin6_family){
+		switch(addr_u.addr.sa_family){
 			case AF_INET:
 				set_2bytes(x,1);
-				ip = htonl(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
+				ip = htonl(addr_u.in.sin_addr.s_addr);
 				set_4bytes(x+2,ip);
 				AAACreateAndAddAVPToMessage(cer,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,6);
 				break;
 			case AF_INET6:
 				set_2bytes(x,2);
-				memcpy(x+2,addr.sin6_addr.s6_addr,16);
+				memcpy(x+2,addr_u.in6.sin6_addr.s6_addr,16);
 				AAACreateAndAddAVPToMessage(cer,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,18);
 				break;
 			default:
-				LOG(L_ERR,"ERROR:I_Snd_CER(): unknown address type with family %d\n",addr.sin6_family);
+				LOG(L_ERR,"ERROR:I_Snd_CER(): unknown address type with family %d\n",addr_u.addr.sa_family);
 		}
 	}
 
@@ -907,31 +911,35 @@ void Snd_CEA(peer *p,AAAMessage *cer,int result_code,int sock)
 {
 	AAAMessage *cea;
 	unsigned int ip;
-	struct sockaddr_in6 addr;
+	union {
+		struct sockaddr addr;
+		struct sockaddr_in in;
+		struct sockaddr_in6 in6;
+	} addr_u ;
 	socklen_t addrlen;
 	char x[18];
 	
 	cea = AAANewMessage(Code_CE,0,0,cer);	
 	if (!cea) goto done;
 	
-	addrlen = sizeof(struct sockaddr_in6);
-	if (getsockname(sock, (struct sockaddr*)&addr, &addrlen) == -1) { 
+	addrlen = sizeof(addr_u);
+	if (getsockname(sock, &(addr_u.addr), &addrlen) == -1) { 
 		LOG(L_ERR,"ERROR:Snd_CEA(): Error on finding local host address > %s\n",strerror(errno));
 	}else{
-		switch(addr.sin6_family){
+		switch(addr_u.addr.sa_family){
 			case AF_INET:
 				set_2bytes(x,1);
-				ip = htonl(((struct sockaddr_in*)&addr)->sin_addr.s_addr);
+				ip = htonl(addr_u.in.sin_addr.s_addr);
 				set_4bytes(x+2,ip);
 				AAACreateAndAddAVPToMessage(cea,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,6);
 				break;
 			case AF_INET6:
 				set_2bytes(x,2);
-				memcpy(x+2,addr.sin6_addr.s6_addr,16);
+				memcpy(x+2,addr_u.in6.sin6_addr.s6_addr,16);
 				AAACreateAndAddAVPToMessage(cea,AVP_Host_IP_Address,AAA_AVP_FLAG_MANDATORY,0,x,18);
 				break;
 			default:
-				LOG(L_ERR,"ERROR:Snd_CEA(): unknown address type with family %d\n",addr.sin6_family);
+				LOG(L_ERR,"ERROR:Snd_CEA(): unknown address type with family %d\n",addr_u.addr.sa_family);
 		}
 	}
 
@@ -1005,26 +1013,37 @@ void Snd_Message(peer *p, AAAMessage *msg)
 		LOG(L_DBG,"There is a session of type %d\n",session->type);
 		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
-				if (is_req(msg))
+				if (is_req(msg)) {
 					auth_client_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
+					session = 0;
+				}
 				else {
 					if (msg->commandCode == IMS_ASA){
 						if (!msg->res_code){
 							msg->res_code = AAAFindMatchingAVP(msg,0,AVP_Result_Code,0,0);
 						}
-						if (!msg->res_code) auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+						if (!msg->res_code) {
+							auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+							session = 0;
+						}
 						else {
 							rcode = get_4bytes(msg->res_code->data.s);
 							if (rcode>=2000 && rcode<3000) {
 								peer_send_msg(p,msg);
 								send_message_before_session_sm=1;
 								auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_SUCCESS,msg);
+								session = 0;
 							}
-							else auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+							else {
+								auth_client_statefull_sm_process(session,AUTH_EV_SEND_ASA_UNSUCCESS,msg);
+								session = 0;
+							}
 						}
 						
-					}else
+					}else {
 						auth_client_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+						session = 0;
+					}
 				}
 				break;
 			case AUTH_SERVER_STATEFULL:
@@ -1035,26 +1054,30 @@ void Snd_Message(peer *p, AAAMessage *msg)
 					{
 						LOG(L_DBG,"ASR\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ASR,msg);
+						session = 0;
 					} else {
 						//would be a RAR but ok!
 						LOG(L_DBG,"other request\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_REQ,msg);
+						session = 0;
 					}
 				} else {
 					if (msg->commandCode == IMS_STR)
 					{
 						LOG(L_DBG,"STA\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_STA,msg);
+						session = 0;
 					} else {
 						LOG(L_DBG,"other reply\n");
 						auth_server_statefull_sm_process(session,AUTH_EV_SEND_ANS,msg);
+						session = 0;
 					}
 				}
 				break;				 
 			default:
 				break;
 		}
-		sessions_unlock(session->hash);
+		if (session) AAASessionsUnlock(session->hash);
 	}
 	if (!send_message_before_session_sm) peer_send_msg(p,msg);
 	
@@ -1072,13 +1095,10 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 {
 	AAASession *session=0;
 	str id={0,0};
-	unsigned int hash; // we need this here because after the sm_processing , we might end up
-					   // with no session any more
 	int nput=0;
 	if (msg->sessionId) session = get_session(msg->sessionId->data);
 
 	if (session){
-		hash=session->hash;
 		switch (session->type){
 			case AUTH_CLIENT_STATEFULL:
 				if (is_req(msg)){
@@ -1086,11 +1106,13 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ASR,msg);
 					else 
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
+					session = 0;
 				}else {
 					if (msg->commandCode==IMS_STA)
 						nput=auth_client_statefull_sm_process(session,AUTH_EV_RECV_STA,msg);
 					else
 						auth_client_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
+					session = 0;
 				}
 				break;
 			 case AUTH_SERVER_STATEFULL:
@@ -1102,21 +1124,23 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 			 		} else {
 			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
 			 		}
+					session = 0;			 		
 			 	}else{
 			 		if (msg->commandCode==IMS_ASA)
 			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ASA,msg);
 			 		else
 			 			auth_server_statefull_sm_process(session,AUTH_EV_RECV_ANS,msg);
+					session = 0;			 		
 			 	}
 			 	break;
 			default:
 				break;			 
 		}
-		sessions_unlock(hash);
 	}else{
 		if (msg->sessionId){
-			if (msg->commandCode == IMS_ASR) 
+			if (msg->commandCode == IMS_ASR) { 
 				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg);
+			}
 			else
 			{
 				if (msg->commandCode == IMS_AAR)
@@ -1132,13 +1156,11 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 						session=new_session(id,AUTH_SERVER_STATEFULL);
 						if (session)
 						{
-							hash=session->hash;
 							add_session(session);
-							sessions_lock(hash);
 							//create an auth session with the id of the message!!!
 							//and get from it the important data
-							auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);
-							sessions_unlock(hash);
+							auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);	
+							session=0;
 						}
 					}
 				}
