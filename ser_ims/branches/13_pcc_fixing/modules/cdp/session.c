@@ -456,6 +456,10 @@ AAASession* AAACreateSession(void *generic_data)
  */
 void AAADropSession(AAASession *s)
 {
+	// first give a chance to the cb to free the generic param
+	if (s&&s->cb) {
+		(s->cb)(AUTH_EV_SESSION_TIMEOUT,s->cb_param,s);
+	}
 	free_session(s);
 }
 

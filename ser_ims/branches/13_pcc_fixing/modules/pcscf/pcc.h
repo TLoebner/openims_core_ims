@@ -62,7 +62,7 @@
 
 
 
-typedef struct authdata {
+typedef struct pcc_authdata {
 	str callid;
 	str host;
 	int port,transport;
@@ -72,7 +72,7 @@ typedef struct authdata {
 	int subscribed_to_signaling_path_status;
 	//for Gqprima only
 	int latch;
-} t_authdata;
+} pcc_authdata_t;
 
 
 int cscf_get_mobile_side(struct sip_msg *msg);
