@@ -46,48 +46,49 @@
 /**
  * \file
  *
- * P-CSCF Policy and Charging Control interface ops
+ * P-CSCF Policy and Charging Control interface - Gq'
  *  
  * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
- * \author Dragos dot Vingarzan -at- fokus dot fraunhofer dot de
  */
- 
-#ifndef __PCC_H_
-#define __PCC_H_
 
-#include "mod.h"
-#include "../cdp/cdp_load.h"
-
+#ifndef PCC_GQPRIMA_H_
+#define PCC_GQPRIMA_H_
 #include "dlg_state.h"
+#include "../cdp/cdp_load.h"
+#include "pcc_avp.h"
+
+#define FL_APPEND(list,add)                                                      \
+do {                                                                             \
+  (add)->next = NULL;															 \
+  (add)->prev = (list)->tail;													 \
+  if ((list)->tail) {                                                            \
+	  ((list)->tail)->next=(add);												 \
+      (add)->next = NULL;                                                        \
+  } else {                                                                       \
+      (list)->head = (add);                                                      \
+  }                                                                              \
+  (list)->tail=(add);                                                        	 \
+} while (0);
+
+int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1,int relatch);
+int gqprima_AAA(AAAMessage *dia_msg);
+
+
+typedef struct _t_binding_unit
+{
+	enum ip_type v;
+	str addr;
+	int port_start;
+	int port_end; //only for multi-ports
+
+	struct _t_binding_unit *prev,*next;
+}t_binding_unit;
+
+typedef struct _t_binding_list
+{
+	t_binding_unit *head,*tail;
+}t_binding_list;
 
 
 
-
-typedef struct pcc_authdata {
-	str callid;
-	str host;
-	int port,transport;
-	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
-
-	//for registration session
-	int subscribed_to_signaling_path_status;
-	//for Gqprima only
-	int latch;
-} pcc_authdata_t;
-
-
-int cscf_get_mobile_side(struct sip_msg *msg);
-void terminate_pcc_session(str session_id);
-
-
-AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1);
-AAAMessage* PCC_STR(struct sip_msg *msg, char *str1);
-AAAMessage* PCC_ASA(AAAMessage *request);
-int PCC_AAA(AAAMessage *msg);
-
-
-
-AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);
-
-
-#endif /*__PCC_H_*/
+#endif /* PCC_GQPRIMA_H_ */
