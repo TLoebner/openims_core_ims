@@ -305,6 +305,7 @@ cdp_session_t* get_session(str id)
 				strncasecmp(x->id.s,id.s,id.len)==0)
 					return x;
 		}			
+	AAASessionsUnlock(hash);	
 	return 0;
 }
 

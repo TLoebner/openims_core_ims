@@ -112,12 +112,17 @@ error:
 
 
 
-
+//TODO - fix this -  add default realm configurable
 inline str pcc_get_destination_realm(str s)
 {
-	str p;
-	p.s = index(s.s, '.')+1;
-	p.len = s.len - (p.s - s.s);
+	str p={0,0};
+	int i;
+	if (!s.len) return p;
+	for(i=0;i<s.len;i++)
+		if (s.s[i]=='.'){
+			p.s = s.s+1;
+			p.len = s.len - (p.s - s.s);
+		}
 	return p;
 }
 /*
@@ -472,7 +477,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	
 	/* Add Destination-Realm AVP */
 	str realm = pcc_get_destination_realm(forced_qos_peer);
-	if (!PCC_add_destination_realm(aar, realm)) goto error;
+	if (realm.len&&!PCC_add_destination_realm(aar, realm)) goto error;
 	
 	/* Add Auth-Application-Id AVP */
 	if (pcscf_qos_release7==1){
@@ -734,7 +739,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	}
 	
 	str realm = pcc_get_destination_realm(forced_qos_peer);
-	if (!PCC_add_destination_realm(dia_str, realm)) goto error;
+	if (realm.len&&!PCC_add_destination_realm(dia_str, realm)) goto error;
 	
 	if (pcscf_qos_release7){
 		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
@@ -968,7 +973,7 @@ terminate:
 	//first reply to the RAR
 	set_4bytes(x,AAA_SUCCESS);
 	cdpb.AAAAddAVPToMessage(raa,cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA),raa->avpList.tail);
-	if (!PCC_add_destination_realm(raa, realm)) goto error;
+	if (realm.len && !PCC_add_destination_realm(raa, realm)) goto error;
 	if (forced_qos_peer.len)
 	{
 		cdpb.AAASendMessageToPeer(raa,&forced_qos_peer,NULL,NULL);
@@ -995,7 +1000,7 @@ terminate:
 
 	if (!dia_str) goto error;
 
-	if (!PCC_add_destination_realm(dia_str, realm)) goto error;
+	if (realm.len && !PCC_add_destination_realm(dia_str, realm)) goto error;
 	if (pcscf_qos_release7){
 		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
 	}else{
