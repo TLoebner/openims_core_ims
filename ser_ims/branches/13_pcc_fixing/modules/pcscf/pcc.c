@@ -49,6 +49,7 @@
  * P-CSCF Policy and Charging Control interface ops
  *  
  * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
+ * \author Dragos dot Vingarzan -at- fokus dot fraunhofer dot de
  */
 
 #include "pcc.h"
@@ -58,7 +59,7 @@
 #include "dlg_state.h"
 #include "release_call.h" // for the ASR-ASA
 #include "../tm/tm_load.h"
-#include "gqprima.h"
+#include "pcc_gqprima.h"
 #include "registrar_storage.h"
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
