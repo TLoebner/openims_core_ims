@@ -222,7 +222,7 @@ int * callback_singleton;				/**< Callback singleton 								*/
 
 
 int pcscf_use_pcc = 0;								/**< whether to enable or disable pcc */
-char* pcscf_forced_qos_peer = "pdf.open-ims.test";	/**< FQDN of Policy Dicision Function (PDF) for policy control */
+char* pcscf_forced_qos_peer = "";					/**< FQDN of Policy Decision Function (PDF) for policy control */
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
 int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
