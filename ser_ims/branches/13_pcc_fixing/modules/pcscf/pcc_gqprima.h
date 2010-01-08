@@ -1,5 +1,5 @@
 /**
- * $Id: pcc.c,v 1.10 2007/03/14 16:18:28 Alberto Exp $
+ * $Id$
  *   
  * Copyright (C) 2004-2007 FhG Fokus
  *

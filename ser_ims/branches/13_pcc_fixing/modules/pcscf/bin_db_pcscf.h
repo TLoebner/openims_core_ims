@@ -1,5 +1,5 @@
 /*
- * $Id: bin_pcscf_db.h 236 2007-04-18 12:53:40 +0000 (Wed, 18 Apr 2007) vingarzan $
+ * $Id$
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *

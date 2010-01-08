@@ -1,5 +1,5 @@
 /**
- * $Id: gq_avp.c,v 1.16 2007/03/14 16:18:13 chens Exp $
+ * $Id$
  *   
  * Copyright (C) 2004-2007 FhG Fokus
  *
