@@ -1,5 +1,5 @@
 /*
- * $Id: e2.h 2 2006-11-14 22:37:20Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *

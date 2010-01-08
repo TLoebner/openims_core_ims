@@ -1,5 +1,5 @@
 /*
- * $Id: e2_avp.h 299 2007-05-31 18:19:30Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *

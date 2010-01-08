@@ -1,5 +1,5 @@
 /*
- * $Id: p_persistency.c 236 2007-04-18 12:53:40Z vingarzan $
+ * $Id$
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *

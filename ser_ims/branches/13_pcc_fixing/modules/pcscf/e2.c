@@ -1,5 +1,5 @@
 /*
- * $Id: e2.c 297 2007-05-31 11:30:05Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
