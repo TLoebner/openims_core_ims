@@ -74,9 +74,9 @@ peer* new_peer(str fqdn,str realm,int port)
 		goto error;
 	}
 	memset(x,0,sizeof(peer));
-	shm_str_dup(x->fqdn,fqdn);
+	shm_str_dup_macro(x->fqdn,fqdn);
 	if (!x->fqdn.s) goto error;	
-	shm_str_dup(x->realm,realm);
+	shm_str_dup_macro(x->realm,realm);
 	if (!x->realm.s) goto error;	
 	x->port = port;
 	x->lock = lock_alloc();

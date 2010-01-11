@@ -94,7 +94,8 @@
 		mem_type,data_len);
 #endif
 
-#define shm_str_dup(dst,src)\
+
+#define shm_str_dup_macro(dst,src)\
 {\
 	(dst).s = shm_malloc((src).len+1);\
 	if (!(dst).s){LOG_NO_MEM("shm",(src).len+1);}\
