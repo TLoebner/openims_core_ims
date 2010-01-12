@@ -1995,7 +1995,7 @@ int S_mobile_originating(struct sip_msg *msg,char *str1,char *str2)
 	rr_t *rt;
 	str* uri;
 
-	r = cscf_get_first_route(msg,&h);
+	r = cscf_get_first_route(msg,&h,0);
 	LOG(L_DBG,"DBG:"M_NAME":S_mobile_originating: <%.*s>\n",r.len,r.s);	
 	
 	if (!r.len) return CSCF_RETURN_FALSE;

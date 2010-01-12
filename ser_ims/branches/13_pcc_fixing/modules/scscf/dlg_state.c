@@ -641,7 +641,7 @@ static inline int find_dialog_aor(struct sip_msg *msg,enum s_dialog_direction d,
 static inline enum s_dialog_direction find_dialog_route_dir(struct sip_msg *msg)
 {
 	str r;	
-	r = cscf_get_first_route(msg,0);
+	r = cscf_get_first_route(msg,0,0);
 	
 //	LOG(L_ERR,"DBG:"M_NAME":find_dialog_route_dir(): Route <%.*s>\n",r.len,r.s);
 //		scscf_record_route_mo_uri.len,scscf_record_route_mo_uri.s,

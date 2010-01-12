@@ -942,7 +942,7 @@ str cscf_get_contact(struct sip_msg *msg)
  * @param hr - param to return the ptr to the found header
  * @returns the first route string
  */
-str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr)
+str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int shmed)
 {
 	struct hdr_field *h;
 	rr_t *r;
@@ -959,12 +959,22 @@ str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr)
 		return route;
 	}
 	if (hr) *hr = h;
+
+	if(shmed){
+		h->parsed = 0;	
+	}
+
 	if (parse_rr(h)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_first_route: Error parsing as Route header\n");
 		return route;
 	}
 	r = (rr_t*)h->parsed;
 	route = r->nameaddr.uri;
+
+	if(shmed){
+		pkg_free(r);	
+		h->parsed = 0;	
+	}
 	
 	return route;
 }
@@ -984,7 +994,7 @@ int cscf_remove_first_route(struct sip_msg *msg,str value)
 	str route={0,0},x;
 	int i;
 		
-	route = cscf_get_first_route(msg,&h);
+	route = cscf_get_first_route(msg,&h,0);
 	if (!h||!route.len) return 0;
 	
 	if ((route.len == value.len || (route.len>value.len && route.s[value.len]==';')) &&
@@ -1054,7 +1064,7 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h)
 	str route={0,0},x;
 	int i;
 		
-	route = cscf_get_first_route(msg,h);
+	route = cscf_get_first_route(msg,h,0);
 	if (!h||!route.len) return 0;
 	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_remove_own_route: <%.*s>\n",

@@ -135,13 +135,15 @@ int cscf_get_mobile_side(struct sip_msg *msg)
 {
 
 	str first_route={0,0};
-	if ( msg->first_line.type==SIP_REPLY ) {
-		msg= cscf_get_request_from_reply(msg);
-	}
-	
+
 	if (!msg) return -1;
 
-	first_route=cscf_get_first_route(msg,0);
+	if ( msg->first_line.type==SIP_REPLY ) {
+		msg= cscf_get_request_from_reply(msg);
+		first_route=cscf_get_first_route(msg,0,1);
+	}else {
+		first_route=cscf_get_first_route(msg,0,0);
+	}
 
 	// first_route should return 0 if none route header found
 	if (first_route.len == 0 || first_route.s == 0 ) {
