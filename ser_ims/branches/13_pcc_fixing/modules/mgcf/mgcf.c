@@ -91,7 +91,7 @@ int M_PSTN_terminating(struct sip_msg *msg,char *str1,char *str2)
 	str route={0,0};
 	int i;
 	
-	route = cscf_get_first_route(msg,0);
+	route = cscf_get_first_route(msg,0,0);
 	if (!route.len){
 		LOG(L_DBG,"DBG:"M_NAME":M_PSTN_terminating: No Route header.\n");
 		goto done;
@@ -312,7 +312,7 @@ int M_is_in_dialog_simple(struct sip_msg* msg, char* str1, char* str2)
 			LOG(L_ERR,"ERR:"M_NAME":M_is_in_dialog: not implemented for %s\n",str1);
 			return CSCF_RETURN_FALSE;
 	}
-	route = cscf_get_first_route(msg,0);
+	route = cscf_get_first_route(msg,0,0);
 	if (!route.len){
 		LOG(L_DBG,"DBG:"M_NAME":M_is_in_dialog: No Route header.\n");
 		return CSCF_RETURN_FALSE;

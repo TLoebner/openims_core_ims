@@ -685,7 +685,7 @@ int P_mobile_terminating(struct sip_msg *msg,char *str1,char *str2)
 	str route={0,0};
 	int i;
 	
-	route = cscf_get_first_route(msg,0);
+	route = cscf_get_first_route(msg,0,0);
 	if (!route.len){
 		LOG(L_DBG,"DBG:"M_NAME":P_mobile_terminating: No Route header.\n");
 		goto done;
