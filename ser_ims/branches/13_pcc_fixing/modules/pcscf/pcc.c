@@ -340,7 +340,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	enum p_dialog_direction dir = 0;
 	r_contact *contact = 0;
 	str session_id;
-	int is_register=(str1 && (str1[0]=='r' || str1[0]!='R'));
+	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
 	if (is_register){
 		// REGISTRATION
