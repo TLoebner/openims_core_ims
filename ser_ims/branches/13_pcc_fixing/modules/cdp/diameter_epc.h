@@ -477,4 +477,10 @@ enum {
 	AVP_EPC_Service_Info_Status_Preliminary_Service_Information		= 1,
 };
 
+/* TS 29.214 */
+enum {
+	AVP_EPC_Abort_Cause_Bearer_Release								= 0,
+	AVP_EPC_Abort_Cause_Insufficient_Server_Resources				= 1,
+	AVP_ECP_Abort_Cause_Insufficient_Bearer_Resources				= 2
+};
 #endif /*DIAMETER_EPC_H_*/
