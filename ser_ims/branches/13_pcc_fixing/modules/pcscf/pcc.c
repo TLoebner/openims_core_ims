@@ -140,13 +140,18 @@ int cscf_get_mobile_side(struct sip_msg *msg)
 	}
 	
 	if (!msg) return -1;
-	
+
 	first_route=cscf_get_first_route(msg,0);
-	first_route.len-=3; /* forget ;lr*/
-	LOG(L_DBG,"cscf_get_mobile_side : first route is %.*s comparing with %.*s\n",first_route.len,first_route.s,pcscf_record_route_mt_uri.len,pcscf_record_route_mt_uri.s);
-	if (first_route.len == pcscf_record_route_mt_uri.len && strncmp(first_route.s,pcscf_record_route_mt_uri.s,first_route.len)==0)
+
+	// first_route should return 0 if none route header found
+	if (first_route.len == 0 || first_route.s == 0 ) {
+		return -1;	
+	}
+	LOG(L_DBG,"cscf_get_mobile_side : first route is %.*s comparing with %.*s, len is %d \n",first_route.len,first_route.s,pcscf_record_route_mt_uri.len,pcscf_record_route_mt_uri.s, first_route.len);
+
+	if (strncmp(first_route.s,pcscf_record_route_mt_uri.s,pcscf_record_route_mt_uri.len)==0)
 		return 1;
-	else  if (first_route.len == pcscf_record_route_mo_uri.len && strncmp(first_route.s,pcscf_record_route_mo_uri.s,first_route.len)==0)
+	else  if (strncmp(first_route.s,pcscf_record_route_mo_uri.s,pcscf_record_route_mo_uri.len)==0)
 		return 0;
 	else {
 		//it could be the first INVITE so here i can rely in what the config file gave me
