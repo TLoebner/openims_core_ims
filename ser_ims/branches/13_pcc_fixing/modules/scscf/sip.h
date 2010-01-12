@@ -155,7 +155,7 @@ struct via_body* cscf_get_ue_via(struct sip_msg *msg);
 str cscf_get_realm(struct sip_msg *msg);
 str cscf_get_realm_from_uri(str uri);
 
-int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt);
+int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt, int shmed);
 int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id);
 
 name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h);
@@ -170,7 +170,7 @@ str cscf_get_content_type(struct sip_msg *msg);
 
 int cscf_get_content_len(struct sip_msg *msg);
 
-str* cscf_get_service_route(struct sip_msg *msg,int *size);
+str* cscf_get_service_route(struct sip_msg *msg,int *size, int shmed);
 
 int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport);
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport);

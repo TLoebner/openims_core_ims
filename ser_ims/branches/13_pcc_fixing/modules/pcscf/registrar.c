@@ -360,9 +360,9 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	
 	realm = cscf_get_realm(req);
 	
-	cscf_get_p_associated_uri(rpl,&public_id,&public_id_cnt);
+	cscf_get_p_associated_uri(rpl,&public_id,&public_id_cnt,1);
 	
-	service_route = cscf_get_service_route(rpl,&service_route_cnt);
+	service_route = cscf_get_service_route(rpl,&service_route_cnt,1);
 			
 	if ((expires=update_contacts(req,rpl,b->star,expires_hdr,
 			public_id,public_id_cnt,service_route,service_route_cnt,
@@ -370,7 +370,6 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 		goto error;
 
 	//print_r(L_ERR);
-	
 	
 	if (service_route)	pkg_free(service_route);
 	if (public_id) pkg_free(public_id);
