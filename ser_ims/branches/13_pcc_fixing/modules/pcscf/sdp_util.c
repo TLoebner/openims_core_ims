@@ -613,6 +613,9 @@ char * find_sdp_line(char* p, char* plimit, char linechar)
 char * find_next_sdp_line(char* p, char* plimit, char linechar, char* defptr)
 {
 	char *t;
+
+	if( p == NULL || plimit == NULL ) return defptr;
+
 	if (p >= plimit || plimit - p < 3)
 		return defptr;
 	t = find_sdp_line(p + 2, plimit, linechar);
