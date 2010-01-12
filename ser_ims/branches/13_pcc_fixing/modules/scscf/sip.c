@@ -972,7 +972,7 @@ str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int shmed)
 	route = r->nameaddr.uri;
 
 	if(shmed){
-		pkg_free(r);	
+		free_rr(&r);
 		h->parsed = 0;	
 	}
 	
@@ -2358,7 +2358,7 @@ str cscf_get_realm_from_uri(str uri)
  * @param public_id_cnt - the size of the public_id array
  * @returns 1 on success or 0 on error
  */
-int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt)
+int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt, int shmed)
 {
 	struct hdr_field *h;
 	rr_t *r,*r2;
@@ -2406,6 +2406,12 @@ int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id
 		(*public_id)[(*public_id_cnt)]=r2->nameaddr.uri;
 		(*public_id_cnt) = (*public_id_cnt)+1;
 		r2 = r2->next;
+	}
+
+	if(shmed){
+		r = (rr_t*)h->parsed;
+		h->parsed = 0;
+		free_rr(&r);
 	}
 	
 	return 1;
@@ -2616,7 +2622,7 @@ int cscf_get_content_len(struct sip_msg *msg)
  * @param size - size of the returned vector, filled with the result
  * @returns - the str vector of uris
  */
-str* cscf_get_service_route(struct sip_msg *msg,int *size)
+str* cscf_get_service_route(struct sip_msg *msg,int *size, int shmed)
 {
 	struct hdr_field *h;
 	rr_t *r,*r2;
@@ -2663,6 +2669,18 @@ str* cscf_get_service_route(struct sip_msg *msg,int *size)
 				(*size) = (*size)+1;
 				r2 = r2->next;
 			}			
+		}
+		h = h->next;
+	}
+
+	if(shmed) {
+		while(h)
+		if (h->name.len==13 &&
+			strncasecmp(h->name.s,"Service-Route",13)==0)
+		{
+			h->parsed = 0;
+			r = (rr_t*)h->parsed;
+			free_rr(&r);
 		}
 		h = h->next;
 	}

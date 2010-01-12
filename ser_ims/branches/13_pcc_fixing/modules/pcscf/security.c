@@ -329,7 +329,7 @@ str cscf_get_pref_security_header(struct sip_msg *req, str header_name,r_securit
  * @param type - Security Type
  * @param q - Preference Value
  */
-r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_security_type type,float q)
+r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_security_type type,float q, int shmed)
 {
 	contact_t* c=0;
 	contact_body_t* b=0;	
@@ -494,8 +494,19 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 	rc = update_r_contact_sec(puri.host,puri.port_no,puri.proto,
 			&(c->uri),&reg_state,&expires,s);						
 
+	if (shmed && b) {
+                req->contact->parsed = 0;
+                free_contacts(&b->contacts);
+                pkg_free(b);
+        }
+
 	return rc;	
 error:
+	if (shmed && b) {
+                req->contact->parsed = 0;
+                free_contacts(&b->contacts);
+                pkg_free(b);
+        }
 	if (s) free_r_security(s);
 	return 0;	
 }
@@ -674,7 +685,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 
 
 	/* save data into registrar */
-	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q);	
+	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q, 1);	
 	if (!c) goto error;
 	switch(sec_type){
 		case SEC_NONE:
