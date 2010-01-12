@@ -479,7 +479,7 @@ enum {
 
 /* TS 29.214 */
 enum {
-	AVP_EPC_Abort_Cause_Bearer_Release								= 0,
+	AVP_EPC_Abort_Cause_Bearer_Released								= 0,
 	AVP_EPC_Abort_Cause_Insufficient_Server_Resources				= 1,
 	AVP_ECP_Abort_Cause_Insufficient_Bearer_Resources				= 2
 };
