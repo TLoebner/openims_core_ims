@@ -99,6 +99,7 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_record_routes(struct sip_msg *msg);
 
 struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_field *start);
+struct hdr_field* cscf_get_next_record_route2(struct sip_msg *msg,struct hdr_field *start, rr_t* rr_req, int shmed);
 
 struct hdr_field* cscf_get_next_via_hdr(struct sip_msg *msg,struct hdr_field *start);
 str cscf_get_next_via_str(struct sip_msg *msg, struct hdr_field * h, int pos, struct hdr_field **h_out, int *pos_out);

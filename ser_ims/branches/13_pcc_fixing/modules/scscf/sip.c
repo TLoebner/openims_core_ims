@@ -1181,6 +1181,50 @@ struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_fiel
 }
 
 /**
+ * Returns the next record route header
+ * @param msg - the SIP message
+ * @param start - The header to start searching from or NULL if from first header 
+ * @param rr - The parsed result
+ * @param shmed - Indicate if sip msg is shared-memory 
+ * @returns header field on success or NULL on error 
+ */
+struct hdr_field*  cscf_get_next_record_route2(struct sip_msg *msg,struct hdr_field* start, rr_t* rr_req, int shmed)
+{
+	struct hdr_field *h;
+	
+	if (!msg) return 0;
+	
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_next_record_route2: error parsing headers\n");
+		return 0;
+	}
+	if (start) h = start->next;
+	else h = msg->record_route;
+	while (h){
+		if (h->type == HDR_RECORDROUTE_T)
+		{
+			LOG(L_DBG,"DBG:"M_NAME":cscf_get_next_record_route2: RR %.*s\n",h->body.len,h->body.s);
+			if (!h->parsed){
+				if (parse_rr(h)<0){
+					LOG(L_ERR,"ERR:"M_NAME":cscf_get_next_record_routes: Error parsing as Route header\n");
+					return 0;
+				}				
+			}
+			if(shmed) {
+				// force it be to parsed, so that other process will parse it in pkg memeory again
+				// remember to free_rr(&rr_req) in the calling process!!
+				rr_req = (rr_t*) h->parsed;
+				h->parsed = 0;
+		
+			}
+			return h;
+		}
+		h = h->next;
+	}	
+	return 0;
+}
+
+/**
  * Returns the next via header
  * @param msg - the SIP message
  * @param start - The header to start searching from or NULL if from first header 

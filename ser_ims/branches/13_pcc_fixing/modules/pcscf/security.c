@@ -1178,14 +1178,15 @@ int P_follows_record_routes(struct sip_msg *msg, char *str1, char *str2)
 		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): No transactional request found.\n");
 		goto nok;
 	}	
-	temp_hdr_req = cscf_get_next_record_route(req,temp_hdr_req);	
+	temp_hdr_req = cscf_get_next_record_route2(req,temp_hdr_req, rr_req, 1);	
 	if (temp_hdr_req) {
-		rr_req = (rr_t*)temp_hdr_req->parsed;
 		rr_req_i = rr_req;
 	}
 	
 	// Cycle through the request/reply headers and compare
 	while(rr_rpl && rr_req_i) {
+		LOG(L_DBG,"DBG:"M_NAME":P_follows_record_routes(): compare in RR URIs Req = %.*s , Rpl = %.*s \n",
+					rr_req_i->nameaddr.uri.len,rr_req_i->nameaddr.uri.s,rr_rpl->nameaddr.uri.len,rr_rpl->nameaddr.uri.s);
 		
 		if(rr_req_i->nameaddr.uri.len != rr_rpl->nameaddr.uri.len ||
 				strncmp(rr_req_i->nameaddr.uri.s,rr_rpl->nameaddr.uri.s,rr_req_i->nameaddr.uri.len)!=0){
@@ -1207,9 +1208,8 @@ int P_follows_record_routes(struct sip_msg *msg, char *str1, char *str2)
 				free_rr(&rr_req);
 				temp_hdr_req->parsed = NULL;
 			}
-			temp_hdr_req = cscf_get_next_record_route(req,temp_hdr_req);	
+			temp_hdr_req = cscf_get_next_record_route2(req,temp_hdr_req,rr_req,1);	
 			if (temp_hdr_req) {
-				rr_req = (rr_t*)temp_hdr_req->parsed;
 				rr_req_i = rr_req;
 			}
 		}
