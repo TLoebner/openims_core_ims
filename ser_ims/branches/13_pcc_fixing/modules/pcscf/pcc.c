@@ -468,7 +468,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 			}
 		}
 		d_unlock(dlg->hash);
-		dlg=0;
+		//dlg=0;
 	}
 		
 	/* Create an AAR prototype */
@@ -629,8 +629,23 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		if (!aaa) {
 			auth = cdpb.AAAGetAuthSession(session_id);
 			if (auth){
-				cdpb.AAADropAuthSession(auth);
-				auth=0;
+				if(dlg){
+					d_lock(dlg->hash);
+					cdpb.AAADropAuthSession(auth);
+					auth=0;
+					if (dlg->pcc_session_id.s){
+						LOG(L_DBG,"DBG:PCC_AAR: before shm_free \n");
+						shm_free(dlg->pcc_session_id.s);
+						LOG(L_DBG,"DBG:PCC_AAR: first after AAADropAuthSession shm_free \n");
+						dlg->pcc_session_id.s = 0;
+						dlg->pcc_session_id.len = 0;
+					}
+					d_unlock(dlg->hash);
+				}
+				else{
+					cdpb.AAADropAuthSession(auth);
+					auth=0;
+				}
 			}
 		}
 		pkg_free(session_id.s);		
@@ -643,8 +658,21 @@ error:
 	LOG(L_ERR,"PCC_AAR(): unexpected ERROR!!\n");
 	if (aar) cdpb.AAAFreeMessage(&aar);
 	if (auth) {
-	 	cdpb.AAADropAuthSession(auth);
-	 	auth=0;	 	
+		if(dlg){
+			d_lock(dlg->hash);
+			cdpb.AAADropAuthSession(auth);
+			auth=0;
+			if (dlg->pcc_session_id.s){
+				shm_free(dlg->pcc_session_id.s);
+				dlg->pcc_session_id.s = 0;
+				dlg->pcc_session_id.len = 0;
+			}
+			d_unlock(dlg->hash);
+		}
+		else{
+			cdpb.AAADropAuthSession(auth);
+			auth=0;
+		}
 	}
 end:
 	return NULL;
