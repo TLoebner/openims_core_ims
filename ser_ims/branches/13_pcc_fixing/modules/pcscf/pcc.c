@@ -120,8 +120,9 @@ inline str pcc_get_destination_realm(str s)
 	if (!s.len) return p;
 	for(i=0;i<s.len;i++)
 		if (s.s[i]=='.'){
-			p.s = s.s+1;
+			p.s = s.s+i+1;
 			p.len = s.len - (p.s - s.s);
+			break;
 		}
 	return p;
 }
