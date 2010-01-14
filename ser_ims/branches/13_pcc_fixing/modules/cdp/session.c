@@ -174,7 +174,7 @@ int sessions_init(int hash_size)
 	*session_id1 += time(0)&0xFFFF;
 	*session_id2 = 0;
 	
-	add_timer(1,0,session_timer,0);
+	add_timer(1,0,sessions_timer,0);
 	return 1;
 error:
 	return 0;
@@ -339,7 +339,7 @@ void del_session(cdp_session_t *x)
 }
 
 
-/*
+/**
  * Generates a new session_ID (conforming with draft-ietf-aaa-diameter-17).
  * This function is thread safe.
  * @returns an 1 if success or -1 if error.
@@ -380,8 +380,31 @@ error:
 	return -1;
 }
 
+void sessions_log(int level)
+{
+	int hash;
+	cdp_session_t *x;
+#ifdef SER_MOD_INTERFACE
+	if (!is_printable(level))
+#else		
+	if (debug<level)
+#endif
+		return;
+	LOG(level,"------- CDP Sessions ----------------\n");
+	for(hash=0;hash<sessions_hash_size;hash++){		
+		AAASessionsLock(hash);
+		for(x = sessions[hash].head;x;x=x->next) {						
+			LOG(level," %3u. [%.*s] Type [%d]\n",
+					hash,
+					x->id.len,x->id.s,
+					x->type);
+		}
+		AAASessionsUnlock(hash);
+	}
+	LOG(level,"-------------------------------------\n");
+}
 
-void session_timer(time_t now, void* ptr)
+void sessions_timer(time_t now, void* ptr)
 {
 	int hash;
 	cdp_session_t *x;
@@ -428,7 +451,7 @@ void session_timer(time_t now, void* ptr)
 		AAASessionsUnlock(hash);
 	}
 	LOG(L_DBG,"-------------------------------\n");
-					
+	sessions_log(L_NOTICE);
 }
 
 
