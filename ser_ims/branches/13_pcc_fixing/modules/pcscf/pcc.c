@@ -78,7 +78,7 @@ str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
 
 /**
  * Frees memory taken by a pcc_authdata_t structure
-  * @param x - the pcc_authdata_t to be deallocated
+ * @param x - the pcc_authdata_t to be deallocated
  */
 void free_pcc_authdata(pcc_authdata_t *x)
 {
@@ -335,6 +335,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	char *mline=0;
 	char x[4];
 	int i=0,relatch=0;
+	str call_id={0,0};
 	str host={0,0};
 	int port=0,transport=0;
 	int tag=cscf_get_mobile_side(req);
@@ -407,7 +408,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		/* if not, create an authorization session */
 		/* first check on the response */
 		find_dialog_contact(res,dir,&host,&port,&transport);
-		str call_id = cscf_get_call_id(req, 0);
+		call_id = cscf_get_call_id(req, 0);
 		LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		dlg = get_p_dialog(call_id,host,port,transport,&dir);	
 	
@@ -468,7 +469,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 			}
 		}
 		d_unlock(dlg->hash);
-		//dlg=0;
+		dlg=0;
 	}
 		
 	/* Create an AAR prototype */
@@ -629,23 +630,29 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		if (!aaa) {
 			auth = cdpb.AAAGetAuthSession(session_id);
 			if (auth){
-				if(dlg){
-					d_lock(dlg->hash);
-					cdpb.AAADropAuthSession(auth);
-					auth=0;
-					if (dlg->pcc_session_id.s){
-						LOG(L_DBG,"DBG:PCC_AAR: before shm_free \n");
-						shm_free(dlg->pcc_session_id.s);
-						LOG(L_DBG,"DBG:PCC_AAR: first after AAADropAuthSession shm_free \n");
-						dlg->pcc_session_id.s = 0;
-						dlg->pcc_session_id.len = 0;
+				if (is_register){
+					contact=get_r_contact(host,port,transport);
+					if (contact){
+						if (contact->pcc_session_id.s) {
+							shm_free(contact->pcc_session_id.s);
+							contact->pcc_session_id.s = 0;
+							contact->pcc_session_id.len = 0;
+						}
+						r_unlock(contact->hash);
 					}
-					d_unlock(dlg->hash);
+				}else{
+					dlg = get_p_dialog(call_id,host,port,transport,&dir);						
+					if (dlg){
+						if (dlg->pcc_session_id.s) {
+							shm_free(dlg->pcc_session_id.s);
+							dlg->pcc_session_id.s = 0;
+							dlg->pcc_session_id.len = 0;
+						}
+						d_unlock(dlg->hash);
+					}
 				}
-				else{
-					cdpb.AAADropAuthSession(auth);
-					auth=0;
-				}
+				cdpb.AAADropAuthSession(auth);
+				auth=0;
 			}
 		}
 		pkg_free(session_id.s);		
