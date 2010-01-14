@@ -216,7 +216,8 @@ typedef cdp_session_t AAASession;
 
 int sessions_init(int hash_size);
 int sessions_destroy();
-void session_timer(time_t now, void* ptr);
+void sessions_log(int level);
+void sessions_timer(time_t now, void* ptr);
 
 cdp_session_t* get_session(str id);
 cdp_session_t* new_session(str id,cdp_session_type_t type); //this function is needed in the peerstatemachine
