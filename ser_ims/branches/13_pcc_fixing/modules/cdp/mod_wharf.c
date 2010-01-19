@@ -123,8 +123,9 @@ struct cdp_binds cdp_binding={
 	AAAGetAuthSession,
 	AAADropAuthSession,
 	AAATerminateAuthSession,
-	AAASessionsUnlock,
+	
 	AAASessionsLock,
+	AAASessionsUnlock,
 
 	AAACreateTransaction,
 	AAADropTransaction,
