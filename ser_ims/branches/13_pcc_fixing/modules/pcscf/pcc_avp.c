@@ -1221,7 +1221,7 @@ int extract_bandwidth(bandwidth *bw,str sdp,char *start)
 */
 
 /*
- * 
+ * TODO - fix this horrible hack...
  * could return something like 
  * 
  * <tel:+1-234-1234-2134>  and 0
@@ -1236,28 +1236,22 @@ int extract_id(struct sip_msg *r,int tag,str *identification)
 	
 	identification->s=0;
 	identification->len=0;
-	if (!tag)
-	{
+	if (!tag) {
 		f=r->from->body.s;
 		len=r->from->body.len;
 	} else {
 		f=r->to->body.s;
 		len=r->to->body.len;
 	}
-	while (i<len)
-	{
-	
-		switch (f[i])
-		{
-	
+	while (i<len) {
+		switch (f[i]) {
 			case '<' :
-				identification->s=f+i;
+				identification->s=f+i+1;
 				i++;
 				break;
 			case '>' :
-				if (identification->s)
-				 {
-				 	identification->len=(f+i)-identification->s+1;
+				if (identification->s) {
+				 	identification->len=(f+i)-identification->s;
 				 	i=len; // just to get out of here
 					break;
 				 } else {
