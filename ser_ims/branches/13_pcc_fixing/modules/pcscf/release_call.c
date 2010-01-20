@@ -351,7 +351,11 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	firstcseq.len=i;
 	sprintf(firstcseq.s,"%i",d->first_cseq);
 	LOG(L_INFO,"CALLED t_lookup_callid with %.*s, %.*s\n",d->call_id.len,d->call_id.s,firstcseq.len,firstcseq.s);
-	tmb.t_lookup_callid(&t,d->call_id,firstcseq);
+	if (tmb.t_lookup_callid(&t,d->call_id,firstcseq) < 0) {
+		pkg_free(firstcseq.s);
+		LOG(L_ERR,"release_call_previous: t_lookup_callid failed\n");
+		goto error;		
+	}
 	
 	pkg_free(firstcseq.s);
 		
