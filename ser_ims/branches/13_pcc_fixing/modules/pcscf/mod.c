@@ -258,6 +258,7 @@ str ip_address_for_signaling;
  * - P_is_registered() - check if the originator contact of this message is registered at a S-CSCF
  * - P_assert_identity() - assert the identity by removing the P-Preffered-Identity/P-Asserted-Identity header and 
  *  then add a trusted P-Asserted-Identity header
+ * - P_is_deregistration() - returns true if there's an Expires header set to 0 or the maximum expires parameter between all contacts is 0
  * <p>
  * - P_process_notification() - process a NOTIFY for the reg event
  * <p>
@@ -333,6 +334,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
 	{"P_is_registered",				P_is_registered, 			0, 0, REQUEST_ROUTE},
 	{"P_assert_identity",			P_assert_identity, 			0, 0, REQUEST_ROUTE},
+	{"P_is_deregistration",			P_is_deregistration, 		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 
 	{"P_process_notification",		P_process_notification, 	0, 0, REQUEST_ROUTE},
 
@@ -371,6 +373,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE},
 	
 	{"P_access_network_info",		P_access_network_info, 		1, 0, REQUEST_ROUTE},
+	
 	
 	/*emergency services exported functions*/
 	{"P_is_anonymous_identity",		P_is_anonymous_identity, 	0, 0, REQUEST_ROUTE},

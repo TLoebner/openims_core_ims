@@ -99,4 +99,8 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2);
 
 int P_access_network_info(struct sip_msg *req,char *str1,char *str2);
 
+int get_max_expires(struct sip_msg *msg);
+
+int P_is_deregistration(struct sip_msg *msg, char* str1, char* str2);
+
 #endif /* P_CSCF_REGISTRATION_H */

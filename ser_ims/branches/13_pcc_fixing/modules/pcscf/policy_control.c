@@ -157,8 +157,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	}
 
 	/* Get the SIP request from this transaction */
-	if (!preliminary)
-	{
+	if (!preliminary) {
 		t=tmb.t_gett();
 		if (!t) {
 			LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: cannot get the transaction\n");
@@ -190,9 +189,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	} else {
 		//preliminary
 		if ((strncmp(msg->first_line.u.request.method.s,"INVITE",6)==0))
-		{
 			aaa = PCC_AAR(msg,0,str1);
-		}
 	}
 
 	/* Create an AAR based on request and reply and send it to PDF */

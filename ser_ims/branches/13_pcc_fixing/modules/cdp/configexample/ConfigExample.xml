@@ -11,6 +11,8 @@
 	QueueLength="32"
 	TransactionTimeout="5"
 	SessionsHashSize="128"
+	DefaultAuthSessionTimeout="60"
+	DefaultAuthSessionTimeout="300"
 >
 	<Peer FQDN="hss.open-ims.test" Realm="open-ims.test" port="3868"/>
 
