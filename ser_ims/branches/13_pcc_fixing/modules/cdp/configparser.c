@@ -258,6 +258,14 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 	xc = xmlGetProp(root,(xmlChar*)"SessionsHashSize");
 	if (xc) {x->sessions_hash_size = atoi((char*)xc);xmlFree(xc);}
 	else x->sessions_hash_size = 128;
+
+	xc = xmlGetProp(root,(xmlChar*)"DefaultAuthSessionTimeout");
+	if (xc) {x->default_auth_session_timeout = atoi((char*)xc);xmlFree(xc);}
+	else x->default_auth_session_timeout = 60;
+
+	xc = xmlGetProp(root,(xmlChar*)"MaxAuthSessionTimeout");
+	if (xc) {x->max_auth_session_timeout = atoi((char*)xc);xmlFree(xc);}
+	else x->max_auth_session_timeout = 300;
 	
 	for(child = root->children; child; child = child->next)
 		if (child->type == XML_ELEMENT_NODE)

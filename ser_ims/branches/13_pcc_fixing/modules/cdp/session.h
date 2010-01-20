@@ -127,8 +127,8 @@ typedef enum {
 typedef struct _cdp_auth_session_t {
 	cdp_auth_state state;	/**< current state */
 	
-	time_t timeout;			/**< absolute time for timeout  */
-	time_t lifetime;		/**< absolute time for lifetime */
+	time_t timeout;			/**< absolute time for session timeout  -1 means forever */
+	time_t lifetime;		/**< absolute time for auth lifetime -1 means forever */
 	time_t grace_period;	/**< grace_period in seconds 	*/ 
 		
 	void* generic_data;			

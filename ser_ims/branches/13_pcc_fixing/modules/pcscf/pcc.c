@@ -61,6 +61,7 @@
 #include "../tm/tm_load.h"
 #include "pcc_gqprima.h"
 #include "registrar_storage.h"
+#include "registrar.h"
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
 
@@ -343,6 +344,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	r_contact *contact = 0;
 	str session_id;
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
+	uint32_t duration=-1; //forever - this should be overwritten anyway
 	
 	if (is_register){
 		// REGISTRATION
@@ -380,7 +382,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 				STR_SHM_DUP(pcc_authdata->host,host,"shm");
 				pcc_authdata->port=port;
 				pcc_authdata->transport=transport;
-	
 				LOG(L_INFO,"PCC_AAR(): creating PCC Session for registration\n");
 				auth = cdpb.AAACreateAuthSession((void *)pcc_authdata,1,1,callback_for_pccsession,0);
 				if (!auth) {
@@ -391,6 +392,13 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 					goto error;
 				}
 				STR_SHM_DUP(contact->pcc_session_id,auth->id,"shm") ;
+				
+				if (contact->reg_state==REGISTERED) duration = contact->expires;
+				else duration = time(0);
+				auth->u.auth.lifetime = duration;
+				auth->u.auth.grace_period = REGISTRATION_GRACE_PERIOD;
+				if (auth->u.auth.timeout<auth->u.auth.lifetime) auth->u.auth.timeout = duration;
+				
 				r_unlock(contact->hash);
 			}
 		}

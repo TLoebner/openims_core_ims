@@ -120,9 +120,9 @@ void registrar_timer(unsigned int ticks, void* param)
 							LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and Deregistered.\n",
 								c->uri.len,c->uri.s);		
 							if (c->security){
-								/* If we have IPSec SAs, we keep them 60 seconds more to relay further messages */
+								/* If we have IPSec SAs, we keep them REGISTRATION_GRACE_PERIOD seconds more to relay further messages */
 								c->reg_state = DEREGISTERED;
-								c->expires = time_now + 60;
+								c->expires = time_now + REGISTRATION_GRACE_PERIOD;
 							}else{
 								LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",
 									c->uri.len,c->uri.s);						

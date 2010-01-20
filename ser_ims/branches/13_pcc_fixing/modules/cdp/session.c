@@ -394,10 +394,24 @@ void sessions_log(int level)
 	for(hash=0;hash<sessions_hash_size;hash++){		
 		AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=x->next) {						
-			LOG(level," %3u. [%.*s] Type [%d]\n",
+			LOG(level," %3u. [%.*s] AppId [%d] Type [%d]\n",
 					hash,
 					x->id.len,x->id.s,
+					x->application_id,
 					x->type);
+			switch (x->type){
+				case AUTH_CLIENT_STATEFULL:
+				case AUTH_SERVER_STATEFULL:
+					LOG(level,"\tAuth State [%d] Timeout [%d] Lifetime [%d] Grace [%d] Generic [%p]\n",
+							x->u.auth.state,
+							(int)(x->u.auth.timeout-time(0)),
+							(int)(x->u.auth.lifetime-time(0)),
+							(int)(x->u.auth.grace_period),
+							x->u.auth.generic_data);
+					break;
+				default:
+					break;
+			}
 		}
 		AAASessionsUnlock(hash);
 	}
@@ -414,17 +428,14 @@ void sessions_timer(time_t now, void* ptr)
 		AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=x->next) {
 			
-			
 			LOG(L_DBG,"session of type [%i] with id %.*s in hash %u\n",x->type,x->id.len,x->id.s,hash);
 			if (x->type==AUTH_CLIENT_STATEFULL) {
 				LOG(L_DBG,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
 			} else LOG(L_INFO,"\n");
-			
-			
 			 
 			switch (x->type){
 				case AUTH_CLIENT_STATEFULL:
-					if (x->u.auth.timeout!=0 && x->u.auth.timeout<=now){
+					if (x->u.auth.timeout>=0 && x->u.auth.timeout<=now){
 						//Session timeout
 						LOG(L_CRIT,"session TIMEOUT\n");
 						if (x->cb) {
@@ -433,9 +444,9 @@ void sessions_timer(time_t now, void* ptr)
 						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
 					}
-					if (x->u.auth.timeout!=0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
+					if (x->u.auth.lifetime>=0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
 						//lifetime + grace timeout
-						LOG(L_CRIT,"grace TIMEOUT\n");
+						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
 						if (x->cb){
 							cb = x->cb;	
 							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x->cb_param,x);
@@ -512,9 +523,9 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 		s->u.auth.generic_data = generic_data;
 		s->cb = cb;
 		s->cb_param = param;
-		s->u.auth.timeout=time(0)+config->tc*30; 
-		s->u.auth.lifetime=time(0)+config->tc*32;
-		s->u.auth.grace_period=config->tc*2;
+		s->u.auth.timeout=time(0)+config->default_auth_session_timeout; 
+		s->u.auth.lifetime=s->u.auth.timeout;
+		s->u.auth.grace_period=0;
 		LOG(L_DBG,"id is %.*s",s->id.len,s->id.s);
 		LOG(L_DBG,"hash is %u",s->hash);
 		add_session(s);

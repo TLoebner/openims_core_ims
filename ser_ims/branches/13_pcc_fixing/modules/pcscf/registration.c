@@ -1261,5 +1261,53 @@ error :
 }
 
 
+int get_max_expires(struct sip_msg *msg)
+{
+	int expires_hdr=0,r,max_expires;
+	contact_t* c=0;
+	contact_body_t* b=0;	
+	
+	if (!msg) return -1;
+	expires_hdr = cscf_get_expires_hdr(msg);
 
+	if (parse_headers(msg, HDR_EOH_F, 0) <0) {
+		LOG(L_ERR,"ERR:"M_NAME":get_max_expires: error parsing headers\n");
+		return expires_hdr;
+	}	
+	
+	b = cscf_parse_contacts(msg);
+	
+	if (!b||!b->contacts) {
+		LOG(L_DBG,"DBG:"M_NAME":get_max_expires: No contacts found\n");
+		return expires_hdr;
+	}
+	
+	if (b) c = b->contacts;
+	
+	max_expires = expires_hdr;
+	while(c){
+		r = expires_hdr;
+		if (str2int(&(c->expires->body), (unsigned int*)&r) < 0) 
+			r = 0;
+		if (r>max_expires) max_expires = r;
+		c = c->next;
+	}
+	return max_expires;
+}
 
+int P_is_deregistration(struct sip_msg *msg, char* str1, char* str2)
+{
+	int max_expires = get_max_expires(msg);
+	
+	if (max_expires<0){
+		LOG(L_INFO,"DBG:"M_NAME":P_is_deregistration: no expires headers, no expires contact parameters. It is what it is.\n");		
+		return CSCF_RETURN_FALSE;		
+	}else if (max_expires==0){
+		LOG(L_INFO,"DBG:"M_NAME":P_is_deregistration: max expires is 0 => deregistration\n");		
+		return CSCF_RETURN_TRUE;		
+	} else {
+		LOG(L_INFO,"DBG:"M_NAME":P_is_deregistration: max expires is %d\n",max_expires);		
+		return CSCF_RETURN_FALSE;		
+	}
+	
+}
