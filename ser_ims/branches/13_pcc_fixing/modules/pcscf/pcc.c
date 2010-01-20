@@ -733,43 +733,71 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	//AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
 	p_dialog *dlg=0;
+	r_contact *contact=0;
 	char x[4];
 	str host;
 	int port,transport;
 	struct sip_msg *req;
-	enum p_dialog_direction dir=get_dialog_direction(str1);
-	int tag = (int)dir;
+	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
+	enum p_dialog_direction dir;
+	str call_id;	
 	
 	LOG(L_DBG,"PCC_STR()\n");
 /** get Diameter session based on sip call_id */
-	str call_id = cscf_get_call_id(msg, 0);
-	find_dialog_contact(msg,dir,&host,&port,&transport);
-	dlg=get_p_dialog(call_id,host,port,transport,&dir);
-	if (!dlg && msg->first_line.type==SIP_REPLY) {
-		req = cscf_get_request_from_reply(msg);
-		find_dialog_contact(req,dir,&host,&port,&transport);
+	if (is_register){
+		//Registration
+		dir = (int) DLG_MOBILE_ORIGINATING;
+		find_dialog_contact(msg,dir,&host,&port,&transport);	
+		contact=get_r_contact(host,port,transport);
+		if (!contact) {
+			LOG(L_ERR,"ERR:PCC_STR: not sending STR for subscription to path status, for unknown contact\n");
+			goto end;
+		} else {
+			if (contact->pcc_session_id.len) {
+				auth=cdpb.AAAGetAuthSession(contact->pcc_session_id);
+				// done here , so that the callback doesnt call any expirations
+				if (contact->pcc_session_id.s) shm_free(contact->pcc_session_id.s);		
+				contact->pcc_session_id.len=0; 
+				contact->pcc_session_id.s=0; 
+			} else 
+				LOG(L_DBG,"DBG:PCC_STR: no pcc_session_id found on contact, maybe already dropped\n");
+			r_unlock(contact->hash);
+		}
+	}else {
+		//Call
+		dir = get_dialog_direction(str1);
+		find_dialog_contact(msg,dir,&host,&port,&transport);
+		call_id =cscf_get_call_id(msg, 0);
 		dlg=get_p_dialog(call_id,host,port,transport,&dir);
-	}
+		if (!dlg && msg->first_line.type==SIP_REPLY) {
+			req = cscf_get_request_from_reply(msg);
+			find_dialog_contact(req,dir,&host,&port,&transport);
+			dlg=get_p_dialog(call_id,host,port,transport,&dir);
+		}
 			
-	if (!dlg) {
-		LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,tag);
-		goto end;
-	}
-	if (!dlg->pcc_session_id.len) {
-		LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,tag);
-		d_unlock(dlg->hash);
-		goto end;
-	} else {	
-		auth=cdpb.AAAGetAuthSession(dlg->pcc_session_id);
-		// done here , so that the callback doesnt call release_call
-		if (dlg->pcc_session_id.s) shm_free(dlg->pcc_session_id.s);		
-		dlg->pcc_session_id.len=0; 
-		dlg->pcc_session_id.s=0; 
-		d_unlock(dlg->hash);	
+		if (!dlg) {
+			LOG(L_ERR,"PCC_STR(): ending a dialog already dropped? callid %.*s and tag %i\n",call_id.len,call_id.s,dir);
+			goto end;
+		}
+		if (!dlg->pcc_session_id.len) {
+			LOG(L_ERR,"PCC_STR(): this dialog has no pcc session associated [%.*s tag %i]\n",call_id.len,call_id.s,dir);
+			d_unlock(dlg->hash);
+			goto end;
+		} else {	
+			auth=cdpb.AAAGetAuthSession(dlg->pcc_session_id);
+			// done here , so that the callback doesnt call release_call
+			if (dlg->pcc_session_id.s) shm_free(dlg->pcc_session_id.s);		
+			dlg->pcc_session_id.len=0; 
+			dlg->pcc_session_id.s=0; 
+			d_unlock(dlg->hash);	
+		}
 	}
 
-	if (auth->u.auth.state==AUTH_ST_DISCON)
-	{
+	if (!auth){
+		LOG(L_INFO,"PCC_STR(): no session found - ignoring\n");
+		goto end;
+	}
+	if (auth->u.auth.state==AUTH_ST_DISCON){
 		// If we are in DISCON is because an STR was already sent
 		// so just wait for STA or for Grace Timout to happen
 		goto end;
@@ -804,13 +832,10 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	
 	
 	if (forced_qos_peer.len)
-	{
-		//dia_sta = cdpb.AAASendRecvMessageToPeer(dia_str,&forced_qos_peer);
-		 cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
-	}else { 
-		//dia_sta = cdpb.AAASendRecvMessage(dia_str);
-		cdpb.AAASendMessage(dia_str,NULL,NULL);	
-	} 
+		cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
+	else 
+		cdpb.AAASendMessage(dia_str,NULL,NULL);
+	
 	// I send STR and i dont wait for STA because the diameter state machine will do
 	// This prevents a memory leak !!!
 	// The SM sometimes sends STR by itself and then later has to free STA
