@@ -440,7 +440,7 @@ void sessions_timer(time_t now, void* ptr)
 						LOG(L_CRIT,"session TIMEOUT\n");
 						if (x->cb) {
 							cb = x->cb;
-							(cb)(AUTH_EV_SESSION_TIMEOUT,x->cb_param,x);
+							(cb)(AUTH_EV_SESSION_TIMEOUT,x);
 						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
 					}
@@ -449,7 +449,7 @@ void sessions_timer(time_t now, void* ptr)
 						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
 						if (x->cb){
 							cb = x->cb;	
-							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x->cb_param,x);
+							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x);
 						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
 					}
@@ -493,7 +493,7 @@ void AAADropSession(AAASession *s)
 {
 	// first give a chance to the cb to free the generic param
 	if (s&&s->cb) {
-		(s->cb)(AUTH_EV_SESSION_TIMEOUT,s->cb_param,s);
+		(s->cb)(AUTH_EV_SESSION_DROP,s);
 	}
 	free_session(s);
 }
@@ -503,7 +503,7 @@ void AAADropSession(AAASession *s)
  * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
  * @returns the new AAASession or null on error
  */
-AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param)
+AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb)
 {
 	AAASession *s;
 	str id;
@@ -522,7 +522,6 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 	if (s) {
 		s->u.auth.generic_data = generic_data;
 		s->cb = cb;
-		s->cb_param = param;
 		s->u.auth.timeout=time(0)+config->default_auth_session_timeout; 
 		s->u.auth.lifetime=s->u.auth.timeout;
 		s->u.auth.grace_period=0;

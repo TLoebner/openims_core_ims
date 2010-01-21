@@ -62,7 +62,7 @@
 
 
 /** Function for callback on session events: timeout, etc. */
-typedef void (AAASessionCallback_f)(int event,void *param,void *session);
+typedef void (AAASessionCallback_f)(int event,void *session);
 
 /** Types of sessions */
 typedef enum {
@@ -200,8 +200,7 @@ typedef struct _cdp_session_t {
 	} u;
 	 
 	AAASessionCallback_f *cb;			/**< session callback function */
-	void *cb_param;						/**< session callback generic parameter */
-	 
+	
 	struct _cdp_session_t *next,*prev; 	
 } cdp_session_t;
 

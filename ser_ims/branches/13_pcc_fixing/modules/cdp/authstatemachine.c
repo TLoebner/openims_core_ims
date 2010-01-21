@@ -753,7 +753,7 @@ void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)
 	LOG(L_INFO,"cleaning up session %.*s\n",s->id.len,s->id.s);
 	if (s->cb) {
 		cb = s->cb;
-		(cb) (AUTH_EV_SERVICE_TERMINATED,s->cb_param,s);
+		(cb) (AUTH_EV_SERVICE_TERMINATED,s);
 	}
 	
 	AAADropAuthSession(s);
