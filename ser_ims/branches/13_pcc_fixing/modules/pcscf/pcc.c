@@ -198,7 +198,7 @@ static str s_term={";term",5};
 
 
 
-void callback_for_pccsession(int event,void *param,void *session)
+void callback_for_pccsession(int event,void *session)
 {
 	pcc_authdata_t *pcc_data;
 	cdp_session_t *x=session;
@@ -383,7 +383,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 				pcc_authdata->port=port;
 				pcc_authdata->transport=transport;
 				LOG(L_INFO,"PCC_AAR(): creating PCC Session for registration\n");
-				auth = cdpb.AAACreateAuthSession((void *)pcc_authdata,1,1,callback_for_pccsession,0);
+				auth = cdpb.AAACreateAuthSession((void *)pcc_authdata,1,1,callback_for_pccsession);
 				if (!auth) {
 					LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
 					r_unlock(contact->hash);
@@ -451,7 +451,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 			}
 			// i should set a callback for the expiration of the session
 			LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
-			auth = cdpb.AAACreateAuthSession((void *)pcc_authdata,1,1,callback_for_pccsession,0);
+			auth = cdpb.AAACreateAuthSession((void *)pcc_authdata,1,1,callback_for_pccsession);
 			if (!auth) {
 				LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
 				free_pcc_authdata(pcc_authdata);
@@ -471,7 +471,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 				LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
 				if (pcscf_qos_release7==-1)
 				{
-					pcc_authdata = (pcc_authdata_t *)auth->cb_param;
+					pcc_authdata = (pcc_authdata_t *)auth->u.auth.generic_data;
 					relatch = pcc_authdata->latch;
 				}
 			}

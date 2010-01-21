@@ -74,7 +74,7 @@ typedef AAAMessage* (*AAACreateResponse_f)(AAAMessage *request);
 typedef AAASession* (*AAACreateSession_f)(void *generic_data);
 typedef void (*AAADropSession_f)(AAASession *s);
 
-typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb,void *param);
+typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb);
 typedef AAASession* (*AAAGetAuthSession_f)(str id);
 typedef void (*AAADropAuthSession_f)(AAASession *s);
 typedef void (*AAATerminateAuthSession_f)(AAASession *s);
