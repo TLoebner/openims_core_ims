@@ -1094,7 +1094,6 @@ void Snd_Message(peer *p, AAAMessage *msg)
 void Rcv_Process(peer *p, AAAMessage *msg)
 {
 	AAASession *session=0;
-	str id={0,0};
 	int nput=0;
 	if (msg->sessionId) session = cdp_get_session(msg->sessionId->data);
 
