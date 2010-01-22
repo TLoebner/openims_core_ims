@@ -57,122 +57,18 @@
 
 #include "utils.h"
 #include "diameter.h"
+#include "diameter_api.h"
 #include "diameter_ims.h"
 #include "diameter_epc.h"
 #include "session.h"
 #include "peer.h"
 
-#define NO_SCRIPT	-1
-
-
-typedef AAAMessage* (*AAACreateRequest_f)(AAAApplicationId app_id,
-							AAACommandCode command_code,
-							AAAMsgFlag flags,
-							AAASession *session);
-typedef AAAMessage* (*AAACreateResponse_f)(AAAMessage *request);
-
-typedef AAASession* (*AAACreateSession_f)(void *generic_data);
-typedef void (*AAADropSession_f)(AAASession *s);
-
-typedef AAASession* (*AAACreateAuthSession_f)(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb);
-typedef AAASession* (*AAAGetAuthSession_f)(str id);
-typedef void (*AAADropAuthSession_f)(AAASession *s);
-typedef void (*AAATerminateAuthSession_f)(AAASession *s);
-typedef void (*AAASessionsUnlock_f) (unsigned int hash);
-typedef void (*AAASessionsLock_f) (unsigned int hash);
-
-typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
-typedef int (*AAADropTransaction_f)(AAATransaction *trans);
-
-
-typedef AAA_AVP* (*AAACreateAVP_f)(
-									AAA_AVPCode code,
-									AAA_AVPFlag flags,
-									AAAVendorId vendorId,
-									char *data,
-									size_t length,
-									AVPDataStatus data_status);
-		
-typedef AAAReturnCode (*AAAAddAVPToMessage_f)(
-												AAAMessage *msg,
-												AAA_AVP *avp,
-												AAA_AVP *position);
-
-typedef void (*AAAAddAVPToList_f)(AAA_AVP_LIST *list,AAA_AVP *avp);											
-
-typedef AAA_AVP* (*AAAFindMatchingAVP_f)(
-										AAAMessage *msg,
-										AAA_AVP *startAvp,
-										AAA_AVPCode avpCode,
-										AAAVendorId vendorId,
-										AAASearchType searchType);
-
-typedef AAA_AVP  *(*AAAFindMatchingAVPList_f)(
-												AAA_AVP_LIST avpList,
-												AAA_AVP *startAvp,
-												AAA_AVPCode avpCode,
-												AAAVendorId vendorId,
-												AAASearchType searchType);
-typedef AAA_AVP* (*AAAGetNextAVP_f)(AAA_AVP *avp);
-
-
-
-typedef AAAReturnCode (*AAAFreeAVP_f)(
-										AAA_AVP **avp);
-		
-typedef AAAReturnCode  (*AAAFreeAVPList_f)(AAA_AVP_LIST *avpList);
-
-typedef str (*AAAGroupAVPS_f)(AAA_AVP_LIST avps);
-
-typedef AAA_AVP_LIST (*AAAUngroupAVPS_f)(str buf);
-
-
-typedef AAAReturnCode (*AAASendMessage_f)(	
-											AAAMessage *message,
-											AAATransactionCallback_f *callback_f,
-											void *callback_param);
-
-typedef AAAReturnCode (*AAASendMessageToPeer_f)(	
-											AAAMessage *message,
-											str *peer_id, 
-											AAATransactionCallback_f *callback_f,
-											void *callback_param);
-
-typedef AAAMessage* (*AAASendRecvMessage_f)(AAAMessage *msg);
-
-typedef AAAMessage* (*AAASendRecvMessageToPeer_f)(AAAMessage *msg, str *peer_id);
-
-typedef AAAReturnCode (*AAAFreeMessage_f)(
-											AAAMessage **message);
-
-
-typedef int (*AAAAddRequestHandler_f)(AAARequestHandler_f *f,void *param);
-typedef int (*AAAAddResponseHandler_f)(AAAResponseHandler_f *f,void *param);
-
 
 struct cdp_binds {
-	AAASendMessage_f			AAASendMessage;
-	AAASendMessageToPeer_f		AAASendMessageToPeer;
-	AAASendRecvMessage_f		AAASendRecvMessage;
-	AAASendRecvMessageToPeer_f	AAASendRecvMessageToPeer;
-	AAAFreeMessage_f			AAAFreeMessage;
-	
 	AAACreateRequest_f			AAACreateRequest;
 	AAACreateResponse_f			AAACreateResponse;	
+	AAAFreeMessage_f			AAAFreeMessage;
 	
-	AAACreateSession_f			AAACreateSession;
-	AAADropSession_f			AAADropSession;
-
-	AAACreateAuthSession_f		AAACreateAuthSession;
-	AAAGetAuthSession_f			AAAGetAuthSession;
-	AAADropAuthSession_f		AAADropAuthSession;
-	AAATerminateAuthSession_f	AAATerminateAuthSession;
-
-	AAASessionsLock_f 			AAASessionsLock;
-	AAASessionsUnlock_f			AAASessionsUnlock;
-
-	AAACreateTransaction_f		AAACreateTransaction;
-	AAADropTransaction_f		AAADropTransaction;
 	
 	AAACreateAVP_f				AAACreateAVP;
 	AAAAddAVPToMessage_f		AAAAddAVPToMessage;
@@ -184,14 +80,40 @@ struct cdp_binds {
 	AAAFreeAVPList_f			AAAFreeAVPList;
 	AAAGroupAVPS_f				AAAGroupAVPS;
 	AAAUngroupAVPS_f			AAAUngroupAVPS;
+
+	AAASendMessage_f			AAASendMessage;
+	AAASendMessageToPeer_f		AAASendMessageToPeer;
+	AAASendRecvMessage_f		AAASendRecvMessage;
+	AAASendRecvMessageToPeer_f	AAASendRecvMessageToPeer;
+	
 	
 	AAAAddRequestHandler_f		AAAAddRequestHandler;
 	AAAAddResponseHandler_f		AAAAddResponseHandler;
+
+
+	AAACreateTransaction_f		AAACreateTransaction;
+	AAADropTransaction_f		AAADropTransaction;
+	
+	
+	AAACreateSession_f			AAACreateSession;
+	AAAGetSession_f				AAAGetSession;
+	AAADropSession_f			AAADropSession;
+	AAASessionsLock_f 			AAASessionsLock;
+	AAASessionsUnlock_f			AAASessionsUnlock;
+
+	AAACreateClientAuthSession_f AAACreateClientAuthSession;
+	AAACreateServerAuthSession_f AAACreateServerAuthSession;
+	AAAGetAuthSession_f			AAAGetAuthSession;
+	AAADropAuthSession_f		AAADropAuthSession;
+	AAATerminateAuthSession_f	AAATerminateAuthSession;
 
 };
 
 
 #ifdef CDP_FOR_SER
+
+#define NO_SCRIPT	-1
+
 
 typedef int(*load_cdp_f)( struct cdp_binds *cdpb );
 int load_cdp( struct cdp_binds *cdpb);

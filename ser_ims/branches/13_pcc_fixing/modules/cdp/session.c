@@ -131,7 +131,7 @@ void free_session(cdp_session_t *x)
 /**
  * Initializes the session related structures.
  */
-int sessions_init(int hash_size)
+int cdp_sessions_init(int hash_size)
 {
 	int i;
 	session_lock = lock_alloc();
@@ -174,7 +174,7 @@ int sessions_init(int hash_size)
 	*session_id1 += time(0)&0xFFFF;
 	*session_id2 = 0;
 	
-	add_timer(1,0,sessions_timer,0);
+	add_timer(1,0,cdp_sessions_timer,0);
 	return 1;
 error:
 	return 0;
@@ -183,7 +183,7 @@ error:
 /**
  * Destroys the session related structures.
  */
-int sessions_destroy()
+int cdp_sessions_destroy()
 {
 	int i;
 	cdp_session_t *n,*x;
@@ -247,7 +247,7 @@ inline unsigned int get_str_hash(str x,int hash_size)
  * @param type - the session type
  * @returns the new cdp_session_t on success or 0 on failure
  */
-cdp_session_t* new_session(str id,cdp_session_type_t type)
+cdp_session_t* cdp_new_session(str id,cdp_session_type_t type)
 {
 	cdp_session_t *x=0;
 
@@ -270,7 +270,7 @@ error:
  * \note This returns with a lock, so unlock when done
  * @param x - the session to add
  */
-void add_session(cdp_session_t *x)
+void cdp_add_session(cdp_session_t *x)
 {
 //	unsigned int hash;
 	if (!x) return;
@@ -291,15 +291,14 @@ void add_session(cdp_session_t *x)
  * @param id - the id of the session
  * @returns the session if found or 0 if not
  */
-cdp_session_t* get_session(str id)
+cdp_session_t* cdp_get_session(str id)
 {
 	unsigned int hash;
 	cdp_session_t *x;
 	hash = get_str_hash(id,sessions_hash_size);
 	LOG(L_DBG,"calling get session with id %.*s and hash %u\n",id.len,id.s,hash);
 	AAASessionsLock(hash);
-		for(x = sessions[hash].head;x;x=x->next)
-		{
+		for(x = sessions[hash].head;x;x=x->next){
 			LOG(L_DBG,"looking for |%.*s| in |%.*s|\n",id.len,id.s,x->id.len,x->id.s);
 			if (x->id.len == id.len &&
 				strncasecmp(x->id.s,id.s,id.len)==0)
@@ -380,7 +379,7 @@ error:
 	return -1;
 }
 
-void sessions_log(int level)
+void cdp_sessions_log(int level)
 {
 	int hash;
 	cdp_session_t *x;
@@ -405,7 +404,7 @@ void sessions_log(int level)
 					LOG(level,"\tAuth State [%d] Timeout [%d] Lifetime [%d] Grace [%d] Generic [%p]\n",
 							x->u.auth.state,
 							(int)(x->u.auth.timeout-time(0)),
-							(int)(x->u.auth.lifetime-time(0)),
+							x->u.auth.lifetime?(int)(x->u.auth.lifetime-time(0)):-1,
 							(int)(x->u.auth.grace_period),
 							x->u.auth.generic_data);
 					break;
@@ -418,21 +417,15 @@ void sessions_log(int level)
 	LOG(level,"-------------------------------------\n");
 }
 
-void sessions_timer(time_t now, void* ptr)
+void cdp_sessions_timer(time_t now, void* ptr)
 {
 	int hash;
 	cdp_session_t *x;
 	AAASessionCallback_f *cb;
-	LOG(L_DBG,"-------session timer --------\n");
 	for(hash=0;hash<sessions_hash_size;hash++){		
 		AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=x->next) {
 			
-			LOG(L_DBG,"session of type [%i] with id %.*s in hash %u\n",x->type,x->id.len,x->id.s,hash);
-			if (x->type==AUTH_CLIENT_STATEFULL) {
-				LOG(L_DBG,"auth state [%i] timeout [%li]\n",x->u.auth.state,x->u.auth.timeout-now);
-			} else LOG(L_INFO,"\n");
-			 
 			switch (x->type){
 				case AUTH_CLIENT_STATEFULL:
 					if (x->u.auth.timeout>=0 && x->u.auth.timeout<=now){
@@ -443,8 +436,7 @@ void sessions_timer(time_t now, void* ptr)
 							(cb)(AUTH_EV_SESSION_TIMEOUT,x);
 						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
-					}
-					if (x->u.auth.lifetime>=0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
+					} else if (x->u.auth.lifetime>0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
 						//lifetime + grace timeout
 						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
 						if (x->cb){
@@ -454,6 +446,25 @@ void sessions_timer(time_t now, void* ptr)
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
 					}
 					break;
+				case AUTH_SERVER_STATEFULL:
+					if (x->u.auth.timeout>=0 && x->u.auth.timeout<=now){
+						//Session timeout
+						LOG(L_CRIT,"session TIMEOUT\n");
+						if (x->cb) {
+							cb = x->cb;
+							(cb)(AUTH_EV_SESSION_TIMEOUT,x);
+						}
+						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
+					}else if (x->u.auth.lifetime>0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
+						//lifetime + grace timeout
+						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
+						if (x->cb){
+							cb = x->cb;	
+							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x);
+						}
+						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
+					}
+					break;
 				default:
 					break;
 					
@@ -461,8 +472,7 @@ void sessions_timer(time_t now, void* ptr)
 		}
 		AAASessionsUnlock(hash);
 	}
-	LOG(L_DBG,"-------------------------------\n");
-	sessions_log(L_NOTICE);
+	cdp_sessions_log(L_INFO);
 }
 
 
@@ -478,7 +488,7 @@ AAASession* AAACreateSession(void *generic_data)
 	str id;
 	
 	generate_session_id(&id,0);
-	s = new_session(id,UNKNOWN_SESSION);
+	s = cdp_new_session(id,UNKNOWN_SESSION);
 	if (s) {
 		s->u.generic_data = generic_data;
 	}
@@ -498,18 +508,11 @@ void AAADropSession(AAASession *s)
 	free_session(s);
 }
 
-/**
- * Creates a Authorization Session.
- * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
- * @returns the new AAASession or null on error
- */
-AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefull,AAASessionCallback_f *cb)
+
+AAASession* cdp_new_auth_session(str id,int is_client,int is_statefull)
 {
 	AAASession *s;
-	str id;
 	cdp_session_type_t type;
-	
-	generate_session_id(&id,0);
 	
 	if (is_client){
 		if (is_statefull) type = AUTH_CLIENT_STATEFULL;
@@ -518,29 +521,105 @@ AAASession* AAACreateAuthSession(void *generic_data,int is_client,int is_statefu
 		if (is_statefull) type = AUTH_SERVER_STATEFULL;
 		else type = AUTH_SERVER_STATELESS;		
 	}
-	s = new_session(id,type);
+	s = cdp_new_session(id,type);
 	if (s) {
-		s->u.auth.generic_data = generic_data;
-		s->cb = cb;
 		s->u.auth.timeout=time(0)+config->default_auth_session_timeout; 
-		s->u.auth.lifetime=s->u.auth.timeout;
+		s->u.auth.lifetime=0;
 		s->u.auth.grace_period=0;
-		LOG(L_DBG,"id is %.*s",s->id.len,s->id.s);
-		LOG(L_DBG,"hash is %u",s->hash);
-		add_session(s);
+		cdp_add_session(s);
 	}
 	return s;
 }
 
+/**
+ * Creates a Authorization Session for the Client.
+ * It generates a new id and adds the session to the cdp list of sessions
+ * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
+ * @returns the new AAASession or null on error
+ */
+AAASession* AAACreateClientAuthSession(int is_statefull,AAASessionCallback_f *cb,void *generic_data)
+{
+	AAASession *s;
+	str id;
+	
+	generate_session_id(&id,0);
+
+	s = cdp_new_auth_session(id,1,is_statefull);
+	if (s) {
+		s->u.auth.generic_data = generic_data;
+		s->cb = cb;
+		if (s->cb)
+			(s->cb)(AUTH_EV_SESSION_CREATED,s);
+	}
+	return s;
+}
+/**
+ * Creates a Authorization Session for the Server, from the application specific Session starting request
+ * It generates a new id and adds the session to the cdp list of sessions
+ * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
+ * @returns the new AAASession or null on error
+ */
+AAASession* AAACreateServerAuthSession(AAAMessage *msg,int is_statefull,AAASessionCallback_f *cb,void *generic_data)
+{
+	AAASession *s;
+	str id;
+	
+	if (!msg||!msg->sessionId||!msg->sessionId->data.len){
+		LOG(L_ERR,"Error retrieving the Session-Id from the message.\n");
+		return 0;
+	}
+	id.s = shm_malloc(msg->sessionId->data.len);
+	if (!id.s){
+		LOG(L_ERR,"Error allocating %d bytes of shm!\n",msg->sessionId->data.len);
+		return 0;
+	}else{
+		id.len = msg->sessionId->data.len;
+		memcpy(id.s,msg->sessionId->data.s,id.len);
+		s=cdp_new_auth_session(id,0,is_statefull);
+		if (s) {
+			s->u.auth.generic_data = generic_data;
+			s->cb = cb;
+			if (s->cb)
+				(s->cb)(AUTH_EV_SESSION_CREATED,s);
+			auth_server_statefull_sm_process(s,AUTH_EV_RECV_REQ,msg);	
+			// this is a special exception where the session lock is not released 
+			//s=0;
+		}
+	}
+	return s;
+}
 
 /**
  * Looks for a session with a given id and returns it if found
  * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
  * @returns the new AAASession or null on error
  */
+AAASession* AAAGetSession(str id)
+{
+	return cdp_get_session(id);
+}
+
+/**
+ * Looks for an Auth session with a given id and returns it if found
+ * \note Returns with a lock on AAASession->hash. Unlock when done working with the result
+ * @returns the new AAASession or null on error
+ */
 AAASession* AAAGetAuthSession(str id)
 {
-	return get_session(id);
+	AAASession *x=cdp_get_session(id);
+	if (x){
+		switch (x->type){
+			case AUTH_CLIENT_STATEFULL:
+			case AUTH_CLIENT_STATELESS:
+			case AUTH_SERVER_STATEFULL:
+			case AUTH_SERVER_STATELESS:
+				return x;
+			default:
+				AAASessionsUnlock(x->hash);
+				return 0;
+		}
+	}
+	return 0;
 }
 
 /**
@@ -559,7 +638,7 @@ void AAATerminateAuthSession(AAASession *s)
  */
 void AAADropAuthSession(AAASession *s)
 {
-	del_session(s);
+	AAADropSession(s);
 }
 
 /**

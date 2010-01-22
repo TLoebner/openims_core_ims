@@ -1007,7 +1007,7 @@ void Snd_Message(peer *p, AAAMessage *msg)
 	LOG(L_DBG,"Snd_Message called to peer [%.*s] for %s with code %d \n",
 		p->fqdn.len,p->fqdn.s,is_req(msg)?"request":"response",msg->commandCode);
 	touch_peer(p);
-	if (msg->sessionId) session = get_session(msg->sessionId->data);
+	if (msg->sessionId) session = cdp_get_session(msg->sessionId->data);
 	
 	if (session){
 		LOG(L_DBG,"There is a session of type %d\n",session->type);
@@ -1096,7 +1096,7 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 	AAASession *session=0;
 	str id={0,0};
 	int nput=0;
-	if (msg->sessionId) session = get_session(msg->sessionId->data);
+	if (msg->sessionId) session = cdp_get_session(msg->sessionId->data);
 
 	if (session){
 		switch (session->type){
@@ -1138,43 +1138,8 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 		}
 	}else{
 		if (msg->sessionId){
-			if (msg->commandCode == IMS_ASR) { 
+			if (msg->commandCode == IMS_ASR) 
 				auth_client_statefull_sm_process(0,AUTH_EV_RECV_ASR,msg);
-			}
-			else
-			{
-				if (msg->commandCode == IMS_AAR)
-				{
-					//an AAR starts the Authorization State Machine for the server
-					id.s = shm_malloc(msg->sessionId->data.len);
-					if (!id.s){
-						LOG(L_ERR,"Error allocating %d bytes of shm!\n",msg->sessionId->data.len);
-						id.len = 0;
-					}else{
-						id.len = msg->sessionId->data.len;
-						memcpy(id.s,msg->sessionId->data.s,id.len);
-						session=new_session(id,AUTH_SERVER_STATEFULL);
-						if (session)
-						{
-							add_session(session);
-							//create an auth session with the id of the message!!!
-							//and get from it the important data
-							auth_server_statefull_sm_process(session,AUTH_EV_RECV_REQ,msg);	
-							session=0;
-						}
-					}
-				}
-
-			}
-			//this is quite a big error
-			//if (msg->commandCode == IMS_AAR)
-			//{
-				//session=AAACreateAuthSession(0,0,1,0,0);
-				
-				//shm_str_dup(session->id,msg->sessionId->data);
-
-			//}
-			// Any other cases to think about?	 
 		} 
 				 
 	}

@@ -102,14 +102,14 @@ int api_callback(peer *p,AAAMessage *msg,void* ptr)
 	
 	if (!is_req(msg)){		
 		/* take care of transactional callback if any */
-		t = take_trans(msg);
+		t = cdp_take_trans(msg);
 		if (t){
 			t->ans = msg;
 			auto_drop = t->auto_drop;
 			if (t->cb){
 				(t->cb)(0,*(t->ptr),msg);
 			}
-			if (auto_drop) free_trans(t);
+			if (auto_drop) cdp_free_trans(t);
 		}
 	}
 	return 1;

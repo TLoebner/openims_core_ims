@@ -78,14 +78,25 @@ typedef struct {
 	cdp_trans_t *head,*tail;		/**< first, last transactions in the list */ 
 } cdp_trans_list_t;
 
-int trans_init();
+int cdp_trans_init();
 
-inline cdp_trans_t* add_trans(AAAMessage *msg,AAATransactionCallback_f *cb, void *ptr,int timeout,int auto_drop);
+inline cdp_trans_t* cdp_add_trans(AAAMessage *msg,AAATransactionCallback_f *cb, void *ptr,int timeout,int auto_drop);
 void del_trans(AAAMessage *msg);
-inline cdp_trans_t* take_trans(AAAMessage *msg);
-inline void free_trans(cdp_trans_t *x);
+inline cdp_trans_t* cdp_take_trans(AAAMessage *msg);
+inline void cdp_free_trans(cdp_trans_t *x);
 
-void trans_timer(time_t now, void* ptr);
+void cdp_trans_timer(time_t now, void* ptr);
+
+/*            API Exported    */
+
+/** Timeout for Diameter transactions (this is quite big, 
+ * but increase in case that you have a slow peer) */ 				
+
+AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_code);
+typedef AAATransaction * (*AAACreateTransaction_f)(AAAApplicationId app_id,AAACommandCode cmd_code);
+
+int AAADropTransaction(AAATransaction *trans);
+typedef int (*AAADropTransaction_f)(AAATransaction *trans);
 
 
 
