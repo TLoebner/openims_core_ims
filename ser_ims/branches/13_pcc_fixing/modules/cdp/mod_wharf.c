@@ -107,32 +107,14 @@ void cdp_destroy(int rank)
 
 
 struct cdp_binds cdp_binding={
-	AAASendMessage,
-	AAASendMessageToPeer,
-	AAASendRecvMessage,
-	AAASendRecvMessageToPeer,
-	AAAFreeMessage,
-	
 	AAACreateRequest,
-	AAACreateResponse,	
-	
-	AAACreateSession,
-	AAADropSession,
+	AAACreateResponse,
+	AAAFreeMessage,
 
-	AAACreateAuthSession,
-	AAAGetAuthSession,
-	AAADropAuthSession,
-	AAATerminateAuthSession,
-	
-	AAASessionsLock,
-	AAASessionsUnlock,
 
-	AAACreateTransaction,
-	AAADropTransaction,
-	
 	AAACreateAVP,
 	AAAAddAVPToMessage,
-	AAAAddAVPToList,	
+	AAAAddAVPToList,
 	AAAFindMatchingAVP,
 	AAAFindMatchingAVPList,
 	AAAGetNextAVP,
@@ -140,10 +122,33 @@ struct cdp_binds cdp_binding={
 	AAAFreeAVPList,
 	AAAGroupAVPS,
 	AAAUngroupAVPS,
-	
+
+	AAASendMessage,
+	AAASendMessageToPeer,
+	AAASendRecvMessage,
+	AAASendRecvMessageToPeer,
+
+
 	AAAAddRequestHandler,
 	AAAAddResponseHandler,
-	
+
+
+	AAACreateTransaction,
+	AAADropTransaction,
+
+
+	AAACreateSession,
+	AAAGetSession,
+	AAADropSession,
+	AAASessionsLock,
+	AAASessionsUnlock,
+
+	AAACreateClientAuthSession,
+	AAACreateServerAuthSession,
+	AAAGetAuthSession,
+	AAADropAuthSession,
+	AAATerminateAuthSession,
+
 };
 
 

@@ -66,37 +66,6 @@
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
-				/* TRANSACTIONS */
-				
-/**
- * Create a AAATransaction for the given request.
- * @param app_id - id of the request's application
- * @param cmd_code - request's code
- * @returns the AAATransaction*
- */				
-AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_code)
-{
-	AAATransaction *t;
-	t = shm_malloc(sizeof(AAATransaction));
-	if (!t) return 0;
-	memset(t,0,sizeof(AAATransaction));	
-	t->application_id=app_id;
-	t->command_code=cmd_code;			
-	return t;
-}
-
-/**
- * Free the memory allocated for the AAATransaction.
- * @param trans - the AAATransaction to be deallocated
- * @returns 1 on success, 0 on failure
- */
-int AAADropTransaction(AAATransaction *trans)
-{
-	if (!trans) return 0;
-//	LOG(L_ERR,"\nCALLED HERE %d %d\n",trans->done,trans->with_callback);
-	shm_free(trans);
-	return 1;
-}
 
 
 				/* CALLBACKS */
@@ -189,7 +158,7 @@ AAAReturnCode AAASendMessage(
 	/* only add transaction following when required */
 	if (callback_f){
 		if (is_req(message))
-			add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
+			cdp_add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessage(): can't add transaction callback for answer.\n");
 	}
@@ -233,7 +202,7 @@ AAAReturnCode AAASendMessageToPeer(
 	/* only add transaction following when required */
 	if (callback_f){
 		if (is_req(message))
-			add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
+			cdp_add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessageToPeer(): can't add transaction callback for answer.\n");
 	}
@@ -296,7 +265,7 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 		lock = lock_alloc();
 		lock = lock_init(lock);
 		lock_get(lock);
-		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
+		t = cdp_add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
 
 //		if (!peer_send_msg(p,message)) {
 		if (!sm_process(p,Send_Message,message,0,0)){	
@@ -310,7 +279,7 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 		lock_destroy(lock);
 		lock_dealloc((void*)lock);
 		ans = t->ans;
-		free_trans(t);
+		cdp_free_trans(t);
 		return ans;
 	}
 	else
@@ -356,7 +325,7 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 		lock = lock_alloc();
 		lock = lock_init(lock);
 		lock_get(lock);
-		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
+		t = cdp_add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
 
 //		if (!peer_send_msg(p,message)) {
 		if (!sm_process(p,Send_Message,message,0,0)){	
@@ -370,7 +339,7 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 		lock_destroy(lock);
 		lock_dealloc((void*)lock);
 		ans = t->ans;
-		free_trans(t);
+		cdp_free_trans(t);
 		return ans;
 	}
 	else

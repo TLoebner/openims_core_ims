@@ -59,10 +59,10 @@
 
 #define LOAD_ERROR "ERROR: cdp_bind: S-CSCF module function "
 
-#define FIND_EXP(NAME,STRING,TYPE) \
-	if (!( cdpb->NAME=(TYPE) \
-		find_export(STRING, NO_SCRIPT, 0)) ) {\
-		LOG(L_ERR, LOAD_ERROR "'"STRING"' not found\n");\
+#define FIND_EXP(NAME) \
+	if (!( cdpb->NAME=(NAME##_f) \
+		find_export(#NAME, NO_SCRIPT, 0)) ) {\
+		LOG(L_ERR, LOAD_ERROR "'"#NAME"' not found\n");\
 		return -1;\
 	}
 
@@ -74,42 +74,48 @@
  */  
 int load_cdp( struct cdp_binds *cdpb)
 {
-	FIND_EXP(AAASendMessage,"AAASendMessage",AAASendMessage_f);
-	FIND_EXP(AAASendMessageToPeer,"AAASendMessageToPeer",AAASendMessageToPeer_f);
-	FIND_EXP(AAASendRecvMessage,"AAASendRecvMessage",AAASendRecvMessage_f);
-	FIND_EXP(AAASendRecvMessageToPeer,"AAASendRecvMessageToPeer",AAASendRecvMessageToPeer_f);
-	FIND_EXP(AAAFreeMessage,"AAAFreeMessage",AAAFreeMessage_f);
+	FIND_EXP(AAACreateRequest);
+	FIND_EXP(AAACreateResponse);
+	FIND_EXP(AAAFreeMessage);
 
-	FIND_EXP(AAACreateRequest,"AAACreateRequest",AAACreateRequest_f);
-	FIND_EXP(AAACreateResponse,"AAACreateResponse",AAACreateResponse_f);
+
+	FIND_EXP(AAACreateAVP);
+	FIND_EXP(AAAAddAVPToMessage);
+	FIND_EXP(AAAAddAVPToList);
+	FIND_EXP(AAAFindMatchingAVP);
+	FIND_EXP(AAAFindMatchingAVPList);
+	FIND_EXP(AAAGetNextAVP);
+	FIND_EXP(AAAFreeAVP);
+	FIND_EXP(AAAFreeAVPList);
+	FIND_EXP(AAAGroupAVPS);
+	FIND_EXP(AAAUngroupAVPS);
+
+	FIND_EXP(AAASendMessage);
+	FIND_EXP(AAASendMessageToPeer);
+	FIND_EXP(AAASendRecvMessage);
+	FIND_EXP(AAASendRecvMessageToPeer);
+
+
+	FIND_EXP(AAAAddRequestHandler);
+	FIND_EXP(AAAAddResponseHandler);
+
+
+	FIND_EXP(AAACreateTransaction);
+	FIND_EXP(AAADropTransaction);
+
+
+	FIND_EXP(AAACreateSession);
+	FIND_EXP(AAAGetSession);
+	FIND_EXP(AAADropSession);
+	FIND_EXP(AAASessionsLock);
+	FIND_EXP(AAASessionsUnlock);
+
+	FIND_EXP(AAACreateClientAuthSession);
+	FIND_EXP(AAACreateServerAuthSession);
+	FIND_EXP(AAAGetAuthSession);
+	FIND_EXP(AAADropAuthSession);
+	FIND_EXP(AAATerminateAuthSession);
 	
-	FIND_EXP(AAACreateSession,"AAACreateSession",AAACreateSession_f);
-	FIND_EXP(AAADropSession,"AAADropSession",AAADropSession_f);
-
-	FIND_EXP(AAACreateAuthSession,"AAACreateAuthSession",AAACreateAuthSession_f);
-	FIND_EXP(AAAGetAuthSession,"AAAGetAuthSession",AAAGetAuthSession_f);
-	FIND_EXP(AAADropAuthSession,"AAADropAuthSession",AAADropAuthSession_f);
-	FIND_EXP(AAATerminateAuthSession,"AAATerminateAuthSession",AAATerminateAuthSession_f);
-	FIND_EXP(AAASessionsUnlock,"AAASessionsUnlock",AAASessionsUnlock_f);
-	FIND_EXP(AAASessionsLock,"AAASessionsLock",AAASessionsLock_f);
-
-	FIND_EXP(AAACreateTransaction,"AAACreateTransaction",AAACreateTransaction_f);
-	FIND_EXP(AAADropTransaction,"AAADropTransaction",AAADropTransaction_f);
-	
-	FIND_EXP(AAACreateAVP,"AAACreateAVP",AAACreateAVP_f);
-	FIND_EXP(AAAAddAVPToMessage,"AAAAddAVPToMessage",AAAAddAVPToMessage_f);
-	FIND_EXP(AAAAddAVPToList,"AAAAddAVPToList",AAAAddAVPToList_f);
-	FIND_EXP(AAAFindMatchingAVP,"AAAFindMatchingAVP",AAAFindMatchingAVP_f);
-	FIND_EXP(AAAFindMatchingAVPList,"AAAFindMatchingAVPList",AAAFindMatchingAVPList_f);
-	FIND_EXP(AAAGetNextAVP,"AAAGetNextAVP",AAAGetNextAVP_f);
-	FIND_EXP(AAAFreeAVP,"AAAFreeAVP",AAAFreeAVP_f);
-	FIND_EXP(AAAFreeAVPList,"AAAFreeAVPList",AAAFreeAVPList_f);
-	FIND_EXP(AAAGroupAVPS,"AAAGroupAVPS",AAAGroupAVPS_f);
-	FIND_EXP(AAAUngroupAVPS,"AAAUngroupAVPS",AAAUngroupAVPS_f);
-
-	FIND_EXP(AAAAddRequestHandler,"AAAAddRequestHandler",AAAAddRequestHandler_f);
-	FIND_EXP(AAAAddResponseHandler,"AAAAddResponseHandler",AAAAddResponseHandler_f);
-		
 	return 1;
 }
 
