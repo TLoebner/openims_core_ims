@@ -68,6 +68,8 @@ char* config_file="DiameterPeer.xml"; 	/**< default DiameterPeer configuration f
 
 extern dp_config *config; 				/**< DiameterPeer configuration structure */
 
+#define EXP_FUNC(NAME) \
+		{#NAME, (cmd_function)NAME, NO_SCRIPT, 0, 0},
 /**
  * Exported functions. This is the API available for use from other SER modules.
  * If you require more, please add them here.
@@ -105,43 +107,48 @@ extern dp_config *config; 				/**< DiameterPeer configuration structure */
 static cmd_export_t cdp_cmds[] = {
 	{"load_cdp",					(cmd_function)load_cdp, 				NO_SCRIPT, 0, 0},
 	
-	{"AAACreateRequest",			(cmd_function)AAACreateRequest,			NO_SCRIPT, 0, 0},
-	{"AAACreateResponse",			(cmd_function)AAACreateResponse, 		NO_SCRIPT, 0, 0},
-	{"AAAFreeMessage",				(cmd_function)AAAFreeMessage,			NO_SCRIPT, 0, 0},
-
-	{"AAASendMessage",				(cmd_function)AAASendMessage,			NO_SCRIPT, 0, 0},
-	{"AAASendMessageToPeer",		(cmd_function)AAASendMessageToPeer,		NO_SCRIPT, 0, 0},
-	{"AAASendRecvMessage",			(cmd_function)AAASendRecvMessage, 		NO_SCRIPT, 0, 0},
-	{"AAASendRecvMessageToPeer",	(cmd_function)AAASendRecvMessageToPeer,	NO_SCRIPT, 0, 0},
+	EXP_FUNC(AAACreateRequest)
+	EXP_FUNC(AAACreateResponse)
+	EXP_FUNC(AAAFreeMessage)
 
 
-	{"AAACreateSession",			(cmd_function)AAACreateSession,			NO_SCRIPT, 0, 0},
-	{"AAADropSession",				(cmd_function)AAADropSession, 			NO_SCRIPT, 0, 0},
+	EXP_FUNC(AAACreateAVP)
+	EXP_FUNC(AAAAddAVPToMessage)
+	EXP_FUNC(AAAAddAVPToList)
+	EXP_FUNC(AAAFindMatchingAVP)
+	EXP_FUNC(AAAFindMatchingAVPList)
+	EXP_FUNC(AAAGetNextAVP)
+	EXP_FUNC(AAAFreeAVP)
+	EXP_FUNC(AAAFreeAVPList)
+	EXP_FUNC(AAAGroupAVPS)
+	EXP_FUNC(AAAUngroupAVPS)
+
+	EXP_FUNC(AAASendMessage)
+	EXP_FUNC(AAASendMessageToPeer)
+	EXP_FUNC(AAASendRecvMessage)
+	EXP_FUNC(AAASendRecvMessageToPeer)
+
+
+	EXP_FUNC(AAAAddRequestHandler)
+	EXP_FUNC(AAAAddResponseHandler)
+
+
+	EXP_FUNC(AAACreateTransaction)
+	EXP_FUNC(AAADropTransaction)
+
+
+	EXP_FUNC(AAACreateSession)
+	EXP_FUNC(AAAGetSession)
+	EXP_FUNC(AAADropSession)
+	EXP_FUNC(AAASessionsLock)
+	EXP_FUNC(AAASessionsUnlock)
+
+	EXP_FUNC(AAACreateClientAuthSession)
+	EXP_FUNC(AAACreateServerAuthSession)
+	EXP_FUNC(AAAGetAuthSession)
+	EXP_FUNC(AAADropAuthSession)
+	EXP_FUNC(AAATerminateAuthSession)
 	
-	{"AAACreateAuthSession",		(cmd_function)AAACreateAuthSession,		NO_SCRIPT, 0, 0},
-	{"AAAGetAuthSession",			(cmd_function)AAAGetAuthSession, 		NO_SCRIPT, 0, 0},
-	{"AAADropAuthSession",			(cmd_function)AAADropAuthSession, 		NO_SCRIPT, 0, 0},
-	{"AAATerminateAuthSession",		(cmd_function)AAATerminateAuthSession, 	NO_SCRIPT, 0, 0},	
-
-	{"AAASessionsLock",				(cmd_function)AAASessionsLock,			NO_SCRIPT, 0, 0},
-	{"AAASessionsUnlock",			(cmd_function)AAASessionsUnlock,		NO_SCRIPT, 0, 0},
-
-	{"AAACreateTransaction",		(cmd_function)AAACreateTransaction,		NO_SCRIPT, 0, 0},
-	{"AAADropTransaction",			(cmd_function)AAADropTransaction, 		NO_SCRIPT, 0, 0},
-
-	{"AAACreateAVP",				(cmd_function)AAACreateAVP, 			NO_SCRIPT, 0, 0},
-	{"AAAAddAVPToMessage",			(cmd_function)AAAAddAVPToMessage,		NO_SCRIPT, 0, 0},
-	{"AAAAddAVPToList",				(cmd_function)AAAAddAVPToList,			NO_SCRIPT, 0, 0},
-	{"AAAFindMatchingAVP",			(cmd_function)AAAFindMatchingAVP, 		NO_SCRIPT, 0, 0},
-	{"AAAGetNextAVP",				(cmd_function)AAAGetNextAVP, 			NO_SCRIPT, 0, 0},
-	{"AAAFreeAVP",					(cmd_function)AAAFreeAVP, 				NO_SCRIPT, 0, 0},
-	{"AAAGroupAVPS",				(cmd_function)AAAGroupAVPS, 			NO_SCRIPT, 0, 0},
-	{"AAAUngroupAVPS",				(cmd_function)AAAUngroupAVPS,			NO_SCRIPT, 0, 0},
-	{"AAAFindMatchingAVPList",		(cmd_function)AAAFindMatchingAVPList,	NO_SCRIPT, 0, 0},
-	{"AAAFreeAVPList",				(cmd_function)AAAFreeAVPList,			NO_SCRIPT, 0, 0},
-
-	{"AAAAddRequestHandler",		(cmd_function)AAAAddRequestHandler, 	NO_SCRIPT, 0, 0},
-	{"AAAAddResponseHandler",		(cmd_function)AAAAddResponseHandler,	NO_SCRIPT, 0, 0},
 	{ 0, 0, 0, 0, 0 }
 };
 
