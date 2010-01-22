@@ -472,6 +472,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SEND_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
 					update_auth_session_timers(x,msg);
+					add_auth_session_timers(x,msg);
 					break;
 				case AUTH_EV_SEND_ANS_UNSUCCESS:
 					x->state = AUTH_ST_IDLE;

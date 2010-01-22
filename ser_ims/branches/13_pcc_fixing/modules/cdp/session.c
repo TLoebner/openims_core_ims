@@ -420,12 +420,12 @@ void cdp_sessions_log(int level)
 void cdp_sessions_timer(time_t now, void* ptr)
 {
 	int hash;
-	cdp_session_t *x;
+	cdp_session_t *x,*n;
 	AAASessionCallback_f *cb;
 	for(hash=0;hash<sessions_hash_size;hash++){		
 		AAASessionsLock(hash);
-		for(x = sessions[hash].head;x;x=x->next) {
-			
+		for(x = sessions[hash].head;x;x=n) {
+			n = x->next;
 			switch (x->type){
 				case AUTH_CLIENT_STATEFULL:
 					if (x->u.auth.timeout>=0 && x->u.auth.timeout<=now){
@@ -444,6 +444,14 @@ void cdp_sessions_timer(time_t now, void* ptr)
 							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x);
 						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
+					}else if (x->u.auth.lifetime>0 && x->u.auth.lifetime<=now){
+						//lifetime timeout
+						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
+						if (x->cb){
+							cb = x->cb;	
+							(cb)(AUTH_EV_SESSION_LIFETIME_TIMEOUT,x);
+						}
+						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_LIFETIME_TIMEOUT,0);
 					}
 					break;
 				case AUTH_SERVER_STATEFULL:
@@ -463,6 +471,14 @@ void cdp_sessions_timer(time_t now, void* ptr)
 							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x);
 						}
 						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
+					}else if (x->u.auth.lifetime>0 && x->u.auth.lifetime<=now){
+						//lifetime timeout
+						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
+						if (x->cb){
+							cb = x->cb;	
+							(cb)(AUTH_EV_SESSION_LIFETIME_TIMEOUT,x);
+						}
+						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_LIFETIME_TIMEOUT,0);
 					}
 					break;
 				default:
@@ -505,7 +521,7 @@ void AAADropSession(AAASession *s)
 	if (s&&s->cb) {
 		(s->cb)(AUTH_EV_SESSION_DROP,s);
 	}
-	free_session(s);
+	del_session(s);
 }
 
 
@@ -581,6 +597,7 @@ AAASession* AAACreateServerAuthSession(AAAMessage *msg,int is_statefull,AAASessi
 			s->cb = cb;
 			if (s->cb)
 				(s->cb)(AUTH_EV_SESSION_CREATED,s);
+			update_auth_session_timers(&(s->u.auth),msg);
 			auth_server_statefull_sm_process(s,AUTH_EV_RECV_REQ,msg);	
 			// this is a special exception where the session lock is not released 
 			//s=0;

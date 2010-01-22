@@ -62,6 +62,8 @@
 #include "session.h"
 #include "config.h"
 
+void update_auth_session_timers(cdp_auth_session_t *x,AAAMessage *msg);
+
 inline int auth_client_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 inline void auth_server_statefull_sm_process(cdp_session_t* auth, int event, AAAMessage* msg);
 
