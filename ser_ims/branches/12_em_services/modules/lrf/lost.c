@@ -54,7 +54,7 @@
 #include "mod.h"
 
 #include "../../locking.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/tm_load.h"
 #include <lost/client.h>
 #include <lost/parsing.h>
 #include <lost/pidf_loc.h>
@@ -299,7 +299,10 @@ int LRF_has_loc(struct sip_msg* msg, char * str1, char* str2){
 
 	int ret = get_pidf_lo_body(msg, &pidf_body);
 	if(ret != 0){
-		LOG(ret==-1?L_ERR:L_DBG, ret==-1?"ERR:":"DBG:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
+		if(ret==-1)
+			LOG(L_ERR, "ERR:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
+		else
+			LOG(L_DBG, "DBG:"M_NAME":LRF_has_loc:could not get the pidf+xml body\n");
 	
 		lrf_unlock(d->hash);
 		return NO_LOC_FOUND;

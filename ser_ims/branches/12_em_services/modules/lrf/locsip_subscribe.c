@@ -62,8 +62,14 @@
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_uri.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
+#include "../../modules/tm/tm_load.h"
+
+#ifdef SER_MOD_INTERFACE
+        #include "../../modules_s/dialog/dlg_mod.h"
+#else
+        #include "../dialog/dlg_mod.h"
+#endif
+
 #include "sip.h"
 #include "user_data.h"
 

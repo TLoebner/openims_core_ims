@@ -60,8 +60,8 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
-#include "../tm/tm_load.h"
-#include "../tm/t_lookup.h"
+#include "../../modules/tm/tm_load.h"
+#include "../../modules/tm/t_lookup.h"
 #include "../../parser/parser_f.h"
 #include "../../parser/contact/parse_contact.h"
 #include "mod.h"
@@ -659,8 +659,10 @@ int LRF_call_query_resp(struct sip_msg* msg, char*str1, char*str2){
 		LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: could not send the response\n");
 		goto error2;
 	}
-	
+
+#ifndef TM_DEL_UNREF
 	LOG(L_ERR, "ERR:"M_NAME":LRF_call_query_resp: options ref count %i\n", trans->ref_count);
+#endif
 	
 
 	lrf_unlock(d->hash);
