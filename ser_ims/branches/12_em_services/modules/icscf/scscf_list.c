@@ -79,6 +79,14 @@ int SCSCF_Capabilities_cnt=0;					/**< size of list of S-CSCFs and their capabil
 int i_hash_size;					/**< size of the hash table for the S-CSCF lists 	*/
 i_hash_slot *i_hash_table=0;		/**< the hash table for the S-CSCF lists				*/
 
+#ifdef SER_MOD_INTERFACE
+	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
+		append_branch(_msg, _c, _dst, NULL, _qvalue, 0, _nb)
+#else
+	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
+		append_branch(_msg, _c->uri.s, _c->uri.len, _dst->s, _dst->len, _qvalue, nb)
+#endif
+
 
 /**
  * Refreshes the capabilities list reading them from the db.
@@ -546,7 +554,7 @@ int I_scscf_select(struct sip_msg* msg, char* str1, char* str2)
 			/* subsequent */
 			//LOG(L_CRIT,"append branch\n");
 			req = msg;//cscf_get_request_from_reply(msg);
-			append_branch(req,scscf_name.s,scscf_name.len,0,0,0,0);
+			append_branch_help(req, &scscf_name,0,0,0);
 			result = CSCF_RETURN_TRUE;
 		}
 	}else{
