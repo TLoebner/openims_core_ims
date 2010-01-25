@@ -63,6 +63,7 @@
 #include "sip.h"
 #include "release_call.h"
 
+extern int debug;
 int m_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 m_dialog_hash_slot *m_dialogs=0;			/**< the dialogs hash table				*/
 
