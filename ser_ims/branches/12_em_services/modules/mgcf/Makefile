@@ -9,9 +9,20 @@ include ../../Makefile.defs
 auto_gen=
 NAME=mgcf.so
 
+ifeq ($(CFG_NAME),sip-router)
+	DEFS += -DSER_MOD_INTERFACE
+	SERLIBPATH=/../lib
+	DEFS += -I../lib -DSER -I../..
+	DEFS += -I../../lib 
+	LIBS += -L/usr/local/lib -L../lib/cds -l_ser_cds
+else
+	DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
+	LIBS += -L/usr/local/lib -L../../lib/cds -l_ser_cds
+endif	
+
+DEFS += -DCDP_FOR_SER
+
+
 include ../../Makefile.modules
 
-DEFS += -I../../lib -DSER -I../..
-LIBS += -L../../lib/cds -l_ser_cds
 
-#DEFS += -DWITH_IMS_PM
