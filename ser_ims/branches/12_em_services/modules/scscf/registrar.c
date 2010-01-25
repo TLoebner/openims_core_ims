@@ -105,6 +105,13 @@ extern int append_branches;				/**< if to append branches						*/
         static str zero={0,0};
 #endif
 
+#ifdef SER_MOD_INTERFACE
+	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
+		append_branch(_msg, _c, _dst, NULL, _qvalue, 0, _nb)
+#else
+	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
+		append_branch(_msg, _c->uri.s, _c->uri.len, _dst->s, _dst->len, _qvalue, nb)
+#endif
 
 /**
  * The Registrar timer looks for expires contacts and removes them
@@ -1328,7 +1335,6 @@ static inline int r_add_p_called_party_id(struct sip_msg *msg)
 }
 
 
-
 //static str lookup_sip={"sip:",4};
 /** 
  * Lookup for the Request-URI in registrar and rewrite request URI with the contact address.
@@ -1422,7 +1428,8 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 						) {
 					LOG(L_DBG,"DEBUG:"M_NAME":S_lookup: MODE_ONFAILURE, appending branch\n");
 					/* need to append_branch for this first contact */
-					if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {
+				
+				if (append_branch_help(msg, &c->uri, &dst, c->qvalue, 0) == -1) {
 						LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
 							c->uri.len,c->uri.s);
 					}
@@ -1445,7 +1452,7 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 					c = c->next;
 					while(c){
 						if (r_valid_contact(c)) 														
-							if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {
+							if (append_branch_help(msg, &c->uri, &dst, c->qvalue, 0) == -1) {
 								LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
 									c->uri.len,c->uri.s);
 							} 
