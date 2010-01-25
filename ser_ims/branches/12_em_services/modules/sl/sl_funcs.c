@@ -212,7 +212,11 @@ int sl_reply_error(struct sip_msg *msg )
     -1 : error
     1  : is not an ACK  or a non-local ACK
 */
+#ifdef SER_MOD_INTERFACE
+int sl_filter_ACK(struct sip_msg *msg, unsigned int flag, void *bar )
+#else
 int sl_filter_ACK(struct sip_msg *msg, void *bar )
+#endif
 {
 	str *tag_str;
 
