@@ -36,8 +36,10 @@
 #include "../../str.h"
 #include "../../parser/msg_parser.h"
 
-/*! str initialization */
-#define str_init(_string)  {_string, sizeof(_string) - 1}
+#ifndef  SER_MOD_INTERFACE
+	/*! str initialization */
+	#define str_init(_string)  {_string, sizeof(_string) - 1}
+#endif
 
 
 /**

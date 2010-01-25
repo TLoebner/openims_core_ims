@@ -11,14 +11,16 @@ NAME=ecscf.so
 
 ifeq ($(CFG_NAME),sip-router)
 	DEFS += -DSER_MOD_INTERFACE
-	SERLIBPATH=../../lib
-	SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
-	LIBS += -L../../libs/cds -L../../lib/lost -l_ser_cds -l_lost_client
+	SERLIBPATH=/../lib
+	#SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
+	DEFS += -I/usr/include/libxml2 -I../lib -DSER -I../..
+	DEFS += -I../../lib 
+	LIBS += -L/usr/local/lib -L../lib/cds -L../lib/lost -llost_client -lcds
 else
-	LIBS += -L../../libs/cds -L../../lib/lost -l_ser_cds -l_lost_client
+	DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
+	LIBS += -L/usr/local/lib -L../../lib/cds -L../../lib/lost -l_lost_client
 endif	
-DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
-LIBS += -lxml2 -L../../lib/cds -l_ser_cds -L../../lib/lost -l_lost_client
+LIBS += -lxml2 
 
 DEFS += -DCDP_FOR_SER
 DEFS += -I/usr/include/libxml2 

@@ -51,16 +51,20 @@
 #include <time.h>
 
 #include "dlg_state.h"
-#include "../tm/tm_load.h"
-#include "../sl/sl_funcs.h"
+#include "../../modules/tm/tm_load.h"
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_rr.h"
 #include "../../parser/parse_from.h"
 #include "../../parser/parse_to.h"
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/sl/sl_funcs.h"
+#else
+	#include "../../modules/sl/sl_funcs.h"
+#endif
 
 #include "sip.h"
-//#include "release_call.h"
 
+extern int debug;
 extern struct tm_binds tmb;
 
 int e_dialogs_hash_size;						/**< size of the dialog hash table 					*/
