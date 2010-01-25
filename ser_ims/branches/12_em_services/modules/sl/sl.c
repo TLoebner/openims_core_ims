@@ -74,6 +74,13 @@
 
 MODULE_VERSION
 
+
+#ifdef SER_MOD_INTERFACE
+	#define REQ_TYPE_CB      (1<<2)
+	#define RPL_TYPE_CB      (1<<3)
+#endif
+
+
 static int default_code = 500;
 static str default_reason = STR_STATIC_INIT("Internal Server Error");
 

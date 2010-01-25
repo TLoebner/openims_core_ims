@@ -32,6 +32,10 @@
 #include "../../sr_module.h"
 #include "../../parser/msg_parser.h"
 
+#ifdef SER_MOD_INTERFACE
+	#include "../../parser/parse_to.h"
+#endif
+
 #define SL_RPL_WAIT_TIME  2  /* in sec */
 
 #define SL_TOTAG_SEPARATOR '.'
@@ -42,7 +46,11 @@ int sl_shutdown();
 typedef int (*sl_send_reply_f)(struct sip_msg* msg, int code, char* reason);
 int sl_send_reply(struct sip_msg* msg, int code, char* reason);
 
+#ifdef SER_MOD_INTERFACE
+int sl_filter_ACK(struct sip_msg*, unsigned int flag, void *bar );
+#else
 int sl_filter_ACK(struct sip_msg*, void *bar );
+#endif
 int sl_reply_error(struct sip_msg *msg );
 
 

@@ -10,4 +10,11 @@ auto_gen=
 NAME=sl.so
 LIBS= 
 
+ifeq ($(CFG_NAME),sip-router)
+	DEFS += -DSER_MOD_INTERFACE
+	SERLIBPATH=/../lib
+	#SER_LIBS+=$(SERLIBPATH)/srdb1/srdb1
+else
+endif
+
 include ../../Makefile.modules
