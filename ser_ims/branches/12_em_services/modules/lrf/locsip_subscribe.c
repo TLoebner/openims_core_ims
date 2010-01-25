@@ -67,6 +67,7 @@
 #include "sip.h"
 #include "user_data.h"
 
+extern int debug;
 extern struct tm_binds tmb;   		/**< Structure with pointers to tm funcs 		*/
 extern dlg_func_t dialogb;			/**< Structure with pointers to dialog funcs			*/
 
