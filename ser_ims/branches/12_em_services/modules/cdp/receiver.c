@@ -78,6 +78,8 @@
 
 #include "receiver.h"
 
+#define L_MEM	 5
+
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
 int dp_add_pid(pid_t pid);
