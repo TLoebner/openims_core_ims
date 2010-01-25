@@ -72,7 +72,12 @@ extern int isc_fr_inv_timeout;		/**< default ISC INVITE response timeout in ms *
 
 #ifdef SER_MOD_INTERFACE
 	extern int route_type;
-#endif	
+	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
+		append_branch(_msg, _c, _dst, NULL, _qvalue, 0, _nb)
+#else
+	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
+		append_branch(_msg, _c->uri.s, _c->uri.len, _dst->s, _dst->len, _qvalue, nb)
+#endif
 
 /**
  *	Forwards the message to the application server.
@@ -111,8 +116,8 @@ int isc_forward( struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	*isc_tmb.route_mode==MODE_ONFAILURE
 #endif
 		)
-		append_branch(msg,msg->first_line.u.request.uri.s,msg->first_line.u.request.uri.len,
-			msg->dst_uri.s,msg->dst_uri.len,0,0);
+		append_branch_help(msg, &msg->first_line.u.request.uri,
+			&msg->dst_uri,0,0);
 	
 	/* set the timeout timers to a lower value */
 	cscf_get_transaction(msg,&hash,&label);
