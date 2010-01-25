@@ -47,7 +47,7 @@
 #define ECSCF_LRF_H
 
 #include "../../str.h"
-#include "../tm/h_table.h"
+#include "../../modules/tm/h_table.h"
 
 struct initial_tr {
 	/* tells in which hash table entry the initial transaction lives */

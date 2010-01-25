@@ -66,14 +66,19 @@
 
 #include "mod.h"
 
-#include "../../db/db.h"
 #include "../../sr_module.h"
 #include "../../socket_info.h"
 #include "../../timer.h"
 #include "../../locking.h"
-#include "../tm/tm_load.h"
-#include "../dialog/dlg_mod.h"
-#include <lost/client.h>
+#include "../../modules/tm/tm_load.h"
+
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+	#include "../lib/lost/client.h"
+#else
+	#include "../../modules/dialog/dlg_mod.h"
+	#include "../../lib/lost/client.h"
+#endif
 
 #include "dlg_state.h"
 #include "lrf.h"

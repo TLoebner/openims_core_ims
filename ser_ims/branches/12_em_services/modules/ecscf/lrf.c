@@ -54,14 +54,22 @@
 #include "../../sr_module.h"
 #include "../../locking.h"
 #include "../../data_lump.h"
-#include "../tm/tm_load.h"
-#include "../tm/h_table.h"
-#include "../tm/t_reply.h"
-#include "../dialog/dlg_mod.h"
+#include "../../modules/tm/tm_load.h"
+#include "../../modules/tm/h_table.h"
+#include "../../modules/tm/t_reply.h"
 #include "../../parser/parse_geoloc.h"
-#include <lost/client.h>
-#include <lost/parsing.h>
-#include <lost/pidf_loc.h>
+
+#ifdef SER_MOD_INTERFACE
+	#include "../../modules_s/dialog/dlg_mod.h"
+	#include "../lib/lost/client.h"
+	#include "../lib/lost/parsing.h"
+	#include "../lib/lost/pidf_loc.h"
+#else 
+	#include "../../modules/dialog/dlg_mod.h"
+	#include "../../lib/lost/client.h"
+	#include "../../lib/lost/parsing.h"
+	#include "../../lib/lost/pidf_loc.h"
+#endif
 
 #include "dlg_state.h"
 #include "lrf.h"
@@ -461,11 +469,16 @@ int send_options_req(str req_uri, str location, str service, struct initial_tr *
 
 	LOG(L_DBG, "DBG:"M_NAME":send_options_req: headers are: \n%.*s, cb_par:%p index: %u label: %u\n", 
 			h.len, h.s, cb_par, cb_par->hash_index, cb_par->label);
+#ifdef SER_MOD_INTERFACE
+/* TODO
+typedef int (*req_t)(uac_req_t *uac_r, str* ruri, str* to, str* from, str *next_hop);*/
+#else
 	if (tmb.t_request(&options_method, &req_uri, &lrf_sip_uri_str, &ecscf_name_str, &h, &location, &lrf_sip_uri_str,
                  options_resp_cb, (void*)cb_par)<0){
                 LOG(L_ERR,"ERR:"M_NAME":send_options_req: Error sending in transaction\n");
                 goto error;
         }
+#endif
 	
 	if (h.s) pkg_free(h.s);
 	return 1;
@@ -612,6 +625,7 @@ int E_get_location(struct sip_msg* msg, char* str1, char * str2){
 			goto error_loc;
 	}
 
+	
 	print_geoloc((struct geoloc_body*)msg->geolocation->parsed);
 	if(!((struct geoloc_body*)msg->geolocation)->retrans_par){
 		LOG(L_ERR, "ERR:"M_NAME":E_get_location:the location does not support routing based on location\n");
