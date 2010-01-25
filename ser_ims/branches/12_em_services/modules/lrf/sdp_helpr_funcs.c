@@ -46,11 +46,12 @@ static str sup_ptypes[] = {
 	str_init("TCP/TLS/MSRP"),
 	{ NULL, 0}
 };
-
-#define LM_ERR(s)\
-	LOG(L_ERR, "ERR:"M_NAME#s);
-#define LM_DBG(s)\
-	LOG(L_DBG, "DBG:"M_NAME#s);
+#ifndef SER_MOD_INTERFACE
+	#define LM_ERR(s)\
+		LOG(L_ERR, "ERR:"M_NAME#s);
+	#define LM_DBG(s)\
+		LOG(L_DBG, "DBG:"M_NAME#s);
+#endif
 
 
 #define READ(val) \

@@ -59,8 +59,8 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../../locking.h"
-#include "../tm/dlg.h"
-#include "../tm/tm_load.h"
+#include "../../modules/tm/dlg.h"
+#include "../../modules/tm/tm_load.h"
 
 enum lrf_dialog_method {
 	DLG_METHOD_OTHER=0,

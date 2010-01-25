@@ -49,10 +49,15 @@
 #include "../../str.h"
 #include "../../locking.h"
 #include "../../ut.h"
-
-#include <lost/client.h>
-#include <lost/parsing.h>
-#include <lost/pidf_loc.h>
+#ifdef SER_MOD_INTERFACE
+	#include "../lib/lost/client.h"
+	#include "../lib/lost/parsing.h"
+	#include "../lib/lost/pidf_loc.h"
+#else
+	#include "../../lib/lost/client.h"
+	#include "../../lib/lost/parsing.h"
+	#include "../../lib/lost/pidf_loc.h"
+#endif
 
 struct trans_info {
 	/* tells in which hash table entry the initial transaction lives */
