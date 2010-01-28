@@ -295,6 +295,7 @@ cdp_session_t* cdp_get_session(str id)
 {
 	unsigned int hash;
 	cdp_session_t *x;
+	if (!id.len) return 0;
 	hash = get_str_hash(id,sessions_hash_size);
 	LOG(L_DBG,"calling get session with id %.*s and hash %u\n",id.len,id.s,hash);
 	AAASessionsLock(hash);

@@ -178,6 +178,10 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 	trans=cdpb.AAACreateTransaction(IMS_Cx,IMS_MAR);
 
 	mar = cdpb.AAACreateRequest(IMS_Cx,IMS_MAR,Flag_Proxyable,session);
+	if (session) {
+		cdpb.AAADropSession(session);
+		session=0;
+	}	
 	if (!mar) goto error;
 
 	if (!Cx_add_destination_realm(mar,realm)) goto error;
@@ -220,7 +224,6 @@ AAAMessage *Cx_MAR(struct sip_msg *msg, str public_identity, str private_identit
 		ims_pm_diameter_answer(maa);
 	#endif			
 	
-	cdpb.AAADropSession(session);
 	cdpb.AAADropTransaction(trans);
 	
 	return maa;
@@ -258,6 +261,10 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 	trans=cdpb.AAACreateTransaction(IMS_Cx,IMS_SAR);
 
 	sar = cdpb.AAACreateRequest(IMS_Cx,IMS_SAR,Flag_Proxyable,session);
+	if (session) {
+		cdpb.AAADropSession(session);
+		session=0;
+	}
 	if (!sar) goto error;
 
 	if (!Cx_add_destination_realm(sar,realm)) goto error;
@@ -294,7 +301,6 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 		ims_pm_diameter_answer(saa);
 	#endif				
 	
-	cdpb.AAADropSession(session);
 	cdpb.AAADropTransaction(trans);
 	
 	return saa;
@@ -302,7 +308,7 @@ AAAMessage *Cx_SAR(struct sip_msg *msg, str public_identity, str private_identit
 error:
 	//free stuff
 	if (trans) cdpb.AAADropTransaction(trans);
-	if (session)	cdpb.AAADropSession(session);
+	if (session) cdpb.AAADropSession(session);
 	if (sar) cdpb.AAAFreeMessage(&sar);
 	return 0;	
 }

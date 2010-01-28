@@ -157,6 +157,10 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 	session = cdpb.AAACreateSession(0);
 
 	uar = cdpb.AAACreateRequest(IMS_Cx,IMS_UAR,Flag_Proxyable,session);
+	if (session) {
+		cdpb.AAADropSession(session);
+		session=0;
+	}	
 	if (!uar) goto error;
 
 	if (!Cx_add_destination_realm(uar,realm)) goto error;
@@ -181,8 +185,6 @@ AAAMessage* Cx_UAR(struct sip_msg *msg,str private_identity, str public_identity
 	#ifdef WITH_IMS_PM
 		ims_pm_diameter_answer(uaa);
 	#endif				
-
-	cdpb.AAADropSession(session);
 	
 	return uaa;
 	
@@ -210,6 +212,10 @@ AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 	session = cdpb.AAACreateSession(0);
 
 	lir = cdpb.AAACreateRequest(IMS_Cx,IMS_LIR,Flag_Proxyable,session);
+	if (session) {
+		cdpb.AAADropSession(session);
+		session=0;
+	}			
 	if (!lir) goto error;
 
 	if (!Cx_add_destination_realm(lir,realm)) goto error;
@@ -230,8 +236,6 @@ AAAMessage* Cx_LIR(struct sip_msg *msg, str public_identity,str realm)
 		ims_pm_diameter_answer(lia);
 	#endif				
 
-
-	cdpb.AAADropSession(session);
 	
 	return lia;
 	
