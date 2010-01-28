@@ -328,9 +328,9 @@ void del_session(cdp_session_t *x)
 	}
 
 	if (sessions[x->hash].head == x) sessions[x->hash].head = x->next;
-	else x->prev->next = x->next;
+	else if (x->prev) x->prev->next = x->next;
 	if (sessions[x->hash].tail == x) sessions[x->hash].tail = x->prev;
-	else x->next->prev = x->prev;
+	else if (x->next) x->next->prev = x->prev;
 	
 	AAASessionsUnlock(hash);
 	
@@ -507,8 +507,8 @@ AAASession* AAACreateSession(void *generic_data)
 	s = cdp_new_session(id,UNKNOWN_SESSION);
 	if (s) {
 		s->u.generic_data = generic_data;
+		cdp_add_session(s);
 	}
-	
 	return s;
 }
 
