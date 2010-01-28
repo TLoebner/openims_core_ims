@@ -138,6 +138,7 @@ struct cdp_binds cdp_binding={
 
 
 	AAACreateSession,
+	AAAMakeSession,
 	AAAGetSession,
 	AAADropSession,
 	AAASessionsLock,

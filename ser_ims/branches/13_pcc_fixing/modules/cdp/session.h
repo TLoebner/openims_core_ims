@@ -233,6 +233,9 @@ typedef cdp_session_t AAASession;
 AAASession* AAACreateSession(void *generic_data);
 typedef AAASession* (*AAACreateSession_f)(void *generic_data);
 
+AAASession* AAAMakeSession(int app_id,int type,str session_id);
+typedef AAASession* (*AAAMakeSession_f)(int app_id,int type,str session_id);
+
 AAASession* AAAGetSession(str id);
 typedef AAASession* (*AAAGetSession_f)(str id);
 

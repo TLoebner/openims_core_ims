@@ -105,6 +105,7 @@ int load_cdp( struct cdp_binds *cdpb)
 
 
 	FIND_EXP(AAACreateSession);
+	FIND_EXP(AAAMakeSession);
 	FIND_EXP(AAAGetSession);
 	FIND_EXP(AAADropSession);
 	FIND_EXP(AAASessionsLock);

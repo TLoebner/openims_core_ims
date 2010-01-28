@@ -96,6 +96,7 @@ struct cdp_binds {
 	
 	
 	AAACreateSession_f			AAACreateSession;
+	AAAMakeSession_f			AAAMakeSession;
 	AAAGetSession_f				AAAGetSession;
 	AAADropSession_f			AAADropSession;
 	AAASessionsLock_f 			AAASessionsLock;
