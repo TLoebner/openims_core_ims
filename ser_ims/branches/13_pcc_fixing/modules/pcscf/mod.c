@@ -228,6 +228,8 @@ int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
 int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
 char* ip_address_for_signaling_char="127.0.0.1";
 str ip_address_for_signaling;
+char* pcc_dest_realm_s = "open-ims.test";
+str pcc_dest_realm;
 
 
 /** 
@@ -456,6 +458,8 @@ static cmd_export_t pcscf_cmds[]={
  *  - qos_side - on which side does this P-CSCF work (0 1 2)
  *  - qos_release7 - whether to use Rx or Gq
  *  - forced_qos_peer - the address of the forced qos peer
+ *  - ip_address_for_signaling - 
+ *  - pcc_dest_realm - the destination realm, used in PCC
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -526,6 +530,7 @@ static param_export_t pcscf_params[]={
 	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
 	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
 	{"ip_address_for_signaling",			STR_PARAM,		&ip_address_for_signaling_char},
+	{"pcc_dest_realm",					STR_PARAM,		&pcc_dest_realm_s},
 
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
@@ -688,6 +693,9 @@ int fix_parameters()
 	
 	ip_address_for_signaling.s = ip_address_for_signaling_char;
 	ip_address_for_signaling.len = strlen(ip_address_for_signaling_char);
+
+	pcc_dest_realm.s = pcc_dest_realm_s;
+	pcc_dest_realm.len = strlen(pcc_dest_realm_s);
 
 	return 1;
 }
