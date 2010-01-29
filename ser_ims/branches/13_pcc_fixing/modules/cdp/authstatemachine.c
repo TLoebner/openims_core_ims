@@ -248,10 +248,8 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 	}
 	x = &(s->u.auth);
 	
-	// I dont want the session to expire!
-	//x->timeout+=config->tc*30;
-	//x->lifetime=x->timeout+config->tc*32;
-	
+	if (s->cb) (s->cb)(event,s);
+
 	//if (x && x->state && msg) LOG(L_ERR,"auth_client_statefull_sm_process [event %i] [state %i] endtoend %u hopbyhop %u\n",event,x->state,msg->endtoendId,msg->hopbyhopId);
 
 	switch(x->state){
@@ -382,6 +380,7 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 				// send a valid STA, then the session stays open forever...
 				// We dont accept that... we have lifetime+grace_period for that
 				// This is not in the Diameter RFC ...	
+				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 				// thats the addition
 				case AUTH_EV_RECV_STA:
@@ -404,7 +403,10 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}
-	if (s) AAASessionsUnlock(s->hash);
+	if (s) {
+		if (s->cb) (s->cb)(AUTH_EV_SESSION_MODIFIED,s);
+		AAASessionsUnlock(s->hash);
+	}
 	return rv;
 }
 
@@ -423,9 +425,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	if (!s) return;
 	x = &(s->u.auth);
 	
-	// I dont want the session to expire!
-	//x->timeout+=config->tc*30;
-	//x->lifetime=x->timeout+config->tc*2;
+	if (s->cb) (s->cb)(event,s);			
 
 	switch(x->state){
 		case AUTH_ST_IDLE:
@@ -439,6 +439,8 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					// so no big deal
 					// but this is not the Diameter RFC...
 					x->state = AUTH_ST_OPEN;
+					// execute the cb here because we won't have a chance later
+					if (s->cb) (s->cb)(AUTH_EV_SESSION_MODIFIED,s);			
 					// Don't unlock the session hash table because the session is returned to the user
 					// This can only be called from the AAACreateServerAuthSession()!
 					s=0;
@@ -448,6 +450,14 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					Session_Cleanup(s,msg);
 					s = 0;
 					break;
+					
+				/* Just in case we have some lost sessions */	
+				case AUTH_EV_SESSION_TIMEOUT:
+				case AUTH_EV_SESSION_GRACE_TIMEOUT:					
+					Session_Cleanup(s,msg);
+					s = 0;
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -529,7 +539,10 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}	
-	if (s) AAASessionsUnlock(s->hash);
+	if (s) {
+		if (s->cb) (s->cb)(AUTH_EV_SESSION_MODIFIED,s);			
+		AAASessionsUnlock(s->hash);
+	}
 }
 
 

@@ -422,7 +422,6 @@ void cdp_sessions_timer(time_t now, void* ptr)
 {
 	int hash;
 	cdp_session_t *x,*n;
-	AAASessionCallback_f *cb;
 	for(hash=0;hash<sessions_hash_size;hash++){		
 		AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=n) {
@@ -432,26 +431,14 @@ void cdp_sessions_timer(time_t now, void* ptr)
 					if (x->u.auth.timeout>=0 && x->u.auth.timeout<=now){
 						//Session timeout
 						LOG(L_CRIT,"session TIMEOUT\n");
-						if (x->cb) {
-							cb = x->cb;
-							(cb)(AUTH_EV_SESSION_TIMEOUT,x);
-						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
 					} else if (x->u.auth.lifetime>0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
 						//lifetime + grace timeout
 						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
-						if (x->cb){
-							cb = x->cb;	
-							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x);
-						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
 					}else if (x->u.auth.lifetime>0 && x->u.auth.lifetime<=now){
 						//lifetime timeout
 						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
-						if (x->cb){
-							cb = x->cb;	
-							(cb)(AUTH_EV_SESSION_LIFETIME_TIMEOUT,x);
-						}
 						auth_client_statefull_sm_process(x,AUTH_EV_SESSION_LIFETIME_TIMEOUT,0);
 					}
 					break;
@@ -459,26 +446,14 @@ void cdp_sessions_timer(time_t now, void* ptr)
 					if (x->u.auth.timeout>=0 && x->u.auth.timeout<=now){
 						//Session timeout
 						LOG(L_CRIT,"session TIMEOUT\n");
-						if (x->cb) {
-							cb = x->cb;
-							(cb)(AUTH_EV_SESSION_TIMEOUT,x);
-						}
 						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_TIMEOUT,0);
 					}else if (x->u.auth.lifetime>0 && x->u.auth.lifetime+x->u.auth.grace_period<=now){
 						//lifetime + grace timeout
 						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
-						if (x->cb){
-							cb = x->cb;	
-							(cb)(AUTH_EV_SESSION_GRACE_TIMEOUT,x);
-						}
 						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_GRACE_TIMEOUT,0);
 					}else if (x->u.auth.lifetime>0 && x->u.auth.lifetime<=now){
 						//lifetime timeout
 						LOG(L_CRIT,"lifetime+grace TIMEOUT\n");
-						if (x->cb){
-							cb = x->cb;	
-							(cb)(AUTH_EV_SESSION_LIFETIME_TIMEOUT,x);
-						}
 						auth_server_statefull_sm_process(x,AUTH_EV_SESSION_LIFETIME_TIMEOUT,0);
 					}
 					break;
@@ -546,9 +521,8 @@ AAASession* AAAMakeSession(int app_id,int type,str session_id)
 void AAADropSession(AAASession *s)
 {
 	// first give a chance to the cb to free the generic param
-	if (s&&s->cb) {
+	if (s&&s->cb) 
 		(s->cb)(AUTH_EV_SESSION_DROP,s);
-	}
 	del_session(s);
 }
 
