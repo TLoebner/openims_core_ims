@@ -71,6 +71,9 @@ extern struct cdp_binds cdpb;
 /**< FQDN of PDF, defined in mod.c */
 extern str forced_qos_peer; /*its the PCRF in this case*/
 
+/* the destination realm*/
+extern str pcc_dest_realm;
+
 extern int pcscf_qos_release7;
 extern int pcscf_qos_side;
 extern str pcscf_record_route_mo_uri;
@@ -111,22 +114,11 @@ error:
 	return 0;	
 }
 
-
-
-//TODO - fix this -  add default realm configurable
-inline str pcc_get_destination_realm(str s)
-{
-	str p={0,0};
-	int i;
-	if (!s.len) return p;
-	for(i=0;i<s.len;i++)
-		if (s.s[i]=='.'){
-			p.s = s.s+i+1;
-			p.len = s.len - (p.s - s.s);
-			break;
-		}
-	return p;
+/*Return the destination realm*/
+inline str pcc_get_destination_realm(){
+	return pcc_dest_realm;
 }
+
 /*
  * Auxiliary function that gives if the first route header is mt or mo
  * if reply is -1 you should use what the config file gave you
@@ -493,7 +485,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	/* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
 	
 	/* Add Destination-Realm AVP */
-	str realm = pcc_get_destination_realm(forced_qos_peer);
+	str realm = pcc_get_destination_realm();
 	if (realm.len&&!PCC_add_destination_realm(aar, realm)) goto error;
 	
 	/* Add Auth-Application-Id AVP */
