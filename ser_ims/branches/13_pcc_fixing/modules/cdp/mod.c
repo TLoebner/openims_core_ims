@@ -138,6 +138,7 @@ static cmd_export_t cdp_cmds[] = {
 
 
 	EXP_FUNC(AAACreateSession)
+	EXP_FUNC(AAAMakeSession)
 	EXP_FUNC(AAAGetSession)
 	EXP_FUNC(AAADropSession)
 	EXP_FUNC(AAASessionsLock)
