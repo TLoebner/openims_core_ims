@@ -300,10 +300,213 @@ void callback_for_pccsession(int event,void *session)
 	}
 }
 
+/*
+ * clean the pcc_session_id string from a contact/contact list
+ * @param contacts - the contacts to be processed
+ * @from_registrar - 0 if the contacts are from the msg (usually Contact header), considered a list, no unlock necessary
+ * 	     	   - 1 if from the registrar, in this case the hash lock has to be unlocked	 
+ */
+void pcc_auth_clean_register(r_contact * cnt, contact_t* msg_contacts, int from_registrar){
 
+	struct sip_uri parsed_cnt;
 
+	if(from_registrar){
+		if (cnt->pcc_session_id.s) {
+			shm_free(cnt->pcc_session_id.s);
+			cnt->pcc_session_id.s = 0;
+			cnt->pcc_session_id.len = 0;
+		}
+		r_unlock(cnt->hash);
+	}else{
+		for(;msg_contacts;msg_contacts=msg_contacts->next){
+	
+			str crt_uri = msg_contacts->uri;
+			if(parse_uri(crt_uri.s, crt_uri.len, &parsed_cnt) != E_OK){
+				LOG(L_ERR,"ERR:"M_NAME":pcc_auth_clean_register: error parsing uri of the contact\n");
+				continue;		
+			}
+	
+			r_contact * contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
+					parsed_cnt.proto);
 
+			if (contact){
+				LOG(LOG_CRIT,"BUG:"M_NAME":pcc_auth_clean_register: when called, "
+						"the list of contacts should be already tested\n");
+				return;
+			}
+			pcc_auth_clean_register(contact, NULL, 1);
+		}
+	}
+}
 
+/* 
+ * initiates a subscription to the signalling path status of an aor, in a case of an registration
+ * @param aor: the aor to be handled
+ * @return: 0 - ok, 1 - goto end, -1 - error, -2 - out of memory
+ */
+int pcc_auth_init_registr(contact_t * msg_contacts, AAASession ** authp){
+
+	// REGISTRATION
+	// Dragos: Here we need to find the UE end-point of the signaling. 
+	// TODO: replace this with an iteration through all the Contact headers in the REGISTER response and 
+	// do the operation for each (or one session that would encompass all).
+	//
+	// TODO: check this for de-registration - now it is ignored (considered re-registration)
+	//
+
+	uint32_t duration=-1; //forever - this should be overwritten anyway
+	pcc_authdata_t *pcc_authdata=0;
+	AAASession * auth = *authp;
+	
+	r_contact *contact = NULL;
+	struct sip_uri parsed_cnt;
+	
+	//TODO: aon: add a while for multiple contacts, and have a bundle of information for all the contacts
+	str crt_uri = msg_contacts->uri;
+
+	if(parse_uri(crt_uri.s, crt_uri.len, &parsed_cnt) != E_OK){
+		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: error parsing uri of the contact\n");
+		goto end;
+	}
+	
+	contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
+			parsed_cnt.proto);
+	if(!contact){
+		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: not sending subscription to path status, for unknown contact\n");
+		goto end;
+	}
+
+	if (contact->pcc_session_id.len) {
+		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: re-registration ignoring it\n");
+		//its a re-registration so maybe ignore it
+		r_unlock(contact->hash);
+		goto end;
+		//auth=contact->pcc_session;
+	} else {
+		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: new registration sending AAR to PCRF for AF signaling path status subscription\n");
+		//its a registration so create a new cdp session
+		pcc_authdata = new_pcc_authdata();
+		if(!pcc_authdata) {
+			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: no memory left for generic\n");
+			r_unlock(contact->hash);
+			goto out_of_memory;
+		}				
+		pcc_authdata->subscribed_to_signaling_path_status=1;
+		STR_SHM_DUP(pcc_authdata->host, contact->host,"pcc_auth_init_registr");
+		pcc_authdata->port=contact->port;
+		pcc_authdata->transport=contact->transport;
+		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_registr: creating PCC Session for registration\n");
+		auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
+		if (!auth) {
+			LOG(L_ERR,"INFO:"M_NAME":pcc_auth_init_registr: unable to create the PCC Session\n");
+			r_unlock(contact->hash);
+			free_pcc_authdata(pcc_authdata);
+			pcc_authdata = 0;
+			goto error;
+		}
+		
+		STR_SHM_DUP(contact->pcc_session_id,auth->id,"pcc_auth_init_registr") ;
+		
+		if (contact->reg_state==REGISTERED) duration = contact->expires;
+		else duration = time(0);
+		auth->u.auth.lifetime = duration;
+		auth->u.auth.grace_period = REGISTRATION_GRACE_PERIOD;
+		if (auth->u.auth.timeout<auth->u.auth.lifetime) auth->u.auth.timeout = duration;
+				
+		r_unlock(contact->hash);
+	}
+	*authp = auth;
+	return 0;
+end:
+	return 1; 
+error:
+	return -1;	
+out_of_memory:
+	return -2;
+}
+
+void pcc_auth_clean_dlg_safe(p_dialog * dlg){
+
+	if(!dlg)
+		return;
+
+	if (dlg->pcc_session_id.s) {
+		shm_free(dlg->pcc_session_id.s);
+		dlg->pcc_session_id.s = 0;
+		dlg->pcc_session_id.len = 0;
+	}
+}
+
+/* 
+ * initiates/gets the dialog pcc session for a session establishment
+ * @param aor: the aor to be handled
+ * @return: 0 - ok, -1 - error, -2 - out of memory
+ */
+int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side){
+
+	pcc_authdata_t *pcc_authdata=0;
+	p_dialog * dlg = *dlgp;
+	AAASession * auth = NULL;
+	
+	if (!dlg->pcc_session_id.len) {
+		/*For the first time*/	 
+		pcc_authdata = new_pcc_authdata();
+		if(!pcc_authdata) {
+			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_dlg: no memory left for generic\n");
+			goto out_of_memory;
+		}	
+		pcc_authdata->callid.s=0; pcc_authdata->callid.len=0;
+		STR_SHM_DUP(pcc_authdata->callid, dlg->call_id,"pcc_auth_init_dlg");
+		pcc_authdata->direction=pcc_side;
+		pcc_authdata->host.s=0; pcc_authdata->host.len=0;
+		STR_SHM_DUP(pcc_authdata->host,dlg->host,"pcc_auth_init_dlg");
+		pcc_authdata->port=dlg->port;
+		pcc_authdata->transport=dlg->transport;
+
+		if (pcscf_qos_release7==-1){
+			 //LATCH default set to 1 , could be a config issue
+			 pcc_authdata->latch = 1;
+		}
+		// i should set a callback for the expiration of the session
+		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_dlg: creating PCC Session\n");
+		auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
+		if (!auth) {
+			LOG(L_ERR,"INFO:"M_NAME":pcc_auth_init_dlg: unable to create the PCC Session\n");
+			free_pcc_authdata(pcc_authdata);
+			pcc_authdata = 0;
+			goto error;
+		}		 
+		STR_SHM_DUP(dlg->pcc_session_id,auth->id,"pcc_auth_init_dlg") ;
+		
+	} else {
+		auth = cdpb.AAAGetAuthSession(dlg->pcc_session_id);
+		if (!auth){
+			LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_dlg: pcc session in dialog %.*s %i with id %.*s was not found in cdp\n",
+					dlg->call_id.len, dlg->call_id.s,pcc_side,
+					dlg->pcc_session_id.len,dlg->pcc_session_id.s);
+		}else{
+			LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_dlg:found a pcc session in dialog %.*s %i\n", dlg->call_id.len,dlg->call_id.s,pcc_side);
+			if (pcscf_qos_release7==-1)
+			{
+				pcc_authdata = (pcc_authdata_t *)auth->u.auth.generic_data;
+				*relatch = pcc_authdata->latch;
+			}
+		}
+	}
+	d_unlock(dlg->hash);
+	*dlgp=0;
+	*authp = auth;
+	return 0;
+
+out_of_memory:
+	d_unlock(dlg->hash);
+	*dlgp=NULL;
+	return -2;
+error:
+	d_unlock(dlg->hash);
+	*dlgp=NULL;
+	return -1;
+}
 
 /**
  * Sends the Authorization Authentication Request.
@@ -318,87 +521,51 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
-	p_dialog *dlg=0;
 	AAASession* auth=0;
 	AAA_AVP* avp=0;
-	pcc_authdata_t *pcc_authdata=0;
 	str data={0,0};	
-//	unsigned int hash;
+
+	contact_body_t* b=0;	
+	p_dialog *dlg=0;
+	str host={0,0};
+	int port=0,transport=0;
 	str sdpbodyinvite={0,0},sdpbody200={0,0};
 	char *mline=0;
 	char x[4];
 	int i=0,relatch=0;
 	str call_id={0,0};
-	str host={0,0};
-	int port=0,transport=0;
-	int tag=cscf_get_mobile_side(req);
+	int pcc_side =cscf_get_mobile_side(req);
 	enum p_dialog_direction dir = 0;
-	r_contact *contact = 0;
-	str session_id;
+	
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
-	uint32_t duration=-1; //forever - this should be overwritten anyway
 	
 	if (is_register){
-		// REGISTRATION
-		// Dragos: Here we need to find the UE end-point of the signaling. Unfortunately, what follows is just a 
-		// horrible hack - getting the UE Via IP by using the functions designed for the dialogs.
-		// TODO: replace this with an iteration through all the Contact headers in the REGISTER response and 
-		// do the operation for each (or one session that would encompass all).
-		//
-		// TODO: check this for de-registration - now it is ignored (considered re-registration)
-		//
-		dir = (int) DLG_MOBILE_ORIGINATING;
-		find_dialog_contact(req,dir,&host,&port,&transport);
-	
-		contact=get_r_contact(host,port,transport);
-		if (!contact) {
-			LOG(L_ERR,"ERR:PCC_AAR: not sending subscription to path status, for unknown contact\n");
+		
+		if (parse_headers(res, HDR_EOH_F, 0) <0) {
+			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: error parsing headers\n");
 			goto end;
-		} else {
-			if (contact->pcc_session_id.len) {
-				LOG(L_DBG,"DBG:PCC_AAR: re-registration ignoring it\n");
-				//its a re-registration so maybe ignore it
-				r_unlock(contact->hash);
-				goto end;
-				//auth=contact->pcc_session;
-			} else {
-				LOG(L_DBG,"DBG:PCC_AAR: new registration sending AAR to PCRF for AF signaling path status subscription\n");
-				//its a registration so create a new cdp session
-				pcc_authdata = new_pcc_authdata();
-				if(!pcc_authdata) {
-					LOG(L_ERR,"ERR:PCC_AAR: no memory left for generic\n");
-					r_unlock(contact->hash);
-					goto out_of_memory;
-				}				
-				pcc_authdata->subscribed_to_signaling_path_status=1;
-				STR_SHM_DUP(pcc_authdata->host,host,"shm");
-				pcc_authdata->port=port;
-				pcc_authdata->transport=transport;
-				LOG(L_INFO,"PCC_AAR(): creating PCC Session for registration\n");
-				auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
-				if (!auth) {
-					LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
-					r_unlock(contact->hash);
-					free_pcc_authdata(pcc_authdata);
-					pcc_authdata = 0;
-					goto error;
-				}
-				STR_SHM_DUP(contact->pcc_session_id,auth->id,"shm") ;
-				
-				if (contact->reg_state==REGISTERED) duration = contact->expires;
-				else duration = time(0);
-				auth->u.auth.lifetime = duration;
-				auth->u.auth.grace_period = REGISTRATION_GRACE_PERIOD;
-				if (auth->u.auth.timeout<auth->u.auth.lifetime) auth->u.auth.timeout = duration;
-				
-				r_unlock(contact->hash);
-			}
+		}	
+	
+		b = cscf_parse_contacts(res);
+		if (!b||(!b->contacts && !b->star)) {
+			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: no contacts found in the Contact header\n");
+			goto end;
 		}
+
+		int ret = pcc_auth_init_registr(b->contacts, &auth);
+		switch(ret){
+			case 0: break;
+			case 1: goto end;
+			case -1: goto error;
+			case -2: goto out_of_memory;	 
+		}
+		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_registr: log4 \n");
+		
 	} else {	
 		// CALL
 		dir = get_dialog_direction(str1);
-		if (tag==-1) tag=(int) dir;
-		if (tag) 
+		if (pcc_side==-1) pcc_side=(int) dir;
+		if (pcc_side) 
 			LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
 		else 
 			LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
@@ -409,67 +576,22 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		/* first check on the response */
 		find_dialog_contact(res,dir,&host,&port,&transport);
 		call_id = cscf_get_call_id(req, 0);
-		LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
+		LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		dlg = get_p_dialog(call_id,host,port,transport,&dir);	
 	
 		if (!dlg) {
 			/* then fallback on the request */
 			find_dialog_contact(req,dir,&host,&port,&transport);
 			dlg = get_p_dialog(call_id,host,port,transport,&dir);
-			LOG(L_INFO,"PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
+			LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		}
 		if (!dlg) goto error;
-				
-		if (!dlg->pcc_session_id.len) {
-			/*For the first time*/	 
-			pcc_authdata = new_pcc_authdata();
-			if(!pcc_authdata) {
-				LOG(L_ERR,"ERR:PCC_AAR: no memory left for generic\n");
-				d_unlock(dlg->hash);
-				dlg=0;
-				goto out_of_memory;
-			}	
-			pcc_authdata->callid.s=0; pcc_authdata->callid.len=0;
-			STR_SHM_DUP(pcc_authdata->callid,call_id,"shm");
-			pcc_authdata->direction=tag;
-			pcc_authdata->host.s=0; pcc_authdata->host.len=0;
-			STR_SHM_DUP(pcc_authdata->host,host,"shm");
-			pcc_authdata->port=port;
-			pcc_authdata->transport=transport;
-			if (pcscf_qos_release7==-1)
-			{
-			 //LATCH default set to 1 , could be a config issue
-			 pcc_authdata->latch = 1;
-			}
-			// i should set a callback for the expiration of the session
-			LOG(L_INFO,"PCC_AAR(): creating PCC Session\n");
-			auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
-			if (!auth) {
-				LOG(L_ERR,"PCC_AAR(): unable to create the PCC Session\n");
-				free_pcc_authdata(pcc_authdata);
-				pcc_authdata = 0;
-				d_unlock(dlg->hash);
-				dlg=0;
-				goto error;
-			}		 
-			STR_SHM_DUP(dlg->pcc_session_id,auth->id,"shm") ;
-		} else {
-			auth = cdpb.AAAGetAuthSession(dlg->pcc_session_id);
-			if (!auth){
-				LOG(L_INFO,"PCC_AAR(): pcc session in dialog %.*s %i with id %.*s was not found in cdp\n",
-						call_id.len,call_id.s,tag,
-						dlg->pcc_session_id.len,dlg->pcc_session_id.s);
-			}else{
-				LOG(L_INFO,"PCC_AAR():found a pcc session in dialog %.*s %i\n",call_id.len,call_id.s,tag);
-				if (pcscf_qos_release7==-1)
-				{
-					pcc_authdata = (pcc_authdata_t *)auth->u.auth.generic_data;
-					relatch = pcc_authdata->latch;
-				}
-			}
+		int ret = pcc_auth_init_dlg(&dlg, &auth, &relatch, pcc_side);
+		switch(ret){
+			case 0: break;
+			case -1: goto error;
+			case -2: goto out_of_memory;	
 		}
-		d_unlock(dlg->hash);
-		dlg=0;
 	}
 		
 	/* Create an AAR prototype */
@@ -550,11 +672,11 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	} else {
 		// Call
 		if(extract_body(req,&sdpbodyinvite)==-1) {
-			LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in INVITE\n","rx_aar");
+			LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: No Body to extract in INVITE\n");
 			goto error;
 		}
 		if(res && extract_body(res,&sdpbody200)==-1) {
-			LOG(L_ERR,"ERROR:"M_NAME":%s: No Body to extract in 200\n","rx_aar");
+			LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: No Body to extract in 200\n");
 			goto error;
 		}
 		/*Create and add 1 media-component-description AVP for each
@@ -569,9 +691,9 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		{
 			i++;
 			
-			if (!PCC_add_media_component_description(aar,sdpbodyinvite,sdpbody200,mline,i,tag))
+			if (!PCC_add_media_component_description(aar,sdpbodyinvite,sdpbody200,mline,i,pcc_side))
 			{
-				LOG(L_ERR,"ERROR: PCC_AAR() : unable to add media component description AVP for line %i\n",i);
+				LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: unable to add media component description AVP for line %i\n",i);
 				goto error; /* Think about this*/
 			}
 			
@@ -581,7 +703,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	
 	if (pcscf_qos_release7!=-1)
 	{
-		PCC_add_subscription_ID(aar,req,tag);
+		PCC_add_subscription_ID(aar,req,pcc_side);
 //		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
 //		cdpb.AAAAddAVPToMessage(aar,
 //				cdpb.AAACreateAVP(
@@ -615,71 +737,29 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		auth=0;
 	}
 	
-	STR_PKG_DUP(session_id,aar->sessionId->data,"shm");
-	
-	LOG(L_INFO,"PCC_AAR() : sending AAR to PCRF\n");
+	LOG(L_INFO,"INFO:"M_NAME":PCC_AAR: sending AAR to PCRF\n");
 	/*---------- 3. Send AAR to PCRF ----------*/
 	if (forced_qos_peer.len)
 		aaa = cdpb.AAASendRecvMessageToPeer(aar,&forced_qos_peer);
 	else 
 		aaa = cdpb.AAASendRecvMessage(aar);	
 	
-	//cdpb.AAAPrintMessage(aaa);
-	// Drop the session immediately, don't wait for it to expire
-	if (session_id.len){
-		if (!aaa) {
-			auth = cdpb.AAAGetAuthSession(session_id);
-			if (auth){
-				if (is_register){
-					contact=get_r_contact(host,port,transport);
-					if (contact){
-						if (contact->pcc_session_id.s) {
-							shm_free(contact->pcc_session_id.s);
-							contact->pcc_session_id.s = 0;
-							contact->pcc_session_id.len = 0;
-						}
-						r_unlock(contact->hash);
-					}
-				}else{
-					dlg = get_p_dialog(call_id,host,port,transport,&dir);						
-					if (dlg){
-						if (dlg->pcc_session_id.s) {
-							shm_free(dlg->pcc_session_id.s);
-							dlg->pcc_session_id.s = 0;
-							dlg->pcc_session_id.len = 0;
-						}
-						d_unlock(dlg->hash);
-					}
-				}
-				cdpb.AAADropAuthSession(auth);
-				auth=0;
-			}
-		}
-		pkg_free(session_id.s);		
-	}
-		
+	LOG(L_INFO,"INFO:"M_NAME":PCC_AAR: received AAA from PCRF\n");
 	return aaa;
+
 out_of_memory:
-	LOG(L_CRIT,"PCC_AAR():out of memory\n");
+	LOG(L_CRIT,"CRIT:"M_NAME":PCC_AAR:out of memory\n");
 error:
-	LOG(L_ERR,"PCC_AAR(): unexpected ERROR!!\n");
+	LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: unexpected ERROR\n");
 	if (aar) cdpb.AAAFreeMessage(&aar);
 	if (auth) {
 		if(dlg){
 			d_lock(dlg->hash);
-			cdpb.AAADropAuthSession(auth);
-			auth=0;
-			if (dlg->pcc_session_id.s){
-				shm_free(dlg->pcc_session_id.s);
-				dlg->pcc_session_id.s = 0;
-				dlg->pcc_session_id.len = 0;
-			}
+			pcc_auth_clean_dlg_safe(dlg);
 			d_unlock(dlg->hash);
 		}
-		else{
-			cdpb.AAADropAuthSession(auth);
-			auth=0;
-		}
+		cdpb.AAADropAuthSession(auth);
+		auth=0;
 	}
 end:
 	return NULL;

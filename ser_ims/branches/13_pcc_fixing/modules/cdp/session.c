@@ -283,7 +283,6 @@ void cdp_add_session(cdp_session_t *x)
 	if (sessions[x->hash].tail) sessions[x->hash].tail->next = x;
 	sessions[x->hash].tail = x;
 	if (!sessions[x->hash].head) sessions[x->hash].head = x;	
-	AAASessionsUnlock(x->hash);
 }
 
 /**

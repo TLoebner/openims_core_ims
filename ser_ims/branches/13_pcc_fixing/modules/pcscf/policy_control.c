@@ -157,6 +157,7 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 	}
 
 	/* Get the SIP request from this transaction */
+	/* Create an AAR based on request and reply and send it to PDF */
 	if (!preliminary) {
 		t=tmb.t_gett();
 		if (!t) {
@@ -192,7 +193,6 @@ int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 			aaa = PCC_AAR(msg,0,str1);
 	}
 
-	/* Create an AAR based on request and reply and send it to PDF */
 
 	//cdpb.AAAPrintMessage(aaa);
 	
