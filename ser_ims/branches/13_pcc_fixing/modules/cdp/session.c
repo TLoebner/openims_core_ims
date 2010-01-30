@@ -278,11 +278,12 @@ void cdp_add_session(cdp_session_t *x)
 //	x->hash = hash;
 	LOG(L_DBG,"adding a session with id %.*s\n",x->id.len,x->id.s);
 	AAASessionsLock(x->hash);
-		x->next = 0;
-		x->prev = sessions[x->hash].tail;
-		if (sessions[x->hash].tail) sessions[x->hash].tail->next = x;
-		sessions[x->hash].tail = x;
-		if (!sessions[x->hash].head) sessions[x->hash].head = x;	
+	x->next = 0;
+	x->prev = sessions[x->hash].tail;
+	if (sessions[x->hash].tail) sessions[x->hash].tail->next = x;
+	sessions[x->hash].tail = x;
+	if (!sessions[x->hash].head) sessions[x->hash].head = x;	
+	AAASessionsUnlock(x->hash);
 }
 
 /**
