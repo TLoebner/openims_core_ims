@@ -59,7 +59,7 @@
 
 int P_local_policy(struct sip_msg* msg, char* str1, char* str2);
 int P_generates_aar(struct sip_msg *msg,char *str1,char *str2); 
-int P_AAR(struct sip_msg* msg, char* str1, char* str2); 
+int P_Rx(struct sip_msg* msg, char* str1, char* str2); 
 int P_STR(struct sip_msg* msg, char* str1, char* str2);
 
 #endif /*POLICY_CONTROL_H*/

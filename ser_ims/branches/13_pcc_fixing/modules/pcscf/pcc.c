@@ -732,10 +732,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		gqprima_AAR(aar,req,res,str1,relatch);
 	}
 
-	if (auth) {
-		cdpb.AAASessionsUnlock(auth->hash);
-		auth=0;
-	}
+	if (auth) cdpb.AAASessionsUnlock(auth->hash);
 	
 	LOG(L_INFO,"INFO:"M_NAME":PCC_AAR: sending AAR to PCRF\n");
 	/*---------- 3. Send AAR to PCRF ----------*/

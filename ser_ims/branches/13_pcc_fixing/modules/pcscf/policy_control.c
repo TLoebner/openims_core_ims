@@ -141,7 +141,7 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
  * @param str2 - not used 
  * @returns 1 on Diameter success or 0 on failure   
  */
-int P_AAR(struct sip_msg* msg, char* str1, char* str2)
+int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 {	
 	struct cell *t;
 	int preliminary=0;
