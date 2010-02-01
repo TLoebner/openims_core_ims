@@ -62,6 +62,8 @@
 #include "pcc_gqprima.h"
 #include "registrar_storage.h"
 #include "registrar.h"
+#include "sip_body.h"
+
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
 
@@ -329,7 +331,7 @@ void pcc_auth_clean_register(r_contact * cnt, contact_t* msg_contacts, int from_
 			r_contact * contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
 					parsed_cnt.proto);
 
-			if (contact){
+			if (!contact){
 				LOG(LOG_CRIT,"BUG:"M_NAME":pcc_auth_clean_register: when called, "
 						"the list of contacts should be already tested\n");
 				return;
@@ -508,6 +510,54 @@ error:
 	return -1;
 }
 
+//AF Service is IMS Services although it should be the IMS Communication Services
+static str IMS_Serv_AVP_val = {"IMS Services", 12};
+
+/* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
+int pcc_aar_add_mandat_avps(AAAMessage* aar, struct sip_msg * res){
+
+	char x[4];
+
+	/* Add Auth-Application-Id AVP */
+	if (pcscf_qos_release7==1){
+		if (!PCC_add_auth_application_id(aar, IMS_Rx)) goto error;
+	}else{
+		if (!PCC_add_auth_application_id(aar, IMS_Gq)) goto error;
+	} 
+
+	/* Add Destination-Realm AVP */
+	str realm = pcc_get_destination_realm();
+	if (realm.len && !PCC_add_destination_realm(aar, realm)) goto error;
+
+	/* Add AF-Application-Identifier AVP */
+	cdpb.AAAAddAVPToMessage(aar,
+			cdpb.AAACreateAVP(
+					AVP_IMS_AF_Application_Identifier,
+					AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+					IMS_vendor_id_3GPP,
+					IMS_Serv_AVP_val.s,IMS_Serv_AVP_val.len,
+					AVP_DUPLICATE_DATA),
+			aar->avpList.tail);
+
+	
+	/* Add Service-Info-Status AVP, if prelimiary
+	 * by default(when absent): final status is considered*/
+	if (!res){
+		set_4bytes(x,AVP_EPC_Service_Info_Status_Preliminary_Service_Information);
+		cdpb.AAAAddAVPToMessage(aar,
+				cdpb.AAACreateAVP(
+						AVP_IMS_Service_Info_Status,
+						AAA_AVP_FLAG_VENDOR_SPECIFIC,
+						IMS_vendor_id_3GPP,x,4,
+						AVP_DUPLICATE_DATA),
+				aar->avpList.tail);
+	}
+
+	return 1;
+error:
+	return 0;
+}
+
 /**
  * Sends the Authorization Authentication Request.
  * @param req - SIP request  
@@ -523,7 +573,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	AAAMessage* aaa = 0;
 	AAASession* auth=0;
 	AAA_AVP* avp=0;
-	str data={0,0};	
 
 	contact_body_t* b=0;	
 	p_dialog *dlg=0;
@@ -532,7 +581,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	str sdpbodyinvite={0,0},sdpbody200={0,0};
 	char *mline=0;
 	char x[4];
-	int i=0,relatch=0;
+	int i, relatch=0;
 	str call_id={0,0};
 	int pcc_side =cscf_get_mobile_side(req);
 	enum p_dialog_direction dir = 0;
@@ -540,13 +589,12 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
 	if (is_register){
-		
-		if (parse_headers(res, HDR_EOH_F, 0) <0) {
+		if (parse_headers(req, HDR_EOH_F, 0) <0) {
 			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: error parsing headers\n");
 			goto end;
 		}	
 	
-		b = cscf_parse_contacts(res);
+		b = cscf_parse_contacts(req);
 		if (!b||(!b->contacts && !b->star)) {
 			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: no contacts found in the Contact header\n");
 			goto end;
@@ -559,7 +607,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 			case -1: goto error;
 			case -2: goto out_of_memory;	 
 		}
-		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_registr: log4 \n");
 		
 	} else {	
 		// CALL
@@ -603,46 +650,9 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	if (!aar) goto error;
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
+	if(!pcc_aar_add_mandat_avps(aar, res))
+		goto error;
 	
-	/* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
-	
-	/* Add Destination-Realm AVP */
-	str realm = pcc_get_destination_realm();
-	if (realm.len&&!PCC_add_destination_realm(aar, realm)) goto error;
-	
-	/* Add Auth-Application-Id AVP */
-	if (pcscf_qos_release7==1){
-		if (!PCC_add_auth_application_id(aar, IMS_Rx)) goto error;
-	}else{
-		if (!PCC_add_auth_application_id(aar, IMS_Gq)) goto error;
-	} 
-
-	if (!res)
-	{
-		set_4bytes(x,AVP_EPC_Service_Info_Status_Preliminary_Service_Information);
-		cdpb.AAAAddAVPToMessage(aar,
-				cdpb.AAACreateAVP(
-						AVP_IMS_Service_Info_Status,
-						AAA_AVP_FLAG_VENDOR_SPECIFIC,
-						IMS_vendor_id_3GPP,x,4,
-						AVP_DUPLICATE_DATA),
-				aar->avpList.tail);
-	}
-
-
-	//AF Service is IMS Services although it should be the IMS Communication Services
-	data.s="IMS Services";
-	data.len=12;
-	cdpb.AAAAddAVPToMessage(aar,
-			cdpb.AAACreateAVP(
-					AVP_IMS_AF_Application_Identifier,
-					AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-					IMS_vendor_id_3GPP,
-					data.s,data.len,
-					AVP_DUPLICATE_DATA),
-			aar->avpList.tail);
-	
-
 	/*---------- 2. Create and add Media-Component-Description AVP ----------*/
 	
 	/*	
@@ -671,25 +681,19 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		//TODO: maybe add Media-Component-Description to actually make a qos reservation for the signaling
 	} else {
 		// Call
-		if(extract_body(req,&sdpbodyinvite)==-1) {
-			LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: No Body to extract in INVITE\n");
+		if(extract_sdp_body(req,&sdpbodyinvite)==-1) {
+			LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: No SDP Body to extract from INVITE\n");
 			goto error;
 		}
-		if(res && extract_body(res,&sdpbody200)==-1) {
-			LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: No Body to extract in 200\n");
+		if(res && extract_sdp_body(res,&sdpbody200)==-1) {
+			LOG(L_ERR,"ERROR:"M_NAME":PCC_AAR: No SDP Body to extract from 200 reply\n");
 			goto error;
 		}
 		/*Create and add 1 media-component-description AVP for each
 		 * m= line in the SDP body 
 		 */
-		
 		mline=find_sdp_line(sdpbodyinvite.s,(sdpbodyinvite.s+sdpbodyinvite.len),'m');
-		
-		if (mline==NULL) goto error;
-			
-		while(mline!=NULL)
-		{
-			i++;
+		for(i=1;mline!=NULL;i++){
 			
 			if (!PCC_add_media_component_description(aar,sdpbodyinvite,sdpbody200,mline,i,pcc_side))
 			{
@@ -755,6 +759,8 @@ error:
 			pcc_auth_clean_dlg_safe(dlg);
 			d_unlock(dlg->hash);
 		}
+		if(is_register && b)
+			pcc_auth_clean_register(NULL, b->contacts, 0);
 		cdpb.AAADropAuthSession(auth);
 		auth=0;
 	}
@@ -802,7 +808,6 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	//AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
 	p_dialog *dlg=0;
-	r_contact *contact=0;
 	char x[4];
 	str host;
 	int port,transport;
@@ -811,27 +816,24 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	enum p_dialog_direction dir;
 	str call_id;	
 	
+	contact_body_t* b=0;	
+
 	LOG(L_DBG,"PCC_STR()\n");
 /** get Diameter session based on sip call_id */
 	if (is_register){
 		//Registration
-		dir = (int) DLG_MOBILE_ORIGINATING;
-		find_dialog_contact(msg,dir,&host,&port,&transport);	
-		contact=get_r_contact(host,port,transport);
-		if (!contact) {
-			LOG(L_ERR,"ERR:PCC_STR: not sending STR for subscription to path status, for unknown contact\n");
+		if (parse_headers(msg, HDR_EOH_F, 0) <0) {
+			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: error parsing headers\n");
 			goto end;
-		} else {
-			if (contact->pcc_session_id.len) {
-				auth=cdpb.AAAGetAuthSession(contact->pcc_session_id);
-				// done here , so that the callback doesnt call any expirations
-				if (contact->pcc_session_id.s) shm_free(contact->pcc_session_id.s);		
-				contact->pcc_session_id.len=0; 
-				contact->pcc_session_id.s=0; 
-			} else 
-				LOG(L_DBG,"DBG:PCC_STR: no pcc_session_id found on contact, maybe already dropped\n");
-			r_unlock(contact->hash);
+		}	
+	
+		b = cscf_parse_contacts(msg);
+		if (!b||(!b->contacts && !b->star)) {
+			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: no contacts found in the Contact header\n");
+			goto end;
 		}
+		pcc_auth_clean_register(NULL, b->contacts, 0);
+
 	}else {
 		//Call
 		dir = get_dialog_direction(str1);

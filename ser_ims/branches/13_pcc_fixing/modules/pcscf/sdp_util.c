@@ -80,6 +80,7 @@
 #include "mod.h"
 #include "nat_helper.h"
 #include "sip.h"
+#include "sip_body.h"
 
 extern int pcscf_nat_enable;
 extern struct rtpp_head rtpp_list;
@@ -192,38 +193,6 @@ other:
 	LOG(L_ERR,"ERROR:check_content_type: invalid type for a message\n");
 	return -1;
 }
-
-int extract_body(struct sip_msg *msg, str *body )
-{
-	
-	body->s = get_body(msg);
-	if (body->s==0) {
-		LOG(L_ERR, "ERROR: extract_body: failed to get the message body\n");
-		goto error;
-	}
-	body->len = msg->len -(int)(body->s-msg->buf);
-	if (body->len==0) {
-		LOG(L_ERR, "ERROR: extract_body: message body has length zero\n");
-		goto error;
-	}
-	
-	/* no need for parse_headers(msg, EOH), get_body will 
-	 * parse everything */
-	/*is the content type correct?*/
-	if (check_content_type(msg)==-1)
-	{
-		LOG(L_ERR,"ERROR: extract_body: content type mismatching\n");
-		goto error;
-	}
-	
-	/*DBG("DEBUG:extract_body:=|%.*s|\n",body->len,body->s);*/
-
-	return 1;
-error:
-	return -1;
-}
-
-
 
 static int isnulladdr(str *sx, int pf)
 {
@@ -371,7 +340,7 @@ static int extract_mediaip(str *body, str *mediaip, int *pf)
 //	str body, ip;
 //	int pf;
 //
-//	if (extract_body(msg, &body) == -1) {
+//	if (extract_sdp_body(msg, &body) == -1) {
 //		LOG(L_ERR,"ERROR: sdp_1918: cannot extract body from msg!\n");
 //		return 0;
 //	}
@@ -1081,7 +1050,7 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 	/* extract_body will also parse all the headers in the message as
 	 * a side effect => don't move get_callid/get_to_tag in front of it
 	 * -- andrei */
-	if (extract_body(msg, &body) == -1) {
+	if (extract_sdp_body(msg, &body) == -1) {
 		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't extract body "
 		    "from the message\n");
 		return -1;
@@ -1520,7 +1489,7 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 		switch(method)
 		{	
 		    case METHOD_INVITE:
-		    	if (extract_body(req,&body)<0) had_sdp_in_invite = 0;
+		    	if (extract_sdp_body(req,&body)<0) had_sdp_in_invite = 0;
 				else had_sdp_in_invite = 1; 
 		    	if (msg->first_line.type == SIP_REQUEST){
 			 		/* on INVITE */
