@@ -1,5 +1,5 @@
 /*
- * $Id: bin_file.c 161 2007-03-01 14:06:01Z vingarzan $
+ * $Id$
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
