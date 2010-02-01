@@ -55,7 +55,6 @@
 #include "pcc.h"
 
 #include "pcc_avp.h"
-#include "sip.h"
 #include "dlg_state.h"
 #include "release_call.h" // for the ASR-ASA
 #include "../tm/tm_load.h"
@@ -305,39 +304,40 @@ void callback_for_pccsession(int event,void *session)
 /*
  * clean the pcc_session_id string from a contact/contact list
  * @param contacts - the contacts to be processed
- * @from_registrar - 0 if the contacts are from the msg (usually Contact header), considered a list, no unlock necessary
- * 	     	   - 1 if from the registrar, in this case the hash lock has to be unlocked	 
+ * @param aor  - the aor of which contact_t should be cleaned
+ * @param from_registrar - 0 if the contacts are from the msg (usually Contact header), considered an AOR
+ * 			 - 1 from registrar
  */
-void pcc_auth_clean_register(r_contact * cnt, contact_t* msg_contacts, int from_registrar){
+AAASession * pcc_auth_clean_register(r_contact * cnt, contact_t* aor, int from_registrar){
 
 	struct sip_uri parsed_cnt;
+	AAASession* auth = NULL;
 
 	if(from_registrar){
 		if (cnt->pcc_session_id.s) {
+			auth = cdpb.AAAGetAuthSession(cnt->pcc_session_id);
 			shm_free(cnt->pcc_session_id.s);
 			cnt->pcc_session_id.s = 0;
 			cnt->pcc_session_id.len = 0;
 		}
 		r_unlock(cnt->hash);
+		return auth;
 	}else{
-		for(;msg_contacts;msg_contacts=msg_contacts->next){
-	
-			str crt_uri = msg_contacts->uri;
-			if(parse_uri(crt_uri.s, crt_uri.len, &parsed_cnt) != E_OK){
-				LOG(L_ERR,"ERR:"M_NAME":pcc_auth_clean_register: error parsing uri of the contact\n");
-				continue;		
-			}
-	
-			r_contact * contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
-					parsed_cnt.proto);
-
-			if (!contact){
-				LOG(LOG_CRIT,"BUG:"M_NAME":pcc_auth_clean_register: when called, "
-						"the list of contacts should be already tested\n");
-				return;
-			}
-			pcc_auth_clean_register(contact, NULL, 1);
+		str crt_uri = aor->uri;
+		if(parse_uri(crt_uri.s, crt_uri.len, &parsed_cnt) != E_OK){
+			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_clean_register: error parsing uri of the contact\n");
+			return NULL;		
 		}
+	
+		r_contact * contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
+				parsed_cnt.proto);
+
+		if (!contact){
+			LOG(LOG_CRIT,"BUG:"M_NAME":pcc_auth_clean_register: when called, "
+						"the contact should be already tested\n");
+			return NULL;
+		}
+		return pcc_auth_clean_register(contact, NULL, 1);
 	}
 }
 
@@ -346,27 +346,20 @@ void pcc_auth_clean_register(r_contact * cnt, contact_t* msg_contacts, int from_
  * @param aor: the aor to be handled
  * @return: 0 - ok, 1 - goto end, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_registr(contact_t * msg_contacts, AAASession ** authp){
+int pcc_auth_init_registr(contact_t * aor, int * expireReg, AAASession ** authp){
 
 	// REGISTRATION
-	// Dragos: Here we need to find the UE end-point of the signaling. 
-	// TODO: replace this with an iteration through all the Contact headers in the REGISTER response and 
-	// do the operation for each (or one session that would encompass all).
-	//
-	// TODO: check this for de-registration - now it is ignored (considered re-registration)
-	//
-
+	
 	uint32_t duration=-1; //forever - this should be overwritten anyway
 	pcc_authdata_t *pcc_authdata=0;
 	AAASession * auth = *authp;
 	
 	r_contact *contact = NULL;
 	struct sip_uri parsed_cnt;
-	
-	//TODO: aon: add a while for multiple contacts, and have a bundle of information for all the contacts
-	str crt_uri = msg_contacts->uri;
+	int ret = 1;
+	str uri = aor->uri;
 
-	if(parse_uri(crt_uri.s, crt_uri.len, &parsed_cnt) != E_OK){
+	if(parse_uri(uri.s, uri.len, &parsed_cnt) != E_OK){
 		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: error parsing uri of the contact\n");
 		goto end;
 	}
@@ -379,18 +372,20 @@ int pcc_auth_init_registr(contact_t * msg_contacts, AAASession ** authp){
 	}
 
 	if (contact->pcc_session_id.len) {
-		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: re-registration ignoring it\n");
-		//its a re-registration so maybe ignore it
-		r_unlock(contact->hash);
-		goto end;
-		//auth=contact->pcc_session;
+		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: re-registration, retrieving the AAAsession \n");
+		auth=cdpb.AAAGetAuthSession(contact->pcc_session_id);
+		if(!auth){
+			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: no AAAsession found\n");
+			ret = -1;
+			goto end;
+		}
+		*expireReg = contact->expires-time(0);
 	} else {
 		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: new registration sending AAR to PCRF for AF signaling path status subscription\n");
 		//its a registration so create a new cdp session
 		pcc_authdata = new_pcc_authdata();
 		if(!pcc_authdata) {
 			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: no memory left for generic\n");
-			r_unlock(contact->hash);
 			goto out_of_memory;
 		}				
 		pcc_authdata->subscribed_to_signaling_path_status=1;
@@ -401,10 +396,10 @@ int pcc_auth_init_registr(contact_t * msg_contacts, AAASession ** authp){
 		auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
 		if (!auth) {
 			LOG(L_ERR,"INFO:"M_NAME":pcc_auth_init_registr: unable to create the PCC Session\n");
-			r_unlock(contact->hash);
 			free_pcc_authdata(pcc_authdata);
 			pcc_authdata = 0;
-			goto error;
+			ret = -1;
+			goto end;
 		}
 		
 		STR_SHM_DUP(contact->pcc_session_id,auth->id,"pcc_auth_init_registr") ;
@@ -414,16 +409,16 @@ int pcc_auth_init_registr(contact_t * msg_contacts, AAASession ** authp){
 		auth->u.auth.lifetime = duration;
 		auth->u.auth.grace_period = REGISTRATION_GRACE_PERIOD;
 		if (auth->u.auth.timeout<auth->u.auth.lifetime) auth->u.auth.timeout = duration;
+		*expireReg = 0;
 				
-		r_unlock(contact->hash);
 	}
 	*authp = auth;
-	return 0;
+	ret = 0;
 end:
-	return 1; 
-error:
-	return -1;	
+	if(contact) r_unlock(contact->hash);
+	return ret;
 out_of_memory:
+	if(contact) r_unlock(contact->hash);
 	return -2;
 }
 
@@ -567,11 +562,11 @@ error:
  * 
  * @returns AAA message or NULL on error  
  */
-AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
+AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t* aor)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
-	AAASession* auth=0;
+	AAASession* auth = 0;
 	AAA_AVP* avp=0;
 
 	contact_body_t* b=0;	
@@ -585,22 +580,12 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 	str call_id={0,0};
 	int pcc_side =cscf_get_mobile_side(req);
 	enum p_dialog_direction dir = 0;
-	
+	int auth_lifetime = 0;
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
 	if (is_register){
-		if (parse_headers(req, HDR_EOH_F, 0) <0) {
-			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: error parsing headers\n");
-			goto end;
-		}	
-	
-		b = cscf_parse_contacts(req);
-		if (!b||(!b->contacts && !b->star)) {
-			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: no contacts found in the Contact header\n");
-			goto end;
-		}
-
-		int ret = pcc_auth_init_registr(b->contacts, &auth);
+		//REGISTRATION
+		int ret = pcc_auth_init_registr(aor, &auth_lifetime, &auth);
 		switch(ret){
 			case 0: break;
 			case 1: goto end;
@@ -678,7 +663,15 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
 		set_4bytes(x,AVP_EPC_Specific_Action_IPCAN_Change);
 		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
-		//TODO: maybe add Media-Component-Description to actually make a qos reservation for the signaling
+		//TODO: dragos: maybe add Media-Component-Description to actually make a qos reservation for the signaling
+
+		//TODO: aon: auth_lifetime: for ims session modification maybe this should also be implemented
+		if(auth_lifetime){
+			set_4bytes(x,auth_lifetime);
+			avp = cdpb.AAACreateAVP(AVP_Authorization_Lifetime,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+			if (avp) cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
+		}
+
 	} else {
 		// Call
 		if(extract_sdp_body(req,&sdpbodyinvite)==-1) {
@@ -704,6 +697,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1)
 			mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 		}
 	}
+	
 	
 	if (pcscf_qos_release7!=-1)
 	{
@@ -760,13 +754,14 @@ error:
 			d_unlock(dlg->hash);
 		}
 		if(is_register && b)
-			pcc_auth_clean_register(NULL, b->contacts, 0);
+			pcc_auth_clean_register(NULL, aor, 0);
 		cdpb.AAADropAuthSession(auth);
 		auth=0;
 	}
 end:
 	return NULL;
 }
+
 
 int PCC_AAA(AAAMessage *aaa)
 {
@@ -802,7 +797,7 @@ int PCC_AAA(AAAMessage *aaa)
  * 
  * @returns STA message or NULL on error
  */
-AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
+AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 {
 	AAAMessage* dia_str = NULL;
 	//AAAMessage* dia_sta = NULL;
@@ -816,23 +811,11 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1)
 	enum p_dialog_direction dir;
 	str call_id;	
 	
-	contact_body_t* b=0;	
-
 	LOG(L_DBG,"PCC_STR()\n");
 /** get Diameter session based on sip call_id */
 	if (is_register){
 		//Registration
-		if (parse_headers(msg, HDR_EOH_F, 0) <0) {
-			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: error parsing headers\n");
-			goto end;
-		}	
-	
-		b = cscf_parse_contacts(msg);
-		if (!b||(!b->contacts && !b->star)) {
-			LOG(L_ERR,"ERR:"M_NAME":PCC_AAR: no contacts found in the Contact header\n");
-			goto end;
-		}
-		pcc_auth_clean_register(NULL, b->contacts, 0);
+		auth = pcc_auth_clean_register(NULL, aor, 0);
 
 	}else {
 		//Call
@@ -938,6 +921,21 @@ end:
 	return NULL;
 }
 
+/* Called upon receipt of an response to a STR
+ * for the moment, just a dummy handler
+ */
+int PCC_STA(AAAMessage *aaa){
+	int rc;
+
+	if (pcscf_qos_release7==-1)
+		rc = gqprima_AAA(aaa);
+	else
+	{
+		PCC_get_result_code(aaa,&rc);
+	}
+
+	return rc;
+}
 
 /*
  * Called upon receipt of an ASR terminates the user session and returns the ASA

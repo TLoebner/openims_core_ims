@@ -126,12 +126,12 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 
 
 /**
- * P_AAR() will be called, if a SIP 183 Session Progress comes back from the callee.  
+ * P_Rx() will be called, if a SIP 183 Session Progress comes back from the callee.  
  * It retrieves relevant SIP headers from SDP offer and answer from INVITE and 183
  * respectively. It converts these SIP headers to corresponding AVPs and creates
  * a AAR and sends it to the PDF and waits for the answer returned by the PDF.
  * 
- * P_AAR() is also called upon registration in that case parameter str1 should
+ * P_Rx() is also called upon registration in that case parameter str1 should
  * start with R or r so that the functions do appropriate
  * Quite confusingly if its a deregistration P_AAR will send an STR to the PCRF
  * to terminate the Diameter Auth Session established
@@ -145,14 +145,17 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 {	
 	struct cell *t;
 	int preliminary=0;
-	AAAMessage* aaa;
+	AAAMessage* resp;
 	int reg=0,expires=0;
+	contact_body_t * aor_list;
+	contact_t * crt_aor;
 	int result = AAA_SUCCESS;
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
+	int call_str = 0;
 	
-	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_AAR: CALLED\n");
+	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_Rx: CALLED\n");
 	if (msg->first_line.type == SIP_REQUEST) {
-		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: called upon request, preliminary information \n");
+		LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_Rx: called upon request, preliminary information \n");
 		preliminary=1;
 	}
 
@@ -161,45 +164,60 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 	if (!preliminary) {
 		t=tmb.t_gett();
 		if (!t) {
-			LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_AAR: cannot get the transaction\n");
+			LOG(L_ERR, ANSI_WHITE"ERR:"M_NAME": P_Rx: cannot get the transaction\n");
 			return CSCF_RETURN_FALSE;
 		}
-		LOG(L_DBG,"DBG:P_AAR t->method is %.*s\n",t->method.len,t->method.s);
+		LOG(L_DBG,"DBG:"M_NAME":P_Rx: t->method is %.*s\n",t->method.len,t->method.s);
 		if ((strncmp(t->method.s,"INVITE",6)==0)||(strncmp(t->method.s,"UPDATE",6)==0)||(strncmp(t->method.s,"PRACK",5)==0))
 		{
 			//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
-			aaa = PCC_AAR(t->uas.request, msg, str1);
+			resp = PCC_AAR(t->uas.request, msg, str1, NULL);
 
 		}else if ((strncmp(t->method.s,"REGISTER",8)==0))
 		{
 			//or at least a register to subscribe to signaling path status
 			reg=1;
 			expires=cscf_get_expires_hdr(t->uas.request);
-			LOG(L_DBG,"DBG:P_AAR: register with expires %i\n",expires);
-			if (expires > 0)
-				aaa = PCC_AAR(t->uas.request, msg, str1);
-			else {
-				//de-registration
-				LOG(L_DBG,"DBG:P_AAR: de-registration finishing auth session if any\n");
-				aaa = PCC_STR(msg,str1);
+			LOG(L_DBG,"DBG:"M_NAME":P_Rx: register with expires %i\n",expires);
+			if (parse_headers(msg, HDR_EOH_F, 0) <0) {
+				LOG(L_ERR,"ERR:"M_NAME":P_Rx: error parsing headers\n");
+				goto error;
+			}	
+		
+			aor_list = cscf_parse_contacts(msg);
+			if (!aor_list || (!aor_list->contacts && !aor_list->star)) {
+				LOG(L_ERR,"ERR:"M_NAME":P_Rx: no contacts found in the Contact header\n");
+				goto error;
+			}
+			for(crt_aor = aor_list->contacts; crt_aor!=NULL; crt_aor= crt_aor->next){
+				if (expires > 0)
+					resp = PCC_AAR(t->uas.request, msg, str1, crt_aor);
+				else {
+					//de-registration
+					LOG(L_DBG,"DBG:"M_NAME":P_Rx: de-registration finishing auth session if any\n");
+					call_str = 1;
+					resp = PCC_STR(msg, str1, crt_aor);
+				}
 			}
 		} else {
-			LOG(L_DBG,"DBG:P_AAR: Policy and Charging Control non-applicable\n");
+			LOG(L_DBG,"DBG:"M_NAME":P_Rx: Policy and Charging Control non-applicable\n");
 			return CSCF_RETURN_TRUE;
 		}
 	} else {
 		//preliminary
 		if ((strncmp(msg->first_line.u.request.method.s,"INVITE",6)==0))
-			aaa = PCC_AAR(msg,0,str1);
+			resp = PCC_AAR(msg,0,str1, NULL);
 	}
 
 
-	//cdpb.AAAPrintMessage(aaa);
+	//cdpb.AAAPrintMessage(resp);
 	
-	if (!aaa) goto error;
-	result = PCC_AAA(aaa);
-	LOG(L_INFO,"recieved an AAA with result code %i\n",result);
-	if (aaa) cdpb.AAAFreeMessage(&aaa); // if frequency
+	if (!resp) goto error;
+	if(call_str) result = PCC_STA(resp);
+	else	result = PCC_AAA(resp);
+	LOG(L_INFO,"INFO:"M_NAME":P_Rx:recieved an AAA with result code %i\n",result);
+
+	cdpb.AAAFreeMessage(&resp); // if frequency
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
 	if (reg || (result >= 2000 && result < 3000) ) {
 		return CSCF_RETURN_TRUE;
@@ -232,7 +250,7 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
 	
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
-	sta = PCC_STR(msg,str1);
+	sta = PCC_STR(msg,str1, NULL);
 	// if you really want the STA just declare a ResponseHandler for it because its never going
 	// to arrive here.. or never again
 	
