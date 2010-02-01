@@ -177,7 +177,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 		{
 			//or at least a register to subscribe to signaling path status
 			reg=1;
-			expires=cscf_get_expires_hdr(t->uas.request);
+			expires=cscf_get_expires_hdr(t->uas.request,1);
 			LOG(L_DBG,"DBG:"M_NAME":P_Rx: register with expires %i\n",expires);
 			if (parse_headers(msg, HDR_EOH_F, 0) <0) {
 				LOG(L_ERR,"ERR:"M_NAME":P_Rx: error parsing headers\n");

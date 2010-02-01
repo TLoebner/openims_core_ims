@@ -52,6 +52,18 @@
  * 
  */
 
+/*
+ * Please be careful about parsing the content of headers from shared-memory
+ * all headers are parsed and stored in tm shared-memory
+ * but only via/from/to/cseq/auth contents are parsed and stored to the shm
+ * so if other headers' contents need to be parsed, be sure to free the memory
+ * see:
+ * http://lists.sip-router.org/pipermail/sr-dev/2009-December/005314.html
+ * http://lists.berlios.de/pipermail/openimscore-cscf/2009-December/002349.html
+ * Feb, 1, 2010,  Min Wang ( wang@basis-audionet.com )
+ */
+
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -384,9 +396,10 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
  * Returns the expires value from the Expires header in the message.
  * It searches into the Expires header and if not found returns -1
  * @param msg - the SIP message, if available
+  * @is_shm - msg from from shared memory
  * @returns the value of the expire or -1 if not found
  */
-int cscf_get_expires_hdr(struct sip_msg *msg) {
+int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm) {
 	exp_body_t *exp;
 	int expires;
 	if (!msg) return -1;
@@ -404,6 +417,10 @@ int cscf_get_expires_hdr(struct sip_msg *msg) {
 		        if (exp->valid) {
 		                expires = exp->val;
 		                LOG(L_DBG,"DBG:"M_NAME":cscf_get_expires_hdr: <%d> \n",expires);
+                                if(is_shm) {
+                                        free_expires((exp_body_t**)&exp);
+                                        msg->expires->parsed = 0;
+                                }
 		                return expires;
 		        }
 		}
@@ -416,17 +433,18 @@ int cscf_get_expires_hdr(struct sip_msg *msg) {
  * First it searches into the Expires header and if not found it also looks 
  * into the expires parameter in the contact header
  * @param msg - the SIP message
+ * @param is_shm - msg from shared memory
  * @returns the value of the expire or the default 3600 if none found
  */
-int cscf_get_max_expires(struct sip_msg *msg)
+int cscf_get_max_expires(struct sip_msg *msg, int is_shm)
 {
 	unsigned int exp;
 	int max_expires = -1;
 	struct hdr_field *h;
 	contact_t *c;
 	/*first search in Expires header */
-	max_expires = cscf_get_expires_hdr(msg);
-	
+	max_expires = cscf_get_expires_hdr(msg, is_shm);
+
 	cscf_parse_contacts(msg);
 	for(h=msg->contact;h;h=h->next){
 		if (h->type==HDR_CONTACT_T && h->parsed) {
@@ -437,6 +455,16 @@ int cscf_get_max_expires(struct sip_msg *msg)
 			}
 		}	
 	}
+
+        if(is_shm){
+                for(h=msg->contact;h;h=h->next){
+                        if (h->type==HDR_CONTACT_T && h->parsed) {
+                                free_contact((contact_body_t**)&(h->parsed));
+                                h->parsed = 0;
+                        }
+                }
+        }
+
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_max_expires: <%d> \n",max_expires);
 	return max_expires;
 }

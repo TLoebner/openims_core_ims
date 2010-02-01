@@ -108,7 +108,7 @@ int isc_third_party_reg(struct sip_msg *msg, isc_match *m,isc_mark *mark)
 	 * this does not work correctly if the user has multiple contacts
 	 * and register/deregisters them individually!!!
 	 */
-	expires = cscf_get_max_expires(msg);
+	expires = cscf_get_max_expires(msg,0);
 	
 	/* Get P-Visited-Network-Id header */
 	pvni = cscf_get_visited_network_id(msg, &hdr);
@@ -304,7 +304,7 @@ void r_third_party_reg_response(struct cell *t,int type,struct tmcb_params *ps)
 		     
         if (ps->code>=200 && ps->code<300){
                 if (ps->rpl)
-                        expires = cscf_get_expires_hdr(ps->rpl);
+                        expires = cscf_get_expires_hdr(ps->rpl,0);
                 else
                         return;
                 req_uri = *((str*) *(ps->param));

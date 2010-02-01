@@ -156,7 +156,7 @@ int I_UAR(struct sip_msg* msg, char* str1, char* str2)
 	
 	if (atoi(str1)) authorization_type=AVP_IMS_UAR_REGISTRATION_AND_CAPABILITIES;
 	else {
-		expires = cscf_get_max_expires(msg);
+		expires = cscf_get_max_expires(msg,0);
 		if (expires == 0) authorization_type=AVP_IMS_UAR_DE_REGISTRATION;
 	}
 	

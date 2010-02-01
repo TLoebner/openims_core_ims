@@ -89,7 +89,7 @@ int ims_pm_get_registration_type(struct sip_msg *msg)
 {
 	str public_identity = cscf_get_public_identity(msg);
 	if (r_is_registered_id(public_identity)){
-		if (cscf_get_expires_hdr(msg)>0) return 1;
+		if (cscf_get_expires_hdr(msg,0)>0) return 1;
 		else return 2;		
 	}
 	else
