@@ -1,7 +1,7 @@
 /**
- * $Id$
+ * $Id: mod.h  $
  *  
- * Copyright (C) 2004-2009 FhG Fokus
+ * Copyright (C) 2004-2006 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -43,37 +43,13 @@
  * 
  */
  
- 
-/**
- * \file
- * 
- * P/I/S-CSCF/etc Module - SIP Message Body Operations
- * 
- * 
- *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
- * 
- */
-#ifndef SIP_BODY_H
-#define SIP_BODY_H
+
+#ifndef NATH_MOD_H
+#define NATH_MOD_H
+
+#include "../../sr_module.h"
+
+#define M_NAME "NATHELPER"
 
 
-str cscf_get_multipart_boundary(str content_type);
-
-str cscf_get_multipart_part(str body,str boundary,int *position);
-
-str cscf_get_multipart_body(str part);
-
-str cscf_get_multipart_content_type(str part);
-
-
-str cscf_get_body_with_type_from_body(str body,str body_content_type,str search_content_type,str *ret_part);
-
-str cscf_get_body_with_type(struct sip_msg *msg,str search_content_type,str *ret_part);
-
-/* this function calls all the other functions, 
- * this is the one that should be used when searching for a specific content-type*/
-str cscf_get_body_with_content_type(struct sip_msg *msg,str search_content_type);
-
-int extract_sdp_body(struct sip_msg *msg, str *body );
-
-#endif /* SIP_BODY_H */
+#endif /* NATH_MOD_H */

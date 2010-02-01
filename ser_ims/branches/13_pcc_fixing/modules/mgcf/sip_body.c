@@ -356,3 +356,50 @@ str cscf_get_body_with_type(struct sip_msg *msg,str search_content_type,str *ret
 	}
 	return cscf_get_body_with_type_from_body(cscf_get_body(msg),body_content_type,search_content_type,ret_part);
 }
+
+/* wrapper of cscf_get_body_with_type function
+ * searches for a body part with a specific content-type
+ * @param msg - the message
+ * @param search_content_type - the content-type to be search for
+ */
+str cscf_get_body_with_content_type(struct sip_msg *msg,str search_content_type){
+
+	str ret_part = {NULL, 0};
+
+	return cscf_get_body_with_type(msg, search_content_type, &ret_part);
+}
+
+static str sdp_content_type = {"application/sdp", 15};
+int extract_sdp_body(struct sip_msg *msg, str *body )
+{
+	
+	str sdp_body = {NULL, 0};
+
+	body->s = get_body(msg);
+	if (body->s==0) {
+		LOG(L_ERR, "ERROR: extract_sdp_body: failed to get the message body\n");
+		goto error;
+	}
+	body->len = msg->len -(int)(body->s-msg->buf);
+	if (body->len==0) {
+		LOG(L_ERR, "ERROR: extract_sdp_body: message body has length zero\n");
+		goto error;
+	}
+	
+	sdp_body = cscf_get_body_with_content_type(msg, sdp_content_type);
+	if(!sdp_body.s || !sdp_body.len){
+		LOG(L_ERR, "ERROR: extract_sdp_body: could not find the sdp body\n");
+		goto error;
+	}
+
+	body->s = sdp_body.s;
+	body->len = sdp_body.len;
+
+	LOG(L_DBG, "DBG:"M_NAME":extract_sdp_body: found sdp body: \n%.*s\n",
+			body->len, body->s);
+	
+	return 1;
+error:
+	return -1;
+}
+
