@@ -200,9 +200,39 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					goto error;
 			}
 			break;	
-/* commented as not reachable */
 		case Wait_Conn_Ack_Elect:
 			switch(event){
+				case I_Rcv_Conn_Ack:
+					I_Snd_CER(p);
+					p->state = Wait_Returns;
+					if (Elect(p,msg))
+						sm_process(p,Win_Election,msg,1,sock);
+					break;
+				case I_Rcv_Conn_NAck:
+					result_code = Process_CER(p,msg);
+					Snd_CEA(p,msg,result_code,p->R_sock);
+					if (result_code>=2000 && result_code<3000)
+						p->state = R_Open;
+					else {
+						R_Disc(p);
+						p->state = Closed;
+					//	p->state = R_Open; /* Or maybe I should disconnect it?*/
+					}
+					break;
+				case R_Peer_Disc:
+					R_Disc(p);
+					p->state = Wait_Conn_Ack;
+					break;
+				case R_Conn_CER:
+					R_Reject(p,sock);
+					p->state = Wait_Conn_Ack_Elect;
+					break;
+				case Timeout:
+					if (p->I_sock>=0) Error(p,p->I_sock);
+					if (p->R_sock>=0) Error(p,p->R_sock);
+					p->state = Closed;
+					break;
+			
 				default:
 					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
