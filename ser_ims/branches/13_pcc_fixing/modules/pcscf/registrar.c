@@ -341,7 +341,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 		goto error;
 	}
 	
-	expires_hdr = cscf_get_expires_hdr(rpl);
+	expires_hdr = cscf_get_expires_hdr(rpl,0);
 	/** Removed because this would parse the hdr, but then it will fail to free the hdr->parsed */
 //	if (expires_hdr<0) 
 //		expires_hdr = cscf_get_expires_hdr(req);

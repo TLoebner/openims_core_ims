@@ -343,7 +343,7 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 		return ret;
 	}
 		
-	expires = cscf_get_max_expires(msg);
+	expires = cscf_get_max_expires(msg,0);
 	
 	if (expires>0) {
 		if (r_is_registered_id(public_identity)) 
@@ -832,7 +832,7 @@ static inline int update_contacts(struct sip_msg* msg, int assignment_type,
 				if (received.len) sent_by=received;				
 			}
 		}
-		expires_hdr = cscf_get_expires_hdr(msg);
+		expires_hdr = cscf_get_expires_hdr(msg,0);
 	}
 	
 	r_act_time();
@@ -1172,7 +1172,7 @@ int save_location(struct sip_msg *msg,int assignment_type,str *xml,str *ccf1,str
 		}
 			
 		/* check for too brief interval for registration */
-		expires_hdr = cscf_get_expires_hdr(msg);
+		expires_hdr = cscf_get_expires_hdr(msg,0);
 		max_expires = expires_hdr;		
 		
 		for(h=msg->contact;h;h=h->next)

@@ -805,7 +805,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 	}
 	
 	/* find the expires (reg or dereg?) */
-	expires = cscf_get_max_expires(req);
+	expires = cscf_get_max_expires(req,1);
 	
 	/* get the IPSec info from the registrar */
 	

@@ -1268,7 +1268,7 @@ int get_max_expires(struct sip_msg *msg)
 	contact_body_t* b=0;	
 	
 	if (!msg) return -1;
-	expires_hdr = cscf_get_expires_hdr(msg);
+	expires_hdr = cscf_get_expires_hdr(msg,0);
 
 	if (parse_headers(msg, HDR_EOH_F, 0) <0) {
 		LOG(L_ERR,"ERR:"M_NAME":get_max_expires: error parsing headers\n");
