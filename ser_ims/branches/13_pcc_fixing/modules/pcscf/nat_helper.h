@@ -1,5 +1,5 @@
 /*
- * $Id: nat_helper.h 566 2008-06-05 12:55:00Z vingarzan $
+ * $Id$
  *
  *
  * Copyright (C) 2005 Porta Software Ltd.
@@ -27,7 +27,7 @@
  */
 
 /**
- * $Id: nat_helper.h 566 2008-06-05 12:55:00Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *

@@ -1,5 +1,5 @@
 /*
- * $Id: bin_db_scscf.h 589 2008-10-14 17:09:18Z vingarzan $
+ * $Id$
  *
  * Copyright (C) 2004-2007 FhG Fokus
  *
