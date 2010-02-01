@@ -53,6 +53,8 @@
  
 #include "pcc_avp.h"
 #include "../../mem/shm_mem.h"
+#include "../../parser/parse_uri.h"
+#include "../../parser/contact/parse_contact.h"
 
 extern str ip_address_for_signaling;
 
@@ -82,6 +84,10 @@ AAA_AVP* pcc_create_framed_ip_address(str ip)
 }
 /**
  * Looks for the contact in the sip message and gets the ip address
+ * 
+ * TODO - extract also the ports and add the Flow Description AVP for all contacts!
+ * TODO - check for errors!
+ * 
  * @param r - sip message to look for contact
  * @param ip - the ip address to return
  * @returns the version from the enum ip_type
@@ -89,31 +95,18 @@ AAA_AVP* pcc_create_framed_ip_address(str ip)
 int pcc_get_ip_address(struct sip_msg *r, str *ip)
 {
 	enum ip_type version=ip_type_v4;
-	char *p=0;
-	if (r)
-	{
-		if (r->contact)
-		{
-			p=strstr(r->contact->body.s,"@");
-			p+=1; //@
-			if (*p=='[')
-			{
-				version=ip_type_v6;
-				ip->s=p++;
-				p=index(ip->s,']');
-
-			} else {
-				version=ip_type_v4;
-				ip->s=p;
-				p=index(ip->s,':');
-			}
-			if (!p) {
-				ip->s=0;
-				ip->len=0;
-				return 0;
-			}
-			ip->len=p-ip->s;
-		}
+	struct contact_body *cb;
+	struct sip_uri uri;
+	if (!ip) return 0;
+	ip->len=0;
+	ip->s=0;
+	if (r&&r->contact&&r->contact->parsed){		
+		cb = (struct contact_body *)r->contact->parsed;
+		if (!cb || !cb->contacts)
+			return 0;
+		parse_uri(cb->contacts->uri.s,cb->contacts->uri.len,&uri);
+		*ip = uri.host;
+		
 	}
 	LOG(L_DBG,"DBG:pcc_get_ip_address: %.*s\n",ip->len,ip->s);
 	return version;
@@ -332,20 +325,23 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg,struct sip_
 	str ip={0,0};
 	str data={0,0};
 	enum ip_type iptype;
-	char c=0;
-	iptype=pcc_get_ip_address(req,&ip);
+	char ip_from[64];
+	char ip_to[64];
+	iptype=pcc_get_ip_address(res,&ip);
 	//TODO get the ip address of this p-cscf
 	//or simple solution
 
-	c=ip.s[ip.len];
-	ip.s[ip.len]=0;
+	memcpy(ip_from,ip.s,ip.len);
+	ip_from[ip.len]=0;
+	memcpy(ip_to,ip_address_for_signaling.s,ip_address_for_signaling.len);
+	ip_to[ip_address_for_signaling.len]=0;
+	
 
-	avp=PCC_create_media_subcomponent(0,"any",ip.s,"",ip_address_for_signaling.s,"","",4);
+	avp=PCC_create_media_subcomponent(0,"any",ip_from,"",ip_to,"","",4);
 	cdpb.AAAAddAVPToList(&list,avp);
 	//We could add a default bearer but the PCRF should do his work
 	//avp=PCC_create_media_subcomponent(0,"any",ip.s,"",(iptype==ip_type_v6?"::":"0.0.0.0"),"","",0);
 	//cdpb.AAAAddAVPToList(&list,avp);
-	ip.s[ip.len]=c;
 
 	data=cdpb.AAAGroupAVPS(list);
   	cdpb.AAAFreeAVPList(&list);
@@ -810,7 +806,12 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  	  	
  	return (i);
  }
-/*Creates a media-sub-component AVP
+/**
+ * Creates a media-sub-component AVP
+ * 
+ * TODO - fix this ... or just delete it and do it again! It adds 2x Flow-Description for example, as a bug!
+ * I don't think that more than 1 can be in one Media Subcomponent.
+ * 
  * @param number - the flow number
  * @param proto - the protocol of the IPFilterRule
  * @param ipA - ip of the INVITE  (if creating rule for UE that sent INVITE)

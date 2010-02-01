@@ -346,7 +346,7 @@ AAASession * pcc_auth_clean_register(r_contact * cnt, contact_t* aor, int from_r
  * @param aor: the aor to be handled
  * @return: 0 - ok, 1 - goto end, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_registr(contact_t * aor, int * expireReg, AAASession ** authp){
+int pcc_auth_init_register(contact_t * aor, int * expireReg, AAASession ** authp){
 
 	// REGISTRATION
 	
@@ -360,49 +360,49 @@ int pcc_auth_init_registr(contact_t * aor, int * expireReg, AAASession ** authp)
 	str uri = aor->uri;
 
 	if(parse_uri(uri.s, uri.len, &parsed_cnt) != E_OK){
-		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: error parsing uri of the contact\n");
+		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: error parsing uri of the contact\n");
 		goto end;
 	}
 	
 	contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
 			parsed_cnt.proto);
 	if(!contact){
-		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: not sending subscription to path status, for unknown contact\n");
+		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: not sending subscription to path status, for unknown contact\n");
 		goto end;
 	}
 
 	if (contact->pcc_session_id.len) {
-		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: re-registration, retrieving the AAAsession \n");
+		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_register: re-registration, retrieving the AAAsession \n");
 		auth=cdpb.AAAGetAuthSession(contact->pcc_session_id);
 		if(!auth){
-			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: no AAAsession found\n");
+			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: no AAAsession found\n");
 			ret = -1;
 			goto end;
 		}
 		*expireReg = contact->expires-time(0);
 	} else {
-		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_registr: new registration sending AAR to PCRF for AF signaling path status subscription\n");
+		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_register: new registration sending AAR to PCRF for AF signaling path status subscription\n");
 		//its a registration so create a new cdp session
 		pcc_authdata = new_pcc_authdata();
 		if(!pcc_authdata) {
-			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_registr: no memory left for generic\n");
+			LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: no memory left for generic\n");
 			goto out_of_memory;
 		}				
 		pcc_authdata->subscribed_to_signaling_path_status=1;
-		STR_SHM_DUP(pcc_authdata->host, contact->host,"pcc_auth_init_registr");
+		STR_SHM_DUP(pcc_authdata->host, contact->host,"pcc_auth_init_register");
 		pcc_authdata->port=contact->port;
 		pcc_authdata->transport=contact->transport;
-		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_registr: creating PCC Session for registration\n");
+		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_register: creating PCC Session for registration\n");
 		auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
 		if (!auth) {
-			LOG(L_ERR,"INFO:"M_NAME":pcc_auth_init_registr: unable to create the PCC Session\n");
+			LOG(L_ERR,"INFO:"M_NAME":pcc_auth_init_register: unable to create the PCC Session\n");
 			free_pcc_authdata(pcc_authdata);
 			pcc_authdata = 0;
 			ret = -1;
 			goto end;
 		}
 		
-		STR_SHM_DUP(contact->pcc_session_id,auth->id,"pcc_auth_init_registr") ;
+		STR_SHM_DUP(contact->pcc_session_id,auth->id,"pcc_auth_init_register") ;
 		
 		if (contact->reg_state==REGISTERED) duration = contact->expires;
 		else duration = time(0);
@@ -585,7 +585,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	
 	if (is_register){
 		//REGISTRATION
-		int ret = pcc_auth_init_registr(aor, &auth_lifetime, &auth);
+		int ret = pcc_auth_init_register(aor, &auth_lifetime, &auth);
 		switch(ret){
 			case 0: break;
 			case 1: goto end;
