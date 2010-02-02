@@ -564,7 +564,10 @@ enum {
 	AVP_IMS_Send_Data_Indication_User_Data_Requested		= 1
 };
 
-
+enum {
+	AVP_Re_Auth_Request_Type_Authorize_Only			=0,
+	AVP_Re_Auth_Request_Type_Authorize_Authenticate	=1,		
+};
 
 
 /**	Diameter Result Codes				*/

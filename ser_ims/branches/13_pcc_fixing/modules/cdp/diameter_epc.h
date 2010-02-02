@@ -425,6 +425,10 @@ enum {
 };
 
 enum {
+	AVP_EPC_Resource_Allocation_Notification_Enable_Notification = 0
+};
+
+enum {
 	AVP_EPC_Session_Linking_Indicator_Immediate					= 0,
 	AVP_EPC_Session_Linking_Indicator_Deferred					= 1,
 };
