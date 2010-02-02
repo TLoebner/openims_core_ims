@@ -81,6 +81,8 @@ extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
 str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
 
+
+
 /**
  * Frees memory taken by a pcc_authdata_t structure
  * @param x - the pcc_authdata_t to be deallocated
@@ -346,7 +348,7 @@ AAASession * pcc_auth_clean_register(r_contact * cnt, contact_t* aor, int from_r
  * @param aor: the aor to be handled
  * @return: 0 - ok, 1 - goto end, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_register(contact_t * aor, int * expireReg, AAASession ** authp){
+int pcc_auth_init_register(contact_t * aor, int * expireReg, AAASession ** authp, struct sip_uri * parsed_aor){
 
 	// REGISTRATION
 	
@@ -355,17 +357,16 @@ int pcc_auth_init_register(contact_t * aor, int * expireReg, AAASession ** authp
 	AAASession * auth = *authp;
 	
 	r_contact *contact = NULL;
-	struct sip_uri parsed_cnt;
 	int ret = 1;
 	str uri = aor->uri;
 
-	if(parse_uri(uri.s, uri.len, &parsed_cnt) != E_OK){
+	if(parse_uri(uri.s, uri.len, parsed_aor) != E_OK){
 		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: error parsing uri of the contact\n");
 		goto end;
 	}
 	
-	contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
-			parsed_cnt.proto);
+	contact = get_r_contact(parsed_aor->host, parsed_aor->port_no, 
+			parsed_aor->proto);
 	if(!contact){
 		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: not sending subscription to path status, for unknown contact\n");
 		goto end;
@@ -581,11 +582,13 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	int pcc_side =cscf_get_mobile_side(req);
 	enum p_dialog_direction dir = 0;
 	int auth_lifetime = 0;
+	struct sip_uri parsed_aor;
+
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
 	if (is_register){
 		//REGISTRATION
-		int ret = pcc_auth_init_register(aor, &auth_lifetime, &auth);
+		int ret = pcc_auth_init_register(aor, &auth_lifetime, &auth, &parsed_aor);
 		switch(ret){
 			case 0: break;
 			case 1: goto end;
@@ -658,7 +661,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 
 	if (is_register){
 		// Registration
-		PCC_add_media_component_description_for_register(aar,req,res);
+		PCC_add_media_component_description_for_register(aar, &parsed_aor);
 		set_4bytes(x,AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer);
 		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
 		set_4bytes(x,AVP_EPC_Specific_Action_IPCAN_Change);
@@ -727,7 +730,8 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 					PCC_add_Service_URN(dia_aar,emergencysession);
 		 */
 	} else {
-		gqprima_AAR(aar,req,res,str1,relatch);
+		//if(!gqprima_AAR(aar,req,res,str1,&parsed_aor, relatch))
+		//	goto error;
 	}
 
 	if (auth) cdpb.AAASessionsUnlock(auth->hash);
@@ -755,6 +759,7 @@ error:
 		}
 		if(is_register && b)
 			pcc_auth_clean_register(NULL, aor, 0);
+		cdpb.AAASessionsUnlock(auth->hash);
 		cdpb.AAADropAuthSession(auth);
 		auth=0;
 	}

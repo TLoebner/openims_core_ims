@@ -103,15 +103,17 @@ inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip,enum ip_type ver
 /**
  * Subsequent request can not modify
  * user-name, specific-action, charging-identifier, service-class
- *
+ * TODO: add port to the necessary avp
  */
 
-int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1,int relatch)
+int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1, 
+		struct sip_uri * parsed_aor, int relatch)
 {
 	AAA_AVP *avp=0;
 	//AAASession* auth=0;
 	str id={0,0};
 	str ip={0,0};
+	unsigned short port;
 	enum ip_type version;
 	str realm={0,0};
 	str sdp={0,0};
@@ -119,6 +121,7 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 	t_binding_list *blist=0;
 	char x[4];
 	enum p_dialog_direction tag=get_dialog_direction(str1);
+	int is_register = (str1[0]=='r' || str1[0]=='R');
 
 	if (extract_id(req,tag,&id)!=-1 &&id.len)
 	{
@@ -127,17 +130,29 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 	}
 	if (tag==DLG_MOBILE_ORIGINATING)
 	{
+		if(!(version=pcc_get_ip_port(req, NULL, &ip, &port)))
+			return 0;
 		extract_sdp_body(req,&sdp);
 		blist=get_binding_list(sdp);
-		version=pcc_get_ip_address(req,&ip);
-	} else {
+
+	} else if (tag == DLG_MOBILE_TERMINATING){
+		if(!(version=pcc_get_ip_port(res, NULL, &ip, &port)))
+			return 0;
 		extract_sdp_body(res,&sdp);
 		blist=get_binding_list(sdp);
-		version=pcc_get_ip_address(res,&ip);
-	}
 
-	add_binding_information(aar,blist,NULL);
-	if (relatch!=-1)
+	}else if (is_register){
+		if(!parsed_aor) {
+			LOG(L_ERR, "ERR:"M_NAME":gqprima_AAR: invalid parsed_aor parameter\n");
+			return 0;
+		}
+		if(!(version=pcc_get_ip_port(NULL, parsed_aor, &ip, &port)))
+			return 0;
+	}else 
+		return 0;
+
+	if(blist) add_binding_information(aar,blist,NULL);
+	if (!is_register && relatch!=-1)
 	{
 		if (relatch) {
 			set_4bytes(x,AVP_ETSI_Latching_Indication_Latch);

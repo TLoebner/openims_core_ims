@@ -84,15 +84,13 @@ AAA_AVP* pcc_create_framed_ip_address(str ip)
 }
 /**
  * Looks for the contact in the sip message and gets the ip address
- * 
- * TODO - extract also the ports and add the Flow Description AVP for all contacts!
- * TODO - check for errors!
- * 
- * @param r - sip message to look for contact
+ * @param r - sip message to look for contact (for dialogs)
+ * @param parsed_aor - the parsed aor of a contact from a 200 reply to a REGISTER
  * @param ip - the ip address to return
- * @returns the version from the enum ip_type
+ * @returns the version from the enum ip_type, 0 if error
+ * TODO: aon: tests required
  */
-int pcc_get_ip_address(struct sip_msg *r, str *ip)
+int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port)
 {
 	enum ip_type version=ip_type_v4;
 	struct contact_body *cb;
@@ -100,16 +98,37 @@ int pcc_get_ip_address(struct sip_msg *r, str *ip)
 	if (!ip) return 0;
 	ip->len=0;
 	ip->s=0;
+	
+	//if used for invite requests
 	if (r&&r->contact&&r->contact->parsed){		
 		cb = (struct contact_body *)r->contact->parsed;
 		if (!cb || !cb->contacts)
-			return 0;
+			goto error;
 		parse_uri(cb->contacts->uri.s,cb->contacts->uri.len,&uri);
 		*ip = uri.host;
-		
+		*port = uri.port_no;
+
+	//used for register replies	
+	}else if(parsed_aor){
+		*ip = parsed_aor->host;
+		*port = parsed_aor->port_no;
+
+	}else if(!parsed_aor)
+		goto error;
+
+	if(ip->len){
+		if(ip->s[0] == '['){
+			version = ip_type_v6;
+			ip->s +=1;
+			ip->len -=1;
+		}	
 	}
-	LOG(L_DBG,"DBG:pcc_get_ip_address: %.*s\n",ip->len,ip->s);
+
+	LOG(L_DBG,"DBG:"M_NAME":pcc_get_ip_port: %.*s\n",ip->len,ip->s);
 	return version;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":pcc_get_ip_port: invalid or no aor found\n");
+	return 0;
 }
 
 /*
@@ -314,29 +333,23 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  * This function creates a Media Component Description with a wildcarded flow
  * that will be set to AF Signaling for the messages between this P-CSCF and the
  * registered UE both in uplink and downlink
+ * TODO - extract also the ports and add the Flow Description AVP for all contacts!
  * @param msg - the Diameter message to add the avps to
  * @param req - the reuqest
  * @param res - the response
  */
-int PCC_add_media_component_description_for_register(AAAMessage *msg,struct sip_msg *req, struct sip_msg *res)
+int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip_uri * parsed_aor)
 {
 	AAA_AVP *avp=0;
 	AAA_AVP_LIST list={0,0};
-	str ip={0,0};
 	str data={0,0};
 	enum ip_type iptype;
-	char ip_from[64];
-	char ip_to[64];
-	iptype=pcc_get_ip_address(res,&ip);
-	//TODO get the ip address of this p-cscf
-	//or simple solution
+	unsigned short port_from;
+	str ip_from, ip_to;
 
-	memcpy(ip_from,ip.s,ip.len);
-	ip_from[ip.len]=0;
-	memcpy(ip_to,ip_address_for_signaling.s,ip_address_for_signaling.len);
-	ip_to[ip_address_for_signaling.len]=0;
+	iptype=pcc_get_ip_port(NULL, parsed_aor, &ip_from, &port_from);
+	ip_to  = ip_address_for_signaling;
 	
-
 	avp=PCC_create_media_subcomponent(0,"any",ip_from,"",ip_to,"","",4);
 	cdpb.AAAAddAVPToList(&list,avp);
 	//We could add a default bearer but the PCRF should do his work
@@ -675,6 +688,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  	int intportA=0,intportB=0;
  	char addressA[PCC_MAX_Char];
  	char addressB[PCC_MAX_Char]="";
+	str ipA, ipB;
  	int i=0,flows=0;
  	int atributes=0; /* a= lines present?*/
  	char *newline,*rtp;
@@ -700,9 +714,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  		  /*1 means sendonly*/
  		  /*2 means recvonly*/
  		  /*0 is no a= line or sendrecv*/
- 		 	
- 		
- 		 
+  		 
  		if (!extract_token(mlineA,portA,PCC_MAX_Char,2))
  		{
  				return -1; /*problem extracting port*/
@@ -746,6 +758,9 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  			return -1;
  		}
  		
+		ipA.s = addressA; ipA.len = strlen(ipA.s);
+		ipB.s = addressB; ipB.len = strlen(ipB.s);
+
   		/* i is the flow number */
  		/*flows is the number of data flows .. for each port 1 data flow*/
  			
@@ -755,11 +770,11 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  				i++;
  				if (tag!=1)
  				{
- 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressA,portA,addressB,portB,"",atributes);
+ 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip", ipA,portA, ipB,portB,"",atributes);
  					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
  				} else {
  		
- 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressB,portB,addressA,portA,"",atributes);
+ 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB,portB,ipA,portA,"",atributes);
  					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
  				}
  				flows++;
@@ -781,10 +796,10 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 		 				sprintf(portB,"%i",intportB);
 		 				if (tag!=1)
 		 				{
-		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressA,portA,addressB,portB,"",3);
+		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipA,portA,ipB,portB,"",3);
 		 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
 		 				} else {
-		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressB,portB,addressA,portA,"",3);
+		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB,portB,ipA,portA,"",3);
 		 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
 		 				}		 		
 		 			}
@@ -825,7 +840,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  * @param bwDL - bandiwdth downlink
  */ 
 
- AAA_AVP *PCC_create_media_subcomponent(int number,char *proto, char *ipA,char *portA, char *ipB,char *portB ,char *options,int atributes)
+ AAA_AVP *PCC_create_media_subcomponent(int number,char *proto, str ipA, char *portA, str ipB,char *portB ,char *options,int atributes)
  {
  
  		str data;
@@ -852,7 +867,8 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 		
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
-			len=sprintf(whatchar,"permit out %s from %s %s to %s %s %s",proto,ipB,"",ipA,portA,options); 											
+			len=sprintf(whatchar,"permit out %s from %.*s %s to %.*s %s %s",proto,ipB.len, ipB.s,"",
+					ipA.len, ipA.s, portA, options); 											
  			flow_description1=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,whatchar,len,
@@ -862,7 +878,8 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 		if (atributes==0 || atributes==1 || atributes==3 || atributes==4)
 		{
  		/*second flow is the send flow*/									
- 			len2=sprintf(whatchar2,"permit in %s from %s %s to %s %s %s",proto,ipA,"",ipB,portB,options);
+ 			len2=sprintf(whatchar2,"permit in %s from %.*s %s to %.*s %s %s",proto,ipA.len, ipA.s,"",
+					ipB.len, ipB.s, portB,options);
  			flow_description2=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,whatchar2,len2,
