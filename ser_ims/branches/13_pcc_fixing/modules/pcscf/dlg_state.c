@@ -1361,6 +1361,8 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	
 	if (d->pcc_session_id.s)
 	{
+		//unlock because the callback locks it
+		d_unlock(hash);
 		terminate_pcc_session(d->pcc_session_id);
 		shm_free(d->pcc_session_id.s);
 		d->pcc_session_id.s = 0;
