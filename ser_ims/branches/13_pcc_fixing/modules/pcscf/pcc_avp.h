@@ -85,20 +85,20 @@ enum ip_type {
 };
 
 /*helper*/
-int pcc_get_ip_address(struct sip_msg *r, str *ip);
+int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
 AAA_AVP* pcc_create_framed_ip_address(str ip);
 /*just headers*/
 
 int PCC_add_destination_realm(AAAMessage *msg, str data);
 int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
 inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
-AAA_AVP *PCC_create_media_subcomponent(int number,
-									char *proto, char *ipA,
-									char *portA, char *ipB,
-									char *portB ,char *options,int atributes);
+AAA_AVP *PCC_create_media_subcomponent(int number, char *proto, 
+					str ipA, char *portA, 
+					str ipB, char *portB ,
+					char *options,int atributes);
 inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
-int PCC_add_media_component_description_for_register(AAAMessage *msg,struct sip_msg *req, struct sip_msg *res);
+int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip_uri * parsed_aor);
 inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
 AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 
