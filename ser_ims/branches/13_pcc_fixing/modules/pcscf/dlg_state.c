@@ -1331,6 +1331,7 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	int port,transport;
 	struct sip_msg *req;
 	enum p_dialog_direction dir;
+	str pcc_session_id={0,0};
 	
 	dir = get_dialog_direction(str1);
 	
@@ -1359,19 +1360,18 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	hash = d->hash;
 	
-	if (d->pcc_session_id.s)
-	{
-		//unlock because the callback locks it
-		d_unlock(hash);
-		terminate_pcc_session(d->pcc_session_id);
-		shm_free(d->pcc_session_id.s);
+	if (d->pcc_session_id.s){
+		pcc_session_id = d->pcc_session_id;
 		d->pcc_session_id.s = 0;
 		d->pcc_session_id.len = 0;
-	}
-	
+	}	
 	del_p_dialog(d);
-		
 	d_unlock(hash);
+
+	if (pcc_session_id.s){
+		terminate_pcc_session(pcc_session_id);
+		shm_free(pcc_session_id.s);
+	}
 	
 	print_p_dialogs(L_INFO);
 	
