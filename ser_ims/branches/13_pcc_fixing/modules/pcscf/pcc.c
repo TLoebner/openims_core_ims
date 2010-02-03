@@ -730,8 +730,8 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 					PCC_add_Service_URN(dia_aar,emergencysession);
 		 */
 	} else {
-		//if(!gqprima_AAR(aar,req,res,str1,&parsed_aor, relatch))
-		//	goto error;
+		if(!gqprima_AAR(aar,req,res,str1,&parsed_aor, relatch))
+			goto error;
 	}
 
 	if (auth) cdpb.AAASessionsUnlock(auth->hash);
