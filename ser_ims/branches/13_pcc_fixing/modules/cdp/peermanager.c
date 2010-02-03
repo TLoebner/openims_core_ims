@@ -297,6 +297,7 @@ void peer_timer(time_t now,void *ptr)
 				case Wait_I_CEA:
 				case Closing:
 				case Wait_Returns:
+				case Wait_Conn_Ack_Elect:
 					touch_peer(p);
 					sm_process(p,Timeout,0,1,0);
 					break;	
