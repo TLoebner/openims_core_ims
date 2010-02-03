@@ -101,7 +101,7 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 		return 0;
 	}
 	if (pcscf_qos_side!=2) {
-		tag = cscf_get_mobile_side(msg);
+		tag = cscf_get_mobile_side(msg,0);
 		if (tag==-1) {
 			tag=(int)get_dialog_direction(str1);
 		}
@@ -171,7 +171,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 		if ((strncmp(t->method.s,"INVITE",6)==0)||(strncmp(t->method.s,"UPDATE",6)==0)||(strncmp(t->method.s,"PRACK",5)==0))
 		{
 			//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
-			resp = PCC_AAR(t->uas.request, msg, str1, NULL);
+			resp = PCC_AAR(t->uas.request, msg, str1, NULL, 1);
 
 		}else if ((strncmp(t->method.s,"REGISTER",8)==0))
 		{
@@ -191,7 +191,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 			}
 			for(crt_aor = aor_list->contacts; crt_aor!=NULL; crt_aor= crt_aor->next){
 				if (expires > 0)
-					resp = PCC_AAR(t->uas.request, msg, str1, crt_aor);
+					resp = PCC_AAR(t->uas.request, msg, str1, crt_aor,0);
 				else {
 					//de-registration
 					LOG(L_DBG,"DBG:"M_NAME":P_Rx: de-registration finishing auth session if any\n");
@@ -206,7 +206,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 	} else {
 		//preliminary
 		if ((strncmp(msg->first_line.u.request.method.s,"INVITE",6)==0))
-			resp = PCC_AAR(msg,0,str1, NULL);
+			resp = PCC_AAR(msg,0,str1, NULL,0);
 	}
 
 

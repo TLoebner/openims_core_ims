@@ -76,11 +76,11 @@ typedef struct pcc_authdata {
 } pcc_authdata_t;
 
 
-int cscf_get_mobile_side(struct sip_msg *msg);
+int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
 void terminate_pcc_session(str session_id);
 
 
-AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor);
+AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor, int is_shm);
 AAAMessage* PCC_STR(struct sip_msg *msg, char *str1, contact_t * aor);
 AAAMessage* PCC_ASA(AAAMessage *request);
 int PCC_AAA(AAAMessage *msg);
