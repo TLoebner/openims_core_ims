@@ -128,7 +128,7 @@ inline str pcc_get_destination_realm(){
  * @param msg - SIP message to check, if reply will get response from it
  * @returns -1 on error, 0 on mo , 1 mt
 */
-int cscf_get_mobile_side(struct sip_msg *msg)
+int cscf_get_mobile_side(struct sip_msg *msg, int is_shm)
 {
 
 	str first_route={0,0};
@@ -139,7 +139,11 @@ int cscf_get_mobile_side(struct sip_msg *msg)
 		msg= cscf_get_request_from_reply(msg);
 		first_route=cscf_get_first_route(msg,0,1);
 	}else {
-		first_route=cscf_get_first_route(msg,0,0);
+		if(is_shm){ 
+			first_route=cscf_get_first_route(msg,0,1);
+		} else {
+			first_route=cscf_get_first_route(msg,0,0);
+		}
 	}
 
 	// first_route should return 0 if none route header found
@@ -559,11 +563,12 @@ error:
  * @param req - SIP request  
  * @param res - SIP response
  * @param str1 - 0/o/orig for originating side, 1/t/term for terminating side, r/REGISTER for registration
+ * @param is_shm - req is from shared memory 
 
  * 
  * @returns AAA message or NULL on error  
  */
-AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t* aor)
+AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t* aor, int is_shm)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
@@ -579,7 +584,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	char x[4];
 	int i, relatch=0;
 	str call_id={0,0};
-	int pcc_side =cscf_get_mobile_side(req);
+	int pcc_side =cscf_get_mobile_side(req, is_shm);
 	enum p_dialog_direction dir = 0;
 	int auth_lifetime = 0;
 	struct sip_uri parsed_aor;
