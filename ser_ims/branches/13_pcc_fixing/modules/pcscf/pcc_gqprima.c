@@ -452,7 +452,7 @@ t_binding_list* get_binding_list(str sdp)
 	t_binding_unit* bunit=0;
 	char *cline=0,*mline=0,*nmline=0;
 	enum ip_type version=ip_type_v4;
-	char port[64];
+	str port = {0,0};
 	char *aux=0;
 	str ip={0,0};
 	cline=find_sdp_line(sdp.s,sdp.s+sdp.len,'c');
@@ -512,18 +512,18 @@ t_binding_list* get_binding_list(str sdp)
 			if (index(bunit->addr.s,':')) bunit->v=ip_type_v6;
 			else bunit->v=ip_type_v4;
 		}
-		if (extract_token(mline,port,64,2))
+		if (extract_token(mline,&port,64,2))
 		{
 			switch(is_a_port(port))
 			{
 				case 1:
-					bunit->port_start=atoi(port);
+					bunit->port_start=atoi(port.s);
 					bunit->port_end=0;
 					break;
 				case 2:
-					aux=index(port,'/');
+					aux=index(port.s,'/');
 					*aux='\0';
-					bunit->port_start=atoi(port);
+					bunit->port_start=atoi(port.s);
 					bunit->port_end=atoi(aux+1);
 					break;
 				default:
@@ -533,6 +533,9 @@ t_binding_list* get_binding_list(str sdp)
 		} else {
 			LOG(L_DBG,"DBG:get_binding_list: no port in media line in SDP\n");
 		}
+		//because we have used extract_token
+		if(port.s) pkg_free(port.s);
+
 		LOG(L_DBG,"DBG:get_binding_list: binding unit with ip %.*s port_start %d port_end %d\n",bunit->addr.len,bunit->addr.s,bunit->port_start,bunit->port_end);
 		FL_APPEND(blist,bunit)
 		bunit = shm_malloc(sizeof(t_binding_unit));

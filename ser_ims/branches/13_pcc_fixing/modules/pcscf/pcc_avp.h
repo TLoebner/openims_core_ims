@@ -93,8 +93,8 @@ int PCC_add_destination_realm(AAAMessage *msg, str data);
 int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
 inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
 AAA_AVP *PCC_create_media_subcomponent(int number, char *proto, 
-					str ipA, char *portA, 
-					str ipB, char *portB ,
+					str ipA, int intportA, 
+					str ipB, int intportB ,
 					char *options,int atributes);
 inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
@@ -103,11 +103,11 @@ inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str
 AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 
 int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number);
-int extract_token(char *line,char *token,int max,int number);
+int extract_token(char *line, str *token,int max,int number);
 int extract_bandwidth(bandwidth *bw,str sdp,char *start);
 int extract_id(struct sip_msg *r,int tag,str *identification);
 int check_atributes(str sdpbody,char *mline);
-int is_a_port(char *port);
+int is_a_port(str port);
 /*int is_an_address(char *ad);*/
 inline int PCC_get_result_code(AAAMessage *msg, int *data);
 #endif /*__PCC_AVP_H*/
