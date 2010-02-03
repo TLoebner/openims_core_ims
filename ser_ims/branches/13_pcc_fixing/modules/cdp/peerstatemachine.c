@@ -205,8 +205,15 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 				case I_Rcv_Conn_Ack:
 					I_Snd_CER(p);
 					p->state = Wait_Returns;
-					if (Elect(p,msg))
+					// modules/cdp/receiver.c always pass 0 as msg ?
+					// sm_process(p,I_Rcv_Conn_Ack,0,0,fd)
+					// Thus in this case alway lose elect?
+					if (Elect(p,msg)){
+						LOG(L_DBG,"DBG:sm_process():Wait_Conn_Ack_Elect Win Elect \n");
 						sm_process(p,Win_Election,msg,1,sock);
+					} else {
+						LOG(L_DBG,"DBG:sm_process():Wait_Conn_Ack_Elect Lose Elect \n");
+					}
 					break;
 				case I_Rcv_Conn_NAck:
 					result_code = Process_CER(p,msg);
@@ -1006,6 +1013,12 @@ int Elect(peer *p,AAAMessage *cer)
 	str remote,local;
 	int i,d;
 
+	if(!cer){
+		LOG(L_ERR,"ERROR:Elect cer is NULL \n");
+		// return lose
+		return 0;
+	}
+	
 	local = config->fqdn;
 
 	avp = AAAFindMatchingAVP(cer,cer->avpList.head,AVP_Origin_Host,0,0);
