@@ -96,7 +96,7 @@ AAA_AVP *PCC_create_media_subcomponent(int number, char *proto,
 					str ipA, int intportA, 
 					str ipB, int intportB ,
 					char *options,int atributes);
-inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
+inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
 int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip_uri * parsed_aor);
 inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);

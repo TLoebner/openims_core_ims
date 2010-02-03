@@ -428,7 +428,7 @@ inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str
  	
  	/*media-sub-component*/
  	
-	n=PCC_create_add_media_subcomponents(&list,sdpinvite,sdp200,number,media_sub_component,tag);
+	n=PCC_create_add_media_subcomp_dialog(&list,sdpinvite,sdp200,number,media_sub_component,tag);
  	if(n==-1)
  	{
  		LOG(L_ERR,"ERR:"M_NAME"Unable to create media_sub_components list AVP");
@@ -683,7 +683,7 @@ inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str
  * returns the number of media_sub_components added on success -1 on error
  * the media_sub_component is given in order to free the AVPS after grouping them!
  */
-inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
+inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
  {
 
  	
@@ -699,10 +699,10 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
 	str portA = {0,0};
 	str portB = {0,0};
 		
- 		LOG(L_DBG,"PCC_add_media_subcomponents() : starting\n");
+ 		LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : starting\n");
  		if (!extract_mclines(sdpA,sdpB,&mlineA,&clineA,&mlineB,&clineB,number))
  		{
- 			LOG(L_DBG,"PCC_add_media_subcomponents(): error extracting lines of sdp content\n");
+ 			LOG(L_ERR,"ERR"M_NAME":PCC_create_add_media_subcomp_dialog: error extracting lines of sdp content\n");
  			return -1;
  		}
  		   
@@ -820,7 +820,7 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  			}						
  											
  	}
- 	LOG(L_DBG,"PCC_add_media_subcomponents() : ending\n");	
+ 	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : ending\n");	
 	if(ipA.s) pkg_free(ipA.s);	
 	if(ipB.s) pkg_free(ipB.s);	
  	  	
