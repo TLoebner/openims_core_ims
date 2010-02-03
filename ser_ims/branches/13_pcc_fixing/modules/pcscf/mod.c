@@ -226,8 +226,14 @@ char* pcscf_forced_qos_peer = "";					/**< FQDN of Policy Decision Function (PDF
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
 int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
-char* ip_address_for_signaling_char="127.0.0.1";
-str ip_address_for_signaling;
+char* ipv4_for_signaling_char="127.0.0.1";
+str ipv4_for_signaling;
+
+char* ipv6_for_signaling_char="::1";
+str ipv6_for_signaling;
+
+unsigned short port_for_signaling;
+
 char* pcc_dest_realm_s = "open-ims.test";
 str pcc_dest_realm;
 
@@ -529,7 +535,10 @@ static param_export_t pcscf_params[]={
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
 	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
 	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
-	{"ip_address_for_signaling",			STR_PARAM,		&ip_address_for_signaling_char},
+	{"ipv4_for_signaling",			STR_PARAM,		&ipv4_for_signaling_char},
+	{"ipv6_for_signaling",			STR_PARAM,		&ipv6_for_signaling_char},
+	{"port_for_signaling",			INT_PARAM,		&port_for_signaling},
+	
 	{"pcc_dest_realm",					STR_PARAM,		&pcc_dest_realm_s},
 
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
@@ -690,10 +699,13 @@ int fix_parameters()
 		ecscf_uri_str.len = strlen(ecscf_uri);
 		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
 	}
+	//pcc params for signaling parameters of the PCSCF
+	ipv4_for_signaling.s = ipv4_for_signaling_char;
+	ipv4_for_signaling.len = strlen(ipv4_for_signaling_char);
 	
-	ip_address_for_signaling.s = ip_address_for_signaling_char;
-	ip_address_for_signaling.len = strlen(ip_address_for_signaling_char);
-
+	ipv6_for_signaling.s = ipv6_for_signaling_char;
+	ipv6_for_signaling.len = strlen(ipv6_for_signaling_char);
+	
 	pcc_dest_realm.s = pcc_dest_realm_s;
 	pcc_dest_realm.len = strlen(pcc_dest_realm_s);
 
