@@ -576,7 +576,7 @@ extern p_dialog_hash_slot *p_dialogs;	/**< the dialogs hash table				*/
 
 
 static str path_str_s={"Path: <",7};
-//static str path_str_1={"sip:term@",9};//deprecated, using s_mt
+static str path_str_1={"sip:term@",9};
 static str path_str_e={";lr>\r\n",6};
 
 static str s_record_route_s={"Record-Route: <",15};
@@ -616,7 +616,7 @@ int fix_parameters()
 	cscf_term_ioi_str.len = strlen(cscf_term_ioi);
 
 	/*Path header*/
-	pcscf_path_str.len = s_mt.len+x.len;
+	pcscf_path_str.len = path_str_1.len+x.len;
 	pcscf_path_str.s = pkg_malloc(pcscf_path_str.len);
 	if (!pcscf_path_str.s){
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Error allocating %d bytes\n",
@@ -625,7 +625,7 @@ int fix_parameters()
 		return 0;
 	}
 	pcscf_path_str.len=0;
-	STR_APPEND(pcscf_path_str,s_mt);
+	STR_APPEND(pcscf_path_str,path_str_1);
 	STR_APPEND(pcscf_path_str,x);
 
 	pcscf_path_hdr_str.len = path_str_s.len + pcscf_path_str.len + path_str_e.len;
