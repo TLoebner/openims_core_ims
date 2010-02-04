@@ -126,7 +126,7 @@ enum {
 	AVP_EPC_3GPP_User_Location_Info						= 22,
 	AVP_EPC_3GPP_MS_TimeZone							= 23,
 	AVP_EPC_3GPP_Allocate_IP_Type						= 27,
-	AVP_EPC_3GPP_RAI									= 909, //TS29.061
+	AVP_EPC_RAI											= 909, //TS29.061
 /** 256 to 299 reserved for future use										*/
 
 
@@ -139,7 +139,7 @@ enum {
 	AVP_EPC_Subscription_Id_Type						= 450,
 	AVP_EPC_User_Equipment_Info							= 458,
 	AVP_EPC_User_Equipment_Info_Type					= 459,
-	AVP_EPC_User_Equipment_Info_Data					= 460,
+	AVP_EPC_User_Equipment_Info_Value					= 460,
 /**  or   RFC 4006 							*/
 
 /** 500 to 599 reserved for TS29.209											*/
@@ -487,4 +487,13 @@ enum {
 	AVP_EPC_Abort_Cause_Insufficient_Server_Resources				= 1,
 	AVP_ECP_Abort_Cause_Insufficient_Bearer_Resources				= 2
 };
+
+/* RFC4006 */
+enum {
+	AVP_EPC_User_Equipment_Info_Type_IMEISV							= 0,
+	AVP_EPC_User_Equipment_Info_Type_MAC							= 1,
+	AVP_EPC_User_Equipment_Info_Type_EUI64							= 2,
+	AVP_EPC_User_Equipment_Info_Type_MODIFIED_EUI64					= 3,
+};
+
 #endif /*DIAMETER_EPC_H_*/
