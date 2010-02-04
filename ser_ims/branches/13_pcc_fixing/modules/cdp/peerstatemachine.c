@@ -147,6 +147,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					result_code = Process_CER(p,msg);
 					if (result_code>=2000 && result_code<3000){
 						p->state = Wait_Conn_Ack_Elect;
+						if (p->r_cer) AAAFreeMessage(&(p->r_cer));
 						p->r_cer = msg;
 					}
 					else {
