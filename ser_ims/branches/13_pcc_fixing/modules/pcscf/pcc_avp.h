@@ -93,8 +93,8 @@ int PCC_add_destination_realm(AAAMessage *msg, str data);
 int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
 inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
 AAA_AVP *PCC_create_media_subcomponent(int number, char *proto, 
-					str ipA, int intportA, 
-					str ipB, int intportB ,
+					str ipA, unsigned int intportA, 
+					str ipB, unsigned int intportB ,
 					char *options,int atributes);
 inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);

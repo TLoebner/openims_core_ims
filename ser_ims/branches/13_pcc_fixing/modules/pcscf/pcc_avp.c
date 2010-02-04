@@ -356,8 +356,8 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip
 	}
 	
 	avp=PCC_create_media_subcomponent(0, (iptype==ip_type_v6?ip_v6_s:ip_v4_s), 
-					ip_from, (int)from_port_no, 
-					ip_to, (int)port_for_signaling,  "", 4);
+					ip_from, from_port_no, 
+					ip_to, port_for_signaling,  "", 4);
 	cdpb.AAAAddAVPToList(&list,avp);
 	
 	data=cdpb.AAAGroupAVPS(list);
@@ -690,7 +690,7 @@ inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str s
  
 	
 	char *mlineA,*mlineB,*clineA,*clineB;
- 	int intportA=0,intportB=0;
+ 	unsigned int intportA=0,intportB=0;
 	str ipA = {0,0}, ipB = {0,0};
  	int i=0,flows=0;
  	int atributes=0; /* a= lines present?*/
@@ -764,8 +764,8 @@ inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str s
  		
   		/* i is the flow number */
  		/*flows is the number of data flows .. for each port 1 data flow*/
-		sscanf(portA.s,"%i",&intportA);
-		sscanf(portB.s,"%i",&intportB);
+		sscanf(portA.s,"%u",&intportA);
+		sscanf(portB.s,"%u",&intportB);
 		if(portA.s) pkg_free(portA.s);	portA.s = 0;
 		if(portB.s) pkg_free(portB.s);	portB.s = 0;
 
@@ -850,8 +850,8 @@ static str permit_in = {"permit in ", 10};
 static str from_s = {" from ", 6};
 static str to_s = {" to ", 4};
  AAA_AVP *PCC_create_media_subcomponent(int number, char* proto, 
-		 			str ipA, int intportA, 
-					str ipB, int intportB ,
+		 			str ipA, unsigned int intportA, 
+					str ipB, unsigned int intportB ,
 					char *options,int atributes)
  {
  
@@ -866,18 +866,14 @@ static str to_s = {" to ", 4};
  		list.tail=0;
  		list.head=0;
  		char x[4];
-		str portA = {0,0};
-		str portB = {0,0};
-		str buffer;
-
-		buffer.s= int2str(intportA, &buffer.len);
-		STR_PKG_DUP(portA, buffer, "PCC_create_media_subcomponent");
+		int portAlen, portBlen;
+			
+		int2str(intportA, &portAlen);
 	
-		buffer.s= int2str(intportB, &buffer.len);
-		STR_PKG_DUP(portB, buffer, "PCC_create_media_subcomponent");
+		int2str(intportB, &portBlen);
 
 		len = (permit_out.len + from_s.len + to_s.len+ipB.len+1+ipA.len+2 +
-				strlen(proto)+portA.len + portB.len +1 /*plus 1 for sprintf*/)*sizeof(char);
+				strlen(proto)+portAlen + portBlen)*sizeof(char);
 		flow_data.s = (char*)pkg_malloc(len);
 	        if(!flow_data.s){
 			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
@@ -905,9 +901,9 @@ static str to_s = {" to ", 4};
 		
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
-			flow_data.len=sprintf(flow_data.s,"permit out %s from %.*s %.*s to %.*s %.*s %s",proto,
-					ipB.len, ipB.s, portB.len, portB.s,
-					ipA.len, ipA.s, portA.len, portA.s, options); 
+			flow_data.len=snprintf(flow_data.s, len, "permit out %s from %.*s %u to %.*s %u %s",proto,
+					ipB.len, ipB.s, intportB,
+					ipA.len, ipA.s, intportA, options); 
 
 			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: first flow is %.*s\n", flow_data.len, flow_data.s);
  			flow_description1=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
@@ -920,9 +916,9 @@ static str to_s = {" to ", 4};
 		if (atributes==0 || atributes==1 || atributes==3 || atributes==4)
 		{
  		/*second flow is the send flow*/									
- 			flow_data2.len=sprintf(flow_data2.s,"permit in %s from %.*s %.*s to %.*s %.*s %s",proto,
-					ipA.len, ipA.s, portA.len, portA.s,
-					ipB.len, ipB.s, portB.len, portB.s, options);
+ 			flow_data2.len=snprintf(flow_data2.s, len2, "permit in %s from %.*s %u to %.*s %u %s",proto,
+					ipA.len, ipA.s, intportA,
+					ipB.len, ipB.s, intportB, options);
 			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: second flow is %.*s\n", flow_data2.len, flow_data2.s);
  			flow_description2=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
@@ -965,18 +961,11 @@ static str to_s = {" to ", 4};
  		cdpb.AAAFreeAVPList(&list);
 		pkg_free(flow_data.s);
 		pkg_free(flow_data2.s);
-		pkg_free(portA.s);
-		pkg_free(portB.s);
 
  		return (cdpb.AAACreateAVP(AVP_IMS_Media_Sub_Component,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,data.s,data.len,
 											AVP_FREE_DATA));
-out_of_memory:
-		if(portA.s) {
-			pkg_free(portA.s); portA.s =0;
-		}
-		return NULL;
  }
 
 /*
