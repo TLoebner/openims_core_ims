@@ -252,6 +252,7 @@ typedef enum {
 	AVP_Framed_IP_Address             =	   8,	
 	AVP_Class                         =   25,
 	AVP_Session_Timeout               =   27,
+	AVP_Called_Station_Id			  =   30,
 	AVP_Proxy_State                   =   33,
 	AVP_Acct_Session_Id				  =   44,
 	AVP_Acct_Multi_Session_Id		  =   50,
