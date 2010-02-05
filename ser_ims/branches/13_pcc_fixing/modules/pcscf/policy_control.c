@@ -65,10 +65,6 @@ extern struct cdp_binds cdpb;          /**< Structure with pointers to cdp funcs
 
 extern int pcscf_use_pcc;
 extern int pcscf_qos_release7;
-extern int pcscf_qos_side;
-
-
-
 
 
 int P_local_policy(struct sip_msg* msg, char* str1, char* str2) 
@@ -90,29 +86,16 @@ int P_local_policy(struct sip_msg* msg, char* str1, char* str2)
 */
 int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 {
-	int tag;
 	struct cell *t;
 	if (!pcscf_use_pcc) return CSCF_RETURN_FALSE;
 	
-	LOG(L_INFO,"P_generates_aar(): starting qos side is %i and str1 %s\n",pcscf_qos_side,str1);
+	LOG(L_INFO,"P_generates_aar(): checking if necessary for qos on side %s\n",str1);
 	t=tmb.t_gett();
 	if (!t) {
 		LOG(L_ERR,"P_generates_aar(): unable to get transaction\n");
 		return 0;
 	}
-	if (pcscf_qos_side!=2) {
-		tag = cscf_get_mobile_side(msg,0);
-		if (tag==-1) {
-			tag=(int)get_dialog_direction(str1);
-		}
-		LOG(L_INFO,"P_generates_aar(): decided on side %i\n",tag);
-		if (pcscf_qos_side!=tag)
-		{
-			LOG(L_DBG,"P_generates_aar(): not on the right side\n");
-			return CSCF_RETURN_FALSE;
-		}
-		
-	}
+	
 	if ((t->method.len==5 && memcmp(t->method.s,"PRACK",5)==0)||(t->method.len==6 && (memcmp(t->method.s,"INVITE",6)==0||memcmp(t->method.s,"UPDATE",6)==0)))
 	{
 		if (cscf_get_content_len(msg)!=0 && cscf_get_content_len(t->uas.request)!=0)

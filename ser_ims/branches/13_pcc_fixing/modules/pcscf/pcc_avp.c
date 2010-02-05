@@ -60,8 +60,7 @@ extern str ipv4_for_signaling;
 extern str ipv6_for_signaling;
 extern unsigned short port_for_signaling;
 
-static char* ip_v4_s = "ip";
-static char* ip_v6_s = "ip6";
+static char* ip_s = "ip";
 
 /**< Structure with pointers to cdp funcs, global variable defined in mod.c  */
 extern struct cdp_binds cdpb;
@@ -355,7 +354,7 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip
 		ip_to  = ipv6_for_signaling;
 	}
 	
-	avp=PCC_create_media_subcomponent(0, (iptype==ip_type_v6?ip_v6_s:ip_v4_s), 
+	avp=PCC_create_media_subcomponent(0, ip_s, 
 					ip_from, from_port_no, 
 					ip_to, port_for_signaling,  "", 4);
 	cdpb.AAAAddAVPToList(&list,avp);

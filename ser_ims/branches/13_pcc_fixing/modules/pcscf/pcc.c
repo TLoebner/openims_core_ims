@@ -148,18 +148,22 @@ int cscf_get_mobile_side(struct sip_msg *msg, int is_shm)
 
 	// first_route should return 0 if none route header found
 	if (first_route.len == 0 || first_route.s == 0 ) {
-		return -1;	
+		LOG(L_DBG,"cscf_get_mobile_side : empty first route, returning unknown\n");	
+		return DLG_MOBILE_UNKNOWN;	
 	}
-	LOG(L_DBG,"cscf_get_mobile_side : first route is %.*s comparing with %.*s, len is %d \n",first_route.len,first_route.s,pcscf_record_route_mt_uri.len,pcscf_record_route_mt_uri.s, first_route.len);
+	LOG(L_DBG,"cscf_get_mobile_side : first route is %.*s comparing with %.*s and %.*s \n",
+			first_route.len,first_route.s,
+			pcscf_record_route_mt_uri.len,pcscf_record_route_mt_uri.s,
+			pcscf_record_route_mo_uri.len,pcscf_record_route_mo_uri.s);
 
 	if (strncmp(first_route.s,pcscf_record_route_mt_uri.s,pcscf_record_route_mt_uri.len)==0)
-		return 1;
+		return DLG_MOBILE_TERMINATING;
 	else  if (strncmp(first_route.s,pcscf_record_route_mo_uri.s,pcscf_record_route_mo_uri.len)==0)
-		return 0;
+		return DLG_MOBILE_ORIGINATING;
 	else {
 		//it could be the first INVITE so here i can rely in what the config file gave me
-		LOG(L_DBG,"cscf_get_mobile_side : returning -1\n");	
-		return -1;
+		LOG(L_DBG,"cscf_get_mobile_side : returning unknown\n");	
+		return DLG_MOBILE_UNKNOWN;
 	}
 
 }
@@ -444,7 +448,7 @@ void pcc_auth_clean_dlg_safe(p_dialog * dlg){
  * @param aor: the aor to be handled
  * @return: 0 - ok, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side){
+int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side, int * auth_lifetime){
 
 	pcc_authdata_t *pcc_authdata=0;
 	p_dialog * dlg = *dlgp;
@@ -469,7 +473,6 @@ int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int p
 			 //LATCH default set to 1 , could be a config issue
 			 pcc_authdata->latch = 1;
 		}
-		// i should set a callback for the expiration of the session
 		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_dlg: creating PCC Session\n");
 		auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
 		if (!auth) {
@@ -479,6 +482,7 @@ int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int p
 			goto error;
 		}		 
 		STR_SHM_DUP(dlg->pcc_session_id,auth->id,"pcc_auth_init_dlg") ;
+		auth->u.auth.lifetime = dlg->expires;
 		
 	} else {
 		auth = cdpb.AAAGetAuthSession(dlg->pcc_session_id);
@@ -494,6 +498,7 @@ int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int p
 				*relatch = pcc_authdata->latch;
 			}
 		}
+		*auth_lifetime = dlg->expires-time(0);
 	}
 	d_unlock(dlg->hash);
 	*dlgp=0;
@@ -604,12 +609,15 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	} else {	
 		// CALL
 		dir = get_dialog_direction(str1);
-		if (pcc_side==-1) pcc_side=(int) dir;
-		if (pcc_side) 
+		if (pcc_side== DLG_MOBILE_UNKNOWN) pcc_side=(int) dir;
+		if (pcc_side == DLG_MOBILE_TERMINATING) 
 			LOG(L_DBG, "INF:"M_NAME":PCC_AAR: terminating side\n");
-		else 
+		else if(pcc_side == DLG_MOBILE_ORIGINATING) 
 			LOG(L_DBG, "INF:"M_NAME":PCC_AAR: originating side\n");
-	
+		else{
+			LOG(L_ERR, "INF:"M_NAME":PCC_AAR: unknown side, end of story\n");
+			goto error;
+		}
 	
 		/* Check for the existence of an auth session for this dialog */
 		/* if not, create an authorization session */
@@ -617,23 +625,30 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 		find_dialog_contact(res,dir,&host,&port,&transport);
 		call_id = cscf_get_call_id(req, 0);
 		LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
-		dlg = get_p_dialog(call_id,host,port,transport,&dir);	
+		dlg = get_p_dialog(call_id,host,port,transport,0);	
 	
 		if (!dlg) {
 			/* then fallback on the request */
 			find_dialog_contact(req,dir,&host,&port,&transport);
-			dlg = get_p_dialog(call_id,host,port,transport,&dir);
+			dlg = get_p_dialog(call_id,host,port,transport,0);
 			LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		}
 		if (!dlg) goto error;
-		int ret = pcc_auth_init_dlg(&dlg, &auth, &relatch, pcc_side);
+		int ret = pcc_auth_init_dlg(&dlg, &auth, &relatch, pcc_side, &auth_lifetime);
 		switch(ret){
 			case 0: break;
 			case -1: goto error;
 			case -2: goto out_of_memory;	
 		}
 	}
-		
+	
+	//auth_lifetime: add an Authorization_Lifetime AVP to update  the lifetime of the cdp session as well
+	if(auth_lifetime){
+			set_4bytes(x,auth_lifetime);
+			avp = cdpb.AAACreateAVP(AVP_Authorization_Lifetime,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+			if (avp) cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
+	}	
+	
 	/* Create an AAR prototype */
 	if (pcscf_qos_release7==1)
 		aar = cdpb.AAACreateRequest(IMS_Rx, IMS_AAR, Flag_Proxyable, auth);
@@ -673,12 +688,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
 		//TODO: dragos: maybe add Media-Component-Description to actually make a qos reservation for the signaling
 
-		//TODO: aon: auth_lifetime: for ims session modification maybe this should also be implemented
-		if(auth_lifetime){
-			set_4bytes(x,auth_lifetime);
-			avp = cdpb.AAACreateAVP(AVP_Authorization_Lifetime,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
-			if (avp) cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
-		}
+		
 
 	} else {
 		// Call
@@ -705,6 +715,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 			mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 		}
 	}
+	
 	
 	
 	if (pcscf_qos_release7!=-1)
@@ -810,7 +821,6 @@ int PCC_AAA(AAAMessage *aaa)
 AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 {
 	AAAMessage* dia_str = NULL;
-	//AAAMessage* dia_sta = NULL;
 	AAASession *auth=0;
 	p_dialog *dlg=0;
 	char x[4];
@@ -832,11 +842,11 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 		dir = get_dialog_direction(str1);
 		find_dialog_contact(msg,dir,&host,&port,&transport);
 		call_id =cscf_get_call_id(msg, 0);
-		dlg=get_p_dialog(call_id,host,port,transport,&dir);
+		dlg=get_p_dialog(call_id,host,port,transport,0);
 		if (!dlg && msg->first_line.type==SIP_REPLY) {
 			req = cscf_get_request_from_reply(msg);
 			find_dialog_contact(req,dir,&host,&port,&transport);
-			dlg=get_p_dialog(call_id,host,port,transport,&dir);
+			dlg=get_p_dialog(call_id,host,port,transport,0);
 		}
 			
 		if (!dlg) {
