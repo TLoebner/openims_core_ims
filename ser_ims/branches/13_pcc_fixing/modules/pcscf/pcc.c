@@ -356,7 +356,7 @@ AAASession * pcc_auth_clean_register(r_contact * cnt, contact_t* aor, int from_r
  * @param aor: the aor to be handled
  * @return: 0 - ok, 1 - goto end, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_register(contact_t * aor, int * expireReg, AAASession ** authp, struct sip_uri * parsed_aor){
+int pcc_auth_init_register(contact_t * aor, unsigned int * expireReg, AAASession ** authp, struct sip_uri * parsed_aor){
 
 	// REGISTRATION
 	
@@ -448,7 +448,7 @@ void pcc_auth_clean_dlg_safe(p_dialog * dlg){
  * @param aor: the aor to be handled
  * @return: 0 - ok, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side, int * auth_lifetime){
+int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side, unsigned int * auth_lifetime){
 
 	pcc_authdata_t *pcc_authdata=0;
 	p_dialog * dlg = *dlgp;
@@ -591,7 +591,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	str call_id={0,0};
 	int pcc_side =cscf_get_mobile_side(req, is_shm);
 	enum p_dialog_direction dir = 0;
-	int auth_lifetime = 0;
+	unsigned int auth_lifetime = 0;
 	struct sip_uri parsed_aor;
 
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
@@ -642,13 +642,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 		}
 	}
 	
-	//auth_lifetime: add an Authorization_Lifetime AVP to update  the lifetime of the cdp session as well
-	if(auth_lifetime){
-			set_4bytes(x,auth_lifetime);
-			avp = cdpb.AAACreateAVP(AVP_Authorization_Lifetime,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
-			if (avp) cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
-	}	
-	
 	/* Create an AAR prototype */
 	if (pcscf_qos_release7==1)
 		aar = cdpb.AAACreateRequest(IMS_Rx, IMS_AAR, Flag_Proxyable, auth);
@@ -660,6 +653,14 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	/*---------- 1. Add mandatory AVPs ----------*/
 	if(!pcc_aar_add_mandat_avps(aar, res))
 		goto error;
+
+	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: log1, auth_lifetime %u\n", auth_lifetime);
+	//auth_lifetime: add an Authorization_Lifetime AVP to update  the lifetime of the cdp session as well
+	if(auth_lifetime){
+		set_4bytes(x,auth_lifetime);
+		avp = cdpb.AAACreateAVP(AVP_Authorization_Lifetime,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
+		if (avp) cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
+	}	
 	
 	/*---------- 2. Create and add Media-Component-Description AVP ----------*/
 	
