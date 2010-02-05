@@ -225,7 +225,7 @@ int pcscf_use_pcc = 0;								/**< whether to enable or disable pcc */
 char* pcscf_forced_qos_peer = "";					/**< FQDN of Policy Decision Function (PDF) for policy control */
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
-int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
+
 char* ipv4_for_signaling_char="127.0.0.1";
 str ipv4_for_signaling;
 
@@ -461,7 +461,6 @@ static cmd_export_t pcscf_cmds[]={
  *  - emerg_support - if the P-CSCF has support for Emrgency Services or not
  *  <p>
  *  - use_pcc - if to use the Policy and Charging Control part
- *  - qos_side - on which side does this P-CSCF work (0 1 2)
  *  - qos_release7 - whether to use Rx or Gq
  *  - forced_qos_peer - the address of the forced qos peer
  *  - ip_address_for_signaling - 
@@ -533,7 +532,6 @@ static param_export_t pcscf_params[]={
 
     {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
-	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
 	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
 	{"ipv4_for_signaling",			STR_PARAM,		&ipv4_for_signaling_char},
 	{"ipv6_for_signaling",			STR_PARAM,		&ipv6_for_signaling_char},
