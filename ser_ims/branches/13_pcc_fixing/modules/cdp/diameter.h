@@ -301,6 +301,14 @@ typedef enum {
 	AVP_Inband_Security_Id			  =  299,
 	AVP_E2E_Sequence				  =  300,
 	
+	AVP_CC_Request_Number             =  415, //RFC4006
+	AVP_CC_Request_Type               =  416, //RFC4006
+	AVP_Subscription_Id				  =  443, //RFC4006
+	AVP_Subscription_Id_Data		  =  444, //RFC4006
+	AVP_Subscription_Id_Type		  =  450, //RFC4006
+	AVP_User_Equipment_Info	          =  458, //RFC4006
+	AVP_User_Equipment_Info_Type      =  459, //RFC4006
+	AVP_User_Equipment_Info_Value	  =  460, //RFC4006
 	AVP_Accounting_Record_Type        =  480,
 	AVP_Accounting_Realtime_Required  =  483,
 	AVP_Accounting_Record_Number      =  485,
