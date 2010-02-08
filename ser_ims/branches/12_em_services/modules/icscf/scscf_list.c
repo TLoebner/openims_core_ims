@@ -79,13 +79,17 @@ int SCSCF_Capabilities_cnt=0;					/**< size of list of S-CSCFs and their capabil
 int i_hash_size;					/**< size of the hash table for the S-CSCF lists 	*/
 i_hash_slot *i_hash_table=0;		/**< the hash table for the S-CSCF lists				*/
 
+inline int append_branch_help( struct sip_msg * msg, str * c, str* dst, qvalue_t qvalue, struct socket_info* socket){
+
 #ifdef SER_MOD_INTERFACE
-	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
-		append_branch(_msg, _c, _dst, NULL, _qvalue, 0, _nb)
+	return append_branch(msg, c, dst, NULL, qvalue, 0, socket);
 #else
-	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
-		append_branch(_msg, _c->uri.s, _c->uri.len, _dst->s, _dst->len, _qvalue, nb)
+	if(dst)
+		return append_branch(msg, c->s, c->len, dst->s, dst->len, qvalue, socket);
+	else
+		return append_branch(msg, c->s, c->len, 0, 0, qvalue, socket);
 #endif
+}
 
 
 /**
@@ -554,7 +558,7 @@ int I_scscf_select(struct sip_msg* msg, char* str1, char* str2)
 			/* subsequent */
 			//LOG(L_CRIT,"append branch\n");
 			req = msg;//cscf_get_request_from_reply(msg);
-			append_branch_help(req, &scscf_name,0,0,0);
+			append_branch_help(req, &scscf_name, NULL,0,0);
 			result = CSCF_RETURN_TRUE;
 		}
 	}else{

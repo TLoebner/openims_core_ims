@@ -70,14 +70,17 @@ extern str isc_my_uri_sip;			/**< Uri of myself to loop the message in str with 
 extern int isc_fr_timeout;			/**< default ISC response timeout in ms */
 extern int isc_fr_inv_timeout;		/**< default ISC INVITE response timeout in ms */
 
+inline int append_branch_help( struct sip_msg * msg, str * c, str* dst, qvalue_t qvalue, struct socket_info* socket){
+
 #ifdef SER_MOD_INTERFACE
-	extern int route_type;
-	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
-		append_branch(_msg, _c, _dst, NULL, _qvalue, 0, _nb)
+	return append_branch(msg, c, dst, NULL, qvalue, 0, socket);
 #else
-	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
-		append_branch(_msg, _c->uri.s, _c->uri.len, _dst->s, _dst->len, _qvalue, nb)
+	if(dst)
+		return append_branch(msg, c->s, c->len, dst->s, dst->len, qvalue, socket);
+	else
+		return append_branch(msg, c->s, c->len, 0, 0, qvalue, socket);
 #endif
+}
 
 /**
  *	Forwards the message to the application server.
