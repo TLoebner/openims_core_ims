@@ -303,8 +303,12 @@ typedef enum {
 	
 	AVP_CC_Request_Number             =  415, //RFC4006
 	AVP_CC_Request_Type               =  416, //RFC4006
+	AVP_Final_Unit_Indication		  =  430, //RFC4006
+	AVP_Rating_Group				  =  432, //RFC4006
+	AVP_Service_Identifier			  =  439, //RFC4006
 	AVP_Subscription_Id				  =  443, //RFC4006
 	AVP_Subscription_Id_Data		  =  444, //RFC4006
+	AVP_Final_Unit_Action			  =  449, //RFC4006
 	AVP_Subscription_Id_Type		  =  450, //RFC4006
 	AVP_User_Equipment_Info	          =  458, //RFC4006
 	AVP_User_Equipment_Info_Type      =  459, //RFC4006
