@@ -351,7 +351,7 @@ enum {
 	AVP_ETSI_Requested_Information						=353,
 	AVP_ETSI_Event_Type									=354,
 	
-	AVP_Line_Identifier									= 500,
+	AVP_ETSI_Line_Identifier							= 500,
 	AVP_ETSI_SIP_Authenticate 							= 501, 
 	AVP_ETSI_SIP_Authorization 							= 502, 
 	AVP_ETSI_SIP_Authentication_Info 					= 503, 
