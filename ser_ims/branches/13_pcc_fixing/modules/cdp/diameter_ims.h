@@ -194,6 +194,7 @@ enum {
 	AVP_IMS_SIP_Forking_Indication						= 523,
 /** Codec-Data is from TS 29.214*/
 	AVP_IMS_Codec_Data									= 524,
+	AVP_IMS_Service_URN									= 525,
 	AVP_IMS_Acceptable_Service_Info						= 526,
 	AVP_IMS_Service_Info_Status							= 527,
 /** 600 to 699 reserved for TS29.229											*/

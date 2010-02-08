@@ -448,7 +448,8 @@ void pcc_auth_clean_dlg_safe(p_dialog * dlg){
  * @param aor: the aor to be handled
  * @return: 0 - ok, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side, unsigned int * auth_lifetime){
+int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int pcc_side, 
+		unsigned int * auth_lifetime, str * service_urn){
 
 	pcc_authdata_t *pcc_authdata=0;
 	p_dialog * dlg = *dlgp;
@@ -500,6 +501,17 @@ int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int p
 		}
 		*auth_lifetime = dlg->expires-time(0);
 	}
+	
+	if(dlg->em_info.em_dialog == EMERG_DLG){
+		//the stored urn includes "urn:", 
+		//the PCRF expects the service urn without it
+		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_dlg: emergency dialog towards %.*s\n",
+					dlg->em_info.service_urn.len,
+					dlg->em_info.service_urn.s);
+		service_urn->s = dlg->em_info.service_urn.s+4;
+		service_urn->len = dlg->em_info.service_urn.len-4;
+	}
+
 	d_unlock(dlg->hash);
 	*dlgp=0;
 	*authp = auth;
@@ -569,7 +581,6 @@ error:
  * @param res - SIP response
  * @param str1 - 0/o/orig for originating side, 1/t/term for terminating side, r/REGISTER for registration
  * @param is_shm - req is from shared memory 
-
  * 
  * @returns AAA message or NULL on error  
  */
@@ -593,6 +604,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	enum p_dialog_direction dir = 0;
 	unsigned int auth_lifetime = 0;
 	struct sip_uri parsed_aor;
+	str service_urn = {0,0};
 
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
@@ -634,7 +646,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 			LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		}
 		if (!dlg) goto error;
-		int ret = pcc_auth_init_dlg(&dlg, &auth, &relatch, pcc_side, &auth_lifetime);
+		int ret = pcc_auth_init_dlg(&dlg, &auth, &relatch, pcc_side, &auth_lifetime, &service_urn);
 		switch(ret){
 			case 0: break;
 			case -1: goto error;
@@ -654,7 +666,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	if(!pcc_aar_add_mandat_avps(aar, res))
 		goto error;
 
-	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: log1, auth_lifetime %u\n", auth_lifetime);
+	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: auth_lifetime %u\n", auth_lifetime);
 	//auth_lifetime: add an Authorization_Lifetime AVP to update  the lifetime of the cdp session as well
 	if(auth_lifetime){
 		set_4bytes(x,auth_lifetime);
@@ -715,6 +727,18 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 			
 			mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 		}
+		
+		//add Service URN for emergency sessions
+		if(service_urn.s && service_urn.len){
+				avp = cdpb.AAACreateAVP(AVP_IMS_Service_URN, 
+						AAA_AVP_FLAG_VENDOR_SPECIFIC,
+						IMS_vendor_id_3GPP,
+						service_urn.s,
+						service_urn.len,
+						AVP_DUPLICATE_DATA);
+				cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
+		}
+
 	}
 	
 	
@@ -740,11 +764,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 				x,4,
 				AVP_DUPLICATE_DATA);
 		cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
-		/*
-					todo:
-					PCC_add_Framed_IP_Address(dia_aar,ipv4);
-					PCC_add_Framed_IPv6_Prefix(dia_aar,ipv6);
-					PCC_add_Service_URN(dia_aar,emergencysession);
+
+		/*TODO:
+			PCC_add_Framed_IP_Address(dia_aar,ipv4);
+			PCC_add_Framed_IPv6_Prefix(dia_aar,ipv6);
 		 */
 	} else {
 		if(!gqprima_AAR(aar,req,res,str1,&parsed_aor, relatch))

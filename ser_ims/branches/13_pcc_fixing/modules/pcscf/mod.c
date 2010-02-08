@@ -184,6 +184,8 @@ str forced_clf_peer_str;					/**< fxied FQDN of the forced CLF DiameterPeer (CLF
 char* ecscf_uri ="sip:ecscf.open-ims.test:7060";				/** the e-cscf uri*/
 str ecscf_uri_str;
 int emerg_support = 1;
+int anonym_em_call_support = 1;
+char* emerg_numbers_file="/opt/OpenIMSCore/ser_ims/modules/pcscf/emerg_info.xml";
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -308,7 +310,7 @@ str pcc_dest_realm;
  * <p>
  * - P_access_network_info() - modify the P_Access_Network_Info header with e2 information from CLF
  * <p>
- * - P_is_anonymous_identity()- checks if the request came from an Anonymous User Identity, see 3GPP TS 23.003 : 13.6	
+ * - P_is_anonymous_user()- checks if the request came from an anonymous user, rfc 3261
  * - P_emergency_flag() - checks if the user made an Emergency Registration
  * - P_enforce_sos_routes() - deletes all Route headers and adds one with the URI of the selected E-CSCF
  * - P_380_em_alternative_serv() - Create the body of a 380 Alternative Service reply for Emergency reasons (e.g. emergency Registration needed) 
@@ -384,11 +386,13 @@ static cmd_export_t pcscf_cmds[]={
 	
 	
 	/*emergency services exported functions*/
-	{"P_is_anonymous_identity",		P_is_anonymous_identity, 	0, 0, REQUEST_ROUTE},
-	{"P_emergency_flag",			P_emergency_flag,			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
-	{"P_emergency_ruri",			P_emergency_ruri,			0, 0, REQUEST_ROUTE},
-	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
+	{"P_accept_anonym_em_call",		P_accept_anonym_em_call, 	0, 0, REQUEST_ROUTE},
+	{"P_is_anonymous_user",			P_is_anonymous_user, 		0, 0, REQUEST_ROUTE},
+	{"P_emergency_flag",			P_emergency_flag,		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"P_380_em_alternative_serv",		P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
+	{"P_emergency_ruri",			P_emergency_ruri,		0, 0, REQUEST_ROUTE},
+	{"P_emergency_serv_enabled",		P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
+	{"P_select_ecscf",			P_select_ecscf,			0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
 
 
@@ -459,6 +463,8 @@ static cmd_export_t pcscf_cmds[]={
  *  <p>
  *  - ecscf_uri - the E-CSCF URI to forward the Emergency calls
  *  - emerg_support - if the P-CSCF has support for Emrgency Services or not
+ *  - anonym_em_call_support - set if the pcscf should support of not anonymous calls
+ *  - emerg_numbers_file -  the file where the emergency numbers and their associated emergency URNs are configured
  *  <p>
  *  - use_pcc - if to use the Policy and Charging Control part
  *  - qos_release7 - whether to use Rx or Gq
@@ -541,6 +547,8 @@ static param_export_t pcscf_params[]={
 
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
+	{"anonym_em_call_support",				INT_PARAM, &anonym_em_call_support},
+	{"emerg_numbers_file",					STR_PARAM, &emerg_numbers_file},
 
 	{0,0,0} 
 };
@@ -685,6 +693,13 @@ int fix_parameters()
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
 
+	if(emerg_support){
+		ecscf_uri_str.s = ecscf_uri;
+		ecscf_uri_str.len = strlen(ecscf_uri);
+		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
+	}
+
+
 	/* fix the parameters */
 	forced_clf_peer_str.s = forced_clf_peer;
 	forced_clf_peer_str.len = strlen(forced_clf_peer);
@@ -693,11 +708,6 @@ int fix_parameters()
 	forced_qos_peer.s = pcscf_forced_qos_peer;
 	forced_qos_peer.len = strlen(pcscf_forced_qos_peer);
 	
-	if(emerg_support){
-		ecscf_uri_str.s = ecscf_uri;
-		ecscf_uri_str.len = strlen(ecscf_uri);
-		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
-	}
 	//pcc params for signaling parameters of the PCSCF
 	ipv4_for_signaling.s = ipv4_for_signaling_char;
 	ipv4_for_signaling.len = strlen(ipv4_for_signaling_char);
@@ -963,6 +973,7 @@ static void mod_destroy(void)
 			make_snapshot_subscriptions();
 		}
 		/* Then nuke it all */		
+		clean_emergency_cntxt();
 		parser_destroy();
 		r_subscription_destroy();
 		r_storage_destroy();
