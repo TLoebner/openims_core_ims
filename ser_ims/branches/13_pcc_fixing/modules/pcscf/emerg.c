@@ -58,6 +58,7 @@
 #include "../../data_lump_rpl.h"
 #include "../../mem/mem.h"
 #include "../../locking.h"
+#include "../../parser/parse_from.h"
 #include "../../modules/tm/tm_load.h"
 
 #include "mod.h"
@@ -68,10 +69,12 @@
 #include "ims_pm_pcscf.h"
 #include "e2.h"
 #include "e2_avp.h"
+#include "dlg_state.h"
 
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
 extern int emerg_support;
 extern str ecscf_uri_str;
+extern int anonym_em_call_support;
 
 /*global variables*/
 str ecscf_uri_str;
@@ -82,13 +85,25 @@ xmlNode * action_alt_serv_node = NULL;
 
 int init_em_alt_serv_body();
 
+
 int init_emergency_cntxt(){
 	
 	/*init the XML library*/
 	xmlInitParser();
-	
+
+	if(emerg_support){
+		if(store_em_numbers())
+			return -1;
+	}
 	/*init the xml doc*/
 	return init_em_alt_serv_body();
+}
+
+void clean_emergency_cntxt(){
+
+	if(emerg_support)
+		clean_em_numbers();
+
 }
 
 /* Contructing the rough XML body for the 380 Alternative Service reply
@@ -116,12 +131,6 @@ int init_em_alt_serv_body(){
    	}
    	xmlDocSetRootElement(reply_380_doc, em_alt_serv_node);
 
-	/*if(!xmlNewNs(root_node, BAD_CAST LOST_NS_HREF, NULL)){
-		ERROR_LOG("could not add the namespace %s to the root node\n",
-				LOST_NS_HREF);
-		goto error;
-	}*/
-
 	alt_serv_node = xmlNewChild(em_alt_serv_node, NULL, BAD_CAST ALTERN_SERV_XML_NODE, NULL);
 	if(!alt_serv_node){
 		LOG(L_ERR, "ERR:"M_NAME":init_em_alt_serv_body: when adding new node %s\n", ALTERN_SERV_XML_NODE);
@@ -135,13 +144,13 @@ int init_em_alt_serv_body(){
 	}
 
 	reason_alt_serv_node = xmlNewChild(alt_serv_node, NULL, BAD_CAST REASON_XML_NODE, BAD_CAST "");
-	if(!type_node){
+	if(!reason_alt_serv_node){
 		LOG(L_ERR, "ERR:"M_NAME":init_em_alt_serv_body: when adding new node %s\n", REASON_XML_NODE);
 		goto error;
 	}
 
 	action_alt_serv_node = xmlNewChild(alt_serv_node, NULL, BAD_CAST ACTION_XML_NODE, BAD_CAST ALT_SERV_ACTION_VAL);
-	if(!type_node){
+	if(!action_alt_serv_node){
 		LOG(L_ERR, "ERR:"M_NAME":init_em_alt_serv_body: when adding new node %s\n", ACTION_XML_NODE);
 		goto error;
 	}
@@ -151,67 +160,6 @@ error:
 	return -1;
 }
 
-#define check_sos_URN(_uri, _type, _len)\
-	do{\
-		if((_uri[SOS_URN_LEN+_len+1] == '\0') && \
-				(strncmp(_uri+SOS_URN_LEN+1, _type, _len) ==0)){\
-				LOG(L_DBG, "DBG:"M_NAME":emergency_URN: call to %s\n",_type);\
-				goto is_emerg;\
-		}\
-	}while(0);
-
-
-int emergency_urn(char* uri,  int len){
-
-	if((len < SOS_URN_LEN ) || (strncmp(uri,SOS_URN, SOS_URN_LEN)!=0))
-		goto not_emerg;
-
-	if(len == SOS_URN_LEN)
-		goto is_emerg;
-
-	if(uri[SOS_URN_LEN] !='.'){	
-		goto error;
-	}
-
-	switch(uri[SOS_URN_LEN+1]){
-		case 'a':
-			check_sos_URN(uri, SOS_URN_AMB, SOS_URN_AMB_LEN);
-			check_sos_URN(uri, SOS_URN_AN_CTR, SOS_URN_AN_CTR_LEN);
-			break;			
-		case 'f':
-			check_sos_URN(uri, SOS_URN_FIRE, SOS_URN_FIRE_LEN);
-			break;
-		case 'g':
-			check_sos_URN(uri, SOS_URN_GAS, SOS_URN_GAS_LEN);
-			break;
-		case 'm':
-			check_sos_URN(uri, SOS_URN_MAR, SOS_URN_MAR_LEN);
-			check_sos_URN(uri, SOS_URN_MOUNT, SOS_URN_MOUNT_LEN);
-			break;
-		case 'p':
-			check_sos_URN(uri, SOS_URN_POL, SOS_URN_POL_LEN);
-			check_sos_URN(uri, SOS_URN_POIS, SOS_URN_POIS_LEN);
-			check_sos_URN(uri, SOS_URN_PHYS, SOS_URN_PHYS_LEN);
-		default:
-			break;
-	}
-
-error:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: invalid emergency URI %.*s\n",
-			len, uri);
-	return CSCF_RETURN_ERROR;
-
-not_emerg:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: no emergency URI %.*s\n",
-			len, uri);
-
-	return CSCF_RETURN_FALSE;
-
-is_emerg:
-	LOG(L_DBG, "DBG:"M_NAME":emergency_urn: we have an emergency call for the URI %.*s\n",
-			len, uri);
-	return CSCF_RETURN_TRUE;
-}
 
 /* Checks if the Request Uri is used for an Emergency Service
  * @param msg - the SIP message
@@ -221,27 +169,66 @@ is_emerg:
  */
 int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2){
 
-	return emergency_urn(msg->first_line.u.request.uri.s,
-				msg->first_line.u.request.uri.len);
+	int sos;
+
+
+	str ruri = {msg->first_line.u.request.uri.s,
+				msg->first_line.u.request.uri.len};
+
+	LOG(L_DBG, "DBG:"M_NAME":P_emergency_ruri:checking if the ruri %.*s is an emergency ruri\n",
+			ruri.len, ruri.s);	
+
+	sos = is_emerg_ruri(ruri, NULL);
+	switch(sos){
+	
+		case NOT_URN:	
+		case NOT_EM_URN: 
+			return CSCF_RETURN_ERROR;
+		default: 
+				return CSCF_RETURN_TRUE;
+	}
 }
+
+/**
+ * check if the P-CSCF should accept anonymous Emergency calls
+ * @param msg - the SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not 
+ */
+int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2)
+{
+	LOG(L_INFO,"DBG:"M_NAME":P_accept_anonym_em_call: Check if the P-CSCF is configured to accept an anonymous emergency call or not\n");
+
+	if(anonym_em_call_support)	
+		return CSCF_RETURN_TRUE;
+	else	
+		return CSCF_RETURN_FALSE;
+}
+
+static str anonym_display = {"Anonymous", 9};
 
 /**
  * Finds if the message comes from an anonymous sip uri at this P-CSCF
  * @param msg - the SIP message
- * @param str1 - the realm to look into
+ * @param str1 - not used
  * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not 
+ * @returns #CSCF_RETURN_TRUE if anonymous user, #CSCF_RETURN_FALSE if not, #CSCF_RETURN_BREAK if error parsing 
  */
-int P_is_anonymous_identity(struct sip_msg *msg,char *str1,char *str2)
+int P_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2)
 {
-	struct via_body *vb;
+	struct to_body * from_body;
 
-	LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_identity: Check if anonymous identity used\n");
+	LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_user: Check if anonymous identity used\n");
 
-	vb = cscf_get_ue_via(msg);
-	if(strncmp(vb->host.s, 	ANONYMOUS_DOMAIN_STR, ANONYMOUS_DOMAIN_STR_LEN) == 0){
-		LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_identity: using anonymous identity\n");
+	if((!msg->from || !msg->from->parsed) && (parse_from_header(msg)<0))
+		return CSCF_RETURN_BREAK;
+	
 
+	from_body = (struct to_body*)msg->from->parsed;
+	if((from_body->display.len == anonym_display.len) &&
+		(strncmp(from_body->display.s, anonym_display.s, anonym_display.len)==0)){
+		LOG(L_INFO,"DBG:"M_NAME":P_is_anonymous_user: using anonymous identity\n");
 		return CSCF_RETURN_TRUE;
 	}
 
@@ -292,6 +279,60 @@ int select_ECSCF(str * ecscf_used){
 
 	return 0;
 }
+
+/**
+ * selects the ecscf uri to be enforced
+ * @param msg - the SIP message to add to
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_ERROR on error
+ */
+int P_select_ecscf(struct sip_msg *msg,char *str1,char*str2)
+{
+	p_dialog *d = NULL;
+	str sel_ecscf_uri, call_id, host;
+	int port,transport;
+	enum p_dialog_direction dir;
+
+	dir = DLG_MOBILE_ORIGINATING;
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_select_ecscf(): Error retrieving orig contact\n");
+		return CSCF_RETURN_BREAK;
+	}		
+		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":P_select_ecscf(): Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":P_select_ecscf: could not find the emergency dialog\n");
+		return CSCF_RETURN_BREAK;
+	}
+
+	if(!d->em_info.em_dialog){
+		LOG(L_ERR, "ERR:"M_NAME":P_select_ecscf: script error: trying to use Emergency Services to route a non-emergency call\n");
+		goto error;
+	}
+
+	if(select_ECSCF(&sel_ecscf_uri))
+		goto error;
+
+	STR_SHM_DUP(d->em_info.ecscf_uri, sel_ecscf_uri, "P_select_ecscf");
+	d_unlock(d->hash);
+	return CSCF_RETURN_TRUE;
+
+error:
+out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":P_select_ecscf: could not select an ECSCF\n");
+	if(d) d_unlock(d->hash);
+	return CSCF_RETURN_ERROR;
+	
+}
+
 
 static str route_s={"Route: <",8};
 static str route_e={">\r\n",3};
@@ -401,6 +442,8 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
        	const xmlChar *reason;
 	int len = 0, ret;
 
+	str uri = {msg->first_line.u.request.uri.s, 
+				msg->first_line.u.request.uri.len};
 	ret = CSCF_RETURN_FALSE;
 
 	if(!reply_380_doc){
@@ -412,9 +455,8 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
 			strncmp(msg->first_line.u.request.method.s, invite_method.s, invite_method.len) == 0){
 		
 		
-		ret = emergency_urn(msg->first_line.u.request.uri.s, 
-				msg->first_line.u.request.uri.len);
-		if(ret == CSCF_RETURN_ERROR)
+		ret = is_emerg_ruri(uri, NULL);
+		if(ret == NOT_EM_URN)
 			return CSCF_RETURN_ERROR;
 	}
 
