@@ -105,13 +105,18 @@ extern int append_branches;				/**< if to append branches						*/
         static str zero={0,0};
 #endif
 
+inline int append_branch_help( struct sip_msg * msg, str * c, str* dst, qvalue_t qvalue, struct socket_info* socket){
+
 #ifdef SER_MOD_INTERFACE
-	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
-		append_branch(_msg, _c, _dst, NULL, _qvalue, 0, _nb)
+		return append_branch(msg, c, dst, NULL, qvalue, 0, socket);
 #else
-	#define append_branch_help(_msg, _c, _dst, _qvalue, _nb) \
-		append_branch(_msg, _c->uri.s, _c->uri.len, _dst->s, _dst->len, _qvalue, nb)
+	if(dst)
+		return append_branch(msg, c->s, c->len, dst->s, dst->len, qvalue, socket);
+	else
+		return append_branch(msg, c->s, c->len, 0, 0, qvalue, socket);
 #endif
+}
+
 
 /**
  * The Registrar timer looks for expires contacts and removes them
