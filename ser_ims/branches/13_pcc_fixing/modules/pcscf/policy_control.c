@@ -173,9 +173,13 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 				goto error;
 			}
 			for(crt_aor = aor_list->contacts; crt_aor!=NULL; crt_aor= crt_aor->next){
-				if (expires > 0)
+				if (expires > 0){
 					resp = PCC_AAR(t->uas.request, msg, str1, crt_aor,0);
-				else {
+					if(resp){
+						result = PCC_AAA(resp);
+						//if(result >= 2000 && result < 3000)
+					}
+				}else {
 					//de-registration
 					LOG(L_DBG,"DBG:"M_NAME":P_Rx: de-registration finishing auth session if any\n");
 					str_called = 1;
@@ -203,7 +207,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 
 	cdpb.AAAFreeMessage(&resp); // if frequency
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);
-	if (reg || (result >= 2000 && result < 3000) ) {
+	if (result >= 2000 && result < 3000) {
 		return CSCF_RETURN_TRUE;
 	} else {
 		 return CSCF_RETURN_FALSE; // if its not a success then that means i want to reject this call!

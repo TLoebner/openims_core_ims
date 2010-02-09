@@ -830,6 +830,15 @@ int PCC_AAA(AAAMessage *aaa)
 
 			}
 		}
+		avp = cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_Origin_Host,0,AAA_FORWARD_SEARCH);
+		if (avp){
+			LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Host %.*s\n",avp->data.len, avp->data.s);	
+		}
+
+		avp = cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_Origin_Realm,0,AAA_FORWARD_SEARCH);
+		if (avp){
+			LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Realm %.*s\n",avp->data.len, avp->data.s);	
+		}
 	}
 	//cdpb.AAAFreeMessage(&aaa);
 	return rc;
@@ -1072,7 +1081,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 		LOG(L_DBG,"DBG:PCC_RAA: received a RAR for non existing session\n");
 		return 0;
 	}
-	realm = pcc_get_destination_realm(forced_qos_peer);
+	realm = pcc_get_destination_realm();
 	raa=cdpb.AAACreateResponse(request);
 	if (!raa) goto error;
 
