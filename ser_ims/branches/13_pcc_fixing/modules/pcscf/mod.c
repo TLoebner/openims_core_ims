@@ -227,6 +227,7 @@ int pcscf_use_pcc = 0;								/**< whether to enable or disable pcc */
 char* pcscf_forced_qos_peer = "";					/**< FQDN of Policy Decision Function (PDF) for policy control */
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
+int pcc_use_ports = 1; 						/**< weather to use ports in the IPFilterRule >**/
 
 char* ipv4_for_signaling_char="127.0.0.1";
 str ipv4_for_signaling;
@@ -544,6 +545,7 @@ static param_export_t pcscf_params[]={
 	{"port_for_signaling",			INT_PARAM,		&port_for_signaling},
 	
 	{"pcc_dest_realm",					STR_PARAM,		&pcc_dest_realm_s},
+	{"pcc_use_ports",					INT_PARAM,		&pcc_use_ports},
 
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},

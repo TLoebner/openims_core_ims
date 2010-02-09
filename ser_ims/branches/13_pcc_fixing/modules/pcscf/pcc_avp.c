@@ -59,6 +59,7 @@
 extern str ipv4_for_signaling;
 extern str ipv6_for_signaling;
 extern unsigned short port_for_signaling;
+extern int pcc_use_ports;	
 
 static char* ip_s = "ip";
 
@@ -848,6 +849,11 @@ static str permit_out = {"permit out ", 11};
 static str permit_in = {"permit in ", 10};
 static str from_s = {" from ", 6};
 static str to_s = {" to ", 4};
+static char * permit_out_with_ports = "permit out %s from %.*s %u to %.*s %u %s";
+static char * permit_out_without_ports = "permit out %s from %.*s to %.*s %s";
+static char * permit_in_with_ports = "permit in %s from %.*s %u to %.*s %u %s";
+static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
+
  AAA_AVP *PCC_create_media_subcomponent(int number, char* proto, 
 		 			str ipA, unsigned int intportA, 
 					str ipB, unsigned int intportB ,
@@ -865,14 +871,15 @@ static str to_s = {" to ", 4};
  		list.tail=0;
  		list.head=0;
  		char x[4];
-		int portAlen, portBlen;
-			
-		int2str(intportA, &portAlen);
-	
-		int2str(intportB, &portBlen);
+		int portAlen=0, portBlen=0;
+		
+		if(pcc_use_ports){	
+			int2str(intportA, &portAlen);
+			int2str(intportB, &portBlen);
+		}
 
 		len = (permit_out.len + from_s.len + to_s.len+ipB.len+1+ipA.len+2 +
-				strlen(proto)+portAlen + portBlen)*sizeof(char);
+				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		flow_data.s = (char*)pkg_malloc(len);
 	        if(!flow_data.s){
 			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
@@ -900,9 +907,14 @@ static str to_s = {" to ", 4};
 		
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
-			flow_data.len=snprintf(flow_data.s, len, "permit out %s from %.*s %u to %.*s %u %s",proto,
+			if(pcc_use_ports){
+				flow_data.len=snprintf(flow_data.s, len, permit_out_with_ports,proto,
 					ipB.len, ipB.s, intportB,
 					ipA.len, ipA.s, intportA, options); 
+			}else{
+				flow_data.len=snprintf(flow_data.s, len, permit_out_without_ports,proto,
+					ipB.len, ipB.s, ipA.len, ipA.s, options); 
+			}
 
 			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: first flow is %.*s\n", flow_data.len, flow_data.s);
  			flow_description1=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
@@ -914,10 +926,15 @@ static str to_s = {" to ", 4};
 		
 		if (atributes==0 || atributes==1 || atributes==3 || atributes==4)
 		{
- 		/*second flow is the send flow*/									
- 			flow_data2.len=snprintf(flow_data2.s, len2, "permit in %s from %.*s %u to %.*s %u %s",proto,
+	 		/*second flow is the send flow*/									
+			if(pcc_use_ports){
+	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
 					ipA.len, ipA.s, intportA,
 					ipB.len, ipB.s, intportB, options);
+			}else{
+	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_without_ports,proto,
+					ipA.len, ipA.s, ipB.len, ipB.s, options);
+			}
 			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: second flow is %.*s\n", flow_data2.len, flow_data2.s);
  			flow_description2=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
