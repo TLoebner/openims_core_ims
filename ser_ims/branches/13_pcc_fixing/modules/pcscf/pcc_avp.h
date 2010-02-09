@@ -90,7 +90,7 @@ AAA_AVP* pcc_create_framed_ip_address(str ip);
 /*just headers*/
 
 int PCC_add_destination_realm(AAAMessage *msg, str data);
-int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+int PCC_add_autheapplication_id(AAAMessage *msg, unsigned int data);
 inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
 AAA_AVP *PCC_create_media_subcomponent(int number, char *proto, 
 					str ipA, unsigned int intportA, 
@@ -109,5 +109,6 @@ int extract_id(struct sip_msg *r,int tag,str *identification);
 int check_atributes(str sdpbody,char *mline);
 int is_a_port(str port);
 /*int is_an_address(char *ad);*/
-inline int PCC_get_result_code(AAAMessage *msg, int *data);
+inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+inline int PCC_get_result_code(AAAMessage *msg, unsigned int *data);
 #endif /*__PCC_AVP_H*/

@@ -808,9 +808,12 @@ end:
 }
 
 
+/* handle an AAA response to an AAR for resource reservation for a successfull registration or initiated/updated dialog 
+ * @param aaa - the diameter reply
+ */
 int PCC_AAA(AAAMessage *aaa)
 {
-	int rc;
+	unsigned int rc;
 	AAA_AVP *avp=0;
 	if (pcscf_qos_release7==-1)
 		rc = gqprima_AAA(aaa);
@@ -819,13 +822,12 @@ int PCC_AAA(AAAMessage *aaa)
 		PCC_get_result_code(aaa,&rc);
 		if (rc>2999)
 		{
-			LOG(L_DBG,"DBG:PCC_AAA: AAR request rejected with error code %d\n",rc);
-			//TODO: look for Acceptable-Service-Info
+			LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAR request rejected with error code %d\n",rc);
 			avp=cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_IMS_Acceptable_Service_Info,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
 			if (avp)
 			{
-				//TODO: analyze the value
-				LOG(L_WARN,"WARN:PCC_AAA: PCRF provided Acceptable-Service-Info but this feature is not supported\n");
+				LOG(L_WARN,"WARN:"M_NAME":PCC_AAA: PCRF provided Acceptable-Service-Info, not handled\n");
+
 			}
 		}
 	}
@@ -915,7 +917,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 		auth = 0;
 	}
 	
-	str realm = pcc_get_destination_realm(forced_qos_peer);
+	str realm = pcc_get_destination_realm();
 	if (realm.len&&!PCC_add_destination_realm(dia_str, realm)) goto error;
 	
 	if (pcscf_qos_release7){
@@ -969,7 +971,7 @@ end:
  * for the moment, just a dummy handler
  */
 int PCC_STA(AAAMessage *aaa){
-	int rc;
+	unsigned int rc;
 
 	if (pcscf_qos_release7==-1)
 		rc = gqprima_AAA(aaa);

@@ -1525,14 +1525,14 @@ int is_an_address(char *ad)
 }*/		
 
 
-
+#define macro_name(_rc)	#_rc
 /**
  * Returns the Result-Code AVP from a Diameter message.
  * or the Experimental-Result-Code if there is no Result-Code , because .. who cares
  * @param msg - the Diameter message
  * @returns the AVP payload on success or an empty string on error
  */
-inline int PCC_get_result_code(AAAMessage *msg, int *data)
+inline int PCC_get_result_code(AAAMessage *msg, unsigned int *data)
 {
 
 	AAA_AVP *avp;
@@ -1540,6 +1540,7 @@ inline int PCC_get_result_code(AAAMessage *msg, int *data)
 	list.head=0;
 	list.tail=0;
 	*data=0;
+	int ret = 0;
 	
 	for (avp=msg->avpList.tail;avp;avp=avp->prev)
 	{
@@ -1558,16 +1559,47 @@ inline int PCC_get_result_code(AAAMessage *msg, int *data)
 				{
 					*data = get_4bytes(avp->data.s);
 					cdpb.AAAFreeAVPList(&list);
-					return 1;				
+					ret = 1;				
+					break;
 				}
 			}
 			cdpb.AAAFreeAVPList(&list);
-			return 0; // this has to be here because i have changed the avp!!!
+			break; // this has to be here because i have changed the avp!!!
 					
 		}
 	
 	}
-	return 0;
+	switch((*data)){
+		case DIAMETER_SUCCESS:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(DIAMETER_SUCCESS)); break;
+
+		case RC_IMS_DIAMETER_ERROR_INVALID_SERVICE_INFORMATION:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_INVALID_SERVICE_INFORMATION));break;
+
+		case RC_IMS_DIAMETER_ERROR_FILTER_RESTRICTIONS:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_FILTER_RESTRICTIONS));break;
+
+		case RC_IMS_DIAMETER_ERROR_REQUESTED_SERVICE_NOT_AUTHORIZED:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_REQUESTED_SERVICE_NOT_AUTHORIZED)); break;
+
+		case RC_IMS_DIAMETER_ERROR_DUPLICATED_AF_SESSION:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_DUPLICATED_AF_SESSION)); break;
+
+		case RC_IMS_DIAMETER_ERROR_IPCAN_SESSION_NOT_AVAILABLE:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_IPCAN_SESSION_NOT_AVAILABLE)); break;
+
+		case RC_IMS_DIAMETER_ERROR_UNAUTHORIZED_NON_EMERGENCY_SESSION:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_UNAUTHORIZED_NON_EMERGENCY_SESSION));break;
+	}
+
+	return ret;
 }
 
 

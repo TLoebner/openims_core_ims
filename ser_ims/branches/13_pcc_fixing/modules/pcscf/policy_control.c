@@ -131,10 +131,10 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 	AAAMessage* resp;
 	int reg=0,expires=0;
 	contact_body_t * aor_list;
-	contact_t * crt_aor;
+	contact_t * crt_aor = NULL;
 	int result = AAA_SUCCESS;
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
-	int call_str = 0;
+	int str_called = 0;
 	
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_Rx: CALLED\n");
 	if (msg->first_line.type == SIP_REQUEST) {
@@ -178,7 +178,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 				else {
 					//de-registration
 					LOG(L_DBG,"DBG:"M_NAME":P_Rx: de-registration finishing auth session if any\n");
-					call_str = 1;
+					str_called = 1;
 					resp = PCC_STR(msg, str1, crt_aor);
 				}
 			}
@@ -194,10 +194,11 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 
 
 	//cdpb.AAAPrintMessage(resp);
-	
+	//TODO: multiple AAAs will be received when a registration for more than one contacts is performed
 	if (!resp) goto error;
-	if(call_str) result = PCC_STA(resp);
-	else	result = PCC_AAA(resp);
+	if(str_called) result = PCC_STA(resp);
+	else result = PCC_AAA(resp);
+	
 	LOG(L_INFO,"INFO:"M_NAME":P_Rx:recieved an AAA with result code %i\n",result);
 
 	cdpb.AAAFreeMessage(&resp); // if frequency
@@ -209,10 +210,11 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 	} 
 	/*
 	 * TODO:
-	 * This behavior is wrong, if its a reINVITE  then the rules already exist, the PCRF may
+	 * if its a reINVITE  then the rules already exist, the PCRF may
 	 * not install the news but remain with the old ones and in that case it will send a DIAMETER_UNABLE_TO_COMPLY
 	 * so we need to catch that possibility here maybe looking at the Error-Message
-	*/
+	 */
+	
 	
 error:
 	return CSCF_RETURN_TRUE; // default policy is if PDF/PCRF not working or errors , then leave everything flow
