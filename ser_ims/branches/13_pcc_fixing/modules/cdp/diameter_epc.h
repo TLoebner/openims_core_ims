@@ -302,9 +302,9 @@ enum {
 };
 
 enum {
-	AVP_EPC_Pcc_Rule_Status_Active					=0,
-	AVP_EPC_Pcc_Rule_Status_Inactive				=1,
-	AVP_EPC_Pcc_Rule_Status_Temporarily_Inactive 	=2
+	AVP_EPC_PCC_Rule_Status_Active					=0,
+	AVP_EPC_PCC_Rule_Status_Inactive				=1,
+	AVP_EPC_PCC_Rule_Status_Temporarily_Inactive 	=2
 };
 enum {
 	AVP_EPC_Bearer_Usage_General 		=0,
