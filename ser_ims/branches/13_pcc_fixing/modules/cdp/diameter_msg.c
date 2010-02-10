@@ -331,34 +331,36 @@ AAAMessage *AAACreateRequest(AAAApplicationId app_id,
 	msg->endtoendId = next_endtoend();
 	msg->flags |= flags;	
 
-	/* add destination host and destination realm */
-	if(session->dest_host.s){
-		avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
-			session->dest_host.s,session->dest_host.len,AVP_DUPLICATE_DATA);
-		if (!avp) {
-			LOG(L_ERR,"ERR:AAACreateRequest: Failed creating Destination Host avp\n");
-			goto error;
+	if(session){
+		/* add destination host and destination realm */
+		if(session->dest_host.s){
+			avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
+				session->dest_host.s,session->dest_host.len,AVP_DUPLICATE_DATA);
+			if (!avp) {
+				LOG(L_ERR,"ERR:AAACreateRequest: Failed creating Destination Host avp\n");
+				goto error;
+			}
+			if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+				LOG(L_ERR,"ERR:AAACreateRequest: Failed adding Destination Host avp to message\n");
+				AAAFreeAVP(&avp);
+				goto error;
+			}
 		}
-		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-			LOG(L_ERR,"ERR:AAACreateRequest: Failed adding Destination Host avp to message\n");
-			AAAFreeAVP(&avp);
-			goto error;
-		}
-	}
 
-	if(session->dest_realm.s){
+		if(session->dest_realm.s){
 	
-		avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
-			session->dest_realm.s,session->dest_realm.len,AVP_DUPLICATE_DATA);
-		if (!avp) {
-			LOG(L_ERR,"ERR:AAACreateRequest: Failed creating Destination Realm avp\n");
-			goto error;
+			avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
+				session->dest_realm.s,session->dest_realm.len,AVP_DUPLICATE_DATA);
+			if (!avp) {
+				LOG(L_ERR,"ERR:AAACreateRequest: Failed creating Destination Realm avp\n");
+				goto error;
+			}
+			if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+				LOG(L_ERR,"ERR:AAACreateRequest: Failed adding Destination Realm avp to message\n");
+				AAAFreeAVP(&avp);
+				goto error;
+			}		
 		}
-		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-			LOG(L_ERR,"ERR:AAACreateRequest: Failed adding Destination Realm avp to message\n");
-			AAAFreeAVP(&avp);
-			goto error;
-		}		
 	}
 
 	return msg;
