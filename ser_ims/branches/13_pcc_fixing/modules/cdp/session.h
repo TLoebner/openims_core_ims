@@ -132,7 +132,6 @@ typedef struct _cdp_auth_session_t {
 	time_t timeout;			/**< absolute time for session timeout  -1 means forever */
 	time_t lifetime;		/**< absolute time for auth lifetime -1 means forever */
 	time_t grace_period;	/**< grace_period in seconds 	*/ 
-		
 	void* generic_data;			
 } cdp_auth_session_t;
 
@@ -194,7 +193,7 @@ typedef struct _cdp_session_t {
 	str id;                             /**< session-ID as string */
 	unsigned int application_id;		/**< specific application id associated with this session */	
 	cdp_session_type_t type;
-	
+	str dest_host, dest_realm; /*the destination host and realm, used only for auth, for the moment*/	
 	union {
 		cdp_auth_session_t auth;
 		cdp_acc_session_t acc;

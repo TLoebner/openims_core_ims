@@ -1530,7 +1530,7 @@ int is_an_address(char *ad)
  * Returns the Result-Code AVP from a Diameter message.
  * or the Experimental-Result-Code if there is no Result-Code , because .. who cares
  * @param msg - the Diameter message
- * @returns the AVP payload on success or an empty string on error
+ * @returns 1 if result code found or 0 if error
  */
 inline int PCC_get_result_code(AAAMessage *msg, unsigned int *data)
 {

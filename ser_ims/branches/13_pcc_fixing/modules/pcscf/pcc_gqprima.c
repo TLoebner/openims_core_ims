@@ -217,24 +217,38 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 /**
  * Gqprima processing of the AAA Answer
  * @param dia_msg - the AAA message
- * @return the result-code to be processed by someone else
+ * @return 1 if result code found, 0 if not found
  */
-int gqprima_AAA(AAAMessage *dia_msg)
+int gqprima_AAA(AAAMessage *dia_msg, unsigned int * rc)
 {
 	AAA_AVP *avp=0;
-	int rc=0;
+	AAA_AVP_LIST list;
 	//get the result code
 	avp=cdpb.AAAFindMatchingAVP(dia_msg,dia_msg->avpList.head,AVP_Result_Code,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
-	if (!avp || avp->data.len==0)
+	if (avp && avp->data.len!=0)
 	{
-		rc=-1;
-		//look Experimental-Result-Code AVP
-	} else {
-		rc=get_4bytes(avp->data.s);
+		*rc=get_4bytes(avp->data.s);
+		return 1;
+	}
+
+	avp=cdpb.AAAFindMatchingAVP(dia_msg,dia_msg->avpList.head,AVP_Experimental_Result,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
+	if(avp && avp->data.len !=0)
+	{
+		list=cdpb.AAAUngroupAVPS(avp->data);
+		for(avp=list.head;avp;avp=avp->next)
+		{
+			if (avp->code==AVP_IMS_Experimental_Result_Code)
+			{
+				*rc = get_4bytes(avp->data.s);
+				cdpb.AAAFreeAVPList(&list);
+				return 1;
+			}
+		}
+		cdpb.AAAFreeAVPList(&list);
 	}
 	//read binding information (output-list)
 	//TODO
-	return rc;
+	return 0;
 }
 
 
