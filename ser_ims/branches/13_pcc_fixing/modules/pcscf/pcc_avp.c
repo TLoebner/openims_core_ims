@@ -878,7 +878,7 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 			int2str(intportB, &portBlen);
 		}
 
-		len = (permit_out.len + from_s.len + to_s.len+ipB.len+1+ipA.len+2 +
+		len = (permit_out.len + from_s.len + to_s.len+ipB.len+1+ipA.len+1 +
 				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		flow_data.s = (char*)pkg_malloc(len);
 	        if(!flow_data.s){
@@ -908,7 +908,7 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
 			if(pcc_use_ports){
-				flow_data.len=snprintf(flow_data.s, len, permit_out_with_ports,proto,
+				flow_data.len=snprintf(flow_data.s, len+1, permit_out_with_ports,proto,
 					ipB.len, ipB.s, intportB,
 					ipA.len, ipA.s, intportA, options); 
 			}else{
@@ -928,7 +928,7 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		{
 	 		/*second flow is the send flow*/									
 			if(pcc_use_ports){
-	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
+	 			flow_data2.len=snprintf(flow_data2.s, len2+1, permit_in_with_ports,proto,
 					ipA.len, ipA.s, intportA,
 					ipB.len, ipB.s, intportB, options);
 			}else{
@@ -1547,7 +1547,8 @@ inline int PCC_get_result_code(AAAMessage *msg, unsigned int *data)
 		//LOG(L_INFO,"pcc_get_result_code: looping with avp code %i\n",avp->code);
 		if (avp->code==AVP_Result_Code)
 		{
-			*data = get_4bytes(avp->data.s);	
+			*data = get_4bytes(avp->data.s);
+			ret = 1;	
 				
 		} else if (avp->code==AVP_Experimental_Result)
 		{
