@@ -80,11 +80,11 @@ int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
 void terminate_pcc_session(str session_id);
 
 
-AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor, int is_shm);
+AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor, str * pcc_session_id, int is_shm);
 AAAMessage* PCC_STR(struct sip_msg *msg, char *str1, contact_t * aor);
 AAAMessage* PCC_ASA(AAAMessage *request);
-int PCC_AAA(AAAMessage *msg);
-int PCC_STA(AAAMessage *aaa);
+int PCC_AAA(AAAMessage *msg, unsigned int * rc, str pcc_session_id);
+int PCC_STA(AAAMessage *aaa, unsigned int *rc);
 
 
 AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);

@@ -123,6 +123,10 @@ void free_session(cdp_session_t *x)
 			default:
 				LOG(L_ERR,"ERR:free_session(): Unknown session type %d!\n",x->type);
 		}
+		
+		if(x->dest_host.s) shm_free(x->dest_host.s);
+		if(x->dest_realm.s) shm_free(x->dest_realm.s);
+
 		shm_free(x);
 	}
 }

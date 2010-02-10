@@ -580,11 +580,13 @@ error:
  * @param req - SIP request  
  * @param res - SIP response
  * @param str1 - 0/o/orig for originating side, 1/t/term for terminating side, r/REGISTER for registration
+ * @param pcc_session_id - the returned AAAsession id
  * @param is_shm - req is from shared memory 
  * 
  * @returns AAA message or NULL on error  
  */
-AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t* aor, int is_shm)
+AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t* aor, 
+		str* pcc_session_id, int is_shm)
 {
 	AAAMessage* aar = NULL;
 	AAAMessage* aaa = 0;
@@ -661,6 +663,10 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 		aar = cdpb.AAACreateRequest(IMS_Gq, IMS_AAR, Flag_Proxyable, auth);
 	
 	if (!aar) goto error;
+	if(pcc_session_id){
+		pcc_session_id->s = auth->id.s;
+		pcc_session_id->len = auth->id.len;
+	}
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
 	if(!pcc_aar_add_mandat_avps(aar, res))
@@ -810,38 +816,78 @@ end:
 
 /* handle an AAA response to an AAR for resource reservation for a successfull registration or initiated/updated dialog 
  * @param aaa - the diameter reply
+ * @return -  1 if result code found and processing ok, -1 if error
  */
-int PCC_AAA(AAAMessage *aaa)
+int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 {
-	unsigned int rc;
+	AAASession * auth = NULL;
 	AAA_AVP *avp=0;
+	int ret = 1;
+
 	if (pcscf_qos_release7==-1)
-		rc = gqprima_AAA(aaa);
+		ret = gqprima_AAA(aaa, rc);
 	else
 	{
-		PCC_get_result_code(aaa,&rc);
-		if (rc>2999)
+		ret = PCC_get_result_code(aaa, rc);
+	}
+	if (ret == 0){
+		LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA message without result code\n");
+		return ret;
+	}
+
+	LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAR request result code %u\n",*rc);
+	if((*rc)>2999){
+		LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAR request rejected with error code %u\n",*rc);
+		avp=cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_IMS_Acceptable_Service_Info,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
+		if (avp)
 		{
-			LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAR request rejected with error code %d\n",rc);
-			avp=cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_IMS_Acceptable_Service_Info,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
-			if (avp)
-			{
-				LOG(L_WARN,"WARN:"M_NAME":PCC_AAA: PCRF provided Acceptable-Service-Info, not handled\n");
-
-			}
-		}
-		avp = cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_Origin_Host,0,AAA_FORWARD_SEARCH);
-		if (avp){
-			LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Host %.*s\n",avp->data.len, avp->data.s);	
-		}
-
-		avp = cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_Origin_Realm,0,AAA_FORWARD_SEARCH);
-		if (avp){
-			LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Realm %.*s\n",avp->data.len, avp->data.s);	
+			LOG(L_WARN,"WARN:"M_NAME":PCC_AAA: PCRF provided Acceptable-Service-Info, not handled\n");
 		}
 	}
+	
+	auth = cdpb.AAAGetAuthSession(pcc_session_id);
+	if(!auth){
+		LOG(L_ERR,"BUG:"M_NAME":PCC_AAA: did not find the AAASession associated with the id %.*s\n", 
+				pcc_session_id.len, pcc_session_id.s);
+		goto error;
+	}
+
+	avp = cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_Origin_Host,0,AAA_FORWARD_SEARCH);
+	if(!avp || !avp->data.s || !avp->data.len) {
+		LOG(L_ERR,"ERR:"M_NAME":PCC_AAA: missing or empty Origin Host AVP\n");
+		goto error;
+	}
+
+	LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Host %.*s\n",avp->data.len, avp->data.s);	
+	if(!auth->dest_host.s){
+		STR_SHM_DUP(auth->dest_host, avp->data, "PCC_AAA");
+	}
+
+	avp = cdpb.AAAFindMatchingAVP(aaa,aaa->avpList.head,AVP_Origin_Realm,0,AAA_FORWARD_SEARCH);
+	if(!avp || !avp->data.s || !avp->data.len) {
+		LOG(L_ERR,"ERR:"M_NAME":PCC_AAA: missing or empty Origin Realm AVP\n");
+		goto error;
+	}
+
+	LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Realm %.*s\n",avp->data.len, avp->data.s);	
+	if(!auth->dest_realm.s){
+		STR_SHM_DUP(auth->dest_realm, avp->data, "PCC_AAA");
+	}
+
 	//cdpb.AAAFreeMessage(&aaa);
-	return rc;
+	cdpb.AAASessionsUnlock(auth->hash);
+	return ret;
+error:
+out_of_memory:
+	if(auth){
+		if(auth->dest_host.s){
+			shm_free(auth->dest_host.s);
+			auth->dest_host.s = 0; auth->dest_host.len = 0;
+		}
+		cdpb.AAASessionsUnlock(auth->hash);
+	}
+	return -1;
+	
 }
 
 
@@ -921,14 +967,9 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 	
 	if (!dia_str) goto error;
 	
-	if (auth) {
-		cdpb.AAASessionsUnlock(auth->hash);
-		auth = 0;
-	}
-	
-	str realm = pcc_get_destination_realm();
-	if (realm.len&&!PCC_add_destination_realm(dia_str, realm)) goto error;
-	
+	cdpb.AAASessionsUnlock(auth->hash);
+	auth = 0;
+		
 	if (pcscf_qos_release7){
 		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
 	}else{
@@ -979,17 +1020,15 @@ end:
 /* Called upon receipt of an response to a STR
  * for the moment, just a dummy handler
  */
-int PCC_STA(AAAMessage *aaa){
-	unsigned int rc;
-
+int PCC_STA(AAAMessage *aaa, unsigned int *rc){
+	
 	if (pcscf_qos_release7==-1)
-		rc = gqprima_AAA(aaa);
+		return gqprima_AAA(aaa, rc);
 	else
 	{
-		PCC_get_result_code(aaa,&rc);
+		return PCC_get_result_code(aaa, rc);
 	}
 
-	return rc;
 }
 
 /*
@@ -1180,6 +1219,7 @@ terminate:
 	}else {
 		cdpb.AAASendMessage(raa,NULL,NULL);
 	}
+
 	//then generate a STR-STA
 
 	LOG(L_INFO,"PCC_RAR() : terminating auth session\n");

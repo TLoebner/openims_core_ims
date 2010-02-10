@@ -107,6 +107,56 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 	return CSCF_RETURN_FALSE;
 }
 
+int P_Rx_register(struct sip_msg *req, struct sip_msg * rpl){
+
+	AAAMessage* resp;
+	unsigned int result = AAA_SUCCESS;
+	int expires=0;
+	contact_body_t * aor_list;
+	contact_t * crt_aor = NULL;
+	str pcc_session_id = {0,0};
+
+	//or at least a register to subscribe to signaling path status
+	expires=cscf_get_expires_hdr(req,1);
+	LOG(L_DBG,"DBG:"M_NAME":P_Rx_register: register with expires %i\n",expires);
+	if (parse_headers(rpl, HDR_EOH_F, 0) <0) {
+		LOG(L_ERR,"ERR:"M_NAME":P_Rx_register: error parsing headers\n");
+		goto error;
+	}	
+		
+	aor_list = cscf_parse_contacts(rpl);
+	if (!aor_list || (!aor_list->contacts && !aor_list->star)) {
+		LOG(L_ERR,"ERR:"M_NAME":P_Rx_register: no contacts found in the Contact header\n");
+		goto error;
+	}
+
+	for(crt_aor = aor_list->contacts; crt_aor!=NULL; crt_aor= crt_aor->next){
+		if (expires > 0){
+			resp = PCC_AAR(req, rpl, "reg", crt_aor, &pcc_session_id, 0);
+			if(!resp)
+				goto error;
+			if(PCC_AAA(resp, &result, pcc_session_id) > 0){
+				LOG(L_INFO,"INFO:"M_NAME":P_Rx_register:recieved an AAA with result code %u\n",result);
+				if(result<2000 || result >= 3000){
+					goto error;
+				}
+
+			}
+			cdpb.AAAFreeMessage(&resp); 
+		}else {
+			//de-registration
+			LOG(L_DBG,"DBG:"M_NAME":P_Rx_register: de-registration finishing auth session if any\n");
+			resp = PCC_STR(req, "reg", crt_aor);
+			if(resp)cdpb.AAAFreeMessage(&resp); 
+		}
+	}
+	
+	return CSCF_RETURN_TRUE;
+
+error:
+	return CSCF_RETURN_FALSE;
+}
+
 
 /**
  * P_Rx() will be called, if a SIP 183 Session Progress comes back from the callee.  
@@ -129,12 +179,9 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 	struct cell *t;
 	int preliminary=0;
 	AAAMessage* resp;
-	int reg=0,expires=0;
-	contact_body_t * aor_list;
-	contact_t * crt_aor = NULL;
-	int result = AAA_SUCCESS;
+	unsigned int result = AAA_SUCCESS;
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
-	int str_called = 0;
+	str pcc_session_id = {0,0};
 	
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_Rx: CALLED\n");
 	if (msg->first_line.type == SIP_REQUEST) {
@@ -154,38 +201,11 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 		if ((strncmp(t->method.s,"INVITE",6)==0)||(strncmp(t->method.s,"UPDATE",6)==0)||(strncmp(t->method.s,"PRACK",5)==0))
 		{
 			//we dont apply QoS if its not a reply to an INVITE! or UPDATE or PRACK!
-			resp = PCC_AAR(t->uas.request, msg, str1, NULL, 1);
+			resp = PCC_AAR(t->uas.request, msg, str1, NULL, &pcc_session_id, 1);
 
 		}else if ((strncmp(t->method.s,"REGISTER",8)==0))
 		{
-			//or at least a register to subscribe to signaling path status
-			reg=1;
-			expires=cscf_get_expires_hdr(t->uas.request,1);
-			LOG(L_DBG,"DBG:"M_NAME":P_Rx: register with expires %i\n",expires);
-			if (parse_headers(msg, HDR_EOH_F, 0) <0) {
-				LOG(L_ERR,"ERR:"M_NAME":P_Rx: error parsing headers\n");
-				goto error;
-			}	
-		
-			aor_list = cscf_parse_contacts(msg);
-			if (!aor_list || (!aor_list->contacts && !aor_list->star)) {
-				LOG(L_ERR,"ERR:"M_NAME":P_Rx: no contacts found in the Contact header\n");
-				goto error;
-			}
-			for(crt_aor = aor_list->contacts; crt_aor!=NULL; crt_aor= crt_aor->next){
-				if (expires > 0){
-					resp = PCC_AAR(t->uas.request, msg, str1, crt_aor,0);
-					if(resp){
-						result = PCC_AAA(resp);
-						//if(result >= 2000 && result < 3000)
-					}
-				}else {
-					//de-registration
-					LOG(L_DBG,"DBG:"M_NAME":P_Rx: de-registration finishing auth session if any\n");
-					str_called = 1;
-					resp = PCC_STR(msg, str1, crt_aor);
-				}
-			}
+			return P_Rx_register(t->uas.request, msg);
 		} else {
 			LOG(L_DBG,"DBG:"M_NAME":P_Rx: Policy and Charging Control non-applicable\n");
 			return CSCF_RETURN_TRUE;
@@ -193,17 +213,15 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 	} else {
 		//preliminary
 		if ((strncmp(msg->first_line.u.request.method.s,"INVITE",6)==0))
-			resp = PCC_AAR(msg,0,str1, NULL,0);
+			resp = PCC_AAR(msg,0,str1, NULL,&pcc_session_id, 0);
 	}
 
 
 	//cdpb.AAAPrintMessage(resp);
-	//TODO: multiple AAAs will be received when a registration for more than one contacts is performed
 	if (!resp) goto error;
-	if(str_called) result = PCC_STA(resp);
-	else result = PCC_AAA(resp);
-	
-	LOG(L_INFO,"INFO:"M_NAME":P_Rx:recieved an AAA with result code %i\n",result);
+	if(PCC_AAA(resp, &result, pcc_session_id)>0){
+		LOG(L_INFO,"INFO:"M_NAME":P_Rx:recieved an AAA with result code %u\n",result);
+	}
 
 	cdpb.AAAFreeMessage(&resp); // if frequency
 	//LOG(L_INFO, ANSI_WHITE"INF: rc %d\n", result);

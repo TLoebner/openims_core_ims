@@ -72,7 +72,7 @@ do {                                                                            
 
 
 int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1, struct sip_uri * parsed_aor, int relatch);
-int gqprima_AAA(AAAMessage *dia_msg);
+int gqprima_AAA(AAAMessage *dia_msg, unsigned int * rc);
 
 typedef struct _t_binding_unit
 {
