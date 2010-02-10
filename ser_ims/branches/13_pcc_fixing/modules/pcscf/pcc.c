@@ -1112,7 +1112,6 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 	int code=0,rc=0,erc=0;
 	p_dialog *dlg;
 	char x[4];
-	str realm={0,0};
 	if (!request && !request->sessionId) return 0;
 	session = cdpb.AAAGetAuthSession(request->sessionId->data);
 	if (!session)
@@ -1120,7 +1119,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 		LOG(L_DBG,"DBG:PCC_RAA: received a RAR for non existing session\n");
 		return 0;
 	}
-	realm = pcc_get_destination_realm();
+
 	raa=cdpb.AAACreateResponse(request);
 	if (!raa) goto error;
 
@@ -1187,7 +1186,6 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 	cdpb.AAASessionsUnlock(session->hash);
 	session = 0;
 	rc=AAA_SUCCESS;
-//create_raa:
 	if (rc)
 	{
 		set_4bytes(x,rc);
@@ -1212,7 +1210,6 @@ terminate:
 	//first reply to the RAR
 	set_4bytes(x,AAA_SUCCESS);
 	cdpb.AAAAddAVPToMessage(raa,cdpb.AAACreateAVP(AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA),raa->avpList.tail);
-	if (realm.len && !PCC_add_destination_realm(raa, realm)) goto error;
 	if (forced_qos_peer.len)
 	{
 		cdpb.AAASendMessageToPeer(raa,&forced_qos_peer,NULL,NULL);
@@ -1240,7 +1237,6 @@ terminate:
 
 	if (!dia_str) goto error;
 
-	if (realm.len && !PCC_add_destination_realm(dia_str, realm)) goto error;
 	if (pcscf_qos_release7){
 		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
 	}else{
