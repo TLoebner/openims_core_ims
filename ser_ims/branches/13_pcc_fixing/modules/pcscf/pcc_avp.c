@@ -896,7 +896,7 @@ static str permit_out = {"permit out ", 11};
 static str permit_in = {"permit in ", 10};
 static str from_s = {" from ", 6};
 static str to_s = {" to ", 4};
-static char * permit_out_with_ports = "permit out %s from %.*s %u to %.*s %u %s";
+static char * permit_out_with_ports =    "permit out %s from %.*s %u to %.*s %u %s";
 static char * permit_out_without_ports = "permit out %s from %.*s to %.*s %s";
 static char * permit_in_with_ports = "permit in %s from %.*s %u to %.*s %u %s";
 static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
@@ -923,10 +923,13 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		if(pcc_use_ports){	
 			int2str(intportA, &portAlen);
 			int2str(intportB, &portBlen);
+			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+3+
+				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
+		}else{
+			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+1+
+				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		}
 
-		len = (permit_out.len + from_s.len + to_s.len+ipB.len+1+ipA.len+1 +
-				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		flow_data.s = (char*)pkg_malloc(len);
 	        if(!flow_data.s){
 			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
@@ -955,7 +958,7 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
 			if(pcc_use_ports){
-				flow_data.len=snprintf(flow_data.s, len+1, permit_out_with_ports,proto,
+				flow_data.len=snprintf(flow_data.s, len, permit_out_with_ports,proto,
 					ipB.len, ipB.s, intportB,
 					ipA.len, ipA.s, intportA, options); 
 			}else{
@@ -975,7 +978,7 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		{
 	 		/*second flow is the send flow*/									
 			if(pcc_use_ports){
-	 			flow_data2.len=snprintf(flow_data2.s, len2+1, permit_in_with_ports,proto,
+	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
 					ipA.len, ipA.s, intportA,
 					ipB.len, ipB.s, intportB, options);
 			}else{
@@ -1022,8 +1025,8 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
  		
  		
  		cdpb.AAAFreeAVPList(&list);
-		pkg_free(flow_data.s);
-		pkg_free(flow_data2.s);
+		pkg_free(flow_data.s); flow_data.s =0;
+		pkg_free(flow_data2.s); flow_data2.s = 0;
 
  		return (cdpb.AAACreateAVP(AVP_IMS_Media_Sub_Component,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
