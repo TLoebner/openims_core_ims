@@ -66,33 +66,13 @@ static char* ip_s = "ip";
 /**< Structure with pointers to cdp funcs, global variable defined in mod.c  */
 extern struct cdp_binds cdpb;
 
-AAA_AVP* pcc_create_framed_ip_address(str ip)
-{
-	char x[6];
-	int i,j,k;
-	if (ip.len>0)
-	{
-				memset(x,0,4);
-				x[1]=1;
-				i=2;k=0;
-				for(j=0;j<ip.len;j++){
-					if (ip.s[j]=='.') {x[i++]=k;k=0;}
-					else if (ip.s[j]>='0' && ip.s[j]<='9')
-							k = k*10 + ip.s[j]-'0';
-				}
-				x[i]=k;
-
-				return cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0,x,6,AVP_DUPLICATE_DATA);
-	}
-	return 0;
-}
 /**
  * Looks for the contact in the sip message and gets the ip address
  * @param r - sip message to look for contact (for dialogs)
  * @param parsed_aor - the parsed aor of a contact from a 200 reply to a REGISTER
  * @param ip - the ip address to return
  * @returns the version from the enum ip_type, 0 if error
- * TODO: aon: tests required
+ * TODO: aon: tests for ipv6 required
  */
 int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port)
 {
@@ -154,7 +134,7 @@ error:
  * @param func - the name of the calling function, for debugging purposes
  * @returns 1 on success or 0 on failure
  */
-static inline int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
+inline int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
 {
 	AAA_AVP *avp;
@@ -240,6 +220,73 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
  * 
  *******************************************************************************
  */
+
+/*creates an AVP for the framed-ip info: 
+ * 	if ipv4: AVP_Framed_IP_Address, 
+ * 	otherwise: AVP_Framed_IPv6_Prefix
+ * TODO: take care of the ipv6 case to encode properly the IP*/
+AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version)
+{
+	char x[6];
+	int i,j,k;
+	if (ip.len<0) return 0;
+	
+	memset(x,0,6);
+	x[1]=1;
+	i=2;k=0;
+	for(j=0;j<ip.len;j++){
+		if (ip.s[j]=='.') {x[i++]=k;k=0;}
+		else if (ip.s[j]>='0' && ip.s[j]<='9')
+		k = k*10 + ip.s[j]-'0';
+	}
+	x[i]=k;
+	
+	if(version == ip_type_v4)
+		return cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0,x,6,AVP_DUPLICATE_DATA);
+	else 
+		return cdpb.AAACreateAVP(AVP_Framed_IPv6_Prefix,0,0,x,6,AVP_DUPLICATE_DATA);
+}
+
+/**
+ * Creates and adds a Vendor Specific Application ID Group AVP.
+ * @param msg - the Diameter message to add to.
+ * @param vendor_id - the value for the vendor id AVP
+ * @param auth_app_id - the value of the authentication application AVP
+ * @returns 1 on success or 0 on error
+ */
+int PCC_add_vendor_specific_application_id_group(AAAMessage * msg, unsigned int vendor_id, unsigned int auth_app_id)
+{
+	char x[4];
+	AAA_AVP_LIST list_grp={0,0};
+	AAA_AVP *avp;
+	str group = {0,0};
+
+	set_4bytes(x,vendor_id);
+	if(!(avp = cdpb.AAACreateAVP(AVP_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,x,4, AVP_DUPLICATE_DATA))) goto error;
+	cdpb.AAAAddAVPToList(&list_grp,avp);
+			
+	set_4bytes(x, auth_app_id);
+	if(!(avp = cdpb.AAACreateAVP(AVP_Auth_Application_Id, AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA))) goto error;
+	cdpb.AAAAddAVPToList(&list_grp,avp);
+		
+	group = cdpb.AAAGroupAVPS(list_grp);	
+	if(!group.s || !group.len) goto error;
+	cdpb.AAAFreeAVPList(&list_grp);
+	
+	if(!(avp = cdpb.AAACreateAVP(AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
+				group.s, group.len,AVP_DUPLICATE_DATA))) goto error;
+
+	if(!PCC_add_avp(msg, group.s, group.len, AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY, 0,
+		AVP_DUPLICATE_DATA,__FUNCTION__)) goto error;
+	
+	shm_free(group.s); group.s = NULL;
+	return 1;
+
+error:
+	cdpb.AAAFreeAVPList(&list_grp);
+	if(group.s) shm_free(group.s);
+	return 0;
+}
 
 /**
  * Creates and adds a Destination-Realm AVP.

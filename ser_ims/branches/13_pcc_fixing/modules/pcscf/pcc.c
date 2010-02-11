@@ -553,43 +553,43 @@ error:
 static str IMS_Serv_AVP_val = {"IMS Services", 12};
 
 /* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
-int pcc_aar_add_mandat_avps(AAAMessage* aar, struct sip_msg * res){
+int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struct sip_msg * res){
 
 	char x[4];
+	AAA_AVP * avp;
 
 	/* Add Auth-Application-Id AVP */
 	if (pcscf_qos_release7==1){
-		if (!PCC_add_auth_application_id(aar, IMS_Rx)) goto error;
+		if (!PCC_add_auth_application_id(msg, IMS_Rx)) goto error;
+		if (!PCC_add_vendor_specific_application_id_group(msg, IMS_vendor_id_3GPP, 
+				IMS_Rx)) goto error;
 	}else{
-		if (!PCC_add_auth_application_id(aar, IMS_Gq)) goto error;
+		if (!PCC_add_auth_application_id(msg, IMS_Gq)) goto error;
+		if (!PCC_add_vendor_specific_application_id_group(msg, IMS_vendor_id_3GPP, 
+				IMS_Gq)) goto error;
 	} 
 
-	/* Add Destination-Realm AVP */
-	str realm = pcc_get_destination_realm();
-	if (realm.len && !PCC_add_destination_realm(aar, realm)) goto error;
-
-	/* Add AF-Application-Identifier AVP */
-	cdpb.AAAAddAVPToMessage(aar,
-			cdpb.AAACreateAVP(
-					AVP_IMS_AF_Application_Identifier,
-					AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
-					IMS_vendor_id_3GPP,
-					IMS_Serv_AVP_val.s,IMS_Serv_AVP_val.len,
-					AVP_DUPLICATE_DATA),
-			aar->avpList.tail);
-
+	/* Add Destination-Realm AVP, if not already there */
+	avp = cdpb.AAAFindMatchingAVP(msg, msg->avpList.head, AVP_Destination_Realm,
+					0, AAA_FORWARD_SEARCH);
+	if(!avp){
+		str realm = pcc_get_destination_realm();
+		if (realm.len && !PCC_add_destination_realm(msg, realm)) goto error;
+	}
 	
+	/* Add AF-Application-Identifier AVP */
+	if(!PCC_add_avp(msg, IMS_Serv_AVP_val.s,IMS_Serv_AVP_val.len,
+			AVP_IMS_AF_Application_Identifier, 
+			AAA_AVP_FLAG_MANDATORY, IMS_vendor_id_3GPP,
+			AVP_DUPLICATE_DATA, __FUNCTION__)) goto error;
+
 	/* Add Service-Info-Status AVP, if prelimiary
 	 * by default(when absent): final status is considered*/
-	if (!res){
+	if (dia_req_code == IMS_AAR && !res){
 		set_4bytes(x,AVP_EPC_Service_Info_Status_Preliminary_Service_Information);
-		cdpb.AAAAddAVPToMessage(aar,
-				cdpb.AAACreateAVP(
-						AVP_IMS_Service_Info_Status,
-						AAA_AVP_FLAG_VENDOR_SPECIFIC,
-						IMS_vendor_id_3GPP,x,4,
-						AVP_DUPLICATE_DATA),
-				aar->avpList.tail);
+		if(!PCC_add_avp(msg, x, 4, AVP_IMS_Service_Info_Status, 
+					AAA_AVP_FLAG_MANDATORY, IMS_vendor_id_3GPP,
+					AVP_DUPLICATE_DATA,__FUNCTION__)) goto error;
 	}
 
 	return 1;
@@ -691,7 +691,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	}
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
-	if(!pcc_aar_add_mandat_avps(aar, res))
+	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res))
 		goto error;
 
 	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: auth_lifetime %u\n", auth_lifetime);
@@ -911,8 +911,32 @@ out_of_memory:
 	return -1;
 	
 }
+/*
+ * After a succesfull STA is recieved the auth session should be dropped
+ * and the dialog tooo.. 
+ * but when? 
+ * 
+ * case A) STR after 6xx Decline
+ * 				-> dialog is dropped in config file
+ * case B) STR after BYE recieved
+ * 				-> dialog is dropped by the SIP part of P-CSCF
+ * case C) STR after ASR-ASA 
+ * 				-> for now its done upon reciept of ASR
+ * 				-> this is an automaticly generated  STR by the State Machine
+ * 					so when i recieve an ashyncronous STA for this session, it should be
+ * 					this case, i can then drop the dialog
+ * 
+ */
+// I send STR and i dont wait for STA because the diameter state machine will do
+// This prevents a memory leak !!!
+// The SM sometimes sends STR by itself and then later has to free STA
+// but if i do it there i cant access sta here.. 
 
-AAAMessage * PCC_STR_auth_session_safe(AAASession * auth){
+//LOG(L_INFO,"PCC_STR successful STR-STA exchange\n");
+		
+//cdpb.AAADropAuthSession(auth);
+
+AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth){
 
 	AAAMessage* dia_str = NULL;
 	char x[4];
@@ -936,50 +960,18 @@ AAAMessage * PCC_STR_auth_session_safe(AAASession * auth){
 	
 	if (!dia_str) goto error;
 	
-	cdpb.AAASessionsUnlock(auth->hash);
-	auth = 0;
-		
-	if (pcscf_qos_release7){
-		if (!PCC_add_auth_application_id(dia_str, IMS_Rx)) goto error;
-	}else{
-		if (!PCC_add_auth_application_id(dia_str, IMS_Gq)) goto error;
-	} 
-	
-	/*Termination-Cause*/
-	set_4bytes(x,1)
+	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL))	goto error;
+
+	//Termination-Cause
+	set_4bytes(x,1);
 	cdpb.AAAAddAVPToMessage(dia_str,cdpb.AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA),dia_str->avpList.tail);
 	
-	if (forced_qos_peer.len)
-		cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
-	else 
-		cdpb.AAASendMessage(dia_str,NULL,NULL);
-	
-	// I send STR and i dont wait for STA because the diameter state machine will do
-	// This prevents a memory leak !!!
-	// The SM sometimes sends STR by itself and then later has to free STA
-	// but if i do it there i cant access sta here.. 
-	
-	//LOG(L_INFO,"PCC_STR successful STR-STA exchange\n");
-	/*
-	 * After a succesfull STA is recieved the auth session should be dropped
-	 * and the dialog tooo.. 
-	 * but when? 
-	 * 
-	 * case A) STR after 6xx Decline
-	 * 				-> dialog is dropped in config file
-	 * case B) STR after BYE recieved
-	 * 				-> dialog is dropped by the SIP part of P-CSCF
-	 * case C) STR after ASR-ASA 
-	 * 				-> for now its done upon reciept of ASR
-	 * 				-> this is an automaticly generated  STR by the State Machine
-	 * 					so when i recieve an ashyncronous STA for this session, it should be
-	 * 					this case, i can then drop the dialog
-	 * 
-	*/
-	
-	//cdpb.AAADropAuthSession(auth);
-error:
+	LOG(L_INFO, "INFO:"M_NAME":PCC_STR_auth_session_safe : succsessfully created STR\n");
+	return dia_str;
 end:
+error:
+	LOG(L_INFO, "INFO:"M_NAME":PCC_STR_auth_session_safe : error while creating STR\n");
+	if(dia_str) cdpb.AAAFreeMessage(&dia_str);
 	return NULL;
 }
 
@@ -993,6 +985,7 @@ end:
 AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 {
 	AAASession *auth=0;
+	AAAMessage *dia_str = NULL;
 	p_dialog *dlg=0;
 	str host;
 	int port,transport;
@@ -1037,7 +1030,18 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 		}
 	}
 
-	PCC_STR_auth_session_safe(auth);
+	dia_str = PCC_create_STR_auth_session_safe(auth);
+	if(dia_str){
+		cdpb.AAASessionsUnlock(auth->hash);
+		auth = 0;
+		if (forced_qos_peer.len)
+			cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
+		else 
+			cdpb.AAASendMessage(dia_str,NULL,NULL);
+	
+		LOG(L_INFO, "INFO:"M_NAME":PCC_STR : STR sent\n");
+	}
+	
 	if (auth) cdpb.AAASessionsUnlock(auth->hash);
 
 end:
@@ -1167,7 +1171,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 {
 	AAASession* session;
 	AAA_AVP *avp=0;
-	AAAMessage *raa=0;
+	AAAMessage *raa=0, *dia_str = 0;
 	unsigned int code=0, rc=0;
 	
 	if (!request && !request->sessionId) return 0;
@@ -1254,7 +1258,18 @@ terminate:
 	}
 
 	//then generate a STR-STA
-	PCC_STR_auth_session_safe(session);
+	dia_str = PCC_create_STR_auth_session_safe(session);
+	if(dia_str){
+		cdpb.AAASessionsUnlock(session->hash);
+		session = 0;
+		if (forced_qos_peer.len)
+			cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
+		else 
+			cdpb.AAASendMessage(dia_str,NULL,NULL);
+	
+		LOG(L_INFO, "INFO:"M_NAME":PCC_RAA : STR sent\n");
+	}
+	
 error:
 	if(session) cdpb.AAASessionsUnlock(session->hash);
 	session=0;
