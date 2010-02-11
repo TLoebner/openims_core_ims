@@ -86,11 +86,14 @@ enum ip_type {
 
 /*helper*/
 int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
-AAA_AVP* pcc_create_framed_ip_address(str ip);
+AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version);
 /*just headers*/
 
+int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
+	int flags,int vendorid,int data_do,const char *func);
+
+int PCC_add_vendor_specific_application_id_group(AAAMessage *msg, unsigned int vendorid, unsigned int auth_app_id);
 int PCC_add_destination_realm(AAAMessage *msg, str data);
-int PCC_add_autheapplication_id(AAAMessage *msg, unsigned int data);
 inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
 AAA_AVP *PCC_create_media_subcomponent(int number, char *proto, 
 					str ipA, unsigned int intportA, 

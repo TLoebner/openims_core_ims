@@ -67,7 +67,8 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 
 
 /**
- * Creates and adds a AVP_Framed_IP_Address and a AVP_ETSI_Address_Realm to a  AVP_ETSI_Globally_Unique_Address group.
+ * Creates and adds a AVP_Framed_IP_Address/AVP_Framed_IPv6_Prefix 
+ * and a AVP_ETSI_Address_Realm to a  AVP_ETSI_Globally_Unique_Address group.
  * @param msg - the Diameter message to add to.
  * @param ip - ue ip address
  * @param realm - realm
@@ -75,29 +76,38 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
  */
 inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip,enum ip_type version,str realm)
 {
-	AAA_AVP_LIST list;
-	str group;
+	AAA_AVP_LIST list = {0,0};
+	AAA_AVP * avp;
+	str group = {0,0};
 
 	list.head=0;list.tail=0;
-
-	if (version==ip_type_v4)
-	{
-		cdpb.AAAAddAVPToList(&list,pcc_create_framed_ip_address(ip));
-	} else
-	{
-		//TODO AVP_Framed_IPv6_Prefix
-	}
-	if (realm.len)
-	{
-		cdpb.AAAAddAVPToList(&list,cdpb.AAACreateAVP(AVP_ETSI_Address_Realm,AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,realm.s,realm.len,AVP_DUPLICATE_DATA));
+	
+	if(!(avp = PCC_create_framed_ip_avp(ip, version))) goto error;
+	cdpb.AAAAddAVPToList(&list, avp);
+	
+	if (realm.len){
+		avp = cdpb.AAACreateAVP(AVP_ETSI_Address_Realm,
+					AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+					IMS_vendor_id_ETSI,realm.s,realm.len,AVP_DUPLICATE_DATA);
+		if(!avp) goto error;
+		cdpb.AAAAddAVPToList(&list,avp);
 	}
 
 	group = cdpb.AAAGroupAVPS(list);
-
+	if(!group.s || !group.len) goto error;
 	cdpb.AAAFreeAVPList(&list);
 
-	return cdpb.AAAAddAVPToMessage(msg,cdpb.AAACreateAVP(AVP_ETSI_Globally_Unique_Address,AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,group.s,group.len,AVP_FREE_DATA),msg->avpList.tail);
+	avp = cdpb.AAACreateAVP(AVP_ETSI_Globally_Unique_Address,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,group.s,group.len,AVP_FREE_DATA);
+	if(!avp) goto error;
+	if(cdpb.AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) goto error;
 
+	return 1;
+error:
+	cdpb.AAAFreeAVPList(&list);
+	if(group.s) {shm_free(group.s); group.s = 0;}
+	return 0;
 }
 
 /**
@@ -306,13 +316,8 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	{
 		for(bunit=inblist->head;bunit;bunit=bunit->next)
 		{
-			if (bunit->v==ip_type_v4)
-			{
-				cdpb.AAAAddAVPToList(&subsublist,pcc_create_framed_ip_address(bunit->addr));
+			cdpb.AAAAddAVPToList(&subsublist,PCC_create_framed_ip_avp(bunit->addr, bunit->v));
 
-			} else {
-				//TODO create_framed_ipv6_prefix
-			}
 			set_4bytes(x,bunit->port_start);
 			cdpb.AAAAddAVPToList(&subsublist,cdpb.AAACreateAVP(AVP_ETSI_Port_Number,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,x,4,AVP_DUPLICATE_DATA));
 
@@ -334,20 +339,17 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	{
 		for(bunit=outblist->head;bunit;bunit=bunit->next)
 		{
-			if (bunit->v==ip_type_v4)
+			if (bunit->v==ip_type_v4 && bunit->addr.len==0)
 			{
-				if (bunit->addr.len)
-				{
-					cdpb.AAAAddAVPToList(&subsublist,pcc_create_framed_ip_address(bunit->addr));
-				} else {
-					data.s="0.0.0.0";
-					data.len=7;
-					cdpb.AAAAddAVPToList(&subsublist,pcc_create_framed_ip_address(data));
-					//wildcard
-				}
+				//wildcard
+				data.s="0.0.0.0";
+				data.len=7;
+				cdpb.AAAAddAVPToList(&subsublist, PCC_create_framed_ip_avp(data, bunit->v));
 			} else {
-				//TODO create_framed_ipv6_prefix
+				//TODO:aon: wildcard for ipv6 necessary?
+				cdpb.AAAAddAVPToList(&subsublist, PCC_create_framed_ip_avp(data, bunit->v));
 			}
+
 			if (bunit->port_start)
 			{
 				set_4bytes(x,bunit->port_start);
