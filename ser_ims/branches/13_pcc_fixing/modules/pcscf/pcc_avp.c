@@ -50,7 +50,8 @@
  *
  *\author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */ 
- 
+
+#include <arpa/inet.h>
 #include "pcc_avp.h"
 #include "../../mem/shm_mem.h"
 #include "../../parser/parse_uri.h"
@@ -224,27 +225,53 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
 /*creates an AVP for the framed-ip info: 
  * 	if ipv4: AVP_Framed_IP_Address, 
  * 	otherwise: AVP_Framed_IPv6_Prefix
- * TODO: take care of the ipv6 case to encode properly the IP*/
+ * 	using inet_pton to convert the IP addresses 
+ * 	from human-readable strings to their bynary representation
+ * 	see http://beej.us/guide/bgnet/output/html/multipage/inet_ntopman.html
+ * 	http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
+ */ 	
 AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version)
 {
-	char x[6];
-	int i,j,k;
+	unsigned long sa_v4;
+	unsigned char sa_v6[16];
+	char* ip_pkg = 0;
+	AAA_AVP * avp = NULL;
+
 	if (ip.len<0) return 0;
-	
-	memset(x,0,6);
-	x[1]=1;
-	i=2;k=0;
-	for(j=0;j<ip.len;j++){
-		if (ip.s[j]=='.') {x[i++]=k;k=0;}
-		else if (ip.s[j]>='0' && ip.s[j]<='9')
-		k = k*10 + ip.s[j]-'0';
+	if(version == ip_type_v4){
+		if(ip.len>INET_ADDRSTRLEN)
+			goto error;
+	}else{
+		if(ip.len>INET6_ADDRSTRLEN)
+			goto error;
 	}
-	x[i]=k;
+	ip_pkg = (char*)pkg_malloc((ip.len+1)*sizeof(char));
+	if(!ip_pkg){
+		LOG(L_ERR, "ERR:"M_NAME":PCC_create_framed_ip_avp: could not allocate %i from pkg\n", ip.len+1);
+		goto error;
+	}
+	memcpy(ip_pkg, ip.s, ip.len);
+	ip_pkg[ip.len] = '\0';
 	
-	if(version == ip_type_v4)
-		return cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0,x,6,AVP_DUPLICATE_DATA);
-	else 
-		return cdpb.AAACreateAVP(AVP_Framed_IPv6_Prefix,0,0,x,6,AVP_DUPLICATE_DATA);
+	if(version == ip_type_v4){
+		
+		inet_pton(AF_INET, ip_pkg, &sa_v4);
+		avp = cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0, (char*)sa_v4,4,AVP_DUPLICATE_DATA);
+		if(!avp) goto error;
+	}else{ 
+		
+		inet_pton(AF_INET6, ip_pkg, &sa_v6);
+		avp = cdpb.AAACreateAVP(AVP_Framed_IPv6_Prefix,0,0, (char*)sa_v6,16,AVP_DUPLICATE_DATA);
+		if(!avp) goto error;
+	}
+
+	if(ip_pkg) pkg_free(ip_pkg);
+	return avp;
+
+error:  LOG(L_ERR, "ERR:"M_NAME":PCC_create_framed_ip_avp: for ip %.*s and version %i failed\n",
+			ip.len, ip.s, version);
+	if(ip_pkg) pkg_free(ip_pkg);
+	return avp;
 }
 
 /**
