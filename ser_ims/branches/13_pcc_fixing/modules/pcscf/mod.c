@@ -79,6 +79,7 @@
 	#include "../../modules/dialog/dlg_mod.h"
 #endif
 #include "../cdp/cdp_load.h"
+#include "../cdp_avp/mod_export.h"
 
 #include "registration.h"
 #include "registrar_storage.h"
@@ -577,6 +578,7 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
 dlg_func_t dialogb;						/**< Structure with pointers to dialog funcs			*/
 struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs				*/
+cdp_avp_bind_t *cdp_avp=0;
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -731,6 +733,7 @@ static int mod_init(void)
 {
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
+	cdp_avp_get_bind_f load_cdp_avp;
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
@@ -855,6 +858,17 @@ static int mod_init(void)
 		}
 		if (load_cdp(&cdpb) == -1)
 			goto error;
+		
+		if (!(load_cdp_avp = (cdp_avp_get_bind_f)find_export("cdp_avp_get_bind",NO_SCRIPT,0))) {
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import cdp_avp_get_bind. This module requires cdp_avp module.\n");			
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface as well as the PCC ones have been disabled.\n");			
+			pcscf_use_e2 = 0;
+			pcscf_use_pcc = 0;
+		}
+		cdp_avp = load_cdp_avp();
+		if (!cdp_avp)
+			goto error;
+		
 	}	
 	
 	/* init the registrar storage */
