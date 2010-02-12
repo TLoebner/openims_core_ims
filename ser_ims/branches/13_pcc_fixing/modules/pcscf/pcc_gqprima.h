@@ -76,7 +76,7 @@ int gqprima_AAA(AAAMessage *dia_msg, unsigned int * rc);
 
 typedef struct _t_binding_unit
 {
-	enum ip_type v;
+	uint16_t v;
 	str addr;
 	int port_start;
 	int port_end; //only for multi-ports
