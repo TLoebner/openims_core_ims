@@ -75,9 +75,9 @@ extern cdp_avp_bind_t *cdp_avp;
  * @returns the version from the enum ip_type, 0 if error
  * TODO: aon: tests for ipv6 required
  */
-int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port)
+uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port)
 {
-	enum ip_type version=ip_type_v4;
+	uint16_t version= AF_INET;
 	struct contact_body *cb;
 	struct sip_uri uri;
 	if (!ip) return 0;
@@ -103,7 +103,7 @@ int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, uns
 
 	if(ip->len){
 		if(ip->s[0] == '['){
-			version = ip_type_v6;
+			version = AF_INET6;
 			ip->s +=1;
 			ip->len -=1;
 		}	
@@ -230,7 +230,7 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
  * 	see http://beej.us/guide/bgnet/output/html/multipage/inet_ntopman.html
  * 	http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
  */ 	
-AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version)
+AAA_AVP* PCC_create_framed_ip_avp(str ip, uint16_t version)
 {
 	unsigned long sa_v4;
 	unsigned char sa_v6[16];
@@ -238,7 +238,7 @@ AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version)
 	AAA_AVP * avp = NULL;
 
 	if (ip.len<0) return 0;
-	if(version == ip_type_v4){
+	if(version == AF_INET){
 		if(ip.len>INET_ADDRSTRLEN)
 			goto error;
 	}else{
@@ -253,7 +253,7 @@ AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version)
 	memcpy(ip_pkg, ip.s, ip.len);
 	ip_pkg[ip.len] = '\0';
 	
-	if(version == ip_type_v4){
+	if(version == AF_INET){
 		
 		inet_pton(AF_INET, ip_pkg, &sa_v4);
 		avp = cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0, (char*)sa_v4,4,AVP_DUPLICATE_DATA);
@@ -281,7 +281,7 @@ error:  LOG(L_ERR, "ERR:"M_NAME":PCC_create_framed_ip_avp: for ip %.*s and versi
  * @param auth_app_id - the value of the authentication application AVP
  * @returns 1 on success or 0 on error
  */
-int PCC_add_vendor_specific_application_id_group(AAAMessage * msg, unsigned int vendor_id, unsigned int auth_app_id)
+int PCC_add_vendor_specific_application_id_group(AAAMessage * msg, uint32_t vendor_id, uint32_t auth_app_id)
 {
 	return cdp_avp->base.add_Vendor_Specific_Application_Id_Group(&(msg->avpList),vendor_id,auth_app_id,0);
 }
@@ -389,12 +389,12 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip
 	AAA_AVP *avp=0;
 	AAA_AVP_LIST list={0,0};
 	str data={0,0};
-	enum ip_type iptype;
+	uint16_t iptype;
 	unsigned short from_port_no;
 	str ip_from, ip_to;
 
 	iptype = pcc_get_ip_port(NULL, parsed_aor, &ip_from, &from_port_no);
-	if(iptype == ip_type_v4){
+	if(iptype == AF_INET){
 		ip_to  = ipv4_for_signaling;
 	}else{
 		ip_to  = ipv6_for_signaling;

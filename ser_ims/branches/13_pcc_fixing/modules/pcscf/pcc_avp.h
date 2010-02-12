@@ -80,14 +80,9 @@ typedef struct _bandwidth {
 		int bRR;		
 } bandwidth;
 
-enum ip_type {
-	ip_type_v4 	= 1,
-	ip_type_v6	= 2
-};
-
 /*helper*/
-int pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
-AAA_AVP* PCC_create_framed_ip_avp(str ip, enum ip_type version);
+uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
+AAA_AVP* PCC_create_framed_ip_avp(str ip, uint16_t version);
 /*just headers*/
 
 int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,

@@ -74,7 +74,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
  * @param realm - realm
  * @returns 1 on success or 0 on error
  */
-inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip,enum ip_type version,str realm)
+inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip, uint16_t version,str realm)
 {
 	AAA_AVP_LIST list = {0,0};
 	AAA_AVP * avp;
@@ -124,7 +124,7 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 	str id={0,0};
 	str ip={0,0};
 	unsigned short port;
-	enum ip_type version;
+	uint16_t version;
 	str realm={0,0};
 	str sdp={0,0};
 	str service_class={"IMS Services",12};
@@ -264,42 +264,6 @@ int gqprima_AAA(AAAMessage *dia_msg, unsigned int * rc)
 
 
 /**
- * Looks for the contact in the sip message and gets the ip address
- * @param r - sip message to look for contact
- * @param ip - the ip address to return
- * @returns 0 on error 1 on success
- */
-int get_ip_address(struct sip_msg *r, str *ip)
-{
-	enum ip_type version=ip_type_v4;
-	char *p=0;
-	if (r)
-	{
-		if (r->contact)
-		{
-			p=strstr(r->contact->body.s,"sip:");
-			p+=4; //sip:
-			if (*p=='[')
-			{
-				version=ip_type_v6;
-				ip->s=p++;
-				p=index(ip->s,']');
-
-			} else {
-				version=ip_type_v4;
-				ip->s=p;
-				p=index(ip->s,':');
-
-			}
-			if (!p) return 0;
-			ip->len=p-ip->s;
-		}
-	}
-	return version;
-}
-
-
-/**
  * Adds the Binding-Information AVP
  * @param m - the Diameter Message to add to
  * @param inblist - the input binding list
@@ -323,7 +287,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 
 			data=cdpb.AAAGroupAVPS(subsublist);
 			cdpb.AAAFreeAVPList(&subsublist);
-			if (bunit->v==ip_type_v4)
+			if (bunit->v==AF_INET)
 			{
 				cdpb.AAAAddAVPToList(&sublist,cdpb.AAACreateAVP(AVP_ETSI_V4_transport_address,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,data.s,data.len,AVP_FREE_DATA));
 			} else {
@@ -339,7 +303,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	{
 		for(bunit=outblist->head;bunit;bunit=bunit->next)
 		{
-			if (bunit->v==ip_type_v4 && bunit->addr.len==0)
+			if (bunit->v==AF_INET && bunit->addr.len==0)
 			{
 				//wildcard
 				data.s="0.0.0.0";
@@ -358,7 +322,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 
 			data=cdpb.AAAGroupAVPS(subsublist);
 			cdpb.AAAFreeAVPList(&subsublist);
-			if (bunit->v==ip_type_v4)
+			if (bunit->v==AF_INET)
 			{
 				cdpb.AAAAddAVPToList(&sublist,cdpb.AAACreateAVP(AVP_ETSI_V4_transport_address,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,data.s,data.len,AVP_FREE_DATA));
 			} else {
@@ -467,7 +431,7 @@ t_binding_list* get_binding_list(str sdp)
 	t_binding_list* blist=0;
 	t_binding_unit* bunit=0;
 	char *cline=0,*mline=0,*nmline=0;
-	enum ip_type version=ip_type_v4;
+	uint16_t version=AF_INET;
 	str port = {0,0};
 	char *aux=0;
 	str ip={0,0};
@@ -500,9 +464,9 @@ t_binding_list* get_binding_list(str sdp)
 		}
 		if (index(ip.s,':'))
 		{
-			version=ip_type_v6;
+			version=AF_INET6;
 		} else {
-			version=ip_type_v4;
+			version=AF_INET;
 		}
 		cline=find_next_sdp_line(cline,sdp.s+sdp.len,'c',NULL);
 	}
@@ -525,8 +489,8 @@ t_binding_list* get_binding_list(str sdp)
 			bunit->v=version;
 		} else {
 			//if i have arrived here then i have extracted the token in shared memory in the previous if
-			if (index(bunit->addr.s,':')) bunit->v=ip_type_v6;
-			else bunit->v=ip_type_v4;
+			if (index(bunit->addr.s,':')) bunit->v=AF_INET6;
+			else bunit->v=AF_INET;
 		}
 		if (extract_token(mline,&port,64,2))
 		{
