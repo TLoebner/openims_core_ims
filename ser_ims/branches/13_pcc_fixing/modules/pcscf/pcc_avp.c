@@ -66,7 +66,7 @@ static char* ip_s = "ip";
 
 /**< Structure with pointers to cdp funcs, global variable defined in mod.c  */
 extern struct cdp_binds cdpb;
-
+extern cdp_avp_bind_t *cdp_avp;
 /**
  * Looks for the contact in the sip message and gets the ip address
  * @param r - sip message to look for contact (for dialogs)
@@ -283,36 +283,7 @@ error:  LOG(L_ERR, "ERR:"M_NAME":PCC_create_framed_ip_avp: for ip %.*s and versi
  */
 int PCC_add_vendor_specific_application_id_group(AAAMessage * msg, unsigned int vendor_id, unsigned int auth_app_id)
 {
-	char x[4];
-	AAA_AVP_LIST list_grp={0,0};
-	AAA_AVP *avp;
-	str group = {0,0};
-
-	set_4bytes(x,vendor_id);
-	if(!(avp = cdpb.AAACreateAVP(AVP_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,x,4, AVP_DUPLICATE_DATA))) goto error;
-	cdpb.AAAAddAVPToList(&list_grp,avp);
-			
-	set_4bytes(x, auth_app_id);
-	if(!(avp = cdpb.AAACreateAVP(AVP_Auth_Application_Id, AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA))) goto error;
-	cdpb.AAAAddAVPToList(&list_grp,avp);
-		
-	group = cdpb.AAAGroupAVPS(list_grp);	
-	if(!group.s || !group.len) goto error;
-	cdpb.AAAFreeAVPList(&list_grp);
-	
-	if(!(avp = cdpb.AAACreateAVP(AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
-				group.s, group.len,AVP_DUPLICATE_DATA))) goto error;
-
-	if(!PCC_add_avp(msg, group.s, group.len, AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY, 0,
-		AVP_DUPLICATE_DATA,__FUNCTION__)) goto error;
-	
-	shm_free(group.s); group.s = NULL;
-	return 1;
-
-error:
-	cdpb.AAAFreeAVPList(&list_grp);
-	if(group.s) shm_free(group.s);
-	return 0;
+	return cdp_avp->base.add_Vendor_Specific_Application_Id_Group(&(msg->avpList),vendor_id,auth_app_id,0);
 }
 
 /**

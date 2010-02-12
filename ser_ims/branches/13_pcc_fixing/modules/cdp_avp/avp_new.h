@@ -1,7 +1,18 @@
 /**
  * $Id$
- *  
- * Copyright (C) 2004-2006 FhG Fokus
+ *   
+ * Copyright (C) 2009-2010 FhG Fokus
+ *
+ * This file is part of Open EPC - an implementation of NGMN core components
+ * 
+ * The Open EPC project  is a prototype implementation of the 3GPP 
+ * Release 8 and later Evolved Packet Core (EPC) that will allow academic and 
+ * industrial researchers and engineers around the world to obtain a 
+ * practical look and feel of the capabilities of the Evolved Packet Core.
+ * For more information on the Open EPC project, please visit www.openepc.net
+ * or please contact Fraunhofer FOKUS by e-mail at the following addresses:
+ *     info@openepc.net
+ *
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -36,80 +47,38 @@
  * using and extending the Open Source IMS Core System, if related 
  * patents and licences may become applicable to the intended usage 
  * context.  
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
- 
 
-#ifndef NATH_MOD_H
-#define NATH_MOD_H
+/**
+ * \file
+ * 
+ * CDiameter AVP Operations modules - AVP creation
+ * 
+ * 
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
+ * 
+ */ 
 
-#include "../../sr_module.h"
+#ifndef __AVP_NEW_H
+#define __AVP_NEW_H
 
-#define M_NAME "NATHELPER"
+#ifndef CDP_AVP_REFERENCE
+
+	#include "../cdp/cdp_load.h"
+
+	AAA_AVP* cdp_avp_new(int avp_code,int avp_flags,int avp_vendorid,str data,AVPDataStatus data_do);
+	typedef AAA_AVP* (*cdp_avp_new_f)(int avp_code,int avp_flags,int avp_vendorid,str data,AVPDataStatus data_do);
+
+#else
+	
+	AAA_AVP* basic.new(int avp_code,int avp_flags,int avp_vendorid,str data,AVPDataStatus data_do);
+	
+#endif
 
 
-/** Return and break the execution of routing script */
-#define CSCF_RETURN_BREAK	0 
-/** Return true in the routing script */
-#define CSCF_RETURN_TRUE	1
-/** Return false in the routing script */
-#define CSCF_RETURN_FALSE -1
-/** Return error in the routing script */
-#define CSCF_RETURN_ERROR -2
-
-#define STR_SHM_DUP(dest,src,txt)\
-{\
-	if ((src).len==0) {\
-		(dest).s=0;\
-		(dest).len=0;\
-	}else {\
-		(dest).s = shm_malloc((src).len);\
-		if (!(dest).s){\
-			LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
-			(dest).len = 0;\
-			goto out_of_memory;\
-		}else{\
-			(dest).len = (src).len;\
-			memcpy((dest).s,(src).s,(src).len);\
-		}\
-	}\
-}
-
-#define STR_PKG_DUP(dest,src,txt)\
-{\
-	if ((src).len==0) {\
-		(dest).s=0;\
-		(dest).len=0;\
-	}else {\
-		(dest).s = pkg_malloc((src).len);\
-		if (!(dest).s){\
-			LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
-			(dest).len = 0;\
-			goto out_of_memory;\
-		}else{\
-			(dest).len = (src).len;\
-			memcpy((dest).s,(src).s,(src).len);\
-		}\
-	}\
-}
-
-#define STR_APPEND(dst,src)\
-	{memcpy((dst).s+(dst).len,(src).s,(src).len);\
-	(dst).len = (dst).len + (src).len;}
-
-/* ANSI Terminal colors */
-#define ANSI_GRAY		"\033[01;30m"
-#define ANSI_BLINK_RED 	"\033[00;31m"
-#define ANSI_RED 		"\033[01;31m"
-#define ANSI_GREEN		"\033[01;32m"
-#define ANSI_YELLOW 	"\033[01;33m"
-#define ANSI_BLUE 		"\033[01;34m"
-#define ANSI_MAGENTA	"\033[01;35m"
-#define ANSI_CYAN		"\033[01;36m"
-#define ANSI_WHITE		"\033[01;37m"
-
-#endif /* NATH_MOD_H */
+#endif /* __AVP_NEW_H */

@@ -57,6 +57,7 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../cdp/cdp_load.h"
+#include "../cdp_avp/mod_export.h"
 #include "sdp_util.h"
 
 
