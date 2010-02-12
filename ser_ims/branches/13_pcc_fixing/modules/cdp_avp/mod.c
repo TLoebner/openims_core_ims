@@ -117,7 +117,7 @@
 #endif
 
 #ifdef CDP_FOR_SER
-	struct cdp_binds cdp;
+	struct cdp_binds *cdp;
 	
 	int 	cdp_avp_init();
 	int 	cdp_avp_child_init(int rank);
@@ -276,11 +276,13 @@ int cdp_avp_init()
 		LOG(L_ERR, "ERR"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module\n");
 		goto error;
 	}
+	cdp = pkg_malloc(sizeof(struct cdp_binds));
+	if (!cdp) return 0;
 	/* Load CDP module bindings*/
-	if (load_cdp(&cdp) == -1)
+	if (load_cdp(cdp) == -1)
 		goto error;
 	
-	cdp_avp_bind.cdp = &cdp;
+	cdp_avp_bind.cdp = cdp;
 	
 	return 0;
 error:
@@ -332,6 +334,7 @@ void cdp_avp_destroy(int rank)
 void cdp_avp_destroy(void)
 {
 	LOG(L_DBG,"Destroying module cdp_avp\n");
+	pkg_free(cdp);
 }
 #endif
 
