@@ -939,9 +939,10 @@ found:
 
 
 static int
-force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_invite)
+force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_invite, 
+		str* newip, str* newport)
 {
-	str body, body1, oldport, oldip, newport, newip;
+	str body, body1, oldport, oldip;
 	str callid, from_tag, to_tag, tmp;
 	int create, port, len, asymmetric, flookup, argc, proxied, real;
 	int oidx, pf=0, pf1, force, node_idx;
@@ -1161,10 +1162,11 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 			}
 			++medianum;
 			if (asymmetric != 0 || real != 0) {
-				newip = oldip;
+				newip->s = oldip.s;
+				newip->len = oldip.len;
 			} else {
-				newip.s = ip_addr2a(&msg->rcv.src_ip);
-				newip.len = strlen(newip.s);
+				newip->s = ip_addr2a(&msg->rcv.src_ip);
+				newip->len = strlen(newip->s);
 			}
 			/* XXX must compare address families in all addresses */
 			if (pf == AF_INET6) {
@@ -1177,7 +1179,7 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 			opts[0] = (create == 0) ? 'L' : 'U';
 			v[1].iov_len = oidx;
 			STR2IOVEC(callid, v[3]);
-			STR2IOVEC(newip, v[5]);
+			STR2IOVEC(*newip, v[5]);
 			STR2IOVEC(oldport, v[7]);
 			STR2IOVEC(from_tag, v[9]);
 			if (1 || media_multi) /* XXX netch: can't choose now*/
@@ -1223,21 +1225,21 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 
 			if (isnulladdr(&oldip, pf)) {
 				if (pf1 == AF_INET6) {
-					newip.s = "::";
-					newip.len = 2;
+					newip->s = "::";
+					newip->len = 2;
 				} else {
-					newip.s = "0.0.0.0";
-					newip.len = 7;
+					newip->s = "0.0.0.0";
+					newip->len = 7;
 				}
 			} else {
-				newip.s = (argc < 2) ? str2 : argv[1];
-				newip.len = strlen(newip.s);
+				newip->s = (argc < 2) ? str2 : argv[1];
+				newip->len = strlen(newip->s);
 			}
-			newport.s = int2str(port, &newport.len); /* beware static buffer */
+			newport->s = int2str(port, &newport->len); /* beware static buffer */
 			/* Alter port. */
 			body1.s = m1p;
 			body1.len = bodylimit - body1.s;
-			if (alter_mediaport(msg, &body1, &oldport, &newport, 0) == -1)
+			if (alter_mediaport(msg, &body1, &oldport, newport, 0) == -1)
 				return -1;
 			/*
 			 * Alter IP. Don't alter IP common for the session
@@ -1246,7 +1248,7 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 			if (c2p != NULL || !c1p_altered) {
 				body1.s = c2p ? c2p : c1p;
 				body1.len = bodylimit - body1.s;
-				if (alter_mediaip(msg, &body1, &oldip, pf, &newip, pf1, 0) == -1)
+				if (alter_mediaip(msg, &body1, &oldip, pf, newip, pf1, 0) == -1)
 					return -1;
 				if (!c2p)
 					c1p_altered = 1;
@@ -1464,6 +1466,11 @@ rptest:
 }
 
 //static int check_user_natted(struct sip *msg, struct sip_uri *uri){
+/*
+ * replaces RTP IP and port int the sdp payload according to the RPT proxy resource allocation
+ * @param str1 - "orig" or "term", according to the direction of the message: from or towards the client
+ * TODO: store the new ip and port in the p_dialog structure
+ */
 int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 {
 	int response = CSCF_RETURN_FALSE ;
@@ -1471,6 +1478,9 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 	int had_sdp_in_invite = 0;
 	str body;
 	struct sip_msg *req=0;
+	str newip, newport;
+
+	LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: called for %s", str1);
 
 	if (!pcscf_nat_enable || !rtpproxy_enable) return CSCF_RETURN_FALSE;
 	
@@ -1497,7 +1507,7 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 					if(1)
 					{
 					/* get rtp_proxy/nathelper to open ports - get a iovec*/
-						response = force_rtp_proxy2_f(msg,"","",had_sdp_in_invite) ;
+						response = force_rtp_proxy2_f(msg,"","",had_sdp_in_invite, &newip, &newport) ;
 						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: INVITE ... rtp proxy done\n");			    	
 				    } else {			
 						/* using public ip */
@@ -1512,7 +1522,7 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 					    {
 						/* sdp_1918(msg) */
 						/* str1 & str2 must be something */
-						    response = force_rtp_proxy2_f(msg, "", "",had_sdp_in_invite) ;						
+						    response = force_rtp_proxy2_f(msg, "", "",had_sdp_in_invite, &newip, &newport) ;						
 							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: 183,2xx... rtp proxy done\n");			    	
 						} else {
 							/* public ip found */
@@ -1532,7 +1542,7 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 			    {
 				/* sdp_1918(msg) */
 				/* str1 & str2 must be something */
-				    response = force_rtp_proxy2_f(msg, "", "",0) ;						
+				    response = force_rtp_proxy2_f(msg, "", "",0, &newip, &newport) ;						
 					LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ACK ... rtp proxy done\n");			    	
 				} else {
 					/* public ip found */
