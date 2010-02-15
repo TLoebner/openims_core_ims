@@ -140,6 +140,8 @@ void update_auth_session_timers(cdp_auth_session_t *x,AAAMessage *msg)
 	AAA_AVP *avp;
 	uint32_t session_timeout=0,grace_period=0,auth_lifetime=0;
 	
+	LOG(L_DBG, "DBG:update_auth_session_timers: called\n"); 
+	
 	avp = AAAFindMatchingAVP(msg,0,AVP_Auth_Grace_Period,0,0);
 	if (avp &&avp->data.len==4){ 
 		grace_period = get_4bytes(avp->data.s);
@@ -147,7 +149,10 @@ void update_auth_session_timers(cdp_auth_session_t *x,AAAMessage *msg)
 	}
 	avp = AAAFindMatchingAVP(msg,0,AVP_Authorization_Lifetime,0,0);
 	if (avp &&avp->data.len==4) {
+		LOG(L_DBG, "DBG:update_auth_session_timers: found auth lifetime with len 4: %.*s\n", 
+				avp->data.len, avp->data.s);
 		auth_lifetime = get_4bytes(avp->data.s);
+		LOG(L_DBG, "DBG:update_auth_session_timers: lifetime is %u\n", auth_lifetime);
 		switch(auth_lifetime){
 			case 0:
 				x->lifetime = time(0);
@@ -156,10 +161,14 @@ void update_auth_session_timers(cdp_auth_session_t *x,AAAMessage *msg)
 				x->lifetime = -1;
 				break;
 			default:
+				LOG(L_DBG, "DBG:update_auth_session_timers: updating with %u\n",
+					auth_lifetime); 
 				x->lifetime = time(0)+auth_lifetime;
 		}
 		if (x->timeout!=-1 && x->timeout<x->lifetime) x->timeout = x->lifetime+x->grace_period;
-	}
+	}else
+		LOG(L_DBG, "DBG:update_auth_session_timers: no valid auth lifetime avp found");
+
 	avp = AAAFindMatchingAVP(msg,0,AVP_Session_Timeout,0,0);
 	if (avp &&avp->data.len==4) {
 		session_timeout = get_4bytes(avp->data.s);

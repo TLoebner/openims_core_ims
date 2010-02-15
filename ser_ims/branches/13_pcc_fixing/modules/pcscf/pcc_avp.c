@@ -230,12 +230,11 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
  * 	see http://beej.us/guide/bgnet/output/html/multipage/inet_ntopman.html
  * 	http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
  */ 	
-AAA_AVP* PCC_create_framed_ip_avp(str ip, uint16_t version)
+int PCC_create_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version)
 {
-	unsigned long sa_v4;
-	unsigned char sa_v6[16];
+	ip_address_prefix ip_adr;
 	char* ip_pkg = 0;
-	AAA_AVP * avp = NULL;
+	int ret = 0;
 
 	if (ip.len<0) return 0;
 	if(version == AF_INET){
@@ -252,26 +251,22 @@ AAA_AVP* PCC_create_framed_ip_avp(str ip, uint16_t version)
 	}
 	memcpy(ip_pkg, ip.s, ip.len);
 	ip_pkg[ip.len] = '\0';
+
+	ip_adr.addr.ai_family = version;
 	
 	if(version == AF_INET){
 		
-		inet_pton(AF_INET, ip_pkg, &sa_v4);
-		avp = cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0, (char*)sa_v4,4,AVP_DUPLICATE_DATA);
-		if(!avp) goto error;
+		if(inet_pton(AF_INET, ip_pkg, &(ip_adr.addr.ip.v4.s_addr))!= 1) goto error;
+		ret= cdp_avp_add_Framed_IP_Address(list, ip_adr.addr);
 	}else{ 
 		
-		inet_pton(AF_INET6, ip_pkg, &sa_v6);
-		avp = cdpb.AAACreateAVP(AVP_Framed_IPv6_Prefix,0,0, (char*)sa_v6,16,AVP_DUPLICATE_DATA);
-		if(!avp) goto error;
+		if(inet_pton(AF_INET6, ip_pkg, &(ip_adr.addr.ip.v6.s6_addr))!=1) goto error;
+		ret= cdp_avp_add_Framed_IPv6_Prefix(list, ip_adr);
 	}
 
+error:
 	if(ip_pkg) pkg_free(ip_pkg);
-	return avp;
-
-error:  LOG(L_ERR, "ERR:"M_NAME":PCC_create_framed_ip_avp: for ip %.*s and version %i failed\n",
-			ip.len, ip.s, version);
-	if(ip_pkg) pkg_free(ip_pkg);
-	return avp;
+	return ret;
 }
 
 /**

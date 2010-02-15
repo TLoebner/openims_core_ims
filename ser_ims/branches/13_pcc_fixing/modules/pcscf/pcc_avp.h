@@ -82,7 +82,7 @@ typedef struct _bandwidth {
 
 /*helper*/
 uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
-AAA_AVP* PCC_create_framed_ip_avp(str ip, uint16_t version);
+int PCC_create_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version);
 /*just headers*/
 
 int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
