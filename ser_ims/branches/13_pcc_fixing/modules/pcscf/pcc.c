@@ -565,7 +565,7 @@ int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struc
 				IMS_Rx)) goto error;
 	}else{
 		if (!PCC_add_auth_application_id(msg, IMS_Gq)) goto error;
-		if (!PCC_add_vendor_specific_application_id_group(msg, IMS_vendor_id_3GPP, 
+		if (!PCC_add_vendor_specific_application_id_group(msg, IMS_vendor_id_ETSI, 
 				IMS_Gq)) goto error;
 	} 
 
