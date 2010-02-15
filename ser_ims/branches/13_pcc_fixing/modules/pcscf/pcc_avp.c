@@ -383,7 +383,9 @@ int PCC_AAR_add_avps_for_register(AAAMessage *msg, struct sip_uri* parsed_uri){
 	uint16_t ip_version;
 
 	ip_version = pcc_get_ip_port(NULL, parsed_uri, &ip, &port_no);
+	
 	if(!PCC_add_media_component_description_for_register(msg, ip, port_no, ip_version)) goto error;
+
 	if(!PCC_add_framed_ip_avp(&msg->avpList, ip, ip_version)) goto error;
 
 	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
@@ -739,6 +741,102 @@ inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str
  	
  	return 1;
  }
+
+/*
+ * Parses the sdp payload and extract information like ip addresses and ports
+ * @param sdpA - the SDP body of the INVITE
+ * @param sdpB - the SDP body of the 200 OK answer for the INVITE
+ * @param number - the number of the media component to use (which m= line?)
+ * @param tag - 0 originating side 1 terminating side 
+ * @param mediaLine - the "a=" line found in the sdp payload
+ * @param atributes - type of media returned from the parsing of the "a=" line
+ * @param port - the number od ports, to be used by the calling function
+ * @param ipA, ipB, intportA, intportB - the ip addresses and ports of the caller and called party
+ * returns 0 on "do nothing", 1 on success, -1 on error
+ */
+
+inline int pcc_get_ip_port_dialog(str sdpA,str sdpB, int number, int tag, 
+					char ** mediaLine, int * atributes, int *ports,
+					str * ipA, unsigned int * intportA,
+					str * ipB, unsigned int * intportB){
+	
+	char *mlineA, *mlineB,*clineA,*clineB;
+	char *rtp;
+	str portA = {0,0};
+	str portB = {0,0};
+	int ret= -1;
+
+ 	if (!extract_mclines(sdpA,sdpB,&mlineA,&clineA,&mlineB,&clineB,number)){
+
+ 		LOG(L_ERR,"ERR"M_NAME":PCC_create_add_media_subcomp_dialog: error extracting lines of sdp content\n");
+ 		return -1;
+ 	}
+ 		   
+	/*a= lines are also needed*/
+	/*atributes: 	1 means sendonly*/
+ 	/*		2 means recvonly*/
+ 	/*		0 is no a= line or sendrecv*/
+ 	if (tag==0) {
+ 	 	*atributes=check_atributes(sdpA,mlineA);
+
+ 	} else if (sdpB.len) {
+ 	 	*atributes=check_atributes(sdpB,mlineB);
+ 	}
+ 		 
+ 	  		 
+	if (!extract_token(mlineA,&portA,PCC_MAX_Char,2)){
+
+ 		goto error; /*problem extracting port*/
+ 	}
+ 	if (sdpB.len && !extract_token(mlineB,&portB,PCC_MAX_Char,2)){
+
+ 		goto error; /* either no ' ' or PCC_MAX_Char too small*/
+ 	}
+ 		
+ 	/*check if this are ports or multiports!*/
+ 		
+ 	if(!is_a_port(portA) || (sdpB.len && !is_a_port(portB))){
+		goto error; /* there was a word there but it isn't a port*/
+	}
+ 		 		 		
+ 	if (strncmp(portA.s,"0",1)!=0 && (sdpB.len && strncmp(portB.s,"0",1)==0)){
+ 			/*this means answerer rejected the offer*/
+ 			
+		ret = 0; goto end;/*this is more logical*/
+	}
+ 		
+ 	/*the next lines have nothing to do with rtp
+ 	 * i just reused the pointer*/	
+ 	rtp=strchr(portA.s,'/');
+ 	if (rtp!=NULL){
+ 		sscanf(portA.s,"%*i/%i%*s",ports);
+ 		*rtp='\0'; 
+ 	}	
+ 		
+
+ 	if(!extract_token(clineA,ipA,PCC_MAX_Char,3)){
+		goto end;
+	}
+
+	if(sdpB.len && !extract_token(clineB,ipB,PCC_MAX_Char,3)){
+
+ 		goto end;
+	}
+ 		
+  	/* i is the flow number */
+ 	/*flows is the number of data flows .. for each port 1 data flow*/
+	sscanf(portA.s,"%u",intportA);
+	sscanf(portB.s,"%u",intportB);
+	*mediaLine = mlineA;
+	ret = 1;
+error:
+end:
+	if(portA.s) pkg_free(portA.s);	portA.s = 0;
+	if(portB.s) pkg_free(portB.s);	portB.s = 0;
+	return ret;
+
+}
+
 /* Creates and adds Media-Sub-Components to AVP_LIST
  * @param list - pointer to the AVP_LIST
  * @param sdpA - the SDP body of the INVITE
@@ -752,143 +850,65 @@ inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str
 inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
  {
 
- 	
- 
-	
-	char *mlineA,*mlineB,*clineA,*clineB;
+ 	char * newline, *rtp, *mlineA = NULL;
  	unsigned int intportA=0,intportB=0;
 	str ipA = {0,0}, ipB = {0,0};
  	int i=0,flows=0;
  	int atributes=0; /* a= lines present?*/
- 	char *newline,*rtp;
-	int ports=1; /*how many ports does this m line define?*/
-	str portA = {0,0};
-	str portB = {0,0};
+ 	int ports=1; /*how many ports does this m line define?*/
+	int ret;
 		
- 		LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : starting\n");
- 		if (!extract_mclines(sdpA,sdpB,&mlineA,&clineA,&mlineB,&clineB,number))
- 		{
- 			LOG(L_ERR,"ERR"M_NAME":PCC_create_add_media_subcomp_dialog: error extracting lines of sdp content\n");
- 			return -1;
- 		}
- 		   
- 		   /*a= lines are also needed*/
- 		 
- 		 
- 		 if (tag==0) {
- 		 	atributes=check_atributes(sdpA,mlineA);
-
- 		 } else if (sdpB.len) {
- 		 	atributes=check_atributes(sdpB,mlineB);
- 		 }
- 		 
- 		  /*1 means sendonly*/
- 		  /*2 means recvonly*/
- 		  /*0 is no a= line or sendrecv*/
-  		 
- 		if (!extract_token(mlineA,&portA,PCC_MAX_Char,2))
- 		{
- 				return -1; /*problem extracting port*/
- 		}
- 		if (sdpB.len && !extract_token(mlineB,&portB,PCC_MAX_Char,2))
- 		{
- 				return -1; /* either no ' ' or PCC_MAX_Char too small*/
- 		}
- 		
- 		/*check if this are ports or multiports!*/
- 		
- 		if(!is_a_port(portA) || (sdpB.len && !is_a_port(portB)))
- 		{
- 			return -1; /* there was a word there but it isn't a port*/
- 		}
- 		 		 		
- 		if (strncmp(portA.s,"0",1)!=0 && (sdpB.len && strncmp(portB.s,"0",1)==0))
- 		{
- 			/*this means answerer rejected the offer*/
- 			
- 			return 0; /*this is more logical*/
- 		}
- 		
- 		/*the next lines have nothing to do with rtp
- 		 * i just reused the pointer*/	
- 		rtp=strchr(portA.s,'/');
- 		if (rtp!=NULL)
- 		{
- 			sscanf(portA.s,"%*i/%i%*s",&ports);
- 			*rtp='\0'; 
- 		}	
- 		
-
- 		if(!extract_token(clineA,&ipA,PCC_MAX_Char,3))
- 		{
- 			return -1;
- 		}
- 		if(sdpB.len && !extract_token(clineB,&ipB,PCC_MAX_Char,3))
- 		{
- 			return -1;
- 		}
- 		
-  		/* i is the flow number */
- 		/*flows is the number of data flows .. for each port 1 data flow*/
-		sscanf(portA.s,"%u",&intportA);
-		sscanf(portB.s,"%u",&intportB);
-		if(portA.s) pkg_free(portA.s);	portA.s = 0;
-		if(portB.s) pkg_free(portB.s);	portB.s = 0;
-
-
-		while(flows<ports && i+2<PCC_Media_Sub_Components)
-		{
- 				
-			i++;
-			if (tag!=1)
-			{
-				media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip", ipA, intportA, 
+ 	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : starting\n");
+	
+	ret = pcc_get_ip_port_dialog(sdpA, sdpB, number, tag, &mlineA, &atributes, &ports,
+					&ipA, &intportA, &ipB, &intportB);
+	if(ret!=1) return ret;
+	
+	while(flows<ports && i+2<PCC_Media_Sub_Components){
+ 		i++;
+		if (tag!=1){
+			media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip", ipA, intportA, 
 											ipB, intportB, "",atributes);
-				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
-			} else {
+			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
+		} else {
  		
- 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB, intportB,
+ 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB, intportB,
 											ipA, intportA,"",atributes);
- 				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
- 			}
- 			flows++;
+ 			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
+ 		}
+ 		flows++;
 
-			
- 			
- 			if (1){
+ 		if (1){
 
-				rtp=strstr(mlineA,"RTP");
-				newline=index(mlineA,'\n');
-				if (newline==NULL) newline=index(mlineA,'\0');
-				if (rtp!=NULL && rtp < newline){
-					i++;
-		 			intportA++; 
-		 			intportB++;
-		 			if (tag!=1)
-		 			{
-		 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipA,intportA,
-								ipB,intportB,"",3);
-		 				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
-		 			} else {
-		 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB,intportB,
-								ipA,intportA,"",3);
-		 				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
-		 				}		 		
-		 		}
+			rtp=strstr(mlineA,"RTP");
+			newline=index(mlineA,'\n');
+			if (newline==NULL) newline=index(mlineA,'\0');
+			if (rtp!=NULL && rtp < newline){
+				i++;
+		 		intportA++; 
+		 		intportB++;
+		 		if (tag!=1){
+		 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipA,intportA,
+												ipB,intportB,"",3);
+	 				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
+	 			} else {
+	 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB,intportB,
+												ipA,intportA,"",3);
+		 			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
+		 		}		 		
+		 	}
 	 			
-				intportA++;  
-	 			intportB++;
+			intportA++;  
+	 		intportB++;
 
-	 			/*if its not an RTP flow and it has multiports then the odd ports
-	 			 * are used for the next component .. if it is RTP and multiports than 
-	 			 * the even ports are for the next component because the odd are used for 
-	 			 * RTCP flows*/
- 			}						
+	 		/*if its not an RTP flow and it has multiports then the odd ports
+	 		 * are used for the next component .. if it is RTP and multiports than 
+	 		 * the even ports are for the next component because the odd are used for 
+	 		 * RTCP flows*/
+ 		}						
  											
  	}
  	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : ending\n");	
-	if(ipA.s) pkg_free(ipA.s);	
-	if(ipB.s) pkg_free(ipB.s);	
  	  	
  	return (i);
  }
