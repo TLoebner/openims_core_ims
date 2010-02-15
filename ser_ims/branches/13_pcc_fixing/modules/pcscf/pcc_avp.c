@@ -230,7 +230,7 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
  * 	see http://beej.us/guide/bgnet/output/html/multipage/inet_ntopman.html
  * 	http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
  */ 	
-int PCC_create_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version)
+int PCC_add_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version)
 {
 	ip_address_prefix ip_adr;
 	char* ip_pkg = 0;
@@ -257,11 +257,11 @@ int PCC_create_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version)
 	if(version == AF_INET){
 		
 		if(inet_pton(AF_INET, ip_pkg, &(ip_adr.addr.ip.v4.s_addr))!= 1) goto error;
-		ret= cdp_avp_add_Framed_IP_Address(list, ip_adr.addr);
+		ret= cdp_avp->nasapp.add_Framed_IP_Address(list, ip_adr.addr);
 	}else{ 
 		
 		if(inet_pton(AF_INET6, ip_pkg, &(ip_adr.addr.ip.v6.s6_addr))!=1) goto error;
-		ret= cdp_avp_add_Framed_IPv6_Prefix(list, ip_adr);
+		ret= cdp_avp->nasapp.add_Framed_IPv6_Prefix(list, ip_adr);
 	}
 
 error:
@@ -371,6 +371,32 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	return 1;
 }
 
+/*add all the AVPs the AAR requires that can be build from the contact URI
+ * @param msg - the AAR message
+ * @param parsed_uri - the parsed contact URI
+ * returns 0 if error, 1 if ok
+ */
+int PCC_AAR_add_avps_for_register(AAAMessage *msg, struct sip_uri* parsed_uri){
+
+	str ip;
+	unsigned short port_no;
+	uint16_t ip_version;
+
+	ip_version = pcc_get_ip_port(NULL, parsed_uri, &ip, &port_no);
+	if(!PCC_add_media_component_description_for_register(msg, ip, port_no, ip_version)) goto error;
+	if(!PCC_add_framed_ip_avp(&msg->avpList, ip, ip_version)) goto error;
+
+	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
+				AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer)) goto error;
+
+	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
+				AVP_EPC_Specific_Action_IPCAN_Change)) goto error;
+
+	return 1;
+error:
+	return 0;
+}
+
 /**
  * This function creates a Media Component Description with a wildcarded flow
  * that will be set to AF Signaling for the messages between this P-CSCF and the
@@ -379,17 +405,14 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  * @param req - the reuqest
  * @param res - the response
  */
-int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip_uri * parsed_aor)
+int PCC_add_media_component_description_for_register(AAAMessage *msg, str ip_from, unsigned short from_port_no, uint16_t version)
 {
 	AAA_AVP *avp=0;
 	AAA_AVP_LIST list={0,0};
 	str data={0,0};
-	uint16_t iptype;
-	unsigned short from_port_no;
-	str ip_from, ip_to;
+	str ip_to;
 
-	iptype = pcc_get_ip_port(NULL, parsed_aor, &ip_from, &from_port_no);
-	if(iptype == AF_INET){
+	if(version == AF_INET){
 		ip_to  = ipv4_for_signaling;
 	}else{
 		ip_to  = ipv6_for_signaling;
@@ -398,9 +421,11 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip
 	avp=PCC_create_media_subcomponent(0, ip_s, 
 					ip_from, from_port_no, 
 					ip_to, port_for_signaling,  "", 4);
+	if(!avp) goto error;
 	cdpb.AAAAddAVPToList(&list,avp);
 	
 	data=cdpb.AAAGroupAVPS(list);
+	if(!data.s) goto error;
   	cdpb.AAAFreeAVPList(&list);
   	PCC_add_avp(msg,data.s,data.len,AVP_IMS_Media_Component_Description,
  				AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
@@ -408,9 +433,10 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip
  				AVP_FREE_DATA,
  				__FUNCTION__);
 
-	//theoretically the Framed-IP-Address could also be added..
-
 	return 1;
+error:
+	cdpb.AAAFreeAVPList(&list);
+	return 0;
 }
  
 /**

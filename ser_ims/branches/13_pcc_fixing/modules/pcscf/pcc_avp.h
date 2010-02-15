@@ -82,7 +82,7 @@ typedef struct _bandwidth {
 
 /*helper*/
 uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
-int PCC_create_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version);
+int PCC_add_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version);
 /*just headers*/
 
 int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
@@ -97,7 +97,8 @@ AAA_AVP *PCC_create_media_subcomponent(int number, char *proto,
 					char *options,int atributes);
 inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
-int PCC_add_media_component_description_for_register(AAAMessage *msg, struct sip_uri * parsed_aor);
+int PCC_AAR_add_avps_for_register(AAAMessage *msg, struct sip_uri * parsed_uri);
+int PCC_add_media_component_description_for_register(AAAMessage *msg, str ip, unsigned short port, uint16_t version);
 inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
 AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 

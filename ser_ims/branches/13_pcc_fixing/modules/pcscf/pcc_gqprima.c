@@ -82,7 +82,7 @@ inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip, uint16_t versio
 
 	list.head=0;list.tail=0;
 	
-	if(!PCC_create_framed_ip_avp(&list, ip, version)) goto error;
+	if(!PCC_add_framed_ip_avp(&list, ip, version)) goto error;
 	
 	if (realm.len){
 		avp = cdpb.AAACreateAVP(AVP_ETSI_Address_Realm,
@@ -279,7 +279,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	{
 		for(bunit=inblist->head;bunit;bunit=bunit->next)
 		{
-			if(!PCC_create_framed_ip_avp(&subsublist, bunit->addr, bunit->v)) goto error;
+			if(!PCC_add_framed_ip_avp(&subsublist, bunit->addr, bunit->v)) goto error;
 
 			set_4bytes(x,bunit->port_start);
 			cdpb.AAAAddAVPToList(&subsublist,cdpb.AAACreateAVP(AVP_ETSI_Port_Number,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,x,4,AVP_DUPLICATE_DATA));
@@ -307,10 +307,10 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 				//wildcard
 				data.s="0.0.0.0";
 				data.len=7;
-				if(!PCC_create_framed_ip_avp(&subsublist, data, bunit->v)) goto error;
+				if(!PCC_add_framed_ip_avp(&subsublist, data, bunit->v)) goto error;
 			} else {
 				//TODO:aon: wildcard for ipv6 necessary?
-				if(!PCC_create_framed_ip_avp(&subsublist, bunit->addr, bunit->v)) goto error;
+				if(!PCC_add_framed_ip_avp(&subsublist, bunit->addr, bunit->v)) goto error;
 			}
 
 			if (bunit->port_start)

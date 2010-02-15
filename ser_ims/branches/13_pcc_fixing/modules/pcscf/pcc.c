@@ -722,14 +722,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 
 	if (is_register){
 		// Registration
-		PCC_add_media_component_description_for_register(aar, &parsed_aor);
-		set_4bytes(x,AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer);
-		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
-		set_4bytes(x,AVP_EPC_Specific_Action_IPCAN_Change);
-		cdpb.AAAAddAVPToMessage(aar,cdpb.AAACreateAVP(AVP_IMS_Specific_Action,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_3GPP,x,4,AVP_DUPLICATE_DATA),aar->avpList.tail);
-		//TODO: dragos: maybe add Media-Component-Description to actually make a qos reservation for the signaling
-
-		
+		PCC_AAR_add_avps_for_register(aar, &parsed_aor);
 
 	} else {
 		// Call
@@ -793,10 +786,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 				AVP_DUPLICATE_DATA);
 		cdpb.AAAAddAVPToMessage(aar,avp,aar->avpList.tail);
 
-		/*TODO:
-			PCC_add_Framed_IP_Address(dia_aar,ipv4);
-			PCC_add_Framed_IPv6_Prefix(dia_aar,ipv6);
-		 */
 	} else {
 		if(!gqprima_AAR(aar,req,res,str1,&parsed_aor, relatch))
 			goto error;
