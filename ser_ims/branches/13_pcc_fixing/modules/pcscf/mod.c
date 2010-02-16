@@ -236,7 +236,7 @@ str ipv4_for_signaling;
 char* ipv6_for_signaling_char="::1";
 str ipv6_for_signaling;
 
-unsigned short port_for_signaling;
+unsigned short port_for_signaling = 4060;
 
 char* pcc_dest_realm_s = "open-ims.test";
 str pcc_dest_realm;
