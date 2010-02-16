@@ -647,6 +647,57 @@ inline void auth_server_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 	if (s) AAASessionsUnlock(s->hash);
 }
 
+/* copies the Origin-Host AVP from the src message in a Destination-Host AVP in the dest message
+ * copies the Origin-Realm AVP from the src message in a Destination-Realm AVP in the dest message
+ *
+ */
+int dup_routing_avps(AAAMessage* src, AAAMessage *dest){
+
+	AAA_AVP * avp;
+	str dest_host, dest_realm;
+
+	avp = AAAFindMatchingAVP(src,src->avpList.head,AVP_Origin_Host,0,AAA_FORWARD_SEARCH);
+	if(avp && avp->data.s && avp->data.len) {
+		LOG(L_DBG,"DBG:dup_routing_avps: Origin Host AVP present, duplicating %.*s\n",
+				avp->data.len, avp->data.s);
+		dest_host = avp->data;
+		avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
+			dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed creating Destination Host avp\n");
+			goto error;
+		}
+		if (AAAAddAVPToMessage(src,avp,src->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed adding Destination Host avp to message\n");
+			AAAFreeAVP(&avp);
+			goto error;
+		}
+	}
+
+	avp = AAAFindMatchingAVP(src,src->avpList.head,AVP_Origin_Realm,0,AAA_FORWARD_SEARCH);
+	if(avp && avp->data.s && avp->data.len) {
+		LOG(L_DBG,"DBG:dup_routing_avps: Origin Realm AVP present, duplicating %.*s\n",
+				avp->data.len, avp->data.s);
+		dest_realm = avp->data;
+		avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
+			dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed creating Destination Host avp\n");
+			goto error;
+		}
+		if (AAAAddAVPToMessage(src,avp,src->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed adding Destination Host avp to message\n");
+			AAAFreeAVP(&avp);
+			goto error;
+		}
+	}
+
+	return 1;
+error:
+	return 0;
+
+}
+
 void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 {
 	AAAMessage *asa;
@@ -706,7 +757,11 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 		LOG(L_ERR,"ERR:Send_STR(): error creating STR!\n");
 		return;
 	}
-	
+	if(!dup_routing_avps(msg, str)){
+		LOG(L_ERR,"ERR:Send_STR(): error duplicating routing AVPs!\n");
+		AAAFreeMessage(&str);
+		return;
+	}
 	set_4bytes(x,s->application_id);
 	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(str,avp,str->avpList.tail);
