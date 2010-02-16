@@ -667,7 +667,7 @@ int dup_routing_avps(AAAMessage* src, AAAMessage *dest){
 			LOG(L_ERR,"ERR:dup_routing_avps: Failed creating Destination Host avp\n");
 			goto error;
 		}
-		if (AAAAddAVPToMessage(src,avp,src->avpList.tail)!=AAA_ERR_SUCCESS) {
+		if (AAAAddAVPToMessage(dest,avp,dest->avpList.tail)!=AAA_ERR_SUCCESS) {
 			LOG(L_ERR,"ERR:dup_routing_avps: Failed adding Destination Host avp to message\n");
 			AAAFreeAVP(&avp);
 			goto error;
@@ -685,7 +685,7 @@ int dup_routing_avps(AAAMessage* src, AAAMessage *dest){
 			LOG(L_ERR,"ERR:dup_routing_avps: Failed creating Destination Host avp\n");
 			goto error;
 		}
-		if (AAAAddAVPToMessage(src,avp,src->avpList.tail)!=AAA_ERR_SUCCESS) {
+		if (AAAAddAVPToMessage(dest,avp,dest->avpList.tail)!=AAA_ERR_SUCCESS) {
 			LOG(L_ERR,"ERR:dup_routing_avps: Failed adding Destination Host avp to message\n");
 			AAAFreeAVP(&avp);
 			goto error;
@@ -770,7 +770,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	avp = AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(str,avp,str->avpList.tail);
 	//todo - add all the other avps
-	
+
 	p = get_routing_peer(str);
 	if (!p) {
 		LOG(L_ERR,"unable to get routing peer in Send_STR \n");
