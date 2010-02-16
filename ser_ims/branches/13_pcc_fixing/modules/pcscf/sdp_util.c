@@ -81,6 +81,7 @@
 #include "nat_helper.h"
 #include "sip.h"
 #include "sip_body.h"
+#include "dlg_state.h"
 
 extern int pcscf_nat_enable;
 extern struct rtpp_head rtpp_list;
@@ -102,96 +103,8 @@ static str sup_ptypes[] = {
 extern network_t nets_1918[];
 
 
-int check_content_type(struct sip_msg *msg)
-{
-	static unsigned int appl[16] = {
-		0x6c707061/*appl*/,0x6c707041/*Appl*/,0x6c705061/*aPpl*/,
-		0x6c705041/*APpl*/,0x6c507061/*apPl*/,0x6c507041/*ApPl*/,
-		0x6c505061/*aPPl*/,0x6c505041/*APPl*/,0x4c707061/*appL*/,
-		0x4c707041/*AppL*/,0x4c705061/*aPpL*/,0x4c705041/*APpL*/,
-		0x4c507061/*apPL*/,0x4c507041/*ApPL*/,0x4c505061/*aPPL*/,
-		0x4c505041/*APPL*/};
-	static unsigned int icat[16] = {
-		0x74616369/*icat*/,0x74616349/*Icat*/,0x74614369/*iCat*/,
-		0x74614349/*ICat*/,0x74416369/*icAt*/,0x74416349/*IcAt*/,
-		0x74414369/*iCAt*/,0x74414349/*ICAt*/,0x54616369/*icaT*/,
-		0x54616349/*IcaT*/,0x54614369/*iCaT*/,0x54614349/*ICaT*/,
-		0x54416369/*icAT*/,0x54416349/*IcAT*/,0x54414369/*iCAT*/,
-		0x54414349/*ICAT*/};
-	static unsigned int ion_[8] = {
-		0x006e6f69/*ion_*/,0x006e6f49/*Ion_*/,0x006e4f69/*iOn_*/,
-		0x006e4f49/*IOn_*/,0x004e6f69/*ioN_*/,0x004e6f49/*IoN_*/,
-		0x004e4f69/*iON_*/,0x004e4f49/*ION_*/};
-	static unsigned int sdp_[8] = {
-		0x00706473/*sdp_*/,0x00706453/*Sdp_*/,0x00704473/*sDp_*/,
-		0x00704453/*SDp_*/,0x00506473/*sdP_*/,0x00506453/*SdP_*/,
-		0x00504473/*sDP_*/,0x00504453/*SDP_*/};
-	str           str_type;
-	unsigned int  x;
-	char          *p;
-
-	if (!msg->content_type){
-		if (parse_headers(msg, HDR_CONTENTTYPE_F, 0)<0){
-			LOG(L_ERR,"ERR:"M_NAME":check_content_type: error parsing headers\n");
-			return 1;	
-		}
-	}
-	if (!msg->content_type)
-	{
-		LOG(L_WARN,"WARNING: check_content_type: Content-TYPE header absent!"
-			"let's assume the content is text/plain ;-)\n");
-		return 1;
-	}
-
-	trim_len(str_type.len,str_type.s,msg->content_type->body);
-	p = str_type.s;
-	advance(p,4,str_type,error_1);
-	x = READ(p-4);
-	if (!one_of_16(x,appl))
-		goto other;
-	advance(p,4,str_type,error_1);
-	x = READ(p-4);
-	if (!one_of_16(x,icat))
-		goto other;
-	advance(p,3,str_type,error_1);
-	x = READ(p-3) & 0x00ffffff;
-	if (!one_of_8(x,ion_))
-		goto other;
-
-	/* skip spaces and tabs if any */
-	while (*p==' ' || *p=='\t')
-		advance(p,1,str_type,error_1);
-	if (*p!='/')
-	{
-		LOG(L_ERR, "ERROR:check_content_type: parse error:"
-			"no / found after primary type\n");
-		goto error;
-	}
-	advance(p,1,str_type,error_1);
-	while ((*p==' ' || *p=='\t') && p+1<str_type.s+str_type.len)
-		advance(p,1,str_type,error_1);
-
-	advance(p,3,str_type,error_1);
-	x = READ(p-3) & 0x00ffffff;
-	if (!one_of_8(x,sdp_))
-		goto other;
-
-	if (*p==';'||*p==' '||*p=='\t'||*p=='\n'||*p=='\r'||*p==0) {
-		DBG("DEBUG:check_content_type: type <%.*s> found valid\n",
-			(int)(p-str_type.s), str_type.s);
-		return 1;
-	} else {
-		LOG(L_ERR,"ERROR:check_content_type: bad end for type!\n");
-		return -1;
-	}
-
-error_1:
-	LOG(L_ERR,"ERROR:check_content_type: parse error: body ended :-(!\n");
-error:
-	return -1;
-other:
-	LOG(L_ERR,"ERROR:check_content_type: invalid type for a message\n");
-	return -1;
+int set_rtpproxy_media_descr(p_dialog * dlg, int medianum, str newip, str newport){
+	return 0;
 }
 
 static int isnulladdr(str *sx, int pf)
@@ -937,21 +850,158 @@ found:
 	return node;
 }
 
+int create_rtpp_command(struct sip_msg *  msg, char * m1p, char * m2p, char* c2p, char * v2p, char * c1p,
+		int medianum, int media_multi, int asymmetric, int real, int create,
+		struct iovec *v, char* opts, int oidx, 
+		str * oldip, str * oldport, int * pf){
+
+	char medianum_buf[20];
+	str tmpstr1, medianum_str;
+	str fixed_ip;
+
+	/* Extract address and port */
+	tmpstr1.s = c2p ? c2p : c1p;
+	if (tmpstr1.s == NULL) {
+		/* No "c=" */
+		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't"
+		    " find media IP in the message\n");
+		return -1;
+	}
+	tmpstr1.len = v2p - tmpstr1.s; /* limit is session limit text */
+	if (extract_mediaip(&tmpstr1, oldip, pf) == -1) {
+			LOG(L_ERR, "ERROR: force_rtp_proxy2: can't"
+			    " extract media IP from the message\n");
+			return -1;
+	}
+	tmpstr1.s = m1p;
+	tmpstr1.len = m2p - m1p;
+	if (extract_mediaport(&tmpstr1, oldport) == -1) {
+		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't"
+			    " extract media port from the message\n");
+		return -1;
+	}
+	
+	if (asymmetric != 0 || real != 0) {
+		fixed_ip.s = oldip->s;
+		fixed_ip.len = oldip->len;
+	} else {
+		fixed_ip.s = ip_addr2a(&msg->rcv.src_ip);
+		fixed_ip.len = strlen(fixed_ip.s);
+	}
+	/* XXX must compare address families in all addresses */
+	if ((*pf) == AF_INET6) {
+		opts[oidx] = '6';
+		oidx++;
+	}
+	snprintf(medianum_buf, sizeof medianum_buf, "%d", medianum);
+	medianum_str.s = medianum_buf;
+	medianum_str.len = strlen(medianum_buf);
+	opts[0] = (create == 0) ? 'L' : 'U';
+	v[1].iov_len = oidx;
+
+	STR2IOVEC(fixed_ip, v[5]);
+	STR2IOVEC(*oldport, v[7]);
+	if (1 || media_multi) /* XXX netch: can't choose now*/
+	{
+		STR2IOVEC(medianum_str, v[11]);
+	} else {
+		v[10].iov_len = v[11].iov_len = 0;
+	}
+	return 0;
+}
+
+int parse_rtpproxy_reply(char * cp, char * str2, str * newip, str * newport, int * pf1, 
+			str oldip, str oldport, int pf){
+
+	char *argv[10];
+	char * cpend, * next, **ap;
+	int argc, port;
+
+	/* Parse proxy reply to <argc,argv> */
+	argc = 0;
+	memset(argv, 0, sizeof(argv));
+	cpend=cp+strlen(cp);
+	next=eat_token_end(cp, cpend);
+	for (ap = argv; cp<cpend; cp=next+1, next=eat_token_end(cp, cpend)){
+		*next=0;
+		if (*cp != '\0') {
+		*ap=cp;
+		argc++;
+		if ((char*)++ap >= ((char*)argv+sizeof(argv)))
+			break;
+		}
+	}
+	if (argc < 1) {
+		LOG(L_ERR, "force_rtp_proxy2: no reply from rtp proxy\n");
+		return -1;
+	}
+	port = atoi(argv[0]);
+	if (port <= 0 || port > 65535) {
+		LOG(L_ERR, "force_rtp_proxy2: incorrect port in reply from rtp proxy\n");
+		return -1;
+	}
+
+	*pf1 = (argc >= 3 && argv[2][0] == '6') ? AF_INET6 : AF_INET;
+
+	if (isnulladdr(&oldip, pf)) {
+		if ((*pf1) == AF_INET6) {
+			newip->s = "::";
+			newip->len = 2;
+		} else {
+			newip->s = "0.0.0.0";
+			newip->len = 7;
+		}
+	} else {
+		newip->s = (argc < 2) ? str2 : argv[1];
+		newip->len = strlen(newip->s);
+	}
+	newport->s = int2str(port, &newport->len); /* beware static buffer */
+
+	return 0;
+}
+
+int alter_sdp_line_rtpproxy(struct sip_msg * msg, char * m1p, char * bodylimit,
+				char * c1p, char * c2p, int *c1p_altered,
+				str * oldip, str * oldport, int pf, 
+				str * newip, str* newport, int pf1){
+
+	str body1;
+
+	/* Alter port. */
+	body1.s = m1p;
+	body1.len = bodylimit - body1.s;
+	if (alter_mediaport(msg, &body1, oldport, newport, 0) == -1)
+		return -1;
+	/*
+	 * Alter IP. Don't alter IP common for the session
+	 * more than once.
+	 */
+	if (c2p != NULL || !c1p_altered) {
+		body1.s = c2p ? c2p : c1p;
+		body1.len = bodylimit - body1.s;
+		if (alter_mediaip(msg, &body1, oldip, pf, newip, pf1, 0) == -1)
+			return -1;
+		if (!c2p)
+			*c1p_altered = 1;
+	}
+	return 0;
+}
 
 static int
-force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_invite, 
-		str* newip, str* newport)
+force_rtp_proxy2_f(p_dialog * dlg, struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_invite)
 {
-	str body, body1, oldport, oldip;
+	str body;
 	str callid, from_tag, to_tag, tmp;
-	int create, port, len, asymmetric, flookup, argc, proxied, real;
-	int oidx, pf=0, pf1, force, node_idx;
+	int create, len, asymmetric, flookup, proxied, real;
+	int oidx, force, node_idx;
 	char opts[16];
-	char *cp, *cp1;
-	char  *cpend, *next;
-	char **ap, *argv[10];
+	char *cp, *cp1, *c2p;
 	struct lump* anchor;
 	struct rtpp_node *node;
+	int pf, pf1;
+	str oldip, oldport, newip, newport;
+
+
 	struct iovec v[14] = {
 		{NULL, 0},	/* command */
 		{NULL, 0},	/* options */
@@ -968,10 +1018,8 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 		{" ", 1},	/* separator */
 		{NULL, 0}	/* to_tag */
 	};
-	char *v1p, *v2p, *c1p, *c2p, *m1p, *m2p, *bodylimit;
-	char medianum_buf[20];
+	char *v1p, *v2p, *c1p, *m1p, *m2p, *bodylimit;
 	int medianum, media_multi;
-	str medianum_str, tmpstr1;
 	int c1p_altered;
 
 	v[1].iov_base=opts;
@@ -1068,6 +1116,11 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 		LOG(L_ERR, "ERROR: force_rtp_proxy2: can't get From tag\n");
 		return -1;
 	}
+	STR2IOVEC(callid, v[3]);
+	STR2IOVEC(from_tag, v[9]);
+	STR2IOVEC(to_tag, v[13]);
+
+
 	if (flookup != 0) {
 		if (create == 0 || to_tag.len == 0)
 			return -1;
@@ -1110,7 +1163,7 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 	v2p = find_next_sdp_line(v1p, bodylimit, 'v', bodylimit);
 	media_multi = (v2p != bodylimit);
 	v2p = v1p;
-	medianum = 0;
+	medianum = 1;
 	for(;;) {
 		/* Per-session iteration. */
 		v1p = v2p;
@@ -1139,56 +1192,11 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 			m2p = find_next_sdp_line(m1p, v2p, 'm', v2p);
 			/* c2p will point to per-media "c=" */
 			c2p = find_sdp_line(m1p, m2p, 'c');
-			/* Extract address and port */
-			tmpstr1.s = c2p ? c2p : c1p;
-			if (tmpstr1.s == NULL) {
-				/* No "c=" */
-				LOG(L_ERR, "ERROR: force_rtp_proxy2: can't"
-				    " find media IP in the message\n");
-				return -1;
-			}
-			tmpstr1.len = v2p - tmpstr1.s; /* limit is session limit text */
-			if (extract_mediaip(&tmpstr1, &oldip, &pf) == -1) {
-				LOG(L_ERR, "ERROR: force_rtp_proxy2: can't"
-				    " extract media IP from the message\n");
-				return -1;
-			}
-			tmpstr1.s = m1p;
-			tmpstr1.len = m2p - m1p;
-			if (extract_mediaport(&tmpstr1, &oldport) == -1) {
-				LOG(L_ERR, "ERROR: force_rtp_proxy2: can't"
-				    " extract media port from the message\n");
-				return -1;
-			}
-			++medianum;
-			if (asymmetric != 0 || real != 0) {
-				newip->s = oldip.s;
-				newip->len = oldip.len;
-			} else {
-				newip->s = ip_addr2a(&msg->rcv.src_ip);
-				newip->len = strlen(newip->s);
-			}
-			/* XXX must compare address families in all addresses */
-			if (pf == AF_INET6) {
-				opts[oidx] = '6';
-				oidx++;
-			}
-			snprintf(medianum_buf, sizeof medianum_buf, "%d", medianum);
-			medianum_str.s = medianum_buf;
-			medianum_str.len = strlen(medianum_buf);
-			opts[0] = (create == 0) ? 'L' : 'U';
-			v[1].iov_len = oidx;
-			STR2IOVEC(callid, v[3]);
-			STR2IOVEC(*newip, v[5]);
-			STR2IOVEC(oldport, v[7]);
-			STR2IOVEC(from_tag, v[9]);
-			if (1 || media_multi) /* XXX netch: can't choose now*/
-			{
-				STR2IOVEC(medianum_str, v[11]);
-			} else {
-				v[10].iov_len = v[11].iov_len = 0;
-			}
-			STR2IOVEC(to_tag, v[13]);
+
+			if(create_rtpp_command(msg, m1p, m2p, c2p, v2p, c1p,
+				medianum, media_multi, asymmetric, real,create, 
+				v, (char*) opts, oidx,
+				&oldip, &oldport, &pf)<0) return -1;
 			do {
 				node = select_rtpp_node(callid, 1, node_idx);
 				if (!node) {
@@ -1197,62 +1205,18 @@ force_rtp_proxy2_f(struct sip_msg* msg, char* str1, char* str2,int had_sdp_in_in
 				}
 				cp = send_rtpp_command(node, v, (to_tag.len > 0) ? 14 : 12);
 			} while (cp == NULL);
-			/* Parse proxy reply to <argc,argv> */
-			argc = 0;
-			memset(argv, 0, sizeof(argv));
-			cpend=cp+strlen(cp);
-			next=eat_token_end(cp, cpend);
-			for (ap = argv; cp<cpend; cp=next+1, next=eat_token_end(cp, cpend)){
-				*next=0;
-				if (*cp != '\0') {
-					*ap=cp;
-					argc++;
-					if ((char*)++ap >= ((char*)argv+sizeof(argv)))
-						break;
-				}
-			}
-			if (argc < 1) {
-				LOG(L_ERR, "force_rtp_proxy2: no reply from rtp proxy\n");
-				return -1;
-			}
-			port = atoi(argv[0]);
-			if (port <= 0 || port > 65535) {
-				LOG(L_ERR, "force_rtp_proxy2: incorrect port in reply from rtp proxy\n");
-				return -1;
-			}
 
-			pf1 = (argc >= 3 && argv[2][0] == '6') ? AF_INET6 : AF_INET;
-
-			if (isnulladdr(&oldip, pf)) {
-				if (pf1 == AF_INET6) {
-					newip->s = "::";
-					newip->len = 2;
-				} else {
-					newip->s = "0.0.0.0";
-					newip->len = 7;
-				}
-			} else {
-				newip->s = (argc < 2) ? str2 : argv[1];
-				newip->len = strlen(newip->s);
-			}
-			newport->s = int2str(port, &newport->len); /* beware static buffer */
-			/* Alter port. */
-			body1.s = m1p;
-			body1.len = bodylimit - body1.s;
-			if (alter_mediaport(msg, &body1, &oldport, newport, 0) == -1)
+			if(parse_rtpproxy_reply(cp, str2, &newip, &newport, &pf1, 
+							  oldip, oldport, pf)<0)
 				return -1;
-			/*
-			 * Alter IP. Don't alter IP common for the session
-			 * more than once.
-			 */
-			if (c2p != NULL || !c1p_altered) {
-				body1.s = c2p ? c2p : c1p;
-				body1.len = bodylimit - body1.s;
-				if (alter_mediaip(msg, &body1, &oldip, pf, newip, pf1, 0) == -1)
-					return -1;
-				if (!c2p)
-					c1p_altered = 1;
-			}
+			if(alter_sdp_line_rtpproxy(msg, m1p, bodylimit, 
+						c1p, c2p, &c1p_altered,
+						&oldip, &oldport, pf, 
+						&newip, &newport, pf1)<0)
+				return -1;
+			if(set_rtpproxy_media_descr(dlg, medianum, newip, newport)<0)
+				return -1;
+			medianum++;
 		} /* Iterate medias in session */
 	} /* Iterate sessions */
 
@@ -1478,17 +1442,47 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 	int had_sdp_in_invite = 0;
 	str body;
 	struct sip_msg *req=0;
-	str newip, newport;
-
-	LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: called for %s", str1);
-
-	if (!pcscf_nat_enable || !rtpproxy_enable) return CSCF_RETURN_FALSE;
 	
-    if( check_content_type(msg) ) 
-    {
-	    if (msg->first_line.type == SIP_REQUEST) 
+	str call_id;
+	str host;
+	int port,transport;
+	enum p_dialog_direction dir;
+	p_dialog * dlg;
+
+
+	LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: called for %s\n", str1);
+
+	if (extract_sdp_body(msg,&body)<0) {
+		LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: no SDP body part found\n");
+		return CSCF_RETURN_FALSE;
+	} 
+
+	dir = get_dialog_direction(str1);
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_SDP_manipulate(%s): Error retrieving %s contact\n",str1,str1);
+		return CSCF_RETURN_BREAK;
+	}		
+
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+			
+	dlg = get_p_dialog(call_id,host,port,transport,0);
+	if(!dlg){
+		LOG(L_ERR, "ERR:"M_NAME":P_SDP_manipulate: no dialog found\n");
+		return CSCF_RETURN_FALSE;
+	}
+
+	if(dlg->method!=DLG_METHOD_INVITE){
+		d_unlock(dlg->hash);
+		return CSCF_RETURN_FALSE;
+	}
+
+	
+    	if (msg->first_line.type == SIP_REQUEST) 
 	    	req = msg;
-	    else 
+	else 
 	    	req = cscf_get_request_from_reply(msg);
 	    	
     	if (req) 
@@ -1496,80 +1490,78 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
     	else 
     		method=METHOD_UNDEF;
     	
-		switch(method)
-		{	
-		    case METHOD_INVITE:
-		    	if (extract_sdp_body(req,&body)<0) had_sdp_in_invite = 0;
-				else had_sdp_in_invite = 1; 
+	switch(method){	
+		case METHOD_INVITE:
 		    	if (msg->first_line.type == SIP_REQUEST){
+				had_sdp_in_invite = 1;
 			 		/* on INVITE */
 					/* check the sdp if it has a 1918 */
 					if(1)
 					{
 					/* get rtp_proxy/nathelper to open ports - get a iovec*/
-						response = force_rtp_proxy2_f(msg,"","",had_sdp_in_invite, &newip, &newport) ;
-						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: INVITE ... rtp proxy done\n");			    	
+						if (pcscf_nat_enable && rtpproxy_enable)
+							response = force_rtp_proxy2_f(dlg, msg,"","",had_sdp_in_invite) ;
+						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: INVITE ... done\n");			    	
 				    } else {			
 						/* using public ip */
 						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: INVITE ... found public network in SDP.\n");
 				    	response = CSCF_RETURN_FALSE ;
 				    }
 		    	}else{
+			    	if (extract_sdp_body(req,&body)<0) had_sdp_in_invite = 0;
+				else had_sdp_in_invite = 1; 
+
 		    		if (msg->first_line.u.reply.statuscode == 183 ||
 				    	(msg->first_line.u.reply.statuscode >= 200 &&
 				    	 msg->first_line.u.reply.statuscode < 300)) {
-					    if(1)
-					    {
+					if(1){
 						/* sdp_1918(msg) */
 						/* str1 & str2 must be something */
-						    response = force_rtp_proxy2_f(msg, "", "",had_sdp_in_invite, &newip, &newport) ;						
-							LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: 183,2xx... rtp proxy done\n");			    	
-						} else {
+						if (pcscf_nat_enable && rtpproxy_enable)
+						    response = force_rtp_proxy2_f(dlg, msg, "", "",had_sdp_in_invite) ;
+						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: 183,2xx... done\n");			    	
+					} else {
 							/* public ip found */
 							response = CSCF_RETURN_FALSE ;						
-						}
-						break;
+					}
+					break;
 			    	} else if ( msg->first_line.u.reply.statuscode >=300){
-						LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on %d ...\n",msg->first_line.u.reply.statuscode);
-					    response = unforce_rtp_proxy_f(msg,-1) ;
-				    }
+					LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on %d ...\n",msg->first_line.u.reply.statuscode);
+					if (pcscf_nat_enable && rtpproxy_enable)
+						response = unforce_rtp_proxy_f(msg,-1) ;
+				}
 			    	
 		    	}
-			    break ;
+			break ;
 			
-			case METHOD_ACK:
-			    if(1)
-			    {
+		case METHOD_ACK:
+			if(1){
 				/* sdp_1918(msg) */
 				/* str1 & str2 must be something */
-				    response = force_rtp_proxy2_f(msg, "", "",0, &newip, &newport) ;						
-					LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ACK ... rtp proxy done\n");			    	
-				} else {
+				if (pcscf_nat_enable && rtpproxy_enable)
+					response = force_rtp_proxy2_f(dlg, msg, "", "",0) ;						
+				LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: ACK ... done\n");			    	
+			} else {
 					/* public ip found */
 					response = CSCF_RETURN_FALSE ;						
-				}
-				break;
-				
-		    case METHOD_BYE:
-		    case METHOD_CANCEL:
-				LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on BYE/CANCEL...\n");
+			}
+			break;
+		
+		case METHOD_BYE:
+		case METHOD_CANCEL:
+			LOG(L_CRIT,"DBG:"M_NAME":P_SDP_manipulate: on BYE/CANCEL...\n");
 		    	if (msg->first_line.type == SIP_REQUEST){
     			    /* request/response not acceptable */
+				if (pcscf_nat_enable && rtpproxy_enable)
 				    response = unforce_rtp_proxy_f(msg,-1) ;
 		    	}
-				break;
-	
-		    default:
+			break;
+		default:
 		    	response = CSCF_RETURN_FALSE;
-				break; 
-		}    
-    } else {
-		LOG(L_ERR, "ERROR:check_content_type: parse error:"
-			"see the content_type block\n");
-		response = -1 ;
-    }	
-
-return response ;
+			break; 
+	}    
+	if(dlg) d_unlock(dlg->hash);
+	return response ;
 }
 
 
