@@ -962,22 +962,22 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		if(pcc_use_ports){	
 			int2str(intportA, &portAlen);
 			int2str(intportB, &portBlen);
-			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+3+
+			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+4+
 				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		}else{
-			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+1+
+			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+2+
 				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		}
 
-		flow_data.s = (char*)pkg_malloc(len+1); /*1 for snprintf, it needs an octet for '\0'*/
-	        if(!flow_data.s){
+		flow_data.s = (char*)pkg_malloc(len); 
+		if(!flow_data.s){
 			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
 					when allocating %i bytes in pkg\n", len);			
 			return NULL;
 		}
 
 		len2 = len - (permit_out.len -permit_in.len)*sizeof(char);
-		flow_data2.s = (char*)pkg_malloc(len2+1);
+		flow_data2.s = (char*)pkg_malloc(len2);
 	        if(!flow_data2.s){
 			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
 					when allocating %i bytes in pkg\n", len);			
@@ -993,7 +993,7 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
  											AVP_DUPLICATE_DATA);
 		cdpb.AAAAddAVPToList(&list,flow_number);
 		/*first flow is the recieve flow*/
-		
+		//snprintf: The trailing nul character is counted towards the size limit, so you must allocate at least size characters for str.	
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
 			if(pcc_use_ports){
