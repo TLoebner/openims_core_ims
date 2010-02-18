@@ -257,6 +257,8 @@ void callback_for_pccsession(int event,void *session)
 							contact->pcc_session_id.len=0; 
 							//TODO //give this contact a grace time for expiration
 						}
+						//set expires to 0, so that the registrar timer will clean the r_contact
+						contact->expires=time(0)-1; 
 						r_unlock(contact->hash);
 					}
 				}				
@@ -299,6 +301,7 @@ void callback_for_pccsession(int event,void *session)
 							contact->pcc_session_id.s=0; 
 							contact->pcc_session_id.len=0; 							
 						}
+						contact->expires=time(0)-1; 
 						r_unlock(contact->hash);
 					}
 				}				
