@@ -107,74 +107,68 @@ int P_generates_aar(struct sip_msg *msg,char *str1,char *str2)
 	return CSCF_RETURN_FALSE;
 }
 
-int P_Rx_register(struct sip_msg *req, struct sip_msg * rpl){
+/*
+ * sends an AAR for every registered contact
+ * returns CSCF_RETURN_TRUE on ok and CSCF_RETURN_FALSE on error
+ * TODO:on error: if any AAR was sent, STR will be sent by the authstatemachine
+ */
+int P_AAR_register(struct sip_msg *req, struct sip_msg * rpl){
 
 	AAAMessage* resp;
 	unsigned int result = AAA_SUCCESS;
-	int expires=0;
 	contact_body_t * aor_list;
 	contact_t * crt_aor = NULL;
 	str pcc_session_id = {0,0};
-
-	//or at least a register to subscribe to signaling path status
-	expires=cscf_get_expires_hdr(req,1);
-	LOG(L_DBG,"DBG:"M_NAME":P_Rx_register: register with expires %i\n",expires);
+		
 	if (parse_headers(rpl, HDR_EOH_F, 0) <0) {
 		LOG(L_ERR,"ERR:"M_NAME":P_Rx_register: error parsing headers\n");
-		goto error;
+		return CSCF_RETURN_FALSE;
 	}	
 		
 	aor_list = cscf_parse_contacts(rpl);
 	if (!aor_list || (!aor_list->contacts && !aor_list->star)) {
 		LOG(L_ERR,"ERR:"M_NAME":P_Rx_register: no contacts found in the Contact header\n");
-		goto error;
+		return CSCF_RETURN_FALSE;
 	}
 
 	for(crt_aor = aor_list->contacts; crt_aor!=NULL; crt_aor= crt_aor->next){
-		if (expires > 0){
-			resp = PCC_AAR(req, rpl, "reg", crt_aor, &pcc_session_id, 0);
-			if(!resp)
+		resp = PCC_AAR(req, rpl, "reg", crt_aor, &pcc_session_id, 0);
+		if(!resp)
+			goto error;
+		if(PCC_AAA(resp, &result, pcc_session_id) > 0){
+			LOG(L_INFO,"INFO:"M_NAME":P_Rx_register:recieved an AAA with result code %u\n",result);
+			if(result<2000 || result >= 3000){
+				cdpb.AAAFreeMessage(&resp); 
 				goto error;
-			if(PCC_AAA(resp, &result, pcc_session_id) > 0){
-				LOG(L_INFO,"INFO:"M_NAME":P_Rx_register:recieved an AAA with result code %u\n",result);
-				if(result<2000 || result >= 3000){
-					goto error;
-				}
-
 			}
-			cdpb.AAAFreeMessage(&resp); 
-		}else {
-			//de-registration
-			LOG(L_DBG,"DBG:"M_NAME":P_Rx_register: de-registration finishing auth session if any\n");
-			resp = PCC_STR(req, "reg", crt_aor);
-			if(resp)cdpb.AAAFreeMessage(&resp); 
+
 		}
+		cdpb.AAAFreeMessage(&resp); 
 	}
 	
 	return CSCF_RETURN_TRUE;
 
 error:
+	LOG(L_INFO,"INFO:"M_NAME":P_Rx_register:recieved an AAA with error code or null AAA\n");
 	return CSCF_RETURN_FALSE;
 }
 
 
 /**
- * P_Rx() will be called, if a SIP 183 Session Progress comes back from the callee.  
+ * P_AAR() will be called, if a SIP 183 Session Progress comes back from the callee.  
  * It retrieves relevant SIP headers from SDP offer and answer from INVITE and 183
  * respectively. It converts these SIP headers to corresponding AVPs and creates
  * a AAR and sends it to the PDF and waits for the answer returned by the PDF.
  * 
- * P_Rx() is also called upon registration in that case parameter str1 should
+ * P_AAR() is also called upon registration in that case parameter str1 should
  * start with R or r so that the functions do appropriate
- * Quite confusingly if its a deregistration P_AAR will send an STR to the PCRF
- * to terminate the Diameter Auth Session established
- *
+ * not to be used for deregistrations
  * @param msg - The SIP response  
  * @param str1 - orig/term/register
  * @param str2 - not used 
  * @returns 1 on Diameter success or 0 on failure   
  */
-int P_Rx(struct sip_msg* msg, char* str1, char* str2)
+int P_AAR(struct sip_msg* msg, char* str1, char* str2)
 {	
 	struct cell *t;
 	int preliminary=0;
@@ -205,7 +199,7 @@ int P_Rx(struct sip_msg* msg, char* str1, char* str2)
 
 		}else if ((strncmp(t->method.s,"REGISTER",8)==0))
 		{
-			return P_Rx_register(t->uas.request, msg);
+			return P_AAR_register(t->uas.request, msg);
 		} else {
 			LOG(L_DBG,"DBG:"M_NAME":P_Rx: Policy and Charging Control non-applicable\n");
 			return CSCF_RETURN_TRUE;
@@ -254,13 +248,29 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	// get session id from sip msg   
 	// Gq_STR(session_id) terminate the session
 	AAAMessage* sta=0;
+	contact_t * crt_cnt = NULL;
+	contact_body_t * cnt_list;
+
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
 	
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
-	sta = PCC_STR(msg,str1, NULL);
-	// if you really want the STA just declare a ResponseHandler for it because its never going
-	// to arrive here.. or never again
-	
-	if (sta) cdpb.AAAFreeMessage(&sta);
+		
+	if (parse_headers(msg, HDR_EOH_F, 0) <0) {
+		LOG(L_ERR,"ERR:"M_NAME":P_STR: error parsing headers\n");
+		return CSCF_RETURN_FALSE;
+	}	
+		
+	cnt_list = cscf_parse_contacts(msg);
+	if (!cnt_list || (!cnt_list->contacts && !cnt_list->star)) {
+		LOG(L_ERR,"ERR:"M_NAME":P_STR: no contacts found in the Contact header\n");
+		return CSCF_RETURN_FALSE;
+	}
+
+	for(crt_cnt = cnt_list->contacts; crt_cnt!=NULL; crt_cnt= crt_cnt->next){
+		sta = PCC_STR(msg,str1, crt_cnt);
+		// if you really want the STA just declare a ResponseHandler for it because its never going
+		// to arrive here.. or never again
+		if (sta) cdpb.AAAFreeMessage(&sta);
+	}
 	return CSCF_RETURN_TRUE;
 }
