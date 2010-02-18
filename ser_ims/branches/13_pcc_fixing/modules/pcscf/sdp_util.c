@@ -1449,6 +1449,9 @@ int P_SDP_manipulate(struct sip_msg *msg,char *str1,char *str2)
 	enum p_dialog_direction dir;
 	p_dialog * dlg;
 
+	if (!pcscf_nat_enable || !rtpproxy_enable)
+		return CSCF_RETURN_TRUE;
+
 
 	LOG(L_DBG, "DBG:"M_NAME":P_SDP_manipulate: called for %s\n", str1);
 
