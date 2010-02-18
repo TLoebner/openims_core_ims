@@ -63,6 +63,8 @@ extern unsigned short port_for_signaling;
 extern int pcc_use_ports;	
 
 static char* ip_s = "ip";
+static char* udp_s = "udp";
+static char* tcp_s = "tcp";
 
 /**< Structure with pointers to cdp funcs, global variable defined in mod.c  */
 extern struct cdp_binds cdpb;
@@ -846,33 +848,43 @@ end:
  * @param tag - 0 originating side 1 terminating side 
  * returns the number of media_sub_components added on success -1 on error
  * the media_sub_component is given in order to free the AVPS after grouping them!
+ * the transport protocol will be considered : 
+ * UDP if RTP/AVP, TCP if TCP (RFC 4145) or TCP/MSRP (RFC 4975), or IP if neither
  */
 inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
  {
 
- 	char * newline, *rtp, *mlineA = NULL;
+ 	char * newline, *rtp, *mlineA, *tcp = NULL;
  	unsigned int intportA=0,intportB=0;
 	str ipA = {0,0}, ipB = {0,0};
  	int i=0,flows=0;
  	int atributes=0; /* a= lines present?*/
  	int ports=1; /*how many ports does this m line define?*/
 	int ret;
-		
+	char* proto = ip_s;	
+
  	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : starting\n");
 	
 	ret = pcc_get_ip_port_dialog(sdpA, sdpB, number, tag, &mlineA, &atributes, &ports,
 					&ipA, &intportA, &ipB, &intportB);
 	if(ret!=1) return ret;
+	rtp=strstr(mlineA,"RTP");
+	newline=index(mlineA,'\n');
+	if (newline==NULL) newline=index(mlineA,'\0');
+	if(rtp!=NULL && rtp<newline) proto = udp_s;
+	else if((tcp = strstr(mlineA, "TCP"))!= NULL && tcp<newline)
+		proto = tcp_s;
+
 	
 	while(flows<ports && i+2<PCC_Media_Sub_Components){
  		i++;
 		if (tag!=1){
-			media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip", ipA, intportA, 
+			media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto, ipA, intportA, 
 											ipB, intportB, "",atributes);
 			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
 		} else {
  		
- 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB, intportB,
+ 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto,ipB, intportB,
 											ipA, intportA,"",atributes);
  			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
  		}
@@ -880,19 +892,16 @@ inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str s
 
  		if (1){
 
-			rtp=strstr(mlineA,"RTP");
-			newline=index(mlineA,'\n');
-			if (newline==NULL) newline=index(mlineA,'\0');
 			if (rtp!=NULL && rtp < newline){
 				i++;
 		 		intportA++; 
 		 		intportB++;
 		 		if (tag!=1){
-		 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipA,intportA,
+		 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto,ipA,intportA,
 												ipB,intportB,"",3);
 	 				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
 	 			} else {
-	 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",ipB,intportB,
+	 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto,ipB,intportB,
 												ipA,intportA,"",3);
 		 			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
 		 		}		 		
