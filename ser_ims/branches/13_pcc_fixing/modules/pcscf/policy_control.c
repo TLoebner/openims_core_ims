@@ -254,23 +254,30 @@ int P_STR(struct sip_msg* msg, char* str1, char* str2)
 	if (!pcscf_use_pcc) return CSCF_RETURN_TRUE;
 	
 	LOG(L_INFO, ANSI_WHITE"INF:"M_NAME":P_STR:\n");
+
+	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
+	
+	if(is_register){
+		if (parse_headers(msg, HDR_EOH_F, 0) <0) {
+			LOG(L_ERR,"ERR:"M_NAME":P_STR: error parsing headers\n");
+			return CSCF_RETURN_FALSE;
+		}	
 		
-	if (parse_headers(msg, HDR_EOH_F, 0) <0) {
-		LOG(L_ERR,"ERR:"M_NAME":P_STR: error parsing headers\n");
-		return CSCF_RETURN_FALSE;
-	}	
-		
-	cnt_list = cscf_parse_contacts(msg);
-	if (!cnt_list || (!cnt_list->contacts && !cnt_list->star)) {
-		LOG(L_ERR,"ERR:"M_NAME":P_STR: no contacts found in the Contact header\n");
-		return CSCF_RETURN_FALSE;
+		cnt_list = cscf_parse_contacts(msg);
+		if (!cnt_list || (!cnt_list->contacts && !cnt_list->star)) {
+			LOG(L_ERR,"ERR:"M_NAME":P_STR: no contacts found in the Contact header\n");
+			return CSCF_RETURN_FALSE;
+		}
+
+		for(crt_cnt = cnt_list->contacts; crt_cnt!=NULL; crt_cnt= crt_cnt->next){
+			sta = PCC_STR(msg,str1, crt_cnt);
+			// if you really want the STA just declare a ResponseHandler for it because its never going
+			// to arrive here.. or never again
+			if (sta) cdpb.AAAFreeMessage(&sta);
+		}
+	}else{
+		sta = PCC_STR(msg,str1, NULL);
 	}
 
-	for(crt_cnt = cnt_list->contacts; crt_cnt!=NULL; crt_cnt= crt_cnt->next){
-		sta = PCC_STR(msg,str1, crt_cnt);
-		// if you really want the STA just declare a ResponseHandler for it because its never going
-		// to arrive here.. or never again
-		if (sta) cdpb.AAAFreeMessage(&sta);
-	}
 	return CSCF_RETURN_TRUE;
 }
