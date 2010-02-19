@@ -273,7 +273,7 @@ peer *get_peer_by_fqdn(str *fqdn)
 void peer_timer(time_t now,void *ptr)
 {
 	peer *p,*n;
-	LOG(L_DBG,"DBG:peer_timer(): taking care of peers...\n");
+	LOG(L_MEM,"DBG:peer_timer(): taking care of peers...\n");
 	lock_get(peer_list_lock);
 	p = peer_list->head;
 	while(p){

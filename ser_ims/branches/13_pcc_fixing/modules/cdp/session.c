@@ -468,7 +468,7 @@ void cdp_sessions_timer(time_t now, void* ptr)
 		}
 		AAASessionsUnlock(hash);
 	}
-	cdp_sessions_log(L_INFO);
+	if (now%5==0)cdp_sessions_log(L_DBG);
 }
 
 
