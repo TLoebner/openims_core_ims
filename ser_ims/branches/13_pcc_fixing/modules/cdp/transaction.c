@@ -181,7 +181,7 @@ inline void cdp_free_trans(cdp_trans_t *x)
 void cdp_trans_timer(time_t now, void* ptr)
 {
 	cdp_trans_t *x,*n;	
-	LOG(L_DBG,"DBG:trans_timer(): taking care of diameter transactions...\n");
+	LOG(L_MEM,"DBG:trans_timer(): taking care of diameter transactions...\n");
 	lock_get(trans_list->lock);
 	x = trans_list->head;
 	while(x)
