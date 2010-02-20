@@ -42,61 +42,60 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
- 
+
 /**
- * \file
- * 
- * CDiameterPeer Includes
- * 
- * This header is used to switch between using the CDiameterPeer from SER
- * or as a standalone server.
- * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * \file POSIX Semaphores
  * 
  */
 
-#ifndef __CDP_UTILS_H_
-#define __CDP_UTILS_H_
+#ifndef __WHARF_SEM_H
+#define __WHARF_SEM_H
 
-#if defined(CDP_FOR_SER)
+#ifdef SHM_MEM
 
-	#include "../../dprint.h"
-	#include "../../str.h"
 	#include "../../mem/mem.h"
 	#include "../../mem/shm_mem.h"
-	#include "../../locking.h"
-	#include "../../pt.h"
-	#include <libxml/parser.h>
-	#include "sem.h" 
 
-#elif defined(WHARF)
+	#include <semaphore.h>
+
+	typedef sem_t gen_sem_t;
+
+	/**
+	 * Create a new unnamed semaphore and initialize it
+	 * @param value - 0 if it should be pre-locked, 1 if not, or how many locks until block
+	 * @return
+	 */
+    #define sem_new(sem_ptr,value)\
+	do {\
+		sem_ptr=shm_malloc(sizeof(gen_sem_t));\
+		if (!sem_ptr){\
+			LOG(L_ERR,"Error allocating %d bytes of shm!\n",sizeof(gen_sem_t));\
+			goto out_of_memory;\
+		}	\
+		if (sem_init(sem_ptr, 1, value)<0) {\
+			LOG(L_ERR,"Error > %s\n",strerror(errno));\
+			goto out_of_memory;\
+		}\
+	} while(0)
 	
-	#include "../../utils/utils.h"
+    #define sem_free(sem)\
+	do {\
+		if (sem) {\
+			sem_destroy(sem);\
+			shm_free(sem);\
+			sem=0;\
+		}\
+	} while(0)
 	
+	
+	#define sem_get(sem) sem_wait(sem)
+	#define sem_tryget(sem) sem_trywait(sem)
+	#define sem_timedget(sem,abs_timeout) sem_trywait(sem,abs_timeout)
+	
+	#define sem_release(sem) sem_post(sem)
+
 #else
-	
-	#include "../utils/config.h"
-	#include "../utils/dprint.h"
-	#include "../utils/str.h"
-	#include "../utils/mem.h"
-	#include "../utils/shm_mem.h"
-	#include "../utils/locking.h"
-	
+	//#error "locking requires shared memory support"
 #endif
 
-#ifndef LOG_NO_MEM
-	#define LOG_NO_MEM(mem_type,data_len) \
-		LOG(L_ERR,"ERROR:%s:%s()[%d]: Out of %s memory allocating %d bytes\n",\
-			__FILE__,__FUNCTION__,__LINE__, \
-			mem_type,data_len);
 #endif
-
-
-#define shm_str_dup_macro(dst,src)\
-{\
-	(dst).s = shm_malloc((src).len+1);\
-	if (!(dst).s){LOG_NO_MEM("shm",(src).len+1);}\
-	else {memcpy((dst).s,(src).s,(src).len);(dst).s[(src).len]=0;(dst).len=(src).len;}\
-}
-
-#endif /*UTILS_H_*/
