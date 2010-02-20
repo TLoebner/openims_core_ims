@@ -310,6 +310,9 @@ int diameter_peer_start(int blocking)
 	peer *p;
 
 	/* fork workers */
+
+	// In wharf no workers are needed because it's got already a worker pool
+#ifndef WHARF	
 	for(k=0;k<config->workers;k++){
 		#ifdef CDP_FOR_SER		
 			pid = fork_process(1001+k,"cdp_worker",1);
@@ -340,6 +343,7 @@ int diameter_peer_start(int blocking)
 			dp_add_pid(pid);
 		}
 	}
+#endif	
 
 	/* fork receivers for each pre-configured peers */
 	lock_get(peer_list_lock);
