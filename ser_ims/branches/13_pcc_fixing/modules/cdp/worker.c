@@ -228,43 +228,105 @@ void cb_remove(cdp_cb_t *cb)
 	shm_free(x);
 }
 
-/**
- * Adds a message as a task to the task queue.
- * This blocks if the task queue is full, untill there is space.
- * @param p - the peer that the message was received from
- * @param msg - the message
- * @returns 1 on success, 0 on failure (eg. shutdown in progress)
- */ 
-int put_task(peer *p,AAAMessage *msg)
-{
-//	LOG(L_CRIT,"+1+\n");
-	lock_get(tasks->lock);
-//	LOG(L_CRIT,"+2+\n");
-	while ((tasks->end+1)%tasks->max == tasks->start){
-//		LOG(L_CRIT,"+3+\n");
-		lock_release(tasks->lock);
-//		LOG(L_CRIT,"+4+\n");
-		if (*shutdownx) {
-			cdp_lock_release(tasks->full);
-			return 0;
-		}
-//		LOG(L_ERR,"+");
-		cdp_lock_get(tasks->full);
-//		LOG(L_CRIT,"+5+\n");
-		if (*shutdownx) {
-			cdp_lock_release(tasks->full);
-			return 0;
-		}
-		lock_get(tasks->lock);
-	}
-	tasks->queue[tasks->end].p = p;
-	tasks->queue[tasks->end].msg = msg;
-	tasks->end = (tasks->end+1) % tasks->max;
-	cdp_lock_release(tasks->empty);
-	lock_release(tasks->lock);
-	return 1;
-}
+#ifdef WHARF
 
+	#include "../../base/worker.h"
+	
+	/**
+	 * This is an executor for tasks from shm. Should do the same as what is the middle of the worker_process() loop,
+	 * but this should be used when the messages will be processed by an external to cdp worker-pool.
+	 * @param ptr - the tast_t* into shm
+	 */
+	int worker_execute(void* ptr)
+	{
+		task_t *t=ptr;
+		int r;
+		cdp_cb_t *cb;
+	
+		if (!t) return -1;
+		if (!t->msg) goto error;
+		if (shutdownx&&(*shutdownx)) goto error;
+		LOG(L_DBG,"Executing task for cdp: Message [%d] from Peer [%.*s]\n",
+				t->msg->commandCode,t->p?t->p->fqdn.len:0,t->p?t->p->fqdn.s:0);
+		r = is_req(t->msg);
+		for(cb = callbacks->head;cb;cb = cb->next)
+			(*(cb->cb))(t->p,t->msg,*(cb->ptr));
+			
+		if (r){
+			AAAFreeMessage(&(t->msg));
+		}else{
+			/* will be freed by the user in upper api */
+			/*AAAFreeMessage(&(t.msg));*/
+		}
+		shm_free(t);
+		return -1;
+	error:
+		if (t->msg) AAAFreeMessage(&(t->msg));
+		shm_free(t);
+		return -1;
+	}
+	
+	/**
+	 * Adds a message as a task to the Wharf task queue.
+	 * This blocks if the task queue is full, until there is space.
+	 * @param p - the peer that the message was received from
+	 * @param msg - the message
+	 * @returns 1 on success, 0 on failure (eg. shutdown in progress)
+	 */ 
+	int put_task(peer *p,AAAMessage *msg)
+	{
+		task_t *t=0;
+		t = shm_malloc(sizeof(task_t));
+		if (!t){
+			LOG(L_ERR,"Error allocating %d bytes of shm!\n",sizeof(task_t));
+			return 0;
+		}
+		t->p = p;
+		t->msg = msg;
+		if (!wharf_worker_put_task(worker_execute,t)){
+			shm_free(t);
+			return 0;
+		}
+		return 1;
+	}
+
+#else
+	/**
+	 * Adds a message as a task to the task queue.
+	 * This blocks if the task queue is full, until there is space.
+	 * @param p - the peer that the message was received from
+	 * @param msg - the message
+	 * @returns 1 on success, 0 on failure (eg. shutdown in progress)
+	 */ 
+	int put_task(peer *p,AAAMessage *msg)
+	{
+		lock_get(tasks->lock);
+		while ((tasks->end+1)%tasks->max == tasks->start){
+			lock_release(tasks->lock);
+	
+			if (*shutdownx) {
+				cdp_lock_release(tasks->full);
+				return 0;
+			}
+			
+			cdp_lock_get(tasks->full);
+			
+			if (*shutdownx) {
+				cdp_lock_release(tasks->full);
+				return 0;
+			}
+			
+			lock_get(tasks->lock);
+		}
+		tasks->queue[tasks->end].p = p;
+		tasks->queue[tasks->end].msg = msg;
+		tasks->end = (tasks->end+1) % tasks->max;
+		cdp_lock_release(tasks->empty);
+		lock_release(tasks->lock);
+		return 1;
+	}
+#endif
+	
 /**
  * Remove and return the first task from the queue (FIFO).
  * This blocks until there is something in the queue.
@@ -316,6 +378,8 @@ void worker_poison_queue()
 //	for(i=0;i<config->workers;i++)
 	cdp_lock_release(tasks->empty);
 }
+
+
 
 /**
  * This is the main worker process.
