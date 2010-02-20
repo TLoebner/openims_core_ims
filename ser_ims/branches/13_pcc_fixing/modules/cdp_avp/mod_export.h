@@ -55,6 +55,13 @@
  */
 
 /**
+ * \page CDP_AVP CDiameterPeer AVP helpers Interface 
+ * 
+ * Implements lots of helpers for AVP operations with the cdp module
+ * 
+ * 
+ */
+/**
  * \file
  * 
  * CDiameter AVP Operations modules - exports
