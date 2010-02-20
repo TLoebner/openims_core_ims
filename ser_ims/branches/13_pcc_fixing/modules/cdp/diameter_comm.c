@@ -231,7 +231,7 @@ error:
  */
 void sendrecv_cb(int is_timeout,void *param,AAAMessage *ans)
 {
-	lock_release((gen_lock_t*)param);
+	sem_release((gen_sem_t*)param);
 }
 
 /**
@@ -246,7 +246,7 @@ void sendrecv_cb(int is_timeout,void *param,AAAMessage *ans)
 AAAMessage* AAASendRecvMessage(AAAMessage *message)
 {
 	peer *p;
-	gen_lock_t *lock;
+	gen_sem_t *sem=0;
 	cdp_trans_t *t;
 	AAAMessage *ans;
 	
@@ -262,34 +262,29 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 	
 	
 	if (is_req(message)){
-		lock = lock_alloc();
-		lock = lock_init(lock);
-		lock_get(lock);
-		t = cdp_add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
+		sem_new(sem,0);
+		t = cdp_add_trans(message,sendrecv_cb,(void*)sem,config->transaction_timeout,0);
 
 //		if (!peer_send_msg(p,message)) {
 		if (!sm_process(p,Send_Message,message,0,0)){	
-			lock_destroy(lock);
-			lock_dealloc((void*)lock);	
+			sem_free(sem);	
 			goto error;
 		}
 
 		/* block until callback is executed */
-		lock_get(lock);		
-		lock_destroy(lock);
-		lock_dealloc((void*)lock);
+		sem_get(sem);		
+		sem_free(sem);		
 		ans = t->ans;
 		cdp_free_trans(t);
 		return ans;
-	}
-	else
-	{
+	} else {
 		LOG(L_ERR,"ERROR:AAASendRecvMessage(): can't add wait for answer to answer.\n");
 		goto error;
 	}
 
 		
 error:	
+out_of_memory:
 	AAAFreeMessage(&message);
 	return 0;
 }
@@ -306,7 +301,7 @@ error:
 AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 {
 	peer *p;
-	gen_lock_t *lock;
+	gen_sem_t *sem;
 	cdp_trans_t *t;
 	AAAMessage *ans;
 	
@@ -322,34 +317,29 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 	
 	
 	if (is_req(message)){
-		lock = lock_alloc();
-		lock = lock_init(lock);
-		lock_get(lock);
-		t = cdp_add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
+		sem_new(sem,0);
+		t = cdp_add_trans(message,sendrecv_cb,(void*)sem,config->transaction_timeout,0);
 
 //		if (!peer_send_msg(p,message)) {
 		if (!sm_process(p,Send_Message,message,0,0)){	
-			lock_destroy(lock);
-			lock_dealloc((void*)lock);	
+			sem_free(sem);				
 			goto error;
 		}
 
 		/* block until callback is executed */
-		lock_get(lock);		
-		lock_destroy(lock);
-		lock_dealloc((void*)lock);
+		sem_get(sem);		
+		sem_free(sem);		
 		ans = t->ans;
 		cdp_free_trans(t);
 		return ans;
-	}
-	else
-	{
+	} else {
 		LOG(L_ERR,"ERROR:AAASendRecvMessageToPeer(): can't add wait for answer to answer.\n");
 		goto error;
 	}
 
 		
 error:	
+out_of_memory:
 	AAAFreeMessage(&message);
 	return 0;
 }
