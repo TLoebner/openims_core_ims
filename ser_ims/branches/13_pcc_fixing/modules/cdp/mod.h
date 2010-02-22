@@ -61,17 +61,15 @@
  *  \b Module \b Documentation
  * 
  * [\subpage cdp_overview]
+ * [\subpage cdp_realm_routing]
  * [\subpage cdp_code]
  * [\subpage cdp_config]
  * [\subpage cdp_example]
  *
  * \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
- * Realm routing is integrated - see the example configuration file for a simple
- * usage example.
- * 
- * \todo Session support (although not required on the IMS Cx interfaces). Work in progress in the 08_cdp_sessions
- * branch.
+ * Authorization Session support is now integrated. For Accounting Sessions there is for now no state machine
+ * defined, although the generic session support could be easily extended in the future if this would be required.
  * 
  * 
  * 
@@ -88,7 +86,7 @@
  * - p x Receiver - receiver.c - one for each initially configured peers
  * - 1 x Receiver - receiver.c - one receiver for all other unknown peers
  * 
- * Due to sip-router restrictions, all processes must be forked at the ser start-up, without dynamic ones.
+ * Due to sip-router restrictions, all processes must be forked at the start-up, without dynamic ones.
  * The initial cdp architecture, which assigned one process for each peer, has been modified:
  * - there are dedicated receiver processes for each initially configured peers. Each peer should be then initially
  * configured as to obtain the best performance, or none if the minimum number of processes are to be obtained
@@ -99,6 +97,22 @@
  * dedicated receiver if one exists
  * - on outgoing connections, the timer makes the connection and then passes it to the respective receiver process 
  * assigned to that process or to the special receiver if the peer does not have a dedicated receiver.
+ * 
+ * \section cdp_realm_routing Realm Routing
+ * Realm routing is integrated - see the example configuration file for a simple usage example.
+ * 
+ * For proper routing of Diameter requests, if a specific destination peer is to be targeted, the application
+ * should add a Destination-Host AVP. Then the message will be routed directly there, if that peer is connected.
+ * 
+ * Otherwise, if the destination peer is not previously discovered, a Destination Realm must be filled, which will
+ * trigger the use of specific Realm routes. Then the application should include an Auth/Acct-Application-Id AVP 
+ * or a Vendor-Specific-Application-Id AVP. The stack will search then in the list of connected peers for one that
+ * supports that. The support list is composed of what the peers are declaring at connection, during the 
+ * capabilities exchange operations. Keep in mind that not only the Application-Id, but also the Vendor-Id (or 0 in
+ * case none is defined) are taken into account.
+ * 
+ * The most often issue of messages not being routed is the lack of the Application-Id indicating AVP as presented
+ * above, or a misconfiguration of supported applications on the other peer.   
  * 
  * 
  * \section cdp_code Code Structure
