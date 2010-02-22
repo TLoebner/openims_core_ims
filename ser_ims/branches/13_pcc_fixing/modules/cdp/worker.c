@@ -78,22 +78,6 @@ task_queue_t *tasks;			/**< queue of tasks */
 cdp_cb_list_t *callbacks;		/**< list of callbacks for message processing */
 
 
-	
-	
-/**
- * Gets the lock on a semaphore and blocks until it is available.
- * This procedures does not consume CPU cycles as a busy-waiting would and it is used for
- * blocking on the task queue without a big impact on performance.
- * @param sid - semaphore id
- * @returns when the sempahore is aquired or shutdown
- */
-#define cdp_lock_get(sid) sem_get(sid)
-
-/**
- * Releases the lock on a sempahore.
- * @param sid - the semaphore id
- */
-#define cdp_lock_release(sid) sem_release(sid)
 
 /**
  * Initializes the worker structures, like the task queue.
@@ -305,14 +289,14 @@ void cb_remove(cdp_cb_t *cb)
 			lock_release(tasks->lock);
 	
 			if (*shutdownx) {
-				cdp_lock_release(tasks->full);
+				sem_release(tasks->full);
 				return 0;
 			}
 			
-			cdp_lock_get(tasks->full);
+			sem_get(tasks->full);
 			
 			if (*shutdownx) {
-				cdp_lock_release(tasks->full);
+				sem_release(tasks->full);
 				return 0;
 			}
 			
@@ -321,7 +305,8 @@ void cb_remove(cdp_cb_t *cb)
 		tasks->queue[tasks->end].p = p;
 		tasks->queue[tasks->end].msg = msg;
 		tasks->end = (tasks->end+1) % tasks->max;
-		cdp_lock_release(tasks->empty);
+		if (sem_release(tasks->empty<0))
+			LOG(L_WARN,"WARN:put_task(): Error releasing tasks->empty semaphore > %s!\n",strerror(errno));
 		lock_release(tasks->lock);
 		return 1;
 	}
@@ -343,14 +328,14 @@ task_t take_task()
 		lock_release(tasks->lock);
 //		LOG(L_CRIT,"-4-\n");
 		if (*shutdownx) {
-			cdp_lock_release(tasks->empty);
+			sem_release(tasks->empty);
 			return t;
 		}
 //		LOG(L_ERR,"-");
-		cdp_lock_get(tasks->empty);
+		sem_get(tasks->empty);
 //		LOG(L_CRIT,"-5-\n");
 		if (*shutdownx) {
-			cdp_lock_release(tasks->empty);
+			sem_release(tasks->empty);
 			return t;
 		}
 		
@@ -362,7 +347,8 @@ task_t take_task()
 	t = tasks->queue[tasks->start];
 	tasks->queue[tasks->start].msg = 0;
 	tasks->start = (tasks->start+1) % tasks->max;
-	cdp_lock_release(tasks->full);
+	if (sem_release(tasks->full)<0)
+		LOG(L_WARN,"WARN:take_task(): Error releasing tasks->full semaphore > %s!\n",strerror(errno));
 	lock_release(tasks->lock);
 	return t;
 }
@@ -374,9 +360,10 @@ task_t take_task()
  */
 void worker_poison_queue()
 {
-//	int i;
-//	for(i=0;i<config->workers;i++)
-	cdp_lock_release(tasks->empty);
+	int i;
+	for(i=0;i<config->workers;i++)
+		if (sem_release(tasks->empty<0))
+			LOG(L_WARN,"WARN:worker_poison_queue(): Error releasing tasks->empty semaphore > %s!\n",strerror(errno));
 }
 
 

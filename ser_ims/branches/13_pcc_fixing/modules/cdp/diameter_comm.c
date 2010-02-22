@@ -62,6 +62,8 @@
 #include "api_process.h"
 #include "routing.h"
 #include "peerstatemachine.h"
+#include "globals.h"
+
 
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
@@ -231,7 +233,8 @@ error:
  */
 void sendrecv_cb(int is_timeout,void *param,AAAMessage *ans)
 {
-	sem_release((gen_sem_t*)param);
+	if (sem_release((gen_sem_t*)param)<0)
+		LOG(L_ERR,"ERROR:sendrecv_cb(): Failed to unlock a transactional sendrecv! > %s\n",strerror(errno));
 }
 
 /**
@@ -272,7 +275,10 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 		}
 
 		/* block until callback is executed */
-		sem_get(sem);		
+		while(sem_get(sem)<0){
+			if (shutdownx&&(*shutdownx)) goto error;
+			LOG(L_WARN,"WARN:AAASendRecvMessage(): interrupted by signal or something > %s\n",strerror(errno));
+		}
 		sem_free(sem);		
 		ans = t->ans;
 		cdp_free_trans(t);
@@ -327,7 +333,10 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 		}
 
 		/* block until callback is executed */
-		sem_get(sem);		
+		while(sem_get(sem)<0){
+			if (shutdownx&&(*shutdownx)) goto error;
+			LOG(L_WARN,"WARN:AAASendRecvMessageToPeer(): interrupted by signal or something > %s\n",strerror(errno));
+		}
 		sem_free(sem);		
 		ans = t->ans;
 		cdp_free_trans(t);
