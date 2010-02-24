@@ -92,7 +92,9 @@ extern str pcscf_record_route_mt_uri;	/**< URI for Record-route terminating */
 extern r_hash_slot *registrar;			/**< the contacts */
 extern int r_hash_size;					/**< records tables parameters 	*/
 
-unsigned int current_spi=5000;					/**< current SPI value */
+gen_lock_t *lock_spi=0;
+unsigned int *current_spi=0;			/**< current SPI value */
+
 extern int pcscf_use_tls;				/**< whether to use or not tls */
 extern int pcscf_tls_port;				/**< PORT for TLS server */
 extern int tls_disable;
@@ -104,7 +106,11 @@ extern int tls_disable;
  */
 unsigned int get_next_spi()
 {
-	return current_spi++;
+	unsigned int spi=0;
+	lock_get(lock_spi);
+		spi = (*current_spi)++;
+	 lock_release(lock_spi);
+	return spi;
 }
 
 

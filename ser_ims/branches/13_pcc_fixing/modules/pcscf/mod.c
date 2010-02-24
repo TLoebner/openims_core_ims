@@ -584,6 +584,9 @@ extern r_hash_slot *registrar;			/**< the contacts */
 
 extern p_dialog_hash_slot *p_dialogs;	/**< the dialogs hash table				*/
 
+extern unsigned int *current_spi;			/**< current SPI value */
+extern gen_lock_t *lock_spi;
+
 
 static str path_str_s={"Path: <",7};
 static str path_str_1={"sip:term@",9};
@@ -742,6 +745,10 @@ static int mod_init(void)
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
 	
+	lock_spi = lock_alloc();
+	lock_spi = lock_init(lock_spi);
+	current_spi = shm_malloc(sizeof(unsigned int));
+	*current_spi = 5000;
 	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
@@ -997,6 +1004,10 @@ static void mod_destroy(void)
         lock_get(pcscf_dialog_count_lock);
         shm_free(pcscf_dialog_count);
         lock_destroy(pcscf_dialog_count_lock);
+        
+        lock_destroy(lock_spi);
+        lock_dealloc(lock_spi);
+        shm_free(current_spi);
 	}
 	
 	if (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) {
