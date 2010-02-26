@@ -100,6 +100,8 @@
 			
 		"cdp_avp",					/**< Module's unique name */
 		
+		WHARF_VERSION"-"WHARF_REVISION,		
+		
 		cdp_avp_init,					/**< Module init function */
 		cdp_avp_child_init,				/**< Module child init function */
 		cdp_avp_destroy,				/**< Module destroy function */

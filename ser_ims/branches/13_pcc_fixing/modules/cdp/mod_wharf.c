@@ -40,6 +40,8 @@ wharf_mod_export_t mod_exports={
 		
 		"cdp",					/**< Module's unique name */
 		
+		WHARF_VERSION"-"WHARF_REVISION,		
+		
 		cdp_init,				/**< Module init function */
 		cdp_child_init,			/**< Module child init function */
 		cdp_destroy,			/**< Module destroy function */
