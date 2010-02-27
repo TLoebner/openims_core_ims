@@ -742,6 +742,42 @@ void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 }
 
 
+int add_vendor_specific_application_id_group(AAAMessage * msg, unsigned int vendor_id, unsigned int auth_app_id)
+{
+	char x[4];
+	AAA_AVP_LIST list_grp={0,0};
+	AAA_AVP *avp;
+	str group = {0,0};
+
+	set_4bytes(x,vendor_id);
+	if(!(avp = AAACreateAVP(AVP_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,
+					x,4, AVP_DUPLICATE_DATA))) goto error;
+	AAAAddAVPToList(&list_grp,avp);
+											
+	set_4bytes(x, auth_app_id);
+	if(!(avp = AAACreateAVP(AVP_Auth_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
+					x,4,AVP_DUPLICATE_DATA))) goto error;
+	AAAAddAVPToList(&list_grp,avp);
+											
+	group = AAAGroupAVPS(list_grp);	
+	if(!group.s || !group.len) goto error;
+	AAAFreeAVPList(&list_grp);
+								
+	if(!(avp = AAACreateAVP(AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
+					group.s, group.len,AVP_DUPLICATE_DATA))) goto error;
+
+	if(!AAAAddAVPToMessage(msg, avp, msg->avpList.tail)) goto error;
+																	
+	shm_free(group.s); group.s = NULL;
+	
+	return 1;
+
+error:
+
+	AAAFreeAVPList(&list_grp);
+	if(group.s) shm_free(group.s);
+	return 0;
+}
 
 void Send_STR(cdp_session_t* s, AAAMessage* msg)
 {
@@ -762,6 +798,12 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 		AAAFreeMessage(&str);
 		return;
 	}
+	if(!add_vendor_specific_application_id_group(str,IMS_vendor_id_3GPP,IMS_Rx)){ 
+		LOG(L_ERR,"ERR:Send_STR(): error adding Vendor-Id-Specific-Application-Id Group!\n");
+		AAAFreeMessage(&str);
+		return;
+	}
+	
 	set_4bytes(x,s->application_id);
 	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(str,avp,str->avpList.tail);
