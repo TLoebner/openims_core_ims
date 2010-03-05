@@ -62,41 +62,12 @@
 #include "api_process.h"
 #include "routing.h"
 #include "peerstatemachine.h"
+#include "globals.h"
+
 
 
 extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 
-				/* TRANSACTIONS */
-				
-/**
- * Create a AAATransaction for the given request.
- * @param app_id - id of the request's application
- * @param cmd_code - request's code
- * @returns the AAATransaction*
- */				
-AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_code)
-{
-	AAATransaction *t;
-	t = shm_malloc(sizeof(AAATransaction));
-	if (!t) return 0;
-	memset(t,0,sizeof(AAATransaction));	
-	t->application_id=app_id;
-	t->command_code=cmd_code;			
-	return t;
-}
-
-/**
- * Free the memory allocated for the AAATransaction.
- * @param trans - the AAATransaction to be deallocated
- * @returns 1 on success, 0 on failure
- */
-int AAADropTransaction(AAATransaction *trans)
-{
-	if (!trans) return 0;
-//	LOG(L_ERR,"\nCALLED HERE %d %d\n",trans->done,trans->with_callback);
-	shm_free(trans);
-	return 1;
-}
 
 
 				/* CALLBACKS */
@@ -189,7 +160,7 @@ AAAReturnCode AAASendMessage(
 	/* only add transaction following when required */
 	if (callback_f){
 		if (is_req(message))
-			add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
+			cdp_add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessage(): can't add transaction callback for answer.\n");
 	}
@@ -233,7 +204,7 @@ AAAReturnCode AAASendMessageToPeer(
 	/* only add transaction following when required */
 	if (callback_f){
 		if (is_req(message))
-			add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
+			cdp_add_trans(message,callback_f,callback_param,config->transaction_timeout,1);
 		else
 			LOG(L_ERR,"ERROR:AAASendMessageToPeer(): can't add transaction callback for answer.\n");
 	}
@@ -262,7 +233,8 @@ error:
  */
 void sendrecv_cb(int is_timeout,void *param,AAAMessage *ans)
 {
-	lock_release((gen_lock_t*)param);
+	if (sem_release((gen_sem_t*)param)<0)
+		LOG(L_ERR,"ERROR:sendrecv_cb(): Failed to unlock a transactional sendrecv! > %s\n",strerror(errno));
 }
 
 /**
@@ -277,7 +249,7 @@ void sendrecv_cb(int is_timeout,void *param,AAAMessage *ans)
 AAAMessage* AAASendRecvMessage(AAAMessage *message)
 {
 	peer *p;
-	gen_lock_t *lock;
+	gen_sem_t *sem=0;
 	cdp_trans_t *t;
 	AAAMessage *ans;
 	
@@ -293,34 +265,32 @@ AAAMessage* AAASendRecvMessage(AAAMessage *message)
 	
 	
 	if (is_req(message)){
-		lock = lock_alloc();
-		lock = lock_init(lock);
-		lock_get(lock);
-		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
+		sem_new(sem,0);
+		t = cdp_add_trans(message,sendrecv_cb,(void*)sem,config->transaction_timeout,0);
 
 //		if (!peer_send_msg(p,message)) {
 		if (!sm_process(p,Send_Message,message,0,0)){	
-			lock_destroy(lock);
-			lock_dealloc((void*)lock);	
+			sem_free(sem);	
 			goto error;
 		}
 
 		/* block until callback is executed */
-		lock_get(lock);		
-		lock_destroy(lock);
-		lock_dealloc((void*)lock);
+		while(sem_get(sem)<0){
+			if (shutdownx&&(*shutdownx)) goto error;
+			LOG(L_WARN,"WARN:AAASendRecvMessage(): interrupted by signal or something > %s\n",strerror(errno));
+		}
+		sem_free(sem);		
 		ans = t->ans;
-		free_trans(t);
+		cdp_free_trans(t);
 		return ans;
-	}
-	else
-	{
+	} else {
 		LOG(L_ERR,"ERROR:AAASendRecvMessage(): can't add wait for answer to answer.\n");
 		goto error;
 	}
 
 		
 error:	
+out_of_memory:
 	AAAFreeMessage(&message);
 	return 0;
 }
@@ -337,7 +307,7 @@ error:
 AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 {
 	peer *p;
-	gen_lock_t *lock;
+	gen_sem_t *sem;
 	cdp_trans_t *t;
 	AAAMessage *ans;
 	
@@ -353,34 +323,32 @@ AAAMessage* AAASendRecvMessageToPeer(AAAMessage *message, str *peer_id)
 	
 	
 	if (is_req(message)){
-		lock = lock_alloc();
-		lock = lock_init(lock);
-		lock_get(lock);
-		t = add_trans(message,sendrecv_cb,(void*)lock,config->transaction_timeout,0);
+		sem_new(sem,0);
+		t = cdp_add_trans(message,sendrecv_cb,(void*)sem,config->transaction_timeout,0);
 
 //		if (!peer_send_msg(p,message)) {
 		if (!sm_process(p,Send_Message,message,0,0)){	
-			lock_destroy(lock);
-			lock_dealloc((void*)lock);	
+			sem_free(sem);				
 			goto error;
 		}
 
 		/* block until callback is executed */
-		lock_get(lock);		
-		lock_destroy(lock);
-		lock_dealloc((void*)lock);
+		while(sem_get(sem)<0){
+			if (shutdownx&&(*shutdownx)) goto error;
+			LOG(L_WARN,"WARN:AAASendRecvMessageToPeer(): interrupted by signal or something > %s\n",strerror(errno));
+		}
+		sem_free(sem);		
 		ans = t->ans;
-		free_trans(t);
+		cdp_free_trans(t);
 		return ans;
-	}
-	else
-	{
+	} else {
 		LOG(L_ERR,"ERROR:AAASendRecvMessageToPeer(): can't add wait for answer to answer.\n");
 		goto error;
 	}
 
 		
 error:	
+out_of_memory:
 	AAAFreeMessage(&message);
 	return 0;
 }

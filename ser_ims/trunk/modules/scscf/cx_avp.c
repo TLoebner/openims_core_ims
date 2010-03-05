@@ -1161,7 +1161,7 @@ int Cx_get_auth_data_item_answer(AAAMessage *msg, AAA_AVP **auth_data,
 	}
 	
 	/* NASS Bundled */
-	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Line_Identifier, IMS_vendor_id_ETSI,0);
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_ETSI_Line_Identifier, IMS_vendor_id_ETSI,0);
 	if (!avp||!avp->data.s) {line_identifier->s=0;line_identifier->len=0;}
 	else *line_identifier = avp->data;
 	

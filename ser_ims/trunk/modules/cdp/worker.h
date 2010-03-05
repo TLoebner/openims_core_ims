@@ -76,8 +76,8 @@ typedef struct {
 	int end;			/**< end position in the queue array (index of the youngest task) */
 	int max;			/**< size of the queue array */
 	task_t *queue;		/**< array holding the tasks */
-	int empty;			/**< id of semaphore for signaling an empty queue */
-	int full;			/**< id of semaphore for signaling an full queue */
+	gen_sem_t *empty;	/**< id of semaphore for signaling an empty queue */
+	gen_sem_t *full;	/**< id of semaphore for signaling an full queue */
 } task_queue_t;
 
 /** callback function to be called on message processing */

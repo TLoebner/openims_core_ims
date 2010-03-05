@@ -57,6 +57,7 @@
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../cdp/cdp_load.h"
+#include "../cdp_avp/mod_export.h"
 #include "sdp_util.h"
 
 
@@ -79,30 +80,35 @@ typedef struct _bandwidth {
 		int bRR;		
 } bandwidth;
 
-
-
-
+/*helper*/
+uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port);
+int PCC_add_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version);
 /*just headers*/
 
+int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
+	int flags,int vendorid,int data_do,const char *func);
+
+int PCC_add_vendor_specific_application_id_group(AAAMessage *msg, unsigned int vendorid, unsigned int auth_app_id);
 int PCC_add_destination_realm(AAAMessage *msg, str data);
-int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
 inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag);
-AAA_AVP *PCC_create_media_subcomponent(int number,
-									char *proto, char *ipA,
-									char *portA, char *ipB,
-									char *portB ,char *options,int atributes);
-inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,
+AAA_AVP *PCC_create_media_subcomponent(int number, char *proto, 
+					str ipA, unsigned int intportA, 
+					str ipB, unsigned int intportB ,
+					char *options,int atributes);
+inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,
 											str sdpB,int number,AAA_AVP **media_sub_component,int tag);
-											
+int PCC_AAR_add_avps_for_register(AAAMessage *msg, struct sip_uri * parsed_uri);
+int PCC_add_media_component_description_for_register(AAAMessage *msg, str ip, unsigned short port, uint16_t version);
 inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag);
 AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction);
 
 int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number);
-int extract_token(char *line,char *token,int max,int number);
+int extract_token(char *line, str *token,int max,int number);
 int extract_bandwidth(bandwidth *bw,str sdp,char *start);
 int extract_id(struct sip_msg *r,int tag,str *identification);
 int check_atributes(str sdpbody,char *mline);
-int is_a_port(char *port);
+int is_a_port(str port);
 /*int is_an_address(char *ad);*/
-inline int PCC_get_result_code(AAAMessage *msg, int *data);
+inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data);
+inline int PCC_get_result_code(AAAMessage *msg, unsigned int *data);
 #endif /*__PCC_AVP_H*/

@@ -225,7 +225,7 @@ void accept_loop()
 
 		nready = select( max_sock+1, &listen_set, 0, 0, &timeout);
 		if (nready == 0){
-			LOG(L_DBG,"DBG:accept_loop(): No connection attempts\n");
+			LOG(L_MEM,"DBG:accept_loop(): No connection attempts\n");
 			continue;
 		}
 		if (nready == -1) {

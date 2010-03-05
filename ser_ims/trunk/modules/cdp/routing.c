@@ -87,15 +87,15 @@ peer* get_first_connected_route(routing_entry *r,int app_id,int vendor_id)
 	LOG(L_DBG,"get_first_connected_route in list %p for app_id %d and vendor_id %d\n",
 		r,app_id,vendor_id);
 	for(i=r;i;i=i->next){
-		p = get_peer_by_fqdn(&(r->fqdn));
+		p = get_peer_by_fqdn(&(i->fqdn));
 		if (!p)
 			LOG(L_DBG,"The peer %.*s does not seem to be connected or configured\n",
-				r->fqdn.len,r->fqdn.s);
+				i->fqdn.len,i->fqdn.s);
 		else
-			LOG(L_DBG,"The peer %.*s state is %s\n",r->fqdn.len,r->fqdn.s,
+			LOG(L_DBG,"The peer %.*s state is %s\n",i->fqdn.len,i->fqdn.s,
 				(p->state==I_Open||p->state==R_Open)?"opened":"closed");
 		if (p && (p->state==I_Open || p->state==R_Open) && peer_handles_application(p,app_id,vendor_id)) {			
-			LOG(L_DBG,"The peer %.*s matches - will forward there\n",r->fqdn.len,r->fqdn.s);
+			LOG(L_DBG,"The peer %.*s matches - will forward there\n",i->fqdn.len,i->fqdn.s);
 			return p;
 		}
 	}

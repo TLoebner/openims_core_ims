@@ -252,14 +252,20 @@ typedef enum {
 	AVP_Framed_IP_Address             =	   8,	
 	AVP_Class                         =   25,
 	AVP_Session_Timeout               =   27,
+	AVP_Called_Station_Id			  =   30,
 	AVP_Proxy_State                   =   33,
+	AVP_Acct_Session_Id				  =   44,
+	AVP_Acct_Multi_Session_Id		  =   50,
+	AVP_Event_Timestamp               =   55,
 	AVP_NAS_Port_Type                 =   61,
+	AVP_Acct_Interim_Interval         =   85,	
 	AVP_Framed_Interface_Id           =   96,	
 	AVP_Framed_IPv6_Prefix            =   97,
 	AVP_Host_IP_Address               =  257,
 	AVP_Auth_Application_Id           =  258,
 	AVP_Acct_Application_Id           =  259,	
 	AVP_Vendor_Specific_Application_Id=  260,
+	AVP_Redirect_Host_Usage			  =  261,
 	AVP_Redirect_Max_Cache_Time       =  262,
 	AVP_Session_Id                    =  263,
 	AVP_Origin_Host                   =  264,
@@ -269,24 +275,48 @@ typedef enum {
 	AVP_Result_Code                   =  268,
 	AVP_Product_Name                  =  269,
 	AVP_Session_Binding               =  270,
+	AVP_Session_Server_Failover		  =  271,
+	AVP_Multi_Round_Time_Out          =  272,
 	AVP_Disconnect_Cause              =  273,
 	AVP_Auth_Request_Type             =  274,
 	AVP_Auth_Grace_Period             =  276,
 	AVP_Auth_Session_State            =  277,
 	AVP_Origin_State_Id               =  278,
+	AVP_Failed_AVP					  =  279,
 	AVP_Proxy_Host                    =  280,
 	AVP_Error_Message                 =  281,
-	AVP_Record_Route                  =  282,
+	AVP_Route_Record                  =  282,
 	AVP_Destination_Realm             =  283,
 	AVP_Proxy_Info                    =  284,
 	AVP_Re_Auth_Request_Type          =  285,
+	AVP_Accounting_Sub_Session_Id	  =  287,
 	AVP_Authorization_Lifetime        =  291,
 	AVP_Redirect_Host                 =  292,
 	AVP_Destination_Host              =  293,
+	AVP_Error_Reporting_Host		  =  294,
 	AVP_Termination_Cause             =  295,
 	AVP_Origin_Realm                  =  296,
 	AVP_Experimental_Result			  =  297,
-	AVP_Experimental_Result_Code      =  298
+	AVP_Experimental_Result_Code      =  298,
+	AVP_Inband_Security_Id			  =  299,
+	AVP_E2E_Sequence				  =  300,
+	
+	AVP_CC_Request_Number             =  415, //RFC4006
+	AVP_CC_Request_Type               =  416, //RFC4006
+	AVP_Final_Unit_Indication		  =  430, //RFC4006
+	AVP_Rating_Group				  =  432, //RFC4006
+	AVP_Service_Identifier			  =  439, //RFC4006
+	AVP_Subscription_Id				  =  443, //RFC4006
+	AVP_Subscription_Id_Data		  =  444, //RFC4006
+	AVP_Final_Unit_Action			  =  449, //RFC4006
+	AVP_Subscription_Id_Type		  =  450, //RFC4006
+	AVP_User_Equipment_Info	          =  458, //RFC4006
+	AVP_User_Equipment_Info_Type      =  459, //RFC4006
+	AVP_User_Equipment_Info_Value	  =  460, //RFC4006
+	AVP_Accounting_Record_Type        =  480,
+	AVP_Accounting_Realtime_Required  =  483,
+	AVP_Accounting_Record_Number      =  485,
+	
 }AAA_AVPCodeNr;
 
 

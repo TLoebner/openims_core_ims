@@ -69,6 +69,7 @@
 #include "release_call.h"
 #include "ims_pm.h"
 #include "pcc.h"
+#include "em_numbers.h"
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -582,6 +583,13 @@ void free_p_dialog(p_dialog *d)
 	if (d->dialog_s) tmb.free_dlg(d->dialog_s);
 	if (d->dialog_c) tmb.free_dlg(d->dialog_c);
 	if (d->refresher.s) shm_free(d->refresher.s);
+	if (d->em_info.ecscf_uri.s)
+		shm_free(d->em_info.ecscf_uri.s);
+	if (d->em_info.service_urn.s)
+		shm_free(d->em_info.service_urn.s);
+	if (d->pcc_session_id.s) {
+		shm_free(d->pcc_session_id.s);
+	}
 	shm_free(d);
 	p_dialog_count_decrement(); 
 }
@@ -615,8 +623,10 @@ void print_p_dialogs(int log_level)
 					d->transport,d->host.len,d->host.s,d->port);
 				LOG(log_level,"INF:"M_NAME":\t\tMethod:["ANSI_MAGENTA"%d"ANSI_GREEN
 					"] State:["ANSI_MAGENTA"%d"ANSI_GREEN
+					"] SOS:["ANSI_MAGENTA"%s"ANSI_GREEN
 					"] Exp:["ANSI_MAGENTA"%4d"ANSI_GREEN"]\n",
 					d->method,d->state,
+					(d->em_info.em_dialog==1)?"X":" ",
 					(int)(d->expires - d_time_now));	
 				for(j=0;j<d->routes_cnt;j++)
 					LOG(log_level,"INF:"M_NAME":\t\t RR: <"ANSI_YELLOW"%.*s"ANSI_GREEN">\n",			
@@ -851,6 +861,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	struct hdr_field *h;
 	unsigned int hash;
 	enum p_dialog_direction dir;
+	str service_urn = {0,0};
 	
 	dir = get_dialog_direction(str1);
 	
@@ -878,7 +889,25 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
+	d->em_info.em_dialog = NON_EMERG_DLG;
+	
+	if(dir == DLG_MOBILE_ORIGINATING){
 
+		urn_t urn_type = is_emerg_ruri(msg->first_line.u.request.uri, &service_urn);
+		if(urn_type == NOT_URN || urn_type == NOT_EM_URN){
+			LOG(L_DBG,"DBG:"M_NAME":P_save_dialog: no corresponding "
+				"emergency URN for the dialog\n");
+		}else{
+			d->em_info.em_dialog = EMERG_DLG;
+			//the returned service_urn includes "urn:"
+			STR_SHM_DUP(d->em_info.service_urn, service_urn, "P_save_dialog");
+			LOG(L_INFO,"INFO:"M_NAME":P_save_dialog: service urn is %.*s\n",
+					d->em_info.service_urn.len,
+					d->em_info.service_urn.s);
+
+		}
+	}
+	
 	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);
 
 	ses_exp = cscf_get_session_expires_body(msg, &h);
@@ -903,9 +932,6 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	ruri.len = snprintf(buf2,256,"<%.*s>",x.len,x.s);
 	ruri.s = buf2;
 		
-	// parse rr before t_relay - just because this will be used later and the memory will be copied pkg->shm->pkg
-	cscf_get_first_route(msg,0);	
-	
 	tmb.new_dlg_uac(&call_id,
 					&tag,
 					d->first_cseq,
@@ -1007,7 +1033,7 @@ int update_dialog_on_reply(struct sip_msg *msg, p_dialog *d)
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
 			if (!d->is_releasing){
-				expires = cscf_get_expires_hdr(msg);
+				expires = cscf_get_expires_hdr(msg,0);
 				if (expires >= 0)
 				{
 					d->expires = d_act_time()+expires;	
@@ -1135,7 +1161,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 	if (!d){
 		if (msg->first_line.type==SIP_REQUEST &&
 			msg->first_line.u.request.method.len == 3 && 
-			strncasecmp(msg->first_line.u.request.method.s,"ACK",3)){
+			strncasecmp(msg->first_line.u.request.method.s,"ACK",3) == 0){
 			/* to skip the ACK after a 4xx when the dialog was dropped already*/
 			return CSCF_RETURN_TRUE;
 		}else{
@@ -1194,7 +1220,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		else
 		{
 			if(!d->is_releasing) {
-				expires = cscf_get_expires_hdr(msg);
+				expires = cscf_get_expires_hdr(msg,0);
 				if (expires >= 0) 
 				{
 					LOG(L_INFO,"DBG:"M_NAME":P_update_dialog(%.*s): Update expiration time to %d via Expire header 2\n",call_id.len,call_id.s,expires);
@@ -1250,7 +1276,7 @@ int P_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
 					if(!d->is_releasing) {
-						expires = cscf_get_expires_hdr(msg);
+						expires = cscf_get_expires_hdr(msg,0);
 						if (expires >= 0)
 						{
 							d->expires = d_act_time()+expires;
@@ -1331,6 +1357,7 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	int port,transport;
 	struct sip_msg *req;
 	enum p_dialog_direction dir;
+	str pcc_session_id={0,0};
 	
 	dir = get_dialog_direction(str1);
 	
@@ -1359,15 +1386,18 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 
 	hash = d->hash;
 	
-	if (d->pcc_session)
-	{
-		terminate_pcc_session(d->pcc_session);
-		d->pcc_session=0;
-	}
-	
+	if (d->pcc_session_id.s){
+		pcc_session_id = d->pcc_session_id;
+		d->pcc_session_id.s = 0;
+		d->pcc_session_id.len = 0;
+	}	
 	del_p_dialog(d);
-		
 	d_unlock(hash);
+
+	if (pcc_session_id.s){
+		terminate_pcc_session(pcc_session_id);
+		shm_free(pcc_session_id.s);
+	}
 	
 	print_p_dialogs(L_INFO);
 	

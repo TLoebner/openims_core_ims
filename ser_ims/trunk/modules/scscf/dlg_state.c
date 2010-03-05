@@ -641,7 +641,7 @@ static inline int find_dialog_aor(struct sip_msg *msg,enum s_dialog_direction d,
 static inline enum s_dialog_direction find_dialog_route_dir(struct sip_msg *msg)
 {
 	str r;	
-	r = cscf_get_first_route(msg,0);
+	r = cscf_get_first_route(msg,0,0);
 	
 //	LOG(L_ERR,"DBG:"M_NAME":find_dialog_route_dir(): Route <%.*s>\n",r.len,r.s);
 //		scscf_record_route_mo_uri.len,scscf_record_route_mo_uri.s,
@@ -955,7 +955,7 @@ int update_dialog_on_reply(struct sip_msg *msg, s_dialog *d)
 	{
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
-			expires = cscf_get_expires_hdr(msg);
+			expires = cscf_get_expires_hdr(msg,0);
 			if (expires >= 0)
 			{
 			     d->expires = d_act_time()+expires;
@@ -1129,7 +1129,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		}
 		else
 		{
-			expires = cscf_get_expires_hdr(msg);
+			expires = cscf_get_expires_hdr(msg,0);
 			if (expires >= 0)
 			        d->expires = d_act_time()+expires;
 			else
@@ -1213,7 +1213,7 @@ int S_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 					}
 					else if (req && req->first_line.u.request.method.len==9 &&
 						strncasecmp(req->first_line.u.request.method.s,"SUBSCRIBE",9)==0){
-						expires = cscf_get_expires_hdr(msg);
+						expires = cscf_get_expires_hdr(msg,0);
 						if (expires >= 0)
 							d->expires = d_act_time()+expires;
 						else

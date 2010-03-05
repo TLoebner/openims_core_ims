@@ -99,11 +99,8 @@ int get_result_code(AAAMessage* msg)
 							goto finish;
 						}
 			 	}
-				AAAFreeAVPList(&list);
-			 
-					
+				AAAFreeAVPList(&list);			 					
 			}
-	
 		}
 finish:
 		return rc;
@@ -133,9 +130,100 @@ error:
         return STATE_MAINTAINED;
 }
 
+/**
+ * Retrieve the Session-Timeout, Auth-Lifetime and Auth-Grace-Period AVPs and update the session timers accordingly
+ * @param x
+ * @param msg
+ */
+void update_auth_session_timers(cdp_auth_session_t *x,AAAMessage *msg)
+{
+	AAA_AVP *avp;
+	uint32_t session_timeout=0,grace_period=0,auth_lifetime=0;
+	
+	avp = AAAFindMatchingAVP(msg,0,AVP_Auth_Grace_Period,0,0);
+	if (avp &&avp->data.len==4){ 
+		grace_period = get_4bytes(avp->data.s);
+		x->grace_period = grace_period;
+	}
+	avp = AAAFindMatchingAVP(msg,0,AVP_Authorization_Lifetime,0,0);
+	if (avp &&avp->data.len==4) {
+		auth_lifetime = get_4bytes(avp->data.s);
+		switch(auth_lifetime){
+			case 0:
+				x->lifetime = time(0);
+				break;
+			case 0xFFFFFFFF:
+				x->lifetime = -1;
+				break;
+			default:
+				x->lifetime = time(0)+auth_lifetime;
+		}
+		if (x->timeout!=-1 && x->timeout<x->lifetime) x->timeout = x->lifetime+x->grace_period;
+	}
+	avp = AAAFindMatchingAVP(msg,0,AVP_Session_Timeout,0,0);
+	if (avp &&avp->data.len==4) {
+		session_timeout = get_4bytes(avp->data.s);
+		switch(session_timeout){
+			case 0:
+				x->timeout = time(0)+config->default_auth_session_timeout;
+				break;
+			case 0xFFFFFFFF:
+				x->timeout = -1;
+				break;
+			default:
+				x->timeout = time(0)+session_timeout;
+		}
+		if (!x->lifetime) x->lifetime = x->timeout;
+	}
+}
+
+/**
+ * Add Session-Timeout, Auth-Lifetime and Auth-Grace-Period AVPs to outgoing messages in case they are missing
+ * @param x
+ * @param msg
+ */
+void add_auth_session_timers(cdp_auth_session_t *x,AAAMessage *msg)
+{
+	AAA_AVP *avp;
+	char data[4];
+	uint32_t v;
+	
+	avp = AAAFindMatchingAVP(msg,0,AVP_Authorization_Lifetime,0,0);
+	if (!avp){ 
+		if (x->lifetime==-1) v=0xFFFFFFFF;
+		else {
+			v = x->lifetime-time(0);
+			if (v<0) v = 0;
+		}
+		set_4bytes(data,v);
+		avp = AAACreateAVP(AVP_Authorization_Lifetime,AAA_AVP_FLAG_MANDATORY,0,data,4,AVP_DUPLICATE_DATA);
+		if (avp) AAAAddAVPToMessage(msg,avp,0);
+	}
+	if (x->lifetime!=-1){
+		avp = AAAFindMatchingAVP(msg,0,AVP_Auth_Grace_Period,0,0);
+		if (!avp){ 
+			v = x->grace_period;
+			set_4bytes(data,v);
+			avp = AAACreateAVP(AVP_Auth_Grace_Period,AAA_AVP_FLAG_MANDATORY,0,data,4,AVP_DUPLICATE_DATA);
+			if (avp) AAAAddAVPToMessage(msg,avp,0);
+		}
+	}
+	avp = AAAFindMatchingAVP(msg,0,AVP_Session_Timeout,0,0);
+	if (!avp){ 
+		if (x->timeout==-1) v=0xFFFFFFFF;
+		else {
+			v = x->timeout-time(0);
+			if (v<0) v = 0;
+		}
+		set_4bytes(data,v);
+		avp = AAACreateAVP(AVP_Session_Timeout,AAA_AVP_FLAG_MANDATORY,0,data,4,AVP_DUPLICATE_DATA);
+		if (avp) AAAAddAVPToMessage(msg,avp,0);
+	}
+}
 
 /**
  * stateful client state machine
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
  * @param auth - AAAAuthSession which uses this state machine
  * @param ev   - Event
  * @param msg  - AAAMessage
@@ -160,10 +248,8 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 	}
 	x = &(s->u.auth);
 	
-	// I dont want the session to expire!
-	x->timeout+=config->tc*30;
-	x->lifetime=x->timeout+config->tc*32;
-	
+	if (s->cb) (s->cb)(event,s);
+
 	//if (x && x->state && msg) LOG(L_ERR,"auth_client_statefull_sm_process [event %i] [state %i] endtoend %u hopbyhop %u\n",event,x->state,msg->endtoendId,msg->hopbyhopId);
 
 	switch(x->state){
@@ -172,6 +258,8 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 				case AUTH_EV_SEND_REQ:
 					s->application_id = msg->applicationId;
 					s->u.auth.state = AUTH_ST_PENDING;
+					update_auth_session_timers(x,msg);
+					add_auth_session_timers(x,msg);
 					//LOG(L_INFO,"state machine: i was in idle and i am going to pending\n");
 					break;				
 				default:
@@ -192,13 +280,20 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 			switch(event){
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
+					update_auth_session_timers(x,msg);
 					//LOG(L_INFO,"state machine: i was in pending and i am going to open\n");
 					break;
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in pending and i am going to discon\n");
 					Send_STR(s,msg);
-					break;										
+					break;
+				case AUTH_EV_SESSION_TIMEOUT:
+				case AUTH_EV_SERVICE_TERMINATED:
+				case AUTH_EV_SESSION_GRACE_TIMEOUT:
+					Session_Cleanup(s,NULL);					
+					break;					
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_stateless_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -220,35 +315,43 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					// this is not in the state machine but I (Alberto Diez) need it
 					if (msg->commandCode==IMS_STR) 
 						s->u.auth.state = AUTH_ST_DISCON;
-					else
+					else {
 						s->u.auth.state = AUTH_ST_OPEN;
-					break;				
+						add_auth_session_timers(x,msg);
+					}
+					break;		
+					
 				case AUTH_EV_RECV_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
+					update_auth_session_timers(x,msg);					
 					//LOG(L_INFO,"state machine: i was in open and i am going to open\n");
 					break;
+					
 				case AUTH_EV_RECV_ANS_UNSUCCESS:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
-					break;										
+					break;
+					
 				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SERVICE_TERMINATED:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
-					Send_STR(s,msg);
+					Send_STR(s,msg);					
+					break;
 					
-					break;		
 				case AUTH_EV_SEND_ASA_SUCCESS:
 					x->state = AUTH_ST_DISCON;
 					//LOG(L_INFO,"state machine: i was in open and i am going to discon\n");
-					Send_STR(s,msg);
-					
+					Send_STR(s,msg);					
 					break;
+					
 				case AUTH_EV_SEND_ASA_UNSUCCESS:
 					x->state = AUTH_ST_OPEN;
+					update_auth_session_timers(x,msg);
 					//LOG(L_INFO,"state machine: i was in open and i am going to open\n");
-					break;	
+					break;
+					
 				case AUTH_EV_RECV_ASR: 
 					// two cases , client will comply or will not
 					// our client is very nice and always complys.. because
@@ -257,7 +360,8 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					x->state = AUTH_ST_DISCON;
 					Send_ASA(s,msg);
 					Send_STR(s,msg);
-					break;			
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -271,10 +375,12 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					//LOG(L_INFO,"state machine: i was in discon and i am going to discon\n");
 					Send_ASA(s,msg);
 					break;
+					
 				// Just added this because it might happen if the other peer doesnt 
 				// send a valid STA, then the session stays open forever...
 				// We dont accept that... we have lifetime+grace_period for that
 				// This is not in the Diameter RFC ...	
+				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 				// thats the addition
 				case AUTH_EV_RECV_STA:
@@ -284,8 +390,10 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 					// If I register a ResponseHandler then i Free the STA there not here..
 					// but i dont have interest in that now..				
 					Session_Cleanup(s,NULL);
+					s = 0;
 					rv=1;
-					break; 	
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -295,12 +403,20 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}
+	if (s) {
+		if (s->cb) (s->cb)(AUTH_EV_SESSION_MODIFIED,s);
+		AAASessionsUnlock(s->hash);
+	}
 	return rv;
 }
 
 
 /**
  * Authorization Server State-Machine - Statefull
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
+ * @param s
+ * @param event
+ * @param msg
  */
 inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
@@ -309,9 +425,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	if (!s) return;
 	x = &(s->u.auth);
 	
-	// I dont want the session to expire!
-	x->timeout+=config->tc*30;
-	x->lifetime=x->timeout+config->tc*2;
+	if (s->cb) (s->cb)(event,s);			
 
 	switch(x->state){
 		case AUTH_ST_IDLE:
@@ -325,11 +439,25 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					// so no big deal
 					// but this is not the Diameter RFC...
 					x->state = AUTH_ST_OPEN;
+					// execute the cb here because we won't have a chance later
+					if (s->cb) (s->cb)(AUTH_EV_SESSION_MODIFIED,s);			
+					// Don't unlock the session hash table because the session is returned to the user
+					// This can only be called from the AAACreateServerAuthSession()!
+					s=0;
 					break;
 				case AUTH_EV_SEND_STA:
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
+					
+				/* Just in case we have some lost sessions */	
+				case AUTH_EV_SESSION_TIMEOUT:
+				case AUTH_EV_SESSION_GRACE_TIMEOUT:					
+					Session_Cleanup(s,msg);
+					s = 0;
+					break;
+					
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
 						event,auth_states[x->state]);				
@@ -353,10 +481,13 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 					break;
 				case AUTH_EV_SEND_ANS_SUCCESS:
 					x->state = AUTH_ST_OPEN;
+					update_auth_session_timers(x,msg);
+					add_auth_session_timers(x,msg);
 					break;
 				case AUTH_EV_SEND_ANS_UNSUCCESS:
 					x->state = AUTH_ST_IDLE;
-					Session_Cleanup(s,msg);					
+					Session_Cleanup(s,msg);	
+					s = 0;
 					break;
 				case AUTH_EV_SEND_ASR:
 					x->state = AUTH_ST_DISCON;
@@ -365,11 +496,13 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state=AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				case AUTH_EV_SEND_STA:
 					LOG(L_ERR,"SENDING STA!!!\n");
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -394,6 +527,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SEND_STA:
 					x->state = AUTH_ST_IDLE;
 					Session_Cleanup(s,msg);
+					s = 0;
 					break;
 				default:
 					LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received invalid event %d while in state %s!\n",
@@ -405,6 +539,10 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 			LOG(L_ERR,"ERR:auth_client_statefull_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}	
+	if (s) {
+		if (s->cb) (s->cb)(AUTH_EV_SESSION_MODIFIED,s);			
+		AAASessionsUnlock(s->hash);
+	}
 }
 
 
@@ -412,7 +550,11 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 
 /** 
  * Authorization Client State-Machine - Stateless
- */ 
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
+ * @param s
+ * @param event
+ * @param msg
+ */
 inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMessage *msg)
 {
 	cdp_auth_session_t *x;
@@ -430,6 +572,7 @@ inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 						event,auth_states[x->state]);				
 			}
 			break;
+			
 		case AUTH_ST_PENDING:
 			if (!is_req(msg)){
 				rc = get_result_code(msg);
@@ -450,6 +593,7 @@ inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 						event,auth_states[x->state]);				
 			}
 			break;
+			
 		case AUTH_ST_OPEN:
 			switch(event){
 				case AUTH_EV_SESSION_TIMEOUT:
@@ -463,16 +607,23 @@ inline void auth_client_stateless_sm_process(cdp_session_t* s, int event, AAAMes
 						event,auth_states[x->state]);				
 			}
 			break;
+			
 		default:
 			LOG(L_ERR,"ERR:auth_client_stateless_sm_process(): Received event %d while in invalid state %d!\n",
 				event,x->state);
 	}	
+	if (s) AAASessionsUnlock(s->hash);
 }
 
 /**
  * Authorization Server State-Machine - Stateless
+ * \Note - should be called with a lock on the session and will unlock it - do not use it after!
+ * 
+ * @param auth
+ * @param event
+ * @param msg
  */
-inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAAMessage* msg)
+inline void auth_server_stateless_sm_process(cdp_session_t* s, int event, AAAMessage* msg)
 {
 	/* empty - no state change, anyway */
 /*
@@ -493,72 +644,146 @@ inline void auth_server_stateless_sm_process(cdp_session_t* auth, int event, AAA
 				event,x->state);
 	}
 */
+	if (s) AAASessionsUnlock(s->hash);
+}
+
+/* copies the Origin-Host AVP from the src message in a Destination-Host AVP in the dest message
+ * copies the Origin-Realm AVP from the src message in a Destination-Realm AVP in the dest message
+ *
+ */
+int dup_routing_avps(AAAMessage* src, AAAMessage *dest){
+
+	AAA_AVP * avp;
+	str dest_host, dest_realm;
+
+	avp = AAAFindMatchingAVP(src,src->avpList.head,AVP_Origin_Host,0,AAA_FORWARD_SEARCH);
+	if(avp && avp->data.s && avp->data.len) {
+		LOG(L_DBG,"DBG:dup_routing_avps: Origin Host AVP present, duplicating %.*s\n",
+				avp->data.len, avp->data.s);
+		dest_host = avp->data;
+		avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
+			dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed creating Destination Host avp\n");
+			goto error;
+		}
+		if (AAAAddAVPToMessage(dest,avp,dest->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed adding Destination Host avp to message\n");
+			AAAFreeAVP(&avp);
+			goto error;
+		}
+	}
+
+	avp = AAAFindMatchingAVP(src,src->avpList.head,AVP_Origin_Realm,0,AAA_FORWARD_SEARCH);
+	if(avp && avp->data.s && avp->data.len) {
+		LOG(L_DBG,"DBG:dup_routing_avps: Origin Realm AVP present, duplicating %.*s\n",
+				avp->data.len, avp->data.s);
+		dest_realm = avp->data;
+		avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
+			dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
+		if (!avp) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed creating Destination Host avp\n");
+			goto error;
+		}
+		if (AAAAddAVPToMessage(dest,avp,dest->avpList.tail)!=AAA_ERR_SUCCESS) {
+			LOG(L_ERR,"ERR:dup_routing_avps: Failed adding Destination Host avp to message\n");
+			AAAFreeAVP(&avp);
+			goto error;
+		}
+	}
+
+	return 1;
+error:
+	return 0;
+
 }
 
 void Send_ASA(cdp_session_t* s, AAAMessage* msg)
 {
-	
-	
 	AAAMessage *asa;
 	char x[4];
 	AAA_AVP *avp;	
 	LOG(L_INFO,"Send_ASA():  sending ASA\n");
 	if (!s) {
 	//send an ASA for UNKNOWN_SESSION_ID - use AAASendMessage()
-	// msg is the ASR recieved
+	// msg is the ASR received
 		asa = AAANewMessage(IMS_ASA,0,0,msg);
 		if (!asa) return;	
-
 	
 		set_4bytes(x,AAA_SUCCESS);
 		AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
 	
 		AAASendMessage(asa,0,0);
-
 	}else{
-	// send... many cases... maybe not needed.
-	// for now we do the same
-	asa = AAANewMessage(IMS_ASA,0,0,msg);
-	if (!asa) return;	
-
+		// send... many cases... maybe not needed.
+		// for now we do the same
+		asa = AAANewMessage(IMS_ASA,0,0,msg);
+		if (!asa) return;	
 	
-	
-	
-	set_4bytes(x,AAA_SUCCESS);
-	AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
-	
-	
-	avp = AAAFindMatchingAVP(msg,0,AVP_Origin_Host,0,0);
-	
-		
-	if (avp) 
-	{
-			// This is because AAASendMessage is not going to find a route to the 
-			// the PCRF because TS 29.214 says no Destination-Host and no Auth-Application-Id
-			// in the ASA
-		LOG(L_INFO,"sending ASA to peer %.*s\n",avp->data.len,avp->data.s); 
-		
+		set_4bytes(x,AAA_SUCCESS);
+		AAACreateAndAddAVPToMessage(asa,AVP_Result_Code,AAA_AVP_FLAG_MANDATORY,0,x,4);
+				
+		avp = AAAFindMatchingAVP(msg,0,AVP_Origin_Host,0,0);	
+		if (avp) {
+				// This is because AAASendMessage is not going to find a route to the 
+				// the PCRF because TS 29.214 says no Destination-Host and no Auth-Application-Id
+				// in the ASA
+			LOG(L_INFO,"sending ASA to peer %.*s\n",avp->data.len,avp->data.s); 
 			peer *p;
 			p = get_peer_by_fqdn(&avp->data);
-			if (!peer_send_msg(p,asa))
-			{
+			if (!peer_send_msg(p,asa)) {
 				if (asa) AAAFreeMessage(&asa);	//needed in frequency
-			} else { 
+			} else  
 				LOG(L_INFO,"success sending ASA\n");
-			}
-	}else if (!AAASendMessage(asa,0,0)) {
-		LOG(L_ERR,"Send_ASA() : error sending ASA\n");
-	}
-	
+		}else if (!AAASendMessage(asa,0,0)) {
+			LOG(L_ERR,"Send_ASA() : error sending ASA\n");
+		}	
 	}	
 }
 
 
+int add_vendor_specific_application_id_group(AAAMessage * msg, unsigned int vendor_id, unsigned int auth_app_id)
+{
+	char x[4];
+	AAA_AVP_LIST list_grp={0,0};
+	AAA_AVP *avp;
+	str group = {0,0};
+
+	set_4bytes(x,vendor_id);
+	if(!(avp = AAACreateAVP(AVP_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,
+					x,4, AVP_DUPLICATE_DATA))) goto error;
+	AAAAddAVPToList(&list_grp,avp);
+											
+	set_4bytes(x, auth_app_id);
+	if(!(avp = AAACreateAVP(AVP_Auth_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
+					x,4,AVP_DUPLICATE_DATA))) goto error;
+	AAAAddAVPToList(&list_grp,avp);
+											
+	group = AAAGroupAVPS(list_grp);	
+	if(!group.s || !group.len) goto error;
+	AAAFreeAVPList(&list_grp);
+								
+	if(!(avp = AAACreateAVP(AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
+					group.s, group.len,AVP_DUPLICATE_DATA))) goto error;
+
+	if(!AAAAddAVPToMessage(msg, avp, msg->avpList.tail)) goto error;
+																	
+	shm_free(group.s); group.s = NULL;
+	
+	return 1;
+
+error:
+
+	AAAFreeAVPList(&list_grp);
+	if(group.s) shm_free(group.s);
+	return 0;
+}
 
 void Send_STR(cdp_session_t* s, AAAMessage* msg)
 {
 	AAAMessage *str=0;
 	AAA_AVP *avp=0;
+	peer *p=0;
 	char x[4];
 	//if (msg) LOG(L_DBG,"Send_STR() : sending STR for %d, flags %#1x endtoend %u hopbyhop %u\n",msg->commandCode,msg->flags,msg->endtoendId,msg->hopbyhopId);
 	//else LOG(L_DBG,"Send_STR() called from AAATerminateAuthSession or some other event\n");
@@ -568,7 +793,16 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 		LOG(L_ERR,"ERR:Send_STR(): error creating STR!\n");
 		return;
 	}
-	
+	if(!dup_routing_avps(msg, str)){
+		LOG(L_ERR,"ERR:Send_STR(): error duplicating routing AVPs!\n");
+		AAAFreeMessage(&str);
+		return;
+	}
+	if(!add_vendor_specific_application_id_group(str,IMS_vendor_id_3GPP,IMS_Rx)){ 
+		LOG(L_ERR,"ERR:Send_STR(): error adding Vendor-Id-Specific-Application-Id Group!\n");
+		AAAFreeMessage(&str);
+		return;
+	}
 	
 	set_4bytes(x,s->application_id);
 	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
@@ -578,28 +812,28 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	avp = AAACreateAVP(AVP_Termination_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(str,avp,str->avpList.tail);
 	//todo - add all the other avps
-	peer *p;
-			p = get_routing_peer(str);
-			if (!p) {
-				LOG(L_ERR,"unable to get routing peer in Send_STR \n");
-				if (str) AAAFreeMessage(&str); //needed in frequency
-				return;
-			}
-			//if (str) LOG(L_CRIT,"Send_STR() : sending STR  %d, flags %#1x endtoend %u hopbyhop %u\n",str->commandCode,str->flags,str->endtoendId,str->hopbyhopId);
-			if (!peer_send_msg(p,str))
-			{
-				LOG(L_DBG,"Send_STR peer_send_msg return error!\n");
-				if (str) AAAFreeMessage(&str); //needed in frequency	
-			} else { 
-				
-			}
-	 
+
+	p = get_routing_peer(str);
+	if (!p) {
+		LOG(L_ERR,"unable to get routing peer in Send_STR \n");
+		if (str) AAAFreeMessage(&str); //needed in frequency
+		return;
+	}
+	//if (str) LOG(L_CRIT,"Send_STR() : sending STR  %d, flags %#1x endtoend %u hopbyhop %u\n",str->commandCode,str->flags,str->endtoendId,str->hopbyhopId);
+	if (!peer_send_msg(p,str))
+	{
+		LOG(L_DBG,"Send_STR peer_send_msg return error!\n");
+		if (str) AAAFreeMessage(&str); //needed in frequency	
+	} else { 
+		LOG(L_DBG,"success sending STR\n");
+	}
 }
 
 void Send_ASR(cdp_session_t* s, AAAMessage* msg)
 {
 	AAAMessage *asr=0;
 	AAA_AVP *avp=0;
+	peer *p=0;
 	char x[4];
 	LOG(L_DBG,"Send_ASR() : sending ASR\n");
 	asr = AAACreateRequest(s->application_id,IMS_ASR,Flag_Proxyable,s);
@@ -609,7 +843,6 @@ void Send_ASR(cdp_session_t* s, AAAMessage* msg)
 		return;
 	}
 	
-	
 	set_4bytes(x,s->application_id);
 	avp = AAACreateAVP(AVP_Auth_Application_Id,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(asr,avp,asr->avpList.tail);
@@ -618,20 +851,17 @@ void Send_ASR(cdp_session_t* s, AAAMessage* msg)
 	avp = AAACreateAVP(AVP_IMS_Abort_Cause,AAA_AVP_FLAG_MANDATORY,0,x,4,AVP_DUPLICATE_DATA);
 	AAAAddAVPToMessage(asr,avp,asr->avpList.tail);
 	//todo - add all the other avps
-	peer *p;
-			p = get_routing_peer(asr);
-			if (!p) {
-				LOG(L_ERR,"unable to get routing peer in Send_ASR \n");
-				if (asr) AAAFreeMessage(&asr); //needed in frequency
-			}
-			
-			if (!peer_send_msg(p,asr))
-			{
-				if (asr) AAAFreeMessage(&asr); //needed in frequency	
-			} else { 
-				LOG(L_DBG,"success sending ASR\n");
-			}
-	 
+	
+	p = get_routing_peer(asr);
+	if (!p) {
+		LOG(L_ERR,"unable to get routing peer in Send_ASR \n");
+		if (asr) AAAFreeMessage(&asr); //needed in frequency
+	}
+	
+	if (!peer_send_msg(p,asr)) {
+		if (asr) AAAFreeMessage(&asr); //needed in frequency	
+	} else  
+		LOG(L_DBG,"success sending ASR\n");
 }
 
 void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)
@@ -643,7 +873,7 @@ void Session_Cleanup(cdp_session_t* s, AAAMessage* msg)
 	LOG(L_INFO,"cleaning up session %.*s\n",s->id.len,s->id.s);
 	if (s->cb) {
 		cb = s->cb;
-		(cb) (AUTH_EV_SERVICE_TERMINATED,s->cb_param,s);
+		(cb) (AUTH_EV_SERVICE_TERMINATED,s);
 	}
 	
 	AAADropAuthSession(s);

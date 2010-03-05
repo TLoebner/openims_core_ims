@@ -51,10 +51,11 @@
  *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
  * 
  */
- #include "api_process.h"
- #include "transaction.h"
- #include "receiver.h"
- 
+
+#include "api_process.h"
+#include "transaction.h"
+#include "receiver.h"
+#include "peerstatemachine.h"
 
 
 handler_list *handlers = 0; /**< list of handlers */
@@ -88,7 +89,10 @@ int api_callback(peer *p,AAAMessage *msg,void* ptr)
 				if (h->type == REQUEST_HANDLER) {
 					lock_release(handlers_lock);
 					rsp = (x.handler.requestHandler)(msg,h->param);
-					if (rsp) peer_send_msg(p,rsp);
+					if (rsp) {
+						//peer_send_msg(p,rsp);
+						sm_process(p,Send_Message,rsp,0,0);	
+					}
 					lock_get(handlers_lock);
 				}
 				else {
@@ -102,14 +106,14 @@ int api_callback(peer *p,AAAMessage *msg,void* ptr)
 	
 	if (!is_req(msg)){		
 		/* take care of transactional callback if any */
-		t = take_trans(msg);
+		t = cdp_take_trans(msg);
 		if (t){
 			t->ans = msg;
 			auto_drop = t->auto_drop;
 			if (t->cb){
 				(t->cb)(0,*(t->ptr),msg);
 			}
-			if (auto_drop) free_trans(t);
+			if (auto_drop) cdp_free_trans(t);
 		}
 	}
 	return 1;

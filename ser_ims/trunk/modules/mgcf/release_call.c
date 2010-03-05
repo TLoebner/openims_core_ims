@@ -202,17 +202,15 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
 		return;
 	}
 	
+	hash=d->hash;
 	if (ps->code>=200){
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
-			hash=d->hash;
 			del_m_dialog(d);
-			d_unlock(hash);			 
 		} else {
-			hash=d->hash;
 			d->state=DLG_STATE_TERMINATED_ONE_SIDE;
-			d_unlock(hash);
 		}		
 	} 
+	d_unlock(hash);			 
 }
 
 

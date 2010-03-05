@@ -77,48 +77,7 @@ task_queue_t *tasks;			/**< queue of tasks */
 
 cdp_cb_list_t *callbacks;		/**< list of callbacks for message processing */
 
-struct sembuf cdp_sem_lock=  { 0, -1, 0};	/**< sembuf structure to lock a semaphore */
-struct sembuf cdp_sem_unlock={ 0, +1, 0};	/**< sembuf structure to unlock a semaphore */
 
-union semun {int val;struct semid_ds *buf;ushort *array;} 
-	cdp_semun_lock   = {0}, 
-	cdp_semun_unlock = {1},
-	cdp_semun_init   = {0666|IPC_CREAT},
-	cdp_semun_destroy= {0};
-	
-	
-	
-/**
- * Gets the lock on a semaphore and blocks until it is available.
- * This procedures does not consume CPU cycles as a busy-waiting would and it is used for
- * blocking on the task queue without a big impact on performance.
- * @param sid - semaphore id
- * @returns when the sempahore is aquired or shutdown
- */
-static inline void cdp_lock_get(int sid)
-{
-	if((semop(sid, &cdp_sem_lock, 1)) == -1)
-	{
-		if (shutdownx&&(*shutdownx)) return;
-    	LOG(L_INFO,"ERROR:cdp_lock_get(): Error on semop > %s\n",strerror(errno));
-	}
-}
-
-/**
- * Releases the lock on a sempahore.
- * @param sid - the semaphore id
- */
-static inline void cdp_lock_release(int sid)
-{
-	if( semctl(sid, 0, SETVAL, cdp_semun_unlock) == -1
-	/*semop(sid, &cdp_sem_unlock, 1) == -1*/)
-	{
-		if (shutdownx&&(*shutdownx)) return;
-    	LOG(L_INFO,"ERROR:cdp_lock_release(): Error on semop %s > %d: %s Q[%2d/%2d]\n",
-    		sid==tasks->full?"full":"empty",errno,strerror(errno),
-    		tasks->start,tasks->end);
-	}
-}
 
 /**
  * Initializes the worker structures, like the task queue.
@@ -130,30 +89,37 @@ void worker_init()
 	tasks->lock = lock_alloc();
 	tasks->lock = lock_init(tasks->lock);
 	
-	tasks->empty = semget(IPC_PRIVATE,1,0666 | IPC_CREAT );
-	if (tasks->empty==-1){
-		LOG(L_ERR,"ERROR:worker_init(): Error creating semaphore for empty queue > %s\n",strerror(errno));
-	}else
-		semctl(tasks->empty, 0, SETVAL, cdp_semun_init );
-	tasks->full = semget(IPC_PRIVATE,1, 0666 | IPC_CREAT );
-	if (tasks->full==-1){
-		LOG(L_ERR,"ERROR:worker_init(): Error creating semaphore for full queue > %s\n",strerror(errno));
-	}else
-		semctl(tasks->full, 0, SETVAL, cdp_semun_init);
-	
+	sem_new(tasks->empty,0);
+		
+	sem_new(tasks->full,1);
+		
 	tasks->start = 0;
 	tasks->end = 0;
 	tasks->max = config->queue_length;
 	tasks->queue = shm_malloc(tasks->max*sizeof(task_t));
-	if (!tasks->queue) LOG_NO_MEM("shm",tasks->max*sizeof(task_t));
+	if (!tasks->queue) {
+		LOG_NO_MEM("shm",tasks->max*sizeof(task_t));
+		goto out_of_memory;
+	}
 	memset(tasks->queue,0,tasks->max*sizeof(task_t));
 		
 	callbacks = shm_malloc(sizeof(cdp_cb_list_t));
+	if (!callbacks) goto out_of_memory;
 	callbacks->head = 0; 
 	callbacks->tail = 0;
-	
-	cdp_lock_get(tasks->empty);
-//	lock_release(tasks->full);	
+	return;
+out_of_memory:
+	if (tasks){
+		if (tasks->lock) {
+			lock_destroy(tasks->lock);
+			lock_dealloc(&(tasks->lock)); 
+		}
+		sem_free(tasks->full);
+		sem_free(tasks->empty);
+		if (tasks->queue) shm_free(tasks->queue);
+		shm_free(tasks);
+	}
+	if (callbacks) shm_free(callbacks);
 }
 
 /**
@@ -161,29 +127,49 @@ void worker_init()
  */
 void worker_destroy()
 {
-	int i;
-//	LOG(L_CRIT,"-1-\n");
-/*	lock_get(tasks->lock);*/
-	for(i=0;i<tasks->max;i++){
-		if (tasks->queue[i].msg) AAAFreeMessage(&(tasks->queue[i].msg));
+	int i,sval=0;
+	if (callbacks){
+		while(callbacks->head)
+			cb_remove(callbacks->head);
+		shm_free(callbacks);
 	}
-//	LOG(L_CRIT,"-2-\n");	
-	shm_free(tasks->queue);
-	lock_destroy(tasks->lock);
-	lock_dealloc((void*)tasks->lock);
-//	LOG(L_CRIT,"-3-\n");	
-	
-	//lock_release(tasks->empty);
-	semctl(tasks->empty, 0, IPC_RMID, cdp_semun_destroy);
-//	LOG(L_CRIT,"-4-\n");	
-	
-	semctl(tasks->full, 0, IPC_RMID, cdp_semun_destroy);
-	
-	shm_free(tasks);
-	
-	while(callbacks->head)
-		cb_remove(callbacks->head);
-	shm_free(callbacks);
+
+	if (tasks) {
+	//	LOG(L_CRIT,"-1-\n");
+		lock_get(tasks->lock);
+		for(i=0;i<tasks->max;i++){
+			if (tasks->queue[i].msg) AAAFreeMessage(&(tasks->queue[i].msg));
+			tasks->queue[i].msg = 0;
+			tasks->queue[i].p = 0;
+		}
+		lock_release(tasks->lock);
+
+		LOG(L_INFO,"Unlocking workers waiting on empty queue...\n");
+		for(i=0;i<config->workers;i++)
+			sem_release(tasks->empty);
+		LOG(L_INFO,"Unlocking workers waiting on full queue...\n");
+		i=0;
+		while(sem_getvalue(tasks->full,&sval)==0)			
+			if (sval<=0) {
+				sem_release(tasks->full);
+				i=1;
+			}
+			else break;
+		sleep(i);
+		
+		lock_get(tasks->lock);
+	//	LOG(L_CRIT,"-2-\n");	
+		shm_free(tasks->queue);
+		lock_destroy(tasks->lock);
+		lock_dealloc((void*)tasks->lock);
+	//	LOG(L_CRIT,"-3-\n");	
+		
+		//lock_release(tasks->empty);
+		sem_free(tasks->full);
+		sem_free(tasks->empty);
+		
+		shm_free(tasks);
+	}
 }
 
 /*unsafe*/
@@ -226,39 +212,106 @@ void cb_remove(cdp_cb_t *cb)
 	shm_free(x);
 }
 
-/**
- * Adds a message as a task to the task queue.
- * This blocks if the task queue is full, untill there is space.
- * @param p - the peer that the message was received from
- * @param msg - the message
- * @returns 1 on success, 0 on failure (eg. shutdown in progress)
- */ 
-int put_task(peer *p,AAAMessage *msg)
-{
-//	LOG(L_CRIT,"+1+\n");
-	lock_get(tasks->lock);
-//	LOG(L_CRIT,"+2+\n");
-	while ((tasks->end+1)%tasks->max == tasks->start){
-//		LOG(L_CRIT,"+3+\n");
-		lock_release(tasks->lock);
-//		LOG(L_CRIT,"+4+\n");
-		if (*shutdownx) {
-			cdp_lock_release(tasks->full);
+#ifdef WHARF
+
+	#include "../../base/worker.h"
+	
+	/**
+	 * This is an executor for tasks from shm. Should do the same as what is the middle of the worker_process() loop,
+	 * but this should be used when the messages will be processed by an external to cdp worker-pool.
+	 * @param ptr - the tast_t* into shm
+	 */
+	int worker_execute(void* ptr)
+	{
+		task_t *t=ptr;
+		int r;
+		cdp_cb_t *cb;
+	
+		if (!t) return -1;
+		if (!t->msg) goto error;
+		if (shutdownx&&(*shutdownx)) goto error;
+		LOG(L_DBG,"Executing task for cdp: Message [%d] from Peer [%.*s]\n",
+				t->msg->commandCode,t->p?t->p->fqdn.len:0,t->p?t->p->fqdn.s:0);
+		r = is_req(t->msg);
+		for(cb = callbacks->head;cb;cb = cb->next)
+			(*(cb->cb))(t->p,t->msg,*(cb->ptr));
+			
+		if (r){
+			AAAFreeMessage(&(t->msg));
+		}else{
+			/* will be freed by the user in upper api */
+			/*AAAFreeMessage(&(t.msg));*/
+		}
+		shm_free(t);
+		return -1;
+	error:
+		if (t->msg) AAAFreeMessage(&(t->msg));
+		shm_free(t);
+		return -1;
+	}
+	
+	/**
+	 * Adds a message as a task to the Wharf task queue.
+	 * This blocks if the task queue is full, until there is space.
+	 * @param p - the peer that the message was received from
+	 * @param msg - the message
+	 * @returns 1 on success, 0 on failure (eg. shutdown in progress)
+	 */ 
+	int put_task(peer *p,AAAMessage *msg)
+	{
+		task_t *t=0;
+		t = shm_malloc(sizeof(task_t));
+		if (!t){
+			LOG(L_ERR,"Error allocating %d bytes of shm!\n",sizeof(task_t));
 			return 0;
 		}
-//		LOG(L_ERR,"+");
-		cdp_lock_get(tasks->full);
-//		LOG(L_CRIT,"+5+\n");
-		lock_get(tasks->lock);
+		t->p = p;
+		t->msg = msg;
+		if (!wharf_worker_put_task(worker_execute,t)){
+			shm_free(t);
+			return 0;
+		}
+		return 1;
 	}
-	tasks->queue[tasks->end].p = p;
-	tasks->queue[tasks->end].msg = msg;
-	tasks->end = (tasks->end+1) % tasks->max;
-	cdp_lock_release(tasks->empty);
-	lock_release(tasks->lock);
-	return 1;
-}
 
+#else
+	/**
+	 * Adds a message as a task to the task queue.
+	 * This blocks if the task queue is full, until there is space.
+	 * @param p - the peer that the message was received from
+	 * @param msg - the message
+	 * @returns 1 on success, 0 on failure (eg. shutdown in progress)
+	 */ 
+	int put_task(peer *p,AAAMessage *msg)
+	{
+		lock_get(tasks->lock);
+		while ((tasks->end+1)%tasks->max == tasks->start){
+			lock_release(tasks->lock);
+	
+			if (*shutdownx) {
+				sem_release(tasks->full);
+				return 0;
+			}
+			
+			sem_get(tasks->full);
+			
+			if (*shutdownx) {
+				sem_release(tasks->full);
+				return 0;
+			}
+			
+			lock_get(tasks->lock);
+		}
+		tasks->queue[tasks->end].p = p;
+		tasks->queue[tasks->end].msg = msg;
+		tasks->end = (tasks->end+1) % tasks->max;
+		if (sem_release(tasks->empty<0))
+			LOG(L_WARN,"WARN:put_task(): Error releasing tasks->empty semaphore > %s!\n",strerror(errno));
+		lock_release(tasks->lock);
+		return 1;
+	}
+#endif
+	
 /**
  * Remove and return the first task from the queue (FIFO).
  * This blocks until there is something in the queue.
@@ -275,12 +328,16 @@ task_t take_task()
 		lock_release(tasks->lock);
 //		LOG(L_CRIT,"-4-\n");
 		if (*shutdownx) {
-			cdp_lock_release(tasks->empty);
+			sem_release(tasks->empty);
 			return t;
 		}
 //		LOG(L_ERR,"-");
-		cdp_lock_get(tasks->empty);
+		sem_get(tasks->empty);
 //		LOG(L_CRIT,"-5-\n");
+		if (*shutdownx) {
+			sem_release(tasks->empty);
+			return t;
+		}
 		
 		lock_get(tasks->lock);
 //		LOG(L_CRIT,"-6-\n");
@@ -290,7 +347,8 @@ task_t take_task()
 	t = tasks->queue[tasks->start];
 	tasks->queue[tasks->start].msg = 0;
 	tasks->start = (tasks->start+1) % tasks->max;
-	cdp_lock_release(tasks->full);
+	if (sem_release(tasks->full)<0)
+		LOG(L_WARN,"WARN:take_task(): Error releasing tasks->full semaphore > %s!\n",strerror(errno));
 	lock_release(tasks->lock);
 	return t;
 }
@@ -302,10 +360,13 @@ task_t take_task()
  */
 void worker_poison_queue()
 {
-//	int i;
-//	for(i=0;i<config->workers;i++)
-	cdp_lock_release(tasks->empty);
+	int i;
+	for(i=0;i<config->workers;i++)
+		if (sem_release(tasks->empty<0))
+			LOG(L_WARN,"WARN:worker_poison_queue(): Error releasing tasks->empty semaphore > %s!\n",strerror(errno));
 }
+
+
 
 /**
  * This is the main worker process.

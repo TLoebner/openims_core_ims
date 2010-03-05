@@ -65,6 +65,10 @@
 	Tc			CDATA				#REQUIRED\
 	Workers		CDATA				#REQUIRED\
 	QueueLength	CDATA				#REQUIRED\
+	TransactionTimeout CDATA		#IMPLIED\
+	SessionsHashSize CDATA			#IMPLIED\
+	DefaultAuthSessionTimeout CDATA	#IMPLIED\
+	MaxAuthSessionTimeout CDATA		#IMPLIED\
 >\
 <!ELEMENT Peer (#PCDATA)>\
 <!ATTLIST Peer\

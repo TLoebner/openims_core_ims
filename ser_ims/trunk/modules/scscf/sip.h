@@ -68,8 +68,8 @@ int cscf_add_contact(struct sip_msg *msg,str uri,int expires);
 
 str cscf_get_private_identity(struct sip_msg *msg, str realm);
 str cscf_get_public_identity(struct sip_msg *msg);
-int cscf_get_expires_hdr(struct sip_msg *msg);
-int cscf_get_max_expires(struct sip_msg *msg);
+int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm);
+int cscf_get_max_expires(struct sip_msg *msg, int is_shm);
 str cscf_get_public_identity_from_requri(struct sip_msg *msg);
 
 struct sip_msg *cscf_get_request(unsigned int hash,unsigned int label);
@@ -91,7 +91,7 @@ str cscf_get_asserted_identity(struct sip_msg *msg);
 str cscf_get_asserted_identity_domain(struct sip_msg *msg);
 str cscf_get_contact(struct sip_msg *msg);
 
-str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr);
+str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int is_shm);
 int cscf_remove_first_route(struct sip_msg *msg,str value);
 
 int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h);
@@ -99,6 +99,7 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h);
 str cscf_get_record_routes(struct sip_msg *msg);
 
 struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_field *start);
+struct hdr_field* cscf_get_next_record_route2(struct sip_msg *msg,struct hdr_field *start, rr_t* rr_req, int is_shm);
 
 struct hdr_field* cscf_get_next_via_hdr(struct sip_msg *msg,struct hdr_field *start);
 str cscf_get_next_via_str(struct sip_msg *msg, struct hdr_field * h, int pos, struct hdr_field **h_out, int *pos_out);
@@ -155,7 +156,7 @@ struct via_body* cscf_get_ue_via(struct sip_msg *msg);
 str cscf_get_realm(struct sip_msg *msg);
 str cscf_get_realm_from_uri(str uri);
 
-int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt);
+int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt, int is_shm);
 int cscf_get_first_p_associated_uri(struct sip_msg *msg,str *public_id);
 
 name_addr_t cscf_get_preferred_identity(struct sip_msg *msg,struct hdr_field **h);
@@ -170,7 +171,7 @@ str cscf_get_content_type(struct sip_msg *msg);
 
 int cscf_get_content_len(struct sip_msg *msg);
 
-str* cscf_get_service_route(struct sip_msg *msg,int *size);
+str* cscf_get_service_route(struct sip_msg *msg,int *size, int is_shm);
 
 int cscf_get_originating_contact(struct sip_msg *msg,str *host,int *port,int *transport);
 int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *transport);

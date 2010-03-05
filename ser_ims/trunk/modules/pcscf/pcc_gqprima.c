@@ -1,97 +1,136 @@
-/*
- * gqprima.c
+/**
+ * $Id$
+ *   
+ * Copyright (C) 2004-2007 FhG Fokus
  *
- *  Created on: Aug 28, 2009
- *      Author: adi
+ * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
+ * implementation
+ *
+ * Open IMS Core is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * For a license to use the Open IMS Core software under conditions
+ * other than those described here, or to purchase support for this
+ * software, please contact Fraunhofer FOKUS by e-mail at the following
+ * addresses:
+ *     info@open-ims.org
+ *
+ * Open IMS Core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * It has to be noted that this Open Source IMS Core System is not 
+ * intended to become or act as a product in a commercial context! Its 
+ * sole purpose is to provide an IMS core reference implementation for 
+ * IMS technology testing and IMS application prototyping for research 
+ * purposes, typically performed in IMS test-beds.
+ * 
+ * Users of the Open Source IMS Core System have to be aware that IMS
+ * technology may be subject of patents and licence terms, as being 
+ * specified within the various IMS-related IETF, ITU-T, ETSI, and 3GPP
+ * standards. Thus all Open IMS Core users have to take notice of this 
+ * fact and have to agree to check out carefully before installing, 
+ * using and extending the Open Source IMS Core System, if related 
+ * patents and licences may become applicable to the intended usage 
+ * context.  
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
  */
-#include "gqprima.h"
+ 
+/**
+ * \file
+ *
+ * P-CSCF Policy and Charging Control interface - Gq'
+ *  
+ * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
+ */
+
+#include "pcc_gqprima.h"
 #include "sip.h"
+#include "sip_body.h"
 #include "pcc_avp.h"
 #include "mod.h"
 
 extern struct cdp_binds cdpb;
 
 t_binding_list* get_binding_list(str sdp);
-int get_ip_address(struct sip_msg *r, str *ip);
 int free_binding_list(t_binding_list *list);
 int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list *outblist);
 
 
-AAA_AVP* create_framed_ip_address(str ip)
-{
-	char x[6];
-	int i,j,k;
-	if (ip.len>0)
-	{
-				memset(x,0,4);
-				x[1]=1;
-				i=2;k=0;
-				for(j=0;j<ip.len;j++){
-					if (ip.s[j]=='.') {x[i++]=k;k=0;}
-					else if (ip.s[j]>='0' && ip.s[j]<='9')
-							k = k*10 + ip.s[j]-'0';
-				}
-				x[i]=k;
-
-				return cdpb.AAACreateAVP(AVP_Framed_IP_Address,0,0,x,6,AVP_DUPLICATE_DATA);
-	}
-	return 0;
-}
 
 
 /**
- * Creates and adds a AVP_Framed_IP_Address and a AVP_ETSI_Address_Realm to a  AVP_ETSI_Globally_Unique_Address group.
+ * Creates and adds a AVP_Framed_IP_Address/AVP_Framed_IPv6_Prefix 
+ * and a AVP_ETSI_Address_Realm to a  AVP_ETSI_Globally_Unique_Address group.
  * @param msg - the Diameter message to add to.
  * @param ip - ue ip address
  * @param realm - realm
  * @returns 1 on success or 0 on error
  */
-inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip,enum ip_type version,str realm)
+inline int gqprima_add_g_unique_address(AAAMessage *msg, str ip, uint16_t version,str realm)
 {
-	AAA_AVP_LIST list;
-	str group;
+	AAA_AVP_LIST list = {0,0};
+	AAA_AVP * avp;
+	str group = {0,0};
 
 	list.head=0;list.tail=0;
-
-	if (version==ip_type_v4)
-	{
-		cdpb.AAAAddAVPToList(&list,create_framed_ip_address(ip));
-	} else
-	{
-		//TODO AVP_Framed_IPv6_Prefix
-	}
-	if (realm.len)
-	{
-		cdpb.AAAAddAVPToList(&list,cdpb.AAACreateAVP(AVP_ETSI_Address_Realm,AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,realm.s,realm.len,AVP_DUPLICATE_DATA));
+	
+	if(!PCC_add_framed_ip_avp(&list, ip, version)) goto error;
+	
+	if (realm.len){
+		avp = cdpb.AAACreateAVP(AVP_ETSI_Address_Realm,
+					AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+					IMS_vendor_id_ETSI,realm.s,realm.len,AVP_DUPLICATE_DATA);
+		if(!avp) goto error;
+		cdpb.AAAAddAVPToList(&list,avp);
 	}
 
 	group = cdpb.AAAGroupAVPS(list);
-
+	if(!group.s || !group.len) goto error;
 	cdpb.AAAFreeAVPList(&list);
 
-	return cdpb.AAAAddAVPToMessage(msg,cdpb.AAACreateAVP(AVP_ETSI_Globally_Unique_Address,AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,group.s,group.len,AVP_FREE_DATA),msg->avpList.tail);
+	avp = cdpb.AAACreateAVP(AVP_ETSI_Globally_Unique_Address,
+			AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+			IMS_vendor_id_ETSI,group.s,group.len,AVP_FREE_DATA);
+	if(!avp) goto error;
+	if(cdpb.AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) goto error;
 
+	return 1;
+error:
+	cdpb.AAAFreeAVPList(&list);
+	if(group.s) {shm_free(group.s); group.s = 0;}
+	return 0;
 }
 
 /**
  * Subsequent request can not modify
  * user-name, specific-action, charging-identifier, service-class
- *
+ * TODO: add port to the necessary avp
  */
 
-int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1,int relatch)
+int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *str1, 
+		struct sip_uri * parsed_aor, int relatch)
 {
 	AAA_AVP *avp=0;
 	//AAASession* auth=0;
 	str id={0,0};
 	str ip={0,0};
-	enum ip_type version;
+	unsigned short port;
+	uint16_t version;
 	str realm={0,0};
 	str sdp={0,0};
 	str service_class={"IMS Services",12};
 	t_binding_list *blist=0;
 	char x[4];
 	enum p_dialog_direction tag=get_dialog_direction(str1);
+	int is_register = (str1[0]=='r' || str1[0]=='R');
 
 	if (extract_id(req,tag,&id)!=-1 &&id.len)
 	{
@@ -100,17 +139,29 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 	}
 	if (tag==DLG_MOBILE_ORIGINATING)
 	{
-		extract_body(req,&sdp);
+		if(!(version=pcc_get_ip_port(req, NULL, &ip, &port)))
+			return 0;
+		extract_sdp_body(req,&sdp);
 		blist=get_binding_list(sdp);
-		version=get_ip_address(req,&ip);
-	} else {
-		extract_body(res,&sdp);
-		blist=get_binding_list(sdp);
-		version=get_ip_address(res,&ip);
-	}
 
-	add_binding_information(aar,blist,NULL);
-	if (relatch!=-1)
+	} else if (tag == DLG_MOBILE_TERMINATING){
+		if(!(version=pcc_get_ip_port(res, NULL, &ip, &port)))
+			return 0;
+		extract_sdp_body(res,&sdp);
+		blist=get_binding_list(sdp);
+
+	}else if (is_register){
+		if(!parsed_aor) {
+			LOG(L_ERR, "ERR:"M_NAME":gqprima_AAR: invalid parsed_aor parameter\n");
+			return 0;
+		}
+		if(!(version=pcc_get_ip_port(NULL, parsed_aor, &ip, &port)))
+			return 0;
+	}else 
+		return 0;
+
+	if(blist) add_binding_information(aar,blist,NULL);
+	if (!is_register && relatch!=-1)
 	{
 		if (relatch) {
 			set_4bytes(x,AVP_ETSI_Latching_Indication_Latch);
@@ -175,62 +226,40 @@ int gqprima_AAR(AAAMessage *aar,struct sip_msg *req, struct sip_msg *res, char *
 /**
  * Gqprima processing of the AAA Answer
  * @param dia_msg - the AAA message
- * @return the result-code to be processed by someone else
+ * @return 1 if result code found, 0 if not found
  */
-int gqprima_AAA(AAAMessage *dia_msg)
+int gqprima_AAA(AAAMessage *dia_msg, unsigned int * rc)
 {
 	AAA_AVP *avp=0;
-	int rc=0;
+	AAA_AVP_LIST list;
 	//get the result code
 	avp=cdpb.AAAFindMatchingAVP(dia_msg,dia_msg->avpList.head,AVP_Result_Code,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
-	if (!avp || avp->data.len==0)
+	if (avp && avp->data.len!=0)
 	{
-		rc=-1;
-		//look Experimental-Result-Code AVP
-	} else {
-		rc=get_4bytes(avp->data.s);
+		*rc=get_4bytes(avp->data.s);
+		return 1;
+	}
+
+	avp=cdpb.AAAFindMatchingAVP(dia_msg,dia_msg->avpList.head,AVP_Experimental_Result,IMS_vendor_id_3GPP,AAA_FORWARD_SEARCH);
+	if(avp && avp->data.len !=0)
+	{
+		list=cdpb.AAAUngroupAVPS(avp->data);
+		for(avp=list.head;avp;avp=avp->next)
+		{
+			if (avp->code==AVP_IMS_Experimental_Result_Code)
+			{
+				*rc = get_4bytes(avp->data.s);
+				cdpb.AAAFreeAVPList(&list);
+				return 1;
+			}
+		}
+		cdpb.AAAFreeAVPList(&list);
 	}
 	//read binding information (output-list)
 	//TODO
-	return rc;
+	return 0;
 }
 
-
-
-/**
- * Looks for the contact in the sip message and gets the ip address
- * @param r - sip message to look for contact
- * @param ip - the ip address to return
- * @returns 0 on error 1 on success
- */
-int get_ip_address(struct sip_msg *r, str *ip)
-{
-	enum ip_type version;
-	char *p=0;
-	if (r)
-	{
-		if (r->contact)
-		{
-			p=strstr(r->contact->body.s,"sip:");
-			p+=4; //sip:
-			if (*p=='[')
-			{
-				version=ip_type_v6;
-				ip->s=p++;
-				p=index(ip->s,']');
-
-			} else {
-				version=ip_type_v4;
-				ip->s=p;
-				p=index(ip->s,':');
-
-			}
-			if (!p) return 0;
-			ip->len=p-ip->s;
-		}
-	}
-	return version;
-}
 
 
 /**
@@ -250,19 +279,14 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	{
 		for(bunit=inblist->head;bunit;bunit=bunit->next)
 		{
-			if (bunit->v==ip_type_v4)
-			{
-				cdpb.AAAAddAVPToList(&subsublist,create_framed_ip_address(bunit->addr));
+			if(!PCC_add_framed_ip_avp(&subsublist, bunit->addr, bunit->v)) goto error;
 
-			} else {
-				//TODO create_framed_ipv6_prefix
-			}
 			set_4bytes(x,bunit->port_start);
 			cdpb.AAAAddAVPToList(&subsublist,cdpb.AAACreateAVP(AVP_ETSI_Port_Number,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,x,4,AVP_DUPLICATE_DATA));
 
 			data=cdpb.AAAGroupAVPS(subsublist);
 			cdpb.AAAFreeAVPList(&subsublist);
-			if (bunit->v==ip_type_v4)
+			if (bunit->v==AF_INET)
 			{
 				cdpb.AAAAddAVPToList(&sublist,cdpb.AAACreateAVP(AVP_ETSI_V4_transport_address,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,data.s,data.len,AVP_FREE_DATA));
 			} else {
@@ -278,20 +302,17 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	{
 		for(bunit=outblist->head;bunit;bunit=bunit->next)
 		{
-			if (bunit->v==ip_type_v4)
+			if (bunit->v==AF_INET && bunit->addr.len==0)
 			{
-				if (bunit->addr.len)
-				{
-					cdpb.AAAAddAVPToList(&subsublist,create_framed_ip_address(bunit->addr));
-				} else {
-					data.s="0.0.0.0";
-					data.len=7;
-					cdpb.AAAAddAVPToList(&subsublist,create_framed_ip_address(data));
-					//wildcard
-				}
+				//wildcard
+				data.s="0.0.0.0";
+				data.len=7;
+				if(!PCC_add_framed_ip_avp(&subsublist, data, bunit->v)) goto error;
 			} else {
-				//TODO create_framed_ipv6_prefix
+				//TODO:aon: wildcard for ipv6 necessary?
+				if(!PCC_add_framed_ip_avp(&subsublist, bunit->addr, bunit->v)) goto error;
 			}
+
 			if (bunit->port_start)
 			{
 				set_4bytes(x,bunit->port_start);
@@ -300,7 +321,7 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 
 			data=cdpb.AAAGroupAVPS(subsublist);
 			cdpb.AAAFreeAVPList(&subsublist);
-			if (bunit->v==ip_type_v4)
+			if (bunit->v==AF_INET)
 			{
 				cdpb.AAAAddAVPToList(&sublist,cdpb.AAACreateAVP(AVP_ETSI_V4_transport_address,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,data.s,data.len,AVP_FREE_DATA));
 			} else {
@@ -316,6 +337,8 @@ int add_binding_information(AAAMessage *m,t_binding_list *inblist,t_binding_list
 	cdpb.AAAFreeAVPList(&list);
 	cdpb.AAAAddAVPToMessage(m,cdpb.AAACreateAVP(AVP_ETSI_Binding_Information,AAA_AVP_FLAG_VENDOR_SPECIFIC,IMS_vendor_id_ETSI,data.s,data.len,AVP_FREE_DATA),m->avpList.tail);
 	return 1;
+error:
+	return 0;
 }
 
 
@@ -409,8 +432,8 @@ t_binding_list* get_binding_list(str sdp)
 	t_binding_list* blist=0;
 	t_binding_unit* bunit=0;
 	char *cline=0,*mline=0,*nmline=0;
-	enum ip_type version;
-	char port[64];
+	uint16_t version=AF_INET;
+	str port = {0,0};
 	char *aux=0;
 	str ip={0,0};
 	cline=find_sdp_line(sdp.s,sdp.s+sdp.len,'c');
@@ -442,9 +465,9 @@ t_binding_list* get_binding_list(str sdp)
 		}
 		if (index(ip.s,':'))
 		{
-			version=ip_type_v6;
+			version=AF_INET6;
 		} else {
-			version=ip_type_v4;
+			version=AF_INET;
 		}
 		cline=find_next_sdp_line(cline,sdp.s+sdp.len,'c',NULL);
 	}
@@ -467,21 +490,21 @@ t_binding_list* get_binding_list(str sdp)
 			bunit->v=version;
 		} else {
 			//if i have arrived here then i have extracted the token in shared memory in the previous if
-			if (index(bunit->addr.s,':')) bunit->v=ip_type_v6;
-			else bunit->v=ip_type_v4;
+			if (index(bunit->addr.s,':')) bunit->v=AF_INET6;
+			else bunit->v=AF_INET;
 		}
-		if (extract_token(mline,port,64,2))
+		if (extract_token(mline,&port,64,2))
 		{
 			switch(is_a_port(port))
 			{
 				case 1:
-					bunit->port_start=atoi(port);
+					bunit->port_start=atoi(port.s);
 					bunit->port_end=0;
 					break;
 				case 2:
-					aux=index(port,'/');
+					aux=index(port.s,'/');
 					*aux='\0';
-					bunit->port_start=atoi(port);
+					bunit->port_start=atoi(port.s);
 					bunit->port_end=atoi(aux+1);
 					break;
 				default:
@@ -491,6 +514,9 @@ t_binding_list* get_binding_list(str sdp)
 		} else {
 			LOG(L_DBG,"DBG:get_binding_list: no port in media line in SDP\n");
 		}
+		//because we have used extract_token
+		if(port.s) pkg_free(port.s);
+
 		LOG(L_DBG,"DBG:get_binding_list: binding unit with ip %.*s port_start %d port_end %d\n",bunit->addr.len,bunit->addr.s,bunit->port_start,bunit->port_end);
 		FL_APPEND(blist,bunit)
 		bunit = shm_malloc(sizeof(t_binding_unit));

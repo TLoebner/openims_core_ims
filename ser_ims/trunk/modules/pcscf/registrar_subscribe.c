@@ -197,7 +197,7 @@ int P_subscribe(struct sip_msg *rpl, char* str1, char* str2)
 	
 	cscf_get_first_p_associated_uri(rpl,&public_id);
 	
-	expires_hdr = cscf_get_expires_hdr(rpl);
+	expires_hdr = cscf_get_expires_hdr(rpl,0);
 	
 	if (parse_headers(rpl, HDR_EOH_F, 0) <0) {
 		LOG(L_ERR,"ERR:"M_NAME":P_subscribe: error parsing headers\n");
@@ -377,7 +377,7 @@ void r_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 		return;
 	}
 	if (ps->code>=200 && ps->code<300){
-		expires = cscf_get_expires_hdr(ps->rpl);
+		expires = cscf_get_expires_hdr(ps->rpl,0);
 		update_r_subscription(s,expires);
 		tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
 	}else

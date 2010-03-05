@@ -1,5 +1,5 @@
 /**
- * $Id: gq_avp.c,v 1.16 2007/03/14 16:18:13 chens Exp $
+ * $Id$
  *   
  * Copyright (C) 2004-2007 FhG Fokus
  *
@@ -50,15 +50,73 @@
  *
  *\author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
  */ 
- 
+
+#include <arpa/inet.h>
 #include "pcc_avp.h"
 #include "../../mem/shm_mem.h"
+#include "../../parser/parse_uri.h"
+#include "../../parser/contact/parse_contact.h"
 
+extern str ipv4_for_signaling;
+extern str ipv6_for_signaling;
+extern unsigned short port_for_signaling;
+extern int pcc_use_ports;	
+
+static char* ip_s = "ip";
+static char* udp_s = "udp";
+static char* tcp_s = "tcp";
 
 /**< Structure with pointers to cdp funcs, global variable defined in mod.c  */
 extern struct cdp_binds cdpb;
+extern cdp_avp_bind_t *cdp_avp;
+/**
+ * Looks for the contact in the sip message and gets the ip address
+ * @param r - sip message to look for contact (for dialogs)
+ * @param parsed_aor - the parsed aor of a contact from a 200 reply to a REGISTER
+ * @param ip - the ip address to return
+ * @returns the version from the enum ip_type, 0 if error
+ * TODO: aon: tests for ipv6 required
+ */
+uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip, unsigned short * port)
+{
+	uint16_t version= AF_INET;
+	struct contact_body *cb;
+	struct sip_uri uri;
+	if (!ip) return 0;
+	ip->len=0;
+	ip->s=0;
+	
+	//if used for invite requests
+	if (r&&r->contact&&r->contact->parsed){		
+		cb = (struct contact_body *)r->contact->parsed;
+		if (!cb || !cb->contacts)
+			goto error;
+		parse_uri(cb->contacts->uri.s,cb->contacts->uri.len,&uri);
+		*ip = uri.host;
+		*port = uri.port_no;
 
+	//used for register replies	
+	}else if(parsed_aor){
+		*ip = parsed_aor->host;
+		*port = parsed_aor->port_no;
 
+	}else if(!parsed_aor)
+		goto error;
+
+	if(ip->len){
+		if(ip->s[0] == '['){
+			version = AF_INET6;
+			ip->s +=1;
+			ip->len -=1;
+		}	
+	}
+
+	LOG(L_DBG,"DBG:"M_NAME":pcc_get_ip_port: %.*s\n",ip->len,ip->s);
+	return version;
+error:
+	LOG(L_ERR,"ERR:"M_NAME":pcc_get_ip_port: invalid or no aor found\n");
+	return 0;
+}
 
 /*
  *******************************************************************************
@@ -79,7 +137,7 @@ extern struct cdp_binds cdpb;
  * @param func - the name of the calling function, for debugging purposes
  * @returns 1 on success or 0 on failure
  */
-static inline int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
+inline int PCC_add_avp(AAAMessage *m,char *d,int len,int avp_code,
 	int flags,int vendorid,int data_do,const char *func)
 {
 	AAA_AVP *avp;
@@ -165,6 +223,65 @@ static inline str PCC_get_avp(AAAMessage *msg,int avp_code,int vendor_id,
  * 
  *******************************************************************************
  */
+
+/*creates an AVP for the framed-ip info: 
+ * 	if ipv4: AVP_Framed_IP_Address, 
+ * 	otherwise: AVP_Framed_IPv6_Prefix
+ * 	using inet_pton to convert the IP addresses 
+ * 	from human-readable strings to their bynary representation
+ * 	see http://beej.us/guide/bgnet/output/html/multipage/inet_ntopman.html
+ * 	http://beej.us/guide/bgnet/output/html/multipage/sockaddr_inman.html
+ */ 	
+int PCC_add_framed_ip_avp(AAA_AVP_LIST * list, str ip, uint16_t version)
+{
+	ip_address_prefix ip_adr;
+	char* ip_pkg = 0;
+	int ret = 0;
+
+	if (ip.len<0) return 0;
+	if(version == AF_INET){
+		if(ip.len>INET_ADDRSTRLEN)
+			goto error;
+	}else{
+		if(ip.len>INET6_ADDRSTRLEN)
+			goto error;
+	}
+	ip_pkg = (char*)pkg_malloc((ip.len+1)*sizeof(char));
+	if(!ip_pkg){
+		LOG(L_ERR, "ERR:"M_NAME":PCC_create_framed_ip_avp: could not allocate %i from pkg\n", ip.len+1);
+		goto error;
+	}
+	memcpy(ip_pkg, ip.s, ip.len);
+	ip_pkg[ip.len] = '\0';
+
+	ip_adr.addr.ai_family = version;
+	
+	if(version == AF_INET){
+		
+		if(inet_pton(AF_INET, ip_pkg, &(ip_adr.addr.ip.v4.s_addr))!= 1) goto error;
+		ret= cdp_avp->nasapp.add_Framed_IP_Address(list, ip_adr.addr);
+	}else{ 
+		
+		if(inet_pton(AF_INET6, ip_pkg, &(ip_adr.addr.ip.v6.s6_addr))!=1) goto error;
+		ret= cdp_avp->nasapp.add_Framed_IPv6_Prefix(list, ip_adr);
+	}
+
+error:
+	if(ip_pkg) pkg_free(ip_pkg);
+	return ret;
+}
+
+/**
+ * Creates and adds a Vendor Specific Application ID Group AVP.
+ * @param msg - the Diameter message to add to.
+ * @param vendor_id - the value for the vendor id AVP
+ * @param auth_app_id - the value of the authentication application AVP
+ * @returns 1 on success or 0 on error
+ */
+int PCC_add_vendor_specific_application_id_group(AAAMessage * msg, uint32_t vendor_id, uint32_t auth_app_id)
+{
+	return cdp_avp->base.add_Vendor_Specific_Application_Id_Group(&(msg->avpList),vendor_id,auth_app_id,0);
+}
 
 /**
  * Creates and adds a Destination-Realm AVP.
@@ -256,9 +373,75 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	return 1;
 }
 
+/*add all the AVPs the AAR requires that can be build from the contact URI
+ * @param msg - the AAR message
+ * @param parsed_uri - the parsed contact URI
+ * returns 0 if error, 1 if ok
+ */
+int PCC_AAR_add_avps_for_register(AAAMessage *msg, struct sip_uri* parsed_uri){
 
+	str ip;
+	unsigned short port_no;
+	uint16_t ip_version;
 
+	ip_version = pcc_get_ip_port(NULL, parsed_uri, &ip, &port_no);
+	
+	if(!PCC_add_media_component_description_for_register(msg, ip, port_no, ip_version)) goto error;
 
+	if(!PCC_add_framed_ip_avp(&msg->avpList, ip, ip_version)) goto error;
+
+	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
+				AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer)) goto error;
+
+	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
+				AVP_EPC_Specific_Action_IPCAN_Change)) goto error;
+
+	return 1;
+error:
+	return 0;
+}
+
+/**
+ * This function creates a Media Component Description with a wildcarded flow
+ * that will be set to AF Signaling for the messages between this P-CSCF and the
+ * registered UE both in uplink and downlink
+ * @param msg - the Diameter message to add the avps to
+ * @param req - the reuqest
+ * @param res - the response
+ */
+int PCC_add_media_component_description_for_register(AAAMessage *msg, str ip_from, unsigned short from_port_no, uint16_t version)
+{
+	AAA_AVP *avp=0;
+	AAA_AVP_LIST list={0,0};
+	str data={0,0};
+	str ip_to;
+
+	if(version == AF_INET){
+		ip_to  = ipv4_for_signaling;
+	}else{
+		ip_to  = ipv6_for_signaling;
+	}
+	
+	avp=PCC_create_media_subcomponent(0, ip_s, 
+					ip_from, from_port_no, 
+					ip_to, port_for_signaling,  "", 4);
+	if(!avp) goto error;
+	cdpb.AAAAddAVPToList(&list,avp);
+	
+	data=cdpb.AAAGroupAVPS(list);
+	if(!data.s) goto error;
+  	cdpb.AAAFreeAVPList(&list);
+  	PCC_add_avp(msg,data.s,data.len,AVP_IMS_Media_Component_Description,
+ 				AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+ 				IMS_vendor_id_3GPP,
+ 				AVP_FREE_DATA,
+ 				__FUNCTION__);
+
+	return 1;
+error:
+	cdpb.AAAFreeAVPList(&list);
+	return 0;
+}
  
 /**
  * Creates and adds a Media Component Description AVP
@@ -271,7 +454,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  * @return 1 on success or 0 on error
  */
  
- inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag)
+inline int PCC_add_media_component_description(AAAMessage *msg,str sdpinvite,str sdp200,char *mline,int number,int tag)
  {
  	str data;
  	AAA_AVP_LIST list;
@@ -286,7 +469,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	
  	
  	char *ptr;
- 	char port[PCC_MAX_Char];
+ 	str port;
  	int type,i,n,a;
  	char x[4];
 	
@@ -315,7 +498,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	
  	/*media-sub-component*/
  	
-	n=PCC_create_add_media_subcomponents(&list,sdpinvite,sdp200,number,media_sub_component,tag);
+	n=PCC_create_add_media_subcomp_dialog(&list,sdpinvite,sdp200,number,media_sub_component,tag);
  	if(n==-1)
  	{
  		LOG(L_ERR,"ERR:"M_NAME"Unable to create media_sub_components list AVP");
@@ -383,7 +566,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	
  	/*Max-Requested-Bandwidth-UL*/
  	/*Max-Requested-Bandwidth-DL*/
- 	/*SDP bodies have been checked by gq_create_add_media_subcomponents*/
+ 	/*SDP bodies have been checked by pcc_create_add_media_subcomponents*/
  	
  	i=1;
  	ptr=find_sdp_line(sdp200.s,(sdp200.s+sdp200.len),'m');
@@ -416,7 +599,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
 	if (bwDL.bAS!=0)
 	 {
 	 	
- 			set_4bytes(x,bwDL.bAS*1024);
+ 			set_4bytes(x,bwDL.bAS*1000);
  			Max_UL=cdpb.AAACreateAVP(AVP_IMS_Max_Requested_Bandwidth_UL,
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
@@ -426,7 +609,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
 	 }
 	if (bwUL.bAS!=0)
 	{
- 			set_4bytes(x,bwUL.bAS*1024);
+ 			set_4bytes(x,bwUL.bAS*1000);
  			Max_DL=cdpb.AAACreateAVP(AVP_IMS_Max_Requested_Bandwidth_DL,
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
@@ -439,40 +622,41 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
 	
  	/*Flow-Status*/
  	/*lets follow the specs*/
- 		if (tag==0)
- 		{
- 			extract_token(mline,port,PCC_MAX_Char,2);
- 		} else {
- 			extract_token(ptr,port,PCC_MAX_Char,2);
- 		}
- 		if(strncmp(port,"0",1)==0)
- 		{
- 			set_4bytes(x,AVP_IMS_Flow_Status_Removed);
+	if (tag==0)
+	{
+		extract_token(mline,&port,PCC_MAX_Char,2);
+	} else {
+		extract_token(ptr,&port,PCC_MAX_Char,2);
+	}
+
+	if(strncmp(port.s,"0",1)==0)
+	{
+		set_4bytes(x,AVP_IMS_Flow_Status_Removed);
+	} else {
+  			
+		if (tag==1)
+		{
+			a=check_atributes(sdp200,ptr);
+		} else {
+			a=check_atributes(sdpinvite,mline);
+		}
+  			
+		if (a==1)
+		{
+			set_4bytes(x,AVP_IMS_Flow_Status_Enabled_Uplink);
+  		} else if(a==2)
+  		{
+  			set_4bytes(x,AVP_IMS_Flow_Status_Enabled_Downlink);
   		} else {
-  			
-  			if (tag==1)
-  			{
-  				a=check_atributes(sdp200,ptr);
-  			} else {
-  				a=check_atributes(sdpinvite,mline);
-  			}
-  			
-  			if (a==1)
-  			{
-  				set_4bytes(x,AVP_IMS_Flow_Status_Enabled_Uplink);
-  			} else if(a==2)
-  			{
-  				set_4bytes(x,AVP_IMS_Flow_Status_Enabled_Downlink);
-  			} else {
-  				set_4bytes(x,AVP_IMS_Flow_Status_Enabled);
-  			} 
+  			set_4bytes(x,AVP_IMS_Flow_Status_Enabled);
+  		} 
   			
   			
- 		}
- 	
+ 	}
+ 	if(port.s){ pkg_free(port.s); port.s = 0; }
  	
  		
- 		flow_status=cdpb.AAACreateAVP(AVP_IMS_Flow_Status,
+ 	flow_status=cdpb.AAACreateAVP(AVP_IMS_Flow_Status,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,x,4,
  											AVP_DUPLICATE_DATA);
@@ -548,7 +732,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	/*now group them in one big AVP and free them*/
  	
  	data=cdpb.AAAGroupAVPS(list);
-  	 		
+  	 cdpb.AAAFreeAVPList(&list);
   	PCC_add_avp(msg,data.s,data.len,AVP_IMS_Media_Component_Description,
  				AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  				IMS_vendor_id_3GPP,
@@ -556,40 +740,105 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  				__FUNCTION__);
  	
  	LOG(L_DBG,"PCC_add_media_component_description() : about to end\n");		
- 	cdpb.AAAFreeAVP(&media_component_number);
- 	for(i=0;i<n;i++)
- 	{
- 		cdpb.AAAFreeAVP(&media_sub_component[i]);
- 	}
- 	LOG(L_DBG,"PCC_add_media_component_description() : bandwidths\n");	
- 	if (bwUL.bAS!=0)
-	 {	
-	 	cdpb.AAAFreeAVP(&Max_UL);	 	
-	 }
-	if (bwDL.bAS!=0)
-	{
-		cdpb.AAAFreeAVP(&Max_DL);		
-	}
-	
-	LOG(L_DBG,"PCC_add_media_component_description() : RS RSS\n");	
-	cdpb.AAAFreeAVP(&flow_status);
-	if (RS!=0)
- 	{
- 		cdpb.AAAFreeAVP(&RS);
- 	}
- 	if (RR!=0)
- 	{
- 		cdpb.AAAFreeAVP(&RR);
- 	}
- 	LOG(L_DBG,"PCC_add_media_component_description() : media type and codec-data\n");	
- 	cdpb.AAAFreeAVP(&media_type);
- 	cdpb.AAAFreeAVP(&codec_data1);
- 	cdpb.AAAFreeAVP(&codec_data2);
  	
- 	list.tail=0;
- 	list.head=0;
  	return 1;
  }
+
+/*
+ * Parses the sdp payload and extract information like ip addresses and ports
+ * @param sdpA - the SDP body of the INVITE
+ * @param sdpB - the SDP body of the 200 OK answer for the INVITE
+ * @param number - the number of the media component to use (which m= line?)
+ * @param tag - 0 originating side 1 terminating side 
+ * @param mediaLine - the "a=" line found in the sdp payload
+ * @param atributes - type of media returned from the parsing of the "a=" line
+ * @param port - the number od ports, to be used by the calling function
+ * @param ipA, ipB, intportA, intportB - the ip addresses and ports of the caller and called party
+ * returns 0 on "do nothing", 1 on success, -1 on error
+ */
+
+inline int pcc_get_ip_port_dialog(str sdpA,str sdpB, int number, int tag, 
+					char ** mediaLine, int * atributes, int *ports,
+					str * ipA, unsigned int * intportA,
+					str * ipB, unsigned int * intportB){
+	
+	char *mlineA, *mlineB,*clineA,*clineB;
+	char *rtp;
+	str portA = {0,0};
+	str portB = {0,0};
+	int ret= -1;
+
+ 	if (!extract_mclines(sdpA,sdpB,&mlineA,&clineA,&mlineB,&clineB,number)){
+
+ 		LOG(L_ERR,"ERR"M_NAME":PCC_create_add_media_subcomp_dialog: error extracting lines of sdp content\n");
+ 		return -1;
+ 	}
+ 		   
+	/*a= lines are also needed*/
+	/*atributes: 	1 means sendonly*/
+ 	/*		2 means recvonly*/
+ 	/*		0 is no a= line or sendrecv*/
+ 	if (tag==0) {
+ 	 	*atributes=check_atributes(sdpA,mlineA);
+
+ 	} else if (sdpB.len) {
+ 	 	*atributes=check_atributes(sdpB,mlineB);
+ 	}
+ 		 
+ 	  		 
+	if (!extract_token(mlineA,&portA,PCC_MAX_Char,2)){
+
+ 		goto error; /*problem extracting port*/
+ 	}
+ 	if (sdpB.len && !extract_token(mlineB,&portB,PCC_MAX_Char,2)){
+
+ 		goto error; /* either no ' ' or PCC_MAX_Char too small*/
+ 	}
+ 		
+ 	/*check if this are ports or multiports!*/
+ 		
+ 	if(!is_a_port(portA) || (sdpB.len && !is_a_port(portB))){
+		goto error; /* there was a word there but it isn't a port*/
+	}
+ 		 		 		
+ 	if (strncmp(portA.s,"0",1)!=0 && (sdpB.len && strncmp(portB.s,"0",1)==0)){
+ 			/*this means answerer rejected the offer*/
+ 			
+		ret = 0; goto end;/*this is more logical*/
+	}
+ 		
+ 	/*the next lines have nothing to do with rtp
+ 	 * i just reused the pointer*/	
+ 	rtp=strchr(portA.s,'/');
+ 	if (rtp!=NULL){
+ 		sscanf(portA.s,"%*i/%i%*s",ports);
+ 		*rtp='\0'; 
+ 	}	
+ 		
+
+ 	if(!extract_token(clineA,ipA,PCC_MAX_Char,3)){
+		goto end;
+	}
+
+	if(sdpB.len && !extract_token(clineB,ipB,PCC_MAX_Char,3)){
+
+ 		goto end;
+	}
+ 		
+  	/* i is the flow number */
+ 	/*flows is the number of data flows .. for each port 1 data flow*/
+	sscanf(portA.s,"%u",intportA);
+	sscanf(portB.s,"%u",intportB);
+	*mediaLine = mlineA;
+	ret = 1;
+error:
+end:
+	if(portA.s) pkg_free(portA.s);	portA.s = 0;
+	if(portB.s) pkg_free(portB.s);	portB.s = 0;
+	return ret;
+
+}
+
 /* Creates and adds Media-Sub-Components to AVP_LIST
  * @param list - pointer to the AVP_LIST
  * @param sdpA - the SDP body of the INVITE
@@ -599,156 +848,85 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  * @param tag - 0 originating side 1 terminating side 
  * returns the number of media_sub_components added on success -1 on error
  * the media_sub_component is given in order to free the AVPS after grouping them!
+ * the transport protocol will be considered : 
+ * UDP if RTP/AVP, TCP if TCP (RFC 4145) or TCP/MSRP (RFC 4975), or IP if neither
  */
-inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
+inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
  {
 
- 	
- 
-	
-	char *mlineA,*mlineB,*clineA,*clineB;
- 	char portA[PCC_MAX_Char],portB[PCC_MAX_Char];
- 	int intportA,intportB;
- 	char addressA[PCC_MAX_Char];
- 	char addressB[PCC_MAX_Char];
+ 	char * newline, *rtp, *mlineA, *tcp = NULL;
+ 	unsigned int intportA=0,intportB=0;
+	str ipA = {0,0}, ipB = {0,0};
  	int i=0,flows=0;
  	int atributes=0; /* a= lines present?*/
- 	char *newline,*rtp;
-	int ports=1; /*how many ports does this m line define?*/
-		
- 		LOG(L_DBG,"PCC_add_media_subcomponents() : starting\n");
- 		if (!extract_mclines(sdpA,sdpB,&mlineA,&clineA,&mlineB,&clineB,number))
- 		{
- 			LOG(L_DBG,"PCC_add_media_subcomponents(): error extracting lines of sdp content\n");
- 			return -1;
+ 	int ports=1; /*how many ports does this m line define?*/
+	int ret;
+	char* proto = ip_s;	
+
+ 	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : starting\n");
+	
+	ret = pcc_get_ip_port_dialog(sdpA, sdpB, number, tag, &mlineA, &atributes, &ports,
+					&ipA, &intportA, &ipB, &intportB);
+	if(ret!=1) return ret;
+	rtp=strstr(mlineA,"RTP");
+	newline=index(mlineA,'\n');
+	if (newline==NULL) newline=index(mlineA,'\0');
+	if(rtp!=NULL && rtp<newline) proto = udp_s;
+	else if((tcp = strstr(mlineA, "TCP"))!= NULL && tcp<newline)
+		proto = tcp_s;
+
+	
+	while(flows<ports && i+2<PCC_Media_Sub_Components){
+ 		i++;
+		if (tag!=1){
+			media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto, ipA, intportA, 
+											ipB, intportB, "",atributes);
+			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
+		} else {
+ 		
+ 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto,ipB, intportB,
+											ipA, intportA,"",atributes);
+ 			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
  		}
- 		   
- 		   /*a= lines are also needed*/
- 		 
- 		 
- 		 if (tag==0) {
- 		 	atributes=check_atributes(sdpA,mlineA);
- 			
- 			
- 		 } else {
- 		 	atributes=check_atributes(sdpB,mlineB);
- 		 	
- 		 }
- 		 
- 		  /*1 means sendonly*/
- 		  /*2 means recvonly*/
- 		  /*0 is no a= line or sendrecv or recvonly*/
- 		 	
- 		
- 		 
- 		if (!extract_token(mlineA,portA,PCC_MAX_Char,2))
- 		{
- 				return -1; /*problem extracting port*/
- 		}
- 		if (!extract_token(mlineB,portB,PCC_MAX_Char,2))
- 		{
- 				return -1; /* either no ' ' or PCC_MAX_Char too small*/
- 		}
- 		
- 		/*check if this are ports or multiports!*/
- 		
- 		if(!is_a_port(portA) || !is_a_port(portB)) 
- 		{
- 			return -1; /* there was a word there but it isn't a port*/
- 		}
- 		 		 		
- 		if (strncmp(portA,"0",1)!=0 && strncmp(portB,"0",1)==0)
- 		{
- 			/*this means answerer rejected the offer*/
- 			
- 			return 0; /*this is more logical*/
- 		}
- 		
- 		/*the next lines have nothing to do with rtp
- 		 * i just reused the pointer*/	
- 		rtp=index(portA,'/');
- 		if (rtp!=NULL)
- 		{
- 			sscanf(portA,"%*i/%i%*s",&ports);
- 			*rtp='\0'; 
- 				
- 		}	
- 		
- 		 		
- 		
- 		if(!extract_token(clineA,addressA,PCC_MAX_Char,3))
- 		{
- 			return -1;
- 		}
- 		if(!extract_token(clineB,addressB,PCC_MAX_Char,3))
- 		{
- 			return -1;
- 		}
- 		
- 		
-				
-				
- 		/* i is the flow number */
- 		/*flows is the number of data flows .. for each port 1 data flow*/
- 			
- 			while(flows<ports && i+2<PCC_Media_Sub_Components)
- 			{
- 				
- 				i++;
- 				if (tag!=1)
- 				{
- 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressA,portA,addressB,portB,"",atributes);
- 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
- 				} else {
- 		
- 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressB,portB,addressA,portA,"",atributes);
- 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);		
- 				}
- 				flows++;
- 			
- 				if (1) 
- 				{
-		 			rtp=strstr(mlineA,"RTP");
-		 			newline=index(mlineA,'\n');
-		 			if (newline==NULL) newline=index(mlineA,'\0');
-		 			if (rtp!=NULL && rtp < newline)
-		 	 		{
-		 			i++;
-		 			/*please optimize here!*/
-		 				sscanf(portA,"%i",&intportA);
-		 				sscanf(portB,"%i",&intportB);
-		 				intportA++; 
-		 				intportB++;
-		 				sprintf(portA,"%i",intportA);
-		 				sprintf(portB,"%i",intportB);
-		 				if (tag!=1)
-		 				{
-		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressA,portA,addressB,portB,"",3);
-		 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
-		 				} else {
-		 					media_sub_component[i-1]=PCC_create_media_subcomponent(i,"ip",addressB,portB,addressA,portA,"",3);
-		 					cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
-		 				}		 		
-		 			}
-	 				sscanf(portA,"%i",&intportA);
-	 				sscanf(portB,"%i",&intportB);
-	 				intportA++;  
-		 			intportB++;
-		 			sprintf(portA,"%i",intportA);
-		 			sprintf(portB,"%i",intportB);
-		 			
-		 			/*if its not an RTP flow and it has multiports then the odd ports
-		 			 * are used for the next component .. if it is RTP and multiports than 
-		 			 * the even ports are for the next component because the odd are used for 
-		 			 * RTCP flows*/
- 				}						
+ 		flows++;
+
+ 		if (1){
+
+			if (rtp!=NULL && rtp < newline){
+				i++;
+		 		intportA++; 
+		 		intportB++;
+		 		if (tag!=1){
+		 			media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto,ipA,intportA,
+												ipB,intportB,"",3);
+	 				cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
+	 			} else {
+	 				media_sub_component[i-1]=PCC_create_media_subcomponent(i,proto,ipB,intportB,
+												ipA,intportA,"",3);
+		 			cdpb.AAAAddAVPToList(list,media_sub_component[i-1]);	
+		 		}		 		
+		 	}
+	 			
+			intportA++;  
+	 		intportB++;
+
+	 		/*if its not an RTP flow and it has multiports then the odd ports
+	 		 * are used for the next component .. if it is RTP and multiports than 
+	 		 * the even ports are for the next component because the odd are used for 
+	 		 * RTCP flows*/
+ 		}						
  											
- 			}
- 			LOG(L_DBG,"PCC_add_media_subcomponents() : ending\n");							
+ 	}
+ 	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : ending\n");	
  	  	
  	return (i);
  }
-/*Creates a media-sub-component AVP
+/**
+ * Creates a media-sub-component AVP
+ * 
+ * TODO - fix this ... or just delete it and do it again! It adds 2x Flow-Description for example, as a bug!
+ * I don't think that more than 1 can be in one Media Subcomponent.
+ * 
  * @param number - the flow number
  * @param proto - the protocol of the IPFilterRule
  * @param ipA - ip of the INVITE  (if creating rule for UE that sent INVITE)
@@ -757,27 +935,65 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  * @param portB - port of 200 OK (if creating rule for UE that sent INVITE)
  * @param options - any options to append to the IPFilterRules
  * @param atributes - indication of atributes 
- * 						0 no atributes , 1 sendonly , 2 recvonly , 3 RTCP flows
+ * 						0 no atributes , 1 sendonly , 2 recvonly , 3 RTCP flows, 4 AF signaling flows
  * @param bwUL - bandwidth uplink
  * @param bwDL - bandiwdth downlink
  */ 
 
- AAA_AVP *PCC_create_media_subcomponent(int number,char *proto, char *ipA,char *portA, char *ipB,char *portB ,char *options,int atributes)
+static str permit_out = {"permit out ", 11};
+static str permit_in = {"permit in ", 10};
+static str from_s = {" from ", 6};
+static str to_s = {" to ", 4};
+static char * permit_out_with_ports =    "permit out %s from %.*s %u to %.*s %u %s";
+static char * permit_out_without_ports = "permit out %s from %.*s to %.*s %s";
+static char * permit_in_with_ports = "permit in %s from %.*s %u to %.*s %u %s";
+static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
+
+ AAA_AVP *PCC_create_media_subcomponent(int number, char* proto, 
+		 			str ipA, unsigned int intportA, 
+					str ipB, unsigned int intportB ,
+					char *options,int atributes)
  {
  
  		str data;
  		int len,len2;
- 		char whatchar[PCC_MAX_Char4]; /*too big!*/
- 		char whatchar2[PCC_MAX_Char4];
- 		AAA_AVP *flow_description1,*flow_description2,*flow_number;
- 		AAA_AVP *flow_usage;
+ 		str flow_data = {0,0};
+ 		str flow_data2 = {0,0};
+ 		AAA_AVP *flow_description1=0,*flow_description2=0,*flow_number=0;
+ 		AAA_AVP *flow_usage=0;
  		
  		AAA_AVP_LIST list;
  		list.tail=0;
  		list.head=0;
  		char x[4];
- 		
- 		
+		int portAlen=0, portBlen=0;
+		
+		if(pcc_use_ports){	
+			int2str(intportA, &portAlen);
+			int2str(intportB, &portBlen);
+			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+4+
+				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
+		}else{
+			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+2+
+				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
+		}
+
+		flow_data.s = (char*)pkg_malloc(len); 
+		if(!flow_data.s){
+			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
+					when allocating %i bytes in pkg\n", len);			
+			return NULL;
+		}
+
+		len2 = len - (permit_out.len -permit_in.len)*sizeof(char);
+		flow_data2.s = (char*)pkg_malloc(len2);
+	        if(!flow_data2.s){
+			LOG(L_ERR, "ERR:"M_NAME":PCC_create_media_component: out of memory \
+					when allocating %i bytes in pkg\n", len);			
+			pkg_free(flow_data.s); flow_data.s = 0;
+			return NULL;
+		}		
+
  		set_4bytes(x, number);
  				
  		flow_number=cdpb.AAACreateAVP(AVP_IMS_Flow_Number,
@@ -786,42 +1002,67 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  											AVP_DUPLICATE_DATA);
 		cdpb.AAAAddAVPToList(&list,flow_number);
 		/*first flow is the recieve flow*/
-		
-		if (atributes==0 || atributes==2 || atributes==3) 
+		//snprintf: The trailing nul character is counted towards the size limit, so you must allocate at least size characters for str.	
+		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
-			
-			len=sprintf(whatchar,"permit out %s from %s %s to %s %s %s",proto,ipB,"",ipA,portA,options); 											
+			if(pcc_use_ports){
+				flow_data.len=snprintf(flow_data.s, len, permit_out_with_ports,proto,
+					ipB.len, ipB.s, intportB,
+					ipA.len, ipA.s, intportA, options); 
+			}else{
+				flow_data.len=snprintf(flow_data.s, len, permit_out_without_ports,proto,
+					ipB.len, ipB.s, ipA.len, ipA.s, options); 
+			}
+			flow_data.len = strlen(flow_data.s);
+			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: first flow is %.*s\n", flow_data.len, flow_data.s);
  			flow_description1=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
- 											IMS_vendor_id_3GPP,whatchar,len,
+ 											IMS_vendor_id_3GPP, flow_data.s, flow_data.len,
  											AVP_DUPLICATE_DATA);
  			cdpb.AAAAddAVPToList(&list,flow_description1);
- 			
 		} 
-		if (atributes==0 || atributes==1 || atributes==3)
+		
+		if (atributes==0 || atributes==1 || atributes==3 || atributes==4)
 		{
- 		/*second flow is the send flow*/									
- 			len2=sprintf(whatchar2,"permit in %s from %s %s to %s %s %s",proto,ipA,"",ipB,portB,options);
+	 		/*second flow is the send flow*/									
+			if(pcc_use_ports){
+	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
+					ipA.len, ipA.s, intportA,
+					ipB.len, ipB.s, intportB, options);
+			}else{
+	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_without_ports,proto,
+					ipA.len, ipA.s, ipB.len, ipB.s, options);
+			}
+			flow_data2.len = strlen(flow_data2.s);
+			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: second flow is %.*s\n", flow_data2.len, flow_data2.s);
  			flow_description2=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
- 											IMS_vendor_id_3GPP,whatchar2,len2,
+ 											IMS_vendor_id_3GPP, flow_data2.s, flow_data2.len,
  											AVP_DUPLICATE_DATA);
 			cdpb.AAAAddAVPToList(&list,flow_description2);
 		}
 		
- 		
+		
  		
  		
  		if (atributes==3)
 		{
-			set_4bytes(x,AVP_IMS_Flow_Usage_Rtcp);
-			flow_usage=cdpb.AAACreateAVP(AVP_IMS_Flow_Usage,
+			set_4bytes(x,AVP_EPC_Flow_Usage_Rtcp);
+			flow_usage=cdpb.AAACreateAVP(AVP_EPC_Flow_Usage,
 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
 											IMS_vendor_id_3GPP,x,4,
 											AVP_DUPLICATE_DATA);
 			cdpb.AAAAddAVPToList(&list,flow_usage);
 		} 											
- 		
+ 		if (atributes==4)
+ 				{
+ 					set_4bytes(x,AVP_EPC_Flow_Usage_AF_Signaling);
+ 					flow_usage=cdpb.AAACreateAVP(AVP_IMS_Flow_Usage,
+ 													AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+ 													IMS_vendor_id_3GPP,x,4,
+ 													AVP_DUPLICATE_DATA);
+ 					cdpb.AAAAddAVPToList(&list,flow_usage);
+ 				}
  		
  		
  		
@@ -832,32 +1073,15 @@ inline int PCC_create_add_media_subcomponents(AAA_AVP_LIST *list,str sdpA,str sd
  		data=cdpb.AAAGroupAVPS(list);
  		
  		
- 		
- 		cdpb.AAAFreeAVP(&flow_number);
- 		
- 		
- 		if (atributes==0 || atributes==2 || atributes==3)
- 		{
-			cdpb.AAAFreeAVP(&flow_description1);
- 		}
- 		
- 		if (atributes==0 || atributes==1 || atributes==3)
- 		{
- 			cdpb.AAAFreeAVP(&flow_description2);
- 		}
- 		
- 		
- 		
- 		
- 		if(atributes==3)
- 		{
- 			cdpb.AAAFreeAVP(&flow_usage);
- 		}
+ 		cdpb.AAAFreeAVPList(&list);
+		pkg_free(flow_data.s); flow_data.s =0;
+		pkg_free(flow_data2.s); flow_data2.s = 0;
+
  		return (cdpb.AAACreateAVP(AVP_IMS_Media_Sub_Component,
  											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
  											IMS_vendor_id_3GPP,data.s,data.len,
- 											AVP_FREE_DATA));
-}
+											AVP_FREE_DATA));
+ }
 
 /*
  * Creates a Codec-Data AVP as defined in TS29214 (Rx interface)
@@ -970,9 +1194,9 @@ AAA_AVP* PCC_create_codec_data(str sdp,int number,int direction)
 int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,char **clineB,int number)
 {
  	
- 	char *nclineA,*nclineB; /*next*/
+ 	char *nclineA=NULL,*nclineB=NULL; /*next*/
  	char *sclineA=NULL,*sclineB=NULL; /*session*/
- 	char *nmlineA,*nmlineB; /*next*/
+ 	char *nmlineA=NULL,*nmlineB= NULL; /*next*/
  	int i;
  	
  	 		
@@ -985,40 +1209,43 @@ int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,
 	
 	
  	
-	if (*clineA==NULL || *clineB==NULL || *mlineA==NULL || *mlineB==NULL)
+	if (*clineA==NULL || *mlineA==NULL )
  	{
  		/*missing at least one cline and mline in each SDPbody*/
  		LOG(L_ERR,"ERR:"M_NAME" Malformed SDP body\n");
  		return 0;
- 	} 	
- 	
- 	nclineA=find_next_sdp_line(*clineA,(sdpA.s+sdpA.len),'c',NULL);
- 	nclineB=find_next_sdp_line(*clineB,(sdpB.s+sdpB.len),'c',NULL);
- 	nmlineA=find_next_sdp_line(*mlineA,(sdpA.s+sdpA.len),'m',NULL);
- 	nmlineB=find_next_sdp_line(*mlineB,(sdpB.s+sdpB.len),'m',NULL);
- 	
- 	
- 	
- 	if (*clineA < *mlineA) 
- 	{
- 		sclineA=*clineA;
+ 	} 	else {
+
+ 		nclineA=find_next_sdp_line(*clineA,(sdpA.s+sdpA.len),'c',NULL);
+ 		nmlineA=find_next_sdp_line(*mlineA,(sdpA.s+sdpA.len),'m',NULL);
+ 		if (*clineA < *mlineA)
+ 		 	{
+ 		 		sclineA=*clineA;
+ 		 	}
  	}
- 	if (*clineB < *mlineB)
- 	{
- 		sclineB=*clineB;
+
+	if (sdpB.len)
+	{
+
+		nclineB=find_next_sdp_line(*clineB,(sdpB.s+sdpB.len),'c',NULL);
+		nmlineB=find_next_sdp_line(*mlineB,(sdpB.s+sdpB.len),'m',NULL);
+
+		if (*clineB < *mlineB)
+		{
+			sclineB=*clineB;
+		}
  	}
  	
  	
  	
  	if (number > 1)
- 	 {
+ 	{
  		for (i=1;i<number;i++)
  		{
  			*mlineA=nmlineA;
- 			*mlineB=nmlineB;
  			nmlineA=find_next_sdp_line(*mlineA,(sdpA.s+sdpA.len),'m',NULL);
- 			nmlineB=find_next_sdp_line(*mlineB,(sdpB.s+sdpB.len),'m',NULL);
  			
+
  			if(nclineA >*mlineA && (nclineA < nmlineA || nmlineA== NULL))
  			{
  				// if there is a c line between two m lines or after the last m line
@@ -1029,25 +1256,30 @@ int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,
  				// if not then the session description one is the one 
  				*clineA=sclineA;
  			}
- 			
- 			if(nclineB >*mlineB && (nclineB < nmlineB || nmlineB== NULL))
+
+ 			if (sdpB.len)
  			{
- 				// if there is a c line between two m lines or after the last m line
- 				// then this c line belongs to the first one 
- 			 		*clineB=nclineB;
- 			 		nclineB=find_next_sdp_line(*clineB,(sdpB.s+sdpB.len),'c',NULL);
- 			} else {
- 				// if not then the session description one is the one 
- 				*clineB=sclineB;
+ 				*mlineB=nmlineB;
+ 				nmlineB=find_next_sdp_line(*mlineB,(sdpB.s+sdpB.len),'m',NULL);
+
+				if(nclineB >*mlineB && (nclineB < nmlineB || nmlineB== NULL))
+				{
+					// if there is a c line between two m lines or after the last m line
+					// then this c line belongs to the first one
+						*clineB=nclineB;
+						nclineB=find_next_sdp_line(*clineB,(sdpB.s+sdpB.len),'c',NULL);
+				} else {
+					// if not then the session description one is the one
+					*clineB=sclineB;
+				}
  			}
  		
  		
- 		
- 		if (*mlineA == NULL || *mlineB == NULL || *clineA == NULL || *clineB == NULL)
- 		{
- 			LOG(L_ERR,"ERR:"M_NAME":%s: Failed getting m= and c= lines in SDP\n","extract_mclines");
- 			return 0;
- 		}
+			if (*mlineA == NULL  || *clineA == NULL)
+			{
+				LOG(L_ERR,"ERR:"M_NAME":%s: Failed getting m= and c= lines in SDP\n","extract_mclines");
+				return 0;
+			}
  					
  		}
  		// after this we should have mlineA , mlineB , clineA, clineB
@@ -1069,7 +1301,7 @@ int extract_mclines(str sdpA,str sdpB,char **mlineA,char **clineA,char **mlineB,
  */
  
   
-int extract_token(char *line,char *token,int max,int number)
+int extract_token(char *line, str *token,int max,int number)
 {
 	char *p,*q,*r;
 	int i;
@@ -1093,8 +1325,15 @@ int extract_token(char *line,char *token,int max,int number)
 	while isspace(*(q-1)) q--;
 	if (q-p<max) 
 	{
-		memcpy(token,p,q-p);
-		token[q-p]='\0';
+		token->s = (char*)pkg_malloc(q-p+1);
+		if(!token->s){
+			LOG(L_ERR, "ERR:"M_NAME":extract_token: out_of_memory \
+					when allocating %i bytes\n", q-p);
+			return 0;
+		}
+		memcpy(token->s,p,q-p);
+		token->len = q-p;
+		token->s[token->len] = '\0';
 		return 1;
 	} else {
 		return 0;
@@ -1164,7 +1403,7 @@ int extract_bandwidth(bandwidth *bw,str sdp,char *start)
 */
 
 /*
- * 
+ * TODO - fix this horrible hack...
  * could return something like 
  * 
  * <tel:+1-234-1234-2134>  and 0
@@ -1179,28 +1418,22 @@ int extract_id(struct sip_msg *r,int tag,str *identification)
 	
 	identification->s=0;
 	identification->len=0;
-	if (!tag)
-	{
+	if (!tag) {
 		f=r->from->body.s;
 		len=r->from->body.len;
 	} else {
 		f=r->to->body.s;
 		len=r->to->body.len;
 	}
-	while (i<len)
-	{
-	
-		switch (f[i])
-		{
-	
+	while (i<len) {
+		switch (f[i]) {
 			case '<' :
-				identification->s=f+i;
+				identification->s=f+i+1;
 				i++;
 				break;
 			case '>' :
-				if (identification->s)
-				 {
-				 	identification->len=(f+i)-identification->s+1;
+				if (identification->s) {
+				 	identification->len=(f+i)-identification->s;
 				 	i=len; // just to get out of here
 					break;
 				 } else {
@@ -1308,11 +1541,11 @@ int check_atributes(str sdpbody,char *mline)
  * @param port - the string to check
  * returns 0 if this is not a port  1 if it is a port or 2 if its a multiport
 */
-int is_a_port(char *port) {
+int is_a_port(str port) {
 	int i,multiport=0;
-	for (i=0;i<strlen(port);i++)
+	for (i=0;i< port.len; i++)
 	{
-		switch(port[i]) {
+		switch(port.s[i]) {
 			case '1':
 			case '2':
 			case '3':
@@ -1391,14 +1624,14 @@ int is_an_address(char *ad)
 }*/		
 
 
-
+#define macro_name(_rc)	#_rc
 /**
  * Returns the Result-Code AVP from a Diameter message.
  * or the Experimental-Result-Code if there is no Result-Code , because .. who cares
  * @param msg - the Diameter message
- * @returns the AVP payload on success or an empty string on error
+ * @returns 1 if result code found or 0 if error
  */
-inline int PCC_get_result_code(AAAMessage *msg, int *data)
+inline int PCC_get_result_code(AAAMessage *msg, unsigned int *data)
 {
 
 	AAA_AVP *avp;
@@ -1406,13 +1639,15 @@ inline int PCC_get_result_code(AAAMessage *msg, int *data)
 	list.head=0;
 	list.tail=0;
 	*data=0;
+	int ret = 0;
 	
 	for (avp=msg->avpList.tail;avp;avp=avp->prev)
 	{
 		//LOG(L_INFO,"pcc_get_result_code: looping with avp code %i\n",avp->code);
 		if (avp->code==AVP_Result_Code)
 		{
-			*data = get_4bytes(avp->data.s);	
+			*data = get_4bytes(avp->data.s);
+			ret = 1;	
 				
 		} else if (avp->code==AVP_Experimental_Result)
 		{
@@ -1424,16 +1659,47 @@ inline int PCC_get_result_code(AAAMessage *msg, int *data)
 				{
 					*data = get_4bytes(avp->data.s);
 					cdpb.AAAFreeAVPList(&list);
-					return 1;				
+					ret = 1;				
+					break;
 				}
 			}
 			cdpb.AAAFreeAVPList(&list);
-			return 0; // this has to be here because i have changed the avp!!!
+			break; // this has to be here because i have changed the avp!!!
 					
 		}
 	
 	}
-	return 0;
+	switch((*data)){
+		case DIAMETER_SUCCESS:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(DIAMETER_SUCCESS)); break;
+
+		case RC_IMS_DIAMETER_ERROR_INVALID_SERVICE_INFORMATION:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_INVALID_SERVICE_INFORMATION));break;
+
+		case RC_IMS_DIAMETER_ERROR_FILTER_RESTRICTIONS:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_FILTER_RESTRICTIONS));break;
+
+		case RC_IMS_DIAMETER_ERROR_REQUESTED_SERVICE_NOT_AUTHORIZED:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_REQUESTED_SERVICE_NOT_AUTHORIZED)); break;
+
+		case RC_IMS_DIAMETER_ERROR_DUPLICATED_AF_SESSION:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_DUPLICATED_AF_SESSION)); break;
+
+		case RC_IMS_DIAMETER_ERROR_IPCAN_SESSION_NOT_AVAILABLE:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_IPCAN_SESSION_NOT_AVAILABLE)); break;
+
+		case RC_IMS_DIAMETER_ERROR_UNAUTHORIZED_NON_EMERGENCY_SESSION:
+			LOG(L_DBG,"DBG:"M_NAME":PCC_get_result_code: AAA result %s\n", 
+				macro_name(RC_IMS_DIAMETER_ERROR_UNAUTHORIZED_NON_EMERGENCY_SESSION));break;
+	}
+
+	return ret;
 }
 
 

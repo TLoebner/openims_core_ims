@@ -75,7 +75,7 @@ static str reason_hdr_e={"\"\r\n",3};
 //static str _503_text_s={"Service Unavailable",28};
 static str _488_text_s={"Not Acceptable Here",19};
 
-static str method_CANCEL_s={"CANCEL",6};
+//static str method_CANCEL_s={"CANCEL",6};
 static str method_ACK_s={"ACK",3};
 static str method_BYE_s={"BYE",3};
 
@@ -220,13 +220,13 @@ void confirmed_response(struct cell *t,int type,struct tmcb_params *ps)
 		if (d->state==DLG_STATE_TERMINATED_ONE_SIDE){
 			hash=d->hash;
 			del_p_dialog(d);
-			d_unlock(hash);			 
 		} else {
 			hash=d->hash;
 			d->state=DLG_STATE_TERMINATED_ONE_SIDE;
-			d_unlock(hash);
 		}		
-	} 
+	}
+	d_unlock(hash);			 
+
 }
 
 
@@ -351,7 +351,11 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	firstcseq.len=i;
 	sprintf(firstcseq.s,"%i",d->first_cseq);
 	LOG(L_INFO,"CALLED t_lookup_callid with %.*s, %.*s\n",d->call_id.len,d->call_id.s,firstcseq.len,firstcseq.s);
-	tmb.t_lookup_callid(&t,d->call_id,firstcseq);
+	if (tmb.t_lookup_callid(&t,d->call_id,firstcseq) < 0) {
+		pkg_free(firstcseq.s);
+		LOG(L_ERR,"release_call_previous: t_lookup_callid failed\n");
+		goto error;		
+	}
 	
 	pkg_free(firstcseq.s);
 		
@@ -571,7 +575,10 @@ int P_release_call_onreply(struct sip_msg *msg,char *str1,char *str2)
 			} else {
 				release_call_previous(d,RELEASE_CALL_EARLY,488,reason);		
 			}
-			d->pcc_session=0; // This means we already finished with the dialog
+			// This means we already finished with the dialog
+			if (d->pcc_session_id.s) shm_free(d->pcc_session_id.s);
+			d->pcc_session_id.s=0; 
+			d->pcc_session_id.len=0;
 			d_unlock(hash);
 			return CSCF_RETURN_BREAK;
 		} else {

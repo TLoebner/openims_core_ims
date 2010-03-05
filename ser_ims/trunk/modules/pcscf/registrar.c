@@ -120,9 +120,9 @@ void registrar_timer(unsigned int ticks, void* param)
 							LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and Deregistered.\n",
 								c->uri.len,c->uri.s);		
 							if (c->security){
-								/* If we have IPSec SAs, we keep them 60 seconds more to relay further messages */
+								/* If we have IPSec SAs, we keep them REGISTRATION_GRACE_PERIOD seconds more to relay further messages */
 								c->reg_state = DEREGISTERED;
-								c->expires = time_now + 60;
+								c->expires = time_now + REGISTRATION_GRACE_PERIOD;
 							}else{
 								LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",
 									c->uri.len,c->uri.s);						
@@ -341,7 +341,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 		goto error;
 	}
 	
-	expires_hdr = cscf_get_expires_hdr(rpl);
+	expires_hdr = cscf_get_expires_hdr(rpl,0);
 	/** Removed because this would parse the hdr, but then it will fail to free the hdr->parsed */
 //	if (expires_hdr<0) 
 //		expires_hdr = cscf_get_expires_hdr(req);
@@ -360,9 +360,9 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	
 	realm = cscf_get_realm(req);
 	
-	cscf_get_p_associated_uri(rpl,&public_id,&public_id_cnt);
+	cscf_get_p_associated_uri(rpl,&public_id,&public_id_cnt,1);
 	
-	service_route = cscf_get_service_route(rpl,&service_route_cnt);
+	service_route = cscf_get_service_route(rpl,&service_route_cnt,1);
 			
 	if ((expires=update_contacts(req,rpl,b->star,expires_hdr,
 			public_id,public_id_cnt,service_route,service_route_cnt,
@@ -370,7 +370,6 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 		goto error;
 
 	//print_r(L_ERR);
-	
 	
 	if (service_route)	pkg_free(service_route);
 	if (public_id) pkg_free(public_id);
