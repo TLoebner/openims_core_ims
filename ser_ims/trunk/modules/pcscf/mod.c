@@ -79,6 +79,7 @@
 	#include "../../modules/dialog/dlg_mod.h"
 #endif
 #include "../cdp/cdp_load.h"
+#include "../cdp_avp/mod_export.h"
 
 #include "registration.h"
 #include "registrar_storage.h"
@@ -184,6 +185,8 @@ str forced_clf_peer_str;					/**< fxied FQDN of the forced CLF DiameterPeer (CLF
 char* ecscf_uri ="sip:ecscf.open-ims.test:7060";				/** the e-cscf uri*/
 str ecscf_uri_str;
 int emerg_support = 1;
+int anonym_em_call_support = 1;
+char* emerg_numbers_file="/opt/OpenIMSCore/ser_ims/modules/pcscf/emerg_info.xml";
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -222,10 +225,21 @@ int * callback_singleton;				/**< Callback singleton 								*/
 
 
 int pcscf_use_pcc = 0;								/**< whether to enable or disable pcc */
-char* pcscf_forced_qos_peer = "pdf.open-ims.test";	/**< FQDN of Policy Dicision Function (PDF) for policy control */
+char* pcscf_forced_qos_peer = "";					/**< FQDN of Policy Decision Function (PDF) for policy control */
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
-int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means caller and callee */                        
+int pcc_use_ports = 1; 						/**< weather to use ports in the IPFilterRule >**/
+
+char* ipv4_for_signaling_char="127.0.0.1";
+str ipv4_for_signaling;
+
+char* ipv6_for_signaling_char="::1";
+str ipv6_for_signaling;
+
+unsigned short port_for_signaling = 4060;
+
+char* pcc_dest_realm_s = "open-ims.test";
+str pcc_dest_realm;
 
 
 /** 
@@ -256,6 +270,7 @@ int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means cal
  * - P_is_registered() - check if the originator contact of this message is registered at a S-CSCF
  * - P_assert_identity() - assert the identity by removing the P-Preffered-Identity/P-Asserted-Identity header and 
  *  then add a trusted P-Asserted-Identity header
+ * - P_is_deregistration() - returns true if there's an Expires header set to 0 or the maximum expires parameter between all contacts is 0
  * <p>
  * - P_process_notification() - process a NOTIFY for the reg event
  * <p>
@@ -297,7 +312,7 @@ int pcscf_qos_side =0; 								/**< 0 means caller, 1 means callee , 2 means cal
  * <p>
  * - P_access_network_info() - modify the P_Access_Network_Info header with e2 information from CLF
  * <p>
- * - P_is_anonymous_identity()- checks if the request came from an Anonymous User Identity, see 3GPP TS 23.003 : 13.6	
+ * - P_is_anonymous_user()- checks if the request came from an anonymous user, rfc 3261
  * - P_emergency_flag() - checks if the user made an Emergency Registration
  * - P_enforce_sos_routes() - deletes all Route headers and adds one with the URI of the selected E-CSCF
  * - P_380_em_alternative_serv() - Create the body of a 380 Alternative Service reply for Emergency reasons (e.g. emergency Registration needed) 
@@ -331,6 +346,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
 	{"P_is_registered",				P_is_registered, 			0, 0, REQUEST_ROUTE},
 	{"P_assert_identity",			P_assert_identity, 			0, 0, REQUEST_ROUTE},
+	{"P_is_deregistration",			P_is_deregistration, 		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 
 	{"P_process_notification",		P_process_notification, 	0, 0, REQUEST_ROUTE},
 
@@ -338,7 +354,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_remove_route",				P_remove_route, 			1, 0, REQUEST_ROUTE},
 	
 	{"P_NAT_relay", 				P_NAT_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_SDP_manipulate", 			P_SDP_manipulate, 			0, 0, REQUEST_ROUTE | ONREPLY_ROUTE },
+	{"P_SDP_manipulate", 			P_SDP_manipulate, 			1, 0, REQUEST_ROUTE | ONREPLY_ROUTE },
 	
 	{"P_follows_service_routes",	P_follows_service_routes, 	0, 0, REQUEST_ROUTE},
 	{"P_enforce_service_routes",	P_enforce_service_routes, 	0, 0, REQUEST_ROUTE},
@@ -370,12 +386,15 @@ static cmd_export_t pcscf_cmds[]={
 	
 	{"P_access_network_info",		P_access_network_info, 		1, 0, REQUEST_ROUTE},
 	
+	
 	/*emergency services exported functions*/
-	{"P_is_anonymous_identity",		P_is_anonymous_identity, 	0, 0, REQUEST_ROUTE},
-	{"P_emergency_flag",			P_emergency_flag,			0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_380_em_alternative_serv",	P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
-	{"P_emergency_ruri",			P_emergency_ruri,			0, 0, REQUEST_ROUTE},
-	{"P_emergency_serv_enabled",	P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
+	{"P_accept_anonym_em_call",		P_accept_anonym_em_call, 	0, 0, REQUEST_ROUTE},
+	{"P_is_anonymous_user",			P_is_anonymous_user, 		0, 0, REQUEST_ROUTE},
+	{"P_emergency_flag",			P_emergency_flag,		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
+	{"P_380_em_alternative_serv",		P_380_em_alternative_serv,	1, fixup_380_alt_serv, REQUEST_ROUTE},
+	{"P_emergency_ruri",			P_emergency_ruri,		0, 0, REQUEST_ROUTE},
+	{"P_emergency_serv_enabled",		P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
+	{"P_select_ecscf",			P_select_ecscf,			0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
 
 
@@ -446,11 +465,14 @@ static cmd_export_t pcscf_cmds[]={
  *  <p>
  *  - ecscf_uri - the E-CSCF URI to forward the Emergency calls
  *  - emerg_support - if the P-CSCF has support for Emrgency Services or not
+ *  - anonym_em_call_support - set if the pcscf should support of not anonymous calls
+ *  - emerg_numbers_file -  the file where the emergency numbers and their associated emergency URNs are configured
  *  <p>
  *  - use_pcc - if to use the Policy and Charging Control part
- *  - qos_side - on which side does this P-CSCF work (0 1 2)
  *  - qos_release7 - whether to use Rx or Gq
  *  - forced_qos_peer - the address of the forced qos peer
+ *  - ip_address_for_signaling - 
+ *  - pcc_dest_realm - the destination realm, used in PCC
  */	
 static param_export_t pcscf_params[]={ 
 	{"name", STR_PARAM, &pcscf_name},
@@ -518,11 +540,18 @@ static param_export_t pcscf_params[]={
 
     {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
-	{"qos_side",						INT_PARAM,		&pcscf_qos_side},
 	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
+	{"ipv4_for_signaling",			STR_PARAM,		&ipv4_for_signaling_char},
+	{"ipv6_for_signaling",			STR_PARAM,		&ipv6_for_signaling_char},
+	{"port_for_signaling",			INT_PARAM,		&port_for_signaling},
+	
+	{"pcc_dest_realm",					STR_PARAM,		&pcc_dest_realm_s},
+	{"pcc_use_ports",					INT_PARAM,		&pcc_use_ports},
 
 	{"ecscf_uri",						STR_PARAM, &ecscf_uri},
 	{"emerg_support",					INT_PARAM, &emerg_support},
+	{"anonym_em_call_support",				INT_PARAM, &anonym_em_call_support},
+	{"emerg_numbers_file",					STR_PARAM, &emerg_numbers_file},
 
 	{0,0,0} 
 };
@@ -549,10 +578,14 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
 dlg_func_t dialogb;						/**< Structure with pointers to dialog funcs			*/
 struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs				*/
+cdp_avp_bind_t *cdp_avp=0;
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
 extern p_dialog_hash_slot *p_dialogs;	/**< the dialogs hash table				*/
+
+extern unsigned int *current_spi;			/**< current SPI value */
+extern gen_lock_t *lock_spi;
 
 
 static str path_str_s={"Path: <",7};
@@ -582,6 +615,20 @@ int fix_parameters()
 		x.s += 4;
 		x.len -= 4;	
 	}
+			
+	cscf_icid_value_prefix_str.s = cscf_icid_value_prefix;
+	cscf_icid_value_prefix_str.len = strlen(cscf_icid_value_prefix);
+
+	cscf_icid_gen_addr_str.s = cscf_icid_gen_addr;
+	cscf_icid_gen_addr_str.len = strlen(cscf_icid_gen_addr);
+	
+	cscf_orig_ioi_str.s = cscf_orig_ioi;
+	cscf_orig_ioi_str.len = strlen(cscf_orig_ioi);
+	
+	cscf_term_ioi_str.s = cscf_term_ioi;
+	cscf_term_ioi_str.len = strlen(cscf_term_ioi);
+
+	/*Path header*/
 	pcscf_path_str.len = path_str_1.len+x.len;
 	pcscf_path_str.s = pkg_malloc(pcscf_path_str.len);
 	if (!pcscf_path_str.s){
@@ -606,19 +653,6 @@ int fix_parameters()
 	STR_APPEND(pcscf_path_hdr_str,path_str_s);	
 	STR_APPEND(pcscf_path_hdr_str,pcscf_path_str);
 	STR_APPEND(pcscf_path_hdr_str,path_str_e);
-		
-	cscf_icid_value_prefix_str.s = cscf_icid_value_prefix;
-	cscf_icid_value_prefix_str.len = strlen(cscf_icid_value_prefix);
-
-	cscf_icid_gen_addr_str.s = cscf_icid_gen_addr;
-	cscf_icid_gen_addr_str.len = strlen(cscf_icid_gen_addr);
-	
-	cscf_orig_ioi_str.s = cscf_orig_ioi;
-	cscf_orig_ioi_str.len = strlen(cscf_orig_ioi);
-	
-	cscf_term_ioi_str.s = cscf_term_ioi;
-	cscf_term_ioi_str.len = strlen(cscf_term_ioi);
-
 
 	/* Record-routes */
 	pcscf_record_route_mo.s = pkg_malloc(s_record_route_s.len+s_mo.len+pcscf_name_str.len+s_record_route_lr.len+s_record_route_e.len);
@@ -666,6 +700,13 @@ int fix_parameters()
 	pcscf_record_route_mt_uri.s = pcscf_record_route_mt.s + s_record_route_s.len;
 	pcscf_record_route_mt_uri.len = pcscf_record_route_mt.len - s_record_route_s.len - s_record_route_e.len;
 
+	if(emerg_support){
+		ecscf_uri_str.s = ecscf_uri;
+		ecscf_uri_str.len = strlen(ecscf_uri);
+		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
+	}
+
+
 	/* fix the parameters */
 	forced_clf_peer_str.s = forced_clf_peer;
 	forced_clf_peer_str.len = strlen(forced_clf_peer);
@@ -674,11 +715,15 @@ int fix_parameters()
 	forced_qos_peer.s = pcscf_forced_qos_peer;
 	forced_qos_peer.len = strlen(pcscf_forced_qos_peer);
 	
-	if(emerg_support){
-		ecscf_uri_str.s = ecscf_uri;
-		ecscf_uri_str.len = strlen(ecscf_uri);
-		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
-	}
+	//pcc params for signaling parameters of the PCSCF
+	ipv4_for_signaling.s = ipv4_for_signaling_char;
+	ipv4_for_signaling.len = strlen(ipv4_for_signaling_char);
+	
+	ipv6_for_signaling.s = ipv6_for_signaling_char;
+	ipv6_for_signaling.len = strlen(ipv6_for_signaling_char);
+	
+	pcc_dest_realm.s = pcc_dest_realm_s;
+	pcc_dest_realm.len = strlen(pcc_dest_realm_s);
 
 	return 1;
 }
@@ -691,6 +736,7 @@ static int mod_init(void)
 {
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
+	cdp_avp_get_bind_f load_cdp_avp;
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
@@ -699,6 +745,10 @@ static int mod_init(void)
 	callback_singleton=shm_malloc(sizeof(int));
 	*callback_singleton=0;
 	
+	lock_spi = lock_alloc();
+	lock_spi = lock_init(lock_spi);
+	current_spi = shm_malloc(sizeof(unsigned int));
+	*current_spi = 5000;
 	
 	/* fix the parameters */
 	if (!fix_parameters()) goto error;
@@ -815,6 +865,17 @@ static int mod_init(void)
 		}
 		if (load_cdp(&cdpb) == -1)
 			goto error;
+		
+		if (!(load_cdp_avp = (cdp_avp_get_bind_f)find_export("cdp_avp_get_bind",NO_SCRIPT,0))) {
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import cdp_avp_get_bind. This module requires cdp_avp module.\n");			
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface as well as the PCC ones have been disabled.\n");			
+			pcscf_use_e2 = 0;
+			pcscf_use_pcc = 0;
+		}
+		cdp_avp = load_cdp_avp();
+		if (!cdp_avp)
+			goto error;
+		
 	}	
 	
 	/* init the registrar storage */
@@ -935,6 +996,7 @@ static void mod_destroy(void)
 			make_snapshot_subscriptions();
 		}
 		/* Then nuke it all */		
+		clean_emergency_cntxt();
 		parser_destroy();
 		r_subscription_destroy();
 		r_storage_destroy();
@@ -942,6 +1004,10 @@ static void mod_destroy(void)
         lock_get(pcscf_dialog_count_lock);
         shm_free(pcscf_dialog_count);
         lock_destroy(pcscf_dialog_count_lock);
+        
+        lock_destroy(lock_spi);
+        lock_dealloc(lock_spi);
+        shm_free(current_spi);
 	}
 	
 	if (pcscf_persistency_mode==WITH_DATABASE_BULK || pcscf_persistency_mode==WITH_DATABASE_CACHE) {

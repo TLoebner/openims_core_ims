@@ -66,7 +66,7 @@ cdp_trans_list_t *trans_list=0;		/**< list of transactions */
  * Also adds a timer callback for checking the transaction statuses
  * @returns 1 if success or 0 on error
  */
-int trans_init()
+int cdp_trans_init()
 {
 	trans_list = shm_malloc(sizeof(cdp_trans_list_t));
 	if (!trans_list){
@@ -78,7 +78,7 @@ int trans_init()
 	trans_list->lock = lock_alloc();
 	trans_list->lock = lock_init(trans_list->lock);
 
-	add_timer(1,0,trans_timer,0);
+	add_timer(1,0,cdp_trans_timer,0);
 	return 1;
 }
 
@@ -91,7 +91,7 @@ int trans_init()
  * @param auto_drop - whether to auto drop the transaction on event, or let the application do it later
  * @returns the created cdp_trans_t* or NULL on error 
  */
-inline cdp_trans_t* add_trans(AAAMessage *msg,AAATransactionCallback_f *cb, void *ptr,int timeout,int auto_drop)
+inline cdp_trans_t* cdp_add_trans(AAAMessage *msg,AAATransactionCallback_f *cb, void *ptr,int timeout,int auto_drop)
 {
 	cdp_trans_t *x;
 	x = shm_malloc(sizeof(cdp_trans_t));
@@ -137,7 +137,7 @@ inline void del_trans(AAAMessage *msg)
 		else trans_list->head = x->next;
 		if (x->next) x->next->prev = x->prev;
 		else trans_list->tail = x->prev;
-		free_trans(x);
+		cdp_free_trans(x);
 	}
 	lock_release(trans_list->lock);
 }
@@ -147,7 +147,7 @@ inline void del_trans(AAAMessage *msg)
  * @param msg - the message that this transaction relates to
  * @returns the cdp_trans_t* if found or NULL if not
  */
-inline cdp_trans_t* take_trans(AAAMessage *msg)
+inline cdp_trans_t* cdp_take_trans(AAAMessage *msg)
 {
 	cdp_trans_t *x;
 	lock_get(trans_list->lock);
@@ -167,7 +167,7 @@ inline cdp_trans_t* take_trans(AAAMessage *msg)
  * Deallocate the memory taken by a transaction.
  * @param x - the transaction to deallocate
  */
-inline void free_trans(cdp_trans_t *x)
+inline void cdp_free_trans(cdp_trans_t *x)
 {
 	if (x->ptr) shm_free(x->ptr);
 	shm_free(x);
@@ -178,10 +178,10 @@ inline void free_trans(cdp_trans_t *x)
  * @param now - time of call
  * @param ptr - generic pointer, passed to the transactional callbacks
  */
-void trans_timer(time_t now, void* ptr)
+void cdp_trans_timer(time_t now, void* ptr)
 {
 	cdp_trans_t *x,*n;	
-	LOG(L_DBG,"DBG:trans_timer(): taking care of diameter transactions...\n");
+	LOG(L_MEM,"DBG:trans_timer(): taking care of diameter transactions...\n");
 	lock_get(trans_list->lock);
 	x = trans_list->head;
 	while(x)
@@ -197,7 +197,7 @@ void trans_timer(time_t now, void* ptr)
 			else trans_list->head = x->next;
 			if (x->next) x->next->prev = x->prev;
 			else trans_list->tail = x->prev;
-			if (x->auto_drop) free_trans(x);
+			if (x->auto_drop) cdp_free_trans(x);
 			
 			x = n;
 		} else 
@@ -206,3 +206,36 @@ void trans_timer(time_t now, void* ptr)
 	lock_release(trans_list->lock);
 }
 
+
+
+/* TRANSACTIONS */
+
+/**
+* Create a AAATransaction for the given request.
+* @param app_id - id of the request's application
+* @param cmd_code - request's code
+* @returns the AAATransaction*
+*/				
+AAATransaction *AAACreateTransaction(AAAApplicationId app_id,AAACommandCode cmd_code)
+{
+	AAATransaction *t;
+	t = shm_malloc(sizeof(AAATransaction));
+	if (!t) return 0;
+	memset(t,0,sizeof(AAATransaction));	
+	t->application_id=app_id;
+	t->command_code=cmd_code;			
+	return t;
+}
+
+/**
+* Free the memory allocated for the AAATransaction.
+* @param trans - the AAATransaction to be deallocated
+* @returns 1 on success, 0 on failure
+*/
+int AAADropTransaction(AAATransaction *trans)
+{
+	if (!trans) return 0;
+	//	LOG(L_ERR,"\nCALLED HERE %d %d\n",trans->done,trans->with_callback);
+	shm_free(trans);
+	return 1;
+}

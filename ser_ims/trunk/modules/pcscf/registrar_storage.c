@@ -68,6 +68,10 @@
 #include "nat_helper.h"
 #include "security.h"
 #include "dlg_state.h"
+/* For PCC sessions*/
+#include "../cdp/cdp_load.h"
+/**< Structure with pointers to cdp funcs */
+extern struct cdp_binds cdpb;
 
 time_t time_now;				/**< current time 							*/
 r_hash_slot *registrar=0;		/**< the actual registrar					*/
@@ -758,7 +762,16 @@ r_nat_dest* get_r_nat_pinhole(str host, int port, int transport) {
  */
 void del_r_contact(r_contact *c)
 {
+	AAASession *auth;
+	
 	P_drop_all_dialogs(c->host,c->port,c->transport);
+	if (c->pcc_session_id.len) {
+		auth = cdpb.AAAGetAuthSession(c->pcc_session_id);
+		if (auth) cdpb.AAATerminateAuthSession(auth);
+		shm_free(c->pcc_session_id.s);
+		c->pcc_session_id.len=0;
+		c->pcc_session_id.s=0;
+	}
 	if (registrar[c->hash].head == c) registrar[c->hash].head = c->next;
 	else c->prev->next = c->next;
 	if (registrar[c->hash].tail == c) registrar[c->hash].tail = c->prev;
@@ -795,6 +808,8 @@ void free_r_contact(r_contact *c)
 	}
 	if (c->security_temp) free_r_security(c->security_temp);
 	if (c->security) free_r_security(c->security);
+	if (c->pcc_session_id.len) shm_free(c->pcc_session_id.s);
+
 	shm_free(c);
 }
 

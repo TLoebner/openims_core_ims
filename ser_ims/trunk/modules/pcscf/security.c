@@ -92,7 +92,9 @@ extern str pcscf_record_route_mt_uri;	/**< URI for Record-route terminating */
 extern r_hash_slot *registrar;			/**< the contacts */
 extern int r_hash_size;					/**< records tables parameters 	*/
 
-unsigned int current_spi=5000;					/**< current SPI value */
+gen_lock_t *lock_spi=0;
+unsigned int *current_spi=0;			/**< current SPI value */
+
 extern int pcscf_use_tls;				/**< whether to use or not tls */
 extern int pcscf_tls_port;				/**< PORT for TLS server */
 extern int tls_disable;
@@ -104,7 +106,11 @@ extern int tls_disable;
  */
 unsigned int get_next_spi()
 {
-	return current_spi++;
+	unsigned int spi=0;
+	lock_get(lock_spi);
+		spi = (*current_spi)++;
+	 lock_release(lock_spi);
+	return spi;
 }
 
 
@@ -329,7 +335,7 @@ str cscf_get_pref_security_header(struct sip_msg *req, str header_name,r_securit
  * @param type - Security Type
  * @param q - Preference Value
  */
-r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_security_type type,float q)
+r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_security_type type,float q, int shmed)
 {
 	contact_t* c=0;
 	contact_body_t* b=0;	
@@ -494,8 +500,19 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 	rc = update_r_contact_sec(puri.host,puri.port_no,puri.proto,
 			&(c->uri),&reg_state,&expires,s);						
 
+	if (shmed && b) {
+                req->contact->parsed = 0;
+                free_contacts(&b->contacts);
+                pkg_free(b);
+        }
+
 	return rc;	
 error:
+	if (shmed && b) {
+                req->contact->parsed = 0;
+                free_contacts(&b->contacts);
+                pkg_free(b);
+        }
 	if (s) free_r_security(s);
 	return 0;	
 }
@@ -674,7 +691,7 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 
 
 	/* save data into registrar */
-	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q);	
+	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q, 1);	
 	if (!c) goto error;
 	switch(sec_type){
 		case SEC_NONE:
@@ -794,7 +811,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 	}
 	
 	/* find the expires (reg or dereg?) */
-	expires = cscf_get_max_expires(req);
+	expires = cscf_get_max_expires(req,1);
 	
 	/* get the IPSec info from the registrar */
 	
@@ -1167,14 +1184,15 @@ int P_follows_record_routes(struct sip_msg *msg, char *str1, char *str2)
 		LOG(L_ERR,"ERR:"M_NAME":P_follows_record_routes(): No transactional request found.\n");
 		goto nok;
 	}	
-	temp_hdr_req = cscf_get_next_record_route(req,temp_hdr_req);	
+	temp_hdr_req = cscf_get_next_record_route2(req,temp_hdr_req, rr_req, 1);	
 	if (temp_hdr_req) {
-		rr_req = (rr_t*)temp_hdr_req->parsed;
 		rr_req_i = rr_req;
 	}
 	
 	// Cycle through the request/reply headers and compare
 	while(rr_rpl && rr_req_i) {
+		LOG(L_DBG,"DBG:"M_NAME":P_follows_record_routes(): compare in RR URIs Req = %.*s , Rpl = %.*s \n",
+					rr_req_i->nameaddr.uri.len,rr_req_i->nameaddr.uri.s,rr_rpl->nameaddr.uri.len,rr_rpl->nameaddr.uri.s);
 		
 		if(rr_req_i->nameaddr.uri.len != rr_rpl->nameaddr.uri.len ||
 				strncmp(rr_req_i->nameaddr.uri.s,rr_rpl->nameaddr.uri.s,rr_req_i->nameaddr.uri.len)!=0){
@@ -1196,9 +1214,8 @@ int P_follows_record_routes(struct sip_msg *msg, char *str1, char *str2)
 				free_rr(&rr_req);
 				temp_hdr_req->parsed = NULL;
 			}
-			temp_hdr_req = cscf_get_next_record_route(req,temp_hdr_req);	
+			temp_hdr_req = cscf_get_next_record_route2(req,temp_hdr_req,rr_req,1);	
 			if (temp_hdr_req) {
-				rr_req = (rr_t*)temp_hdr_req->parsed;
 				rr_req_i = rr_req;
 			}
 		}

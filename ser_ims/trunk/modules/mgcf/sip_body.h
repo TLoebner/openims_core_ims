@@ -70,4 +70,10 @@ str cscf_get_body_with_type_from_body(str body,str body_content_type,str search_
 
 str cscf_get_body_with_type(struct sip_msg *msg,str search_content_type,str *ret_part);
 
+/* this function calls all the other functions, 
+ * this is the one that should be used when searching for a specific content-type*/
+str cscf_get_body_with_content_type(struct sip_msg *msg,str search_content_type);
+
+int extract_sdp_body(struct sip_msg *msg, str *body );
+
 #endif /* SIP_BODY_H */

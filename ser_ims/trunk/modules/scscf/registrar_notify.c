@@ -350,7 +350,7 @@ int S_subscribe(struct sip_msg *msg,char *str1,char *str2)
 		goto done;
 	}
 		
-	expires = cscf_get_expires_hdr(msg);
+	expires = cscf_get_expires_hdr(msg,0);
 	if (expires == -1) expires = subscription_default_expires;
 	if (expires > 0) {
 		if (expires < subscription_min_expires) expires = subscription_min_expires;

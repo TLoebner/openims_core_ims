@@ -58,43 +58,41 @@
 #ifndef __CDP_UTILS_H_
 #define __CDP_UTILS_H_
 
-#ifdef CDP_FOR_SER
+#if defined(CDP_FOR_SER)
 
-#include "../../dprint.h"
-#include "../../str.h"
-#include "../../mem/mem.h"
-#include "../../mem/shm_mem.h"
-#include "../../locking.h"
-#include "../../pt.h"
-#include <libxml/parser.h>
+	#include "../../dprint.h"
+	#include "../../str.h"
+	#include "../../mem/mem.h"
+	#include "../../mem/shm_mem.h"
+	#include "../../locking.h"
+	#include "../../pt.h"
+	#include <libxml/parser.h>
+	#include "sem.h" 
 
+#elif defined(WHARF)
+	
+	#include "../../utils/utils.h"
+	
 #else
-
-#ifdef WHARF
-
-#include "../../utils/utils.h"
-
-#else
-
-#include "../utils/config.h"
-#include "../utils/dprint.h"
-#include "../utils/str.h"
-#include "../utils/mem.h"
-#include "../utils/shm_mem.h"
-#include "../utils/locking.h"
-
-#endif
-
+	
+	#include "../utils/config.h"
+	#include "../utils/dprint.h"
+	#include "../utils/str.h"
+	#include "../utils/mem.h"
+	#include "../utils/shm_mem.h"
+	#include "../utils/locking.h"
+	
 #endif
 
 #ifndef LOG_NO_MEM
-#define LOG_NO_MEM(mem_type,data_len) \
-	LOG(L_ERR,"ERROR:%s:%s()[%d]: Out of %s memory allocating %d bytes\n",\
-		__FILE__,__FUNCTION__,__LINE__, \
-		mem_type,data_len);
+	#define LOG_NO_MEM(mem_type,data_len) \
+		LOG(L_ERR,"ERROR:%s:%s()[%d]: Out of %s memory allocating %d bytes\n",\
+			__FILE__,__FUNCTION__,__LINE__, \
+			mem_type,data_len);
 #endif
 
-#define shm_str_dup(dst,src)\
+
+#define shm_str_dup_macro(dst,src)\
 {\
 	(dst).s = shm_malloc((src).len+1);\
 	if (!(dst).s){LOG_NO_MEM("shm",(src).len+1);}\

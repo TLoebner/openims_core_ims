@@ -56,6 +56,17 @@
  * 		
  */
 
+/*
+ * Please be careful about parsing the content of headers from shared-memory
+ * all headers are parsed and stored in tm shared-memory
+ * but only via/from/to/cseq/auth contents are parsed and stored to the shm
+ * so if other headers' contents need to be parsed, be sure to free the memory  
+ * see: 
+ * http://lists.sip-router.org/pipermail/sr-dev/2009-December/005314.html
+ * http://lists.berlios.de/pipermail/openimscore-cscf/2009-December/002349.html
+ * Feb, 1, 2010,  Min Wang ( wang@basis-audionet.com )
+ */
+
 #include "sip.h"
 
 #include "../../mem/mem.h"
@@ -290,9 +301,10 @@ str cscf_get_public_identity(struct sip_msg *msg)
  * Returns the expires value from the Expires header in the message.
  * It searches into the Expires header and if not found returns -1
  * @param msg - the SIP message, if available
+ * @is_shm - msg from from shared memory 
  * @returns the value of the expire or -1 if not found
  */
-int cscf_get_expires_hdr(struct sip_msg *msg)
+int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm)
 {
 	exp_body_t *exp;
 	int expires;
@@ -311,6 +323,10 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
 			if (exp->valid) {
 				expires = exp->val;
 				LOG(L_DBG,"DBG:"M_NAME":cscf_get_expires_hdr: <%d> \n",expires);
+				if(is_shm) {
+					free_expires((exp_body_t**)&exp);
+					msg->expires->parsed = 0;	
+				}
 				return expires;
 			}
 		}
@@ -324,17 +340,18 @@ int cscf_get_expires_hdr(struct sip_msg *msg)
  * First it searches into the Expires header and if not found it also looks 
  * into the expires parameter in the contact header
  * @param msg - the SIP message
+ * @param is_shm - msg from shared memory
  * @returns the value of the expire or the default 3600 if none found
  */
-int cscf_get_max_expires(struct sip_msg *msg)
+int cscf_get_max_expires(struct sip_msg *msg, int is_shm)
 {
 	unsigned int exp;
 	int max_expires = -1;
 	struct hdr_field *h;
 	contact_t *c;
 	/*first search in Expires header */
-	max_expires = cscf_get_expires_hdr(msg);
-	
+	max_expires = cscf_get_expires_hdr(msg, is_shm);
+
 	cscf_parse_contacts(msg);
 	for(h=msg->contact;h;h=h->next){
 		if (h->type==HDR_CONTACT_T && h->parsed) {
@@ -345,6 +362,16 @@ int cscf_get_max_expires(struct sip_msg *msg)
 			}
 		}	
 	}
+
+	if(is_shm){
+		for(h=msg->contact;h;h=h->next){
+			if (h->type==HDR_CONTACT_T && h->parsed) {
+				free_contact((contact_body_t**)&(h->parsed));
+				h->parsed = 0;
+			}
+		}
+	}
+
 	LOG(L_DBG,"DBG:"M_NAME":cscf_get_max_expires: <%d> \n",max_expires);
 	return max_expires;
 }
@@ -940,9 +967,10 @@ str cscf_get_contact(struct sip_msg *msg)
  * Looks for the First Route header
  * @param msg - the sip message
  * @param hr - param to return the ptr to the found header
+ * @is_shm - msg from from shared memory 
  * @returns the first route string
  */
-str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr)
+str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr, int is_shm)
 {
 	struct hdr_field *h;
 	rr_t *r;
@@ -959,12 +987,22 @@ str cscf_get_first_route(struct sip_msg *msg,struct hdr_field **hr)
 		return route;
 	}
 	if (hr) *hr = h;
+
+	if(is_shm){
+		h->parsed = 0;	
+	}
+
 	if (parse_rr(h)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_first_route: Error parsing as Route header\n");
 		return route;
 	}
 	r = (rr_t*)h->parsed;
 	route = r->nameaddr.uri;
+
+	if(is_shm){
+		free_rr(&r);
+		h->parsed = 0;	
+	}
 	
 	return route;
 }
@@ -984,7 +1022,7 @@ int cscf_remove_first_route(struct sip_msg *msg,str value)
 	str route={0,0},x;
 	int i;
 		
-	route = cscf_get_first_route(msg,&h);
+	route = cscf_get_first_route(msg,&h,0);
 	if (!h||!route.len) return 0;
 	
 	if ((route.len == value.len || (route.len>value.len && route.s[value.len]==';')) &&
@@ -1054,7 +1092,7 @@ int cscf_remove_own_route(struct sip_msg *msg,struct hdr_field **h)
 	str route={0,0},x;
 	int i;
 		
-	route = cscf_get_first_route(msg,h);
+	route = cscf_get_first_route(msg,h,0);
 	if (!h||!route.len) return 0;
 	
 	LOG(L_DBG,"DBG:"M_NAME":cscf_remove_own_route: <%.*s>\n",
@@ -1162,6 +1200,50 @@ struct hdr_field* cscf_get_next_record_route(struct sip_msg *msg,struct hdr_fiel
 					LOG(L_ERR,"ERR:"M_NAME":cscf_get_next_record_routes: Error parsing as Route header\n");
 					return 0;
 				}				
+			}
+			return h;
+		}
+		h = h->next;
+	}	
+	return 0;
+}
+
+/**
+ * Returns the next record route header
+ * @param msg - the SIP message
+ * @param start - The header to start searching from or NULL if from first header 
+ * @param rr - The parsed result
+ * @param is_shm - msg from from shared memory 
+ * @returns header field on success or NULL on error 
+ */
+struct hdr_field*  cscf_get_next_record_route2(struct sip_msg *msg,struct hdr_field* start, rr_t* rr_req, int is_shm)
+{
+	struct hdr_field *h;
+	
+	if (!msg) return 0;
+	
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_next_record_route2: error parsing headers\n");
+		return 0;
+	}
+	if (start) h = start->next;
+	else h = msg->record_route;
+	while (h){
+		if (h->type == HDR_RECORDROUTE_T)
+		{
+			LOG(L_DBG,"DBG:"M_NAME":cscf_get_next_record_route2: RR %.*s\n",h->body.len,h->body.s);
+			if (!h->parsed){
+				if (parse_rr(h)<0){
+					LOG(L_ERR,"ERR:"M_NAME":cscf_get_next_record_routes: Error parsing as Route header\n");
+					return 0;
+				}				
+			}
+			if(is_shm) {
+				// force it be to parsed, so that other process will parse it in pkg memeory again
+				// remember to free_rr(&rr_req) in the calling process!!
+				rr_req = (rr_t*) h->parsed;
+				h->parsed = 0;
+		
 			}
 			return h;
 		}
@@ -2346,9 +2428,10 @@ str cscf_get_realm_from_uri(str uri)
  * @param msg - the SIP message to look into
  * @param public_id - array to be allocated and filled with the result
  * @param public_id_cnt - the size of the public_id array
+ * @param is_shm - msg from shared memory
  * @returns 1 on success or 0 on error
  */
-int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt)
+int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id_cnt, int is_shm)
 {
 	struct hdr_field *h;
 	rr_t *r,*r2;
@@ -2396,6 +2479,12 @@ int cscf_get_p_associated_uri(struct sip_msg *msg,str **public_id,int *public_id
 		(*public_id)[(*public_id_cnt)]=r2->nameaddr.uri;
 		(*public_id_cnt) = (*public_id_cnt)+1;
 		r2 = r2->next;
+	}
+
+	if(is_shm){
+		r = (rr_t*)h->parsed;
+		h->parsed = 0;
+		free_rr(&r);
 	}
 	
 	return 1;
@@ -2604,9 +2693,10 @@ int cscf_get_content_len(struct sip_msg *msg)
  * inside values are not duplicated
  * @param msg - the SIP message
  * @param size - size of the returned vector, filled with the result
+ * @param is_shm - msg from shared memory
  * @returns - the str vector of uris
  */
-str* cscf_get_service_route(struct sip_msg *msg,int *size)
+str* cscf_get_service_route(struct sip_msg *msg,int *size, int is_shm)
 {
 	struct hdr_field *h;
 	rr_t *r,*r2;
@@ -2653,6 +2743,18 @@ str* cscf_get_service_route(struct sip_msg *msg,int *size)
 				(*size) = (*size)+1;
 				r2 = r2->next;
 			}			
+		}
+		h = h->next;
+	}
+
+	if(is_shm) {
+		while(h)
+		if (h->name.len==13 &&
+			strncasecmp(h->name.s,"Service-Route",13)==0)
+		{
+			h->parsed = 0;
+			r = (rr_t*)h->parsed;
+			free_rr(&r);
 		}
 		h = h->next;
 	}

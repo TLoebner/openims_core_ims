@@ -60,6 +60,8 @@
 
 #include "registrar_storage.h"
 
+#define REGISTRATION_GRACE_PERIOD 60
+
 void registrar_timer(unsigned int ticks, void* param);
 
 int P_save_location(struct sip_msg *rpl,char *str1, char *str2);

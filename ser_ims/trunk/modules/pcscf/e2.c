@@ -1,5 +1,5 @@
 /*
- * $Id: e2.c 297 2007-05-31 11:30:05Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -163,6 +163,10 @@ AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_i
 	trans=cdpb.AAACreateTransaction(IMS_e2,IMS_UDR);
 
 	udr = cdpb.AAACreateRequest(IMS_e2,IMS_UDR,Flag_Proxyable,session);
+	if (session) {
+		cdpb.AAADropSession(session);
+		session=0;
+	}			
 	if (!udr) goto error;
 
 	if (!e2_add_destination_realm(udr,dest_realm)) goto error;
@@ -191,13 +195,11 @@ AAAMessage *e2_UDR(struct sip_msg *msg, str ip, str address_realm, str private_i
 		uda = cdpb.AAASendRecvMessageToPeer(udr,&forced_clf_peer_str);
 	else
 		uda = cdpb.AAASendRecvMessage(udr);
-	
-	cdpb.AAADropSession(session);
+		
 	cdpb.AAADropTransaction(trans);
 	
 	return uda;
-	
-	
+		
 error:
 	//free stuff
 	if (trans) cdpb.AAADropTransaction(trans);

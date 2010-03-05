@@ -84,7 +84,7 @@ void ims_pm_init_pcscf()
 int ims_pm_get_registration_type(struct sip_msg *msg)
 {
 	if (P_is_registered(msg,0,0)==CSCF_RETURN_TRUE){
-		if (cscf_get_expires_hdr(msg)>0) return 1;
+		if (cscf_get_expires_hdr(msg,0)>0) return 1;
 		else return 2; 
 	}else return 0;
 }

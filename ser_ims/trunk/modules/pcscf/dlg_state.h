@@ -87,6 +87,17 @@ enum p_dialog_direction {
 	DLG_MOBILE_UNKNOWN=2
 };
 
+enum em_state{
+	NON_EMERG_DLG = 0,
+	EMERG_DLG = 1
+};
+
+typedef struct _em_info{
+	enum em_state em_dialog; /*0 if not emergency, 1 if emergency*/
+	str ecscf_uri;
+	str service_urn;
+}p_dialog_em_info;
+
 typedef struct _p_dialog {
 	unsigned int hash;
 	str call_id;
@@ -112,8 +123,9 @@ typedef struct _p_dialog {
 	unsigned char is_releasing;			/**< weather this dialog is already being 
 	  										released or not, or its peer, with count on 
 											tries 										*/
+	p_dialog_em_info em_info;
 											
-	AAASession *pcc_session;
+	str pcc_session_id;
 													
 	dlg_t *dialog_s;  /* dialog as UAS*/
 	dlg_t *dialog_c;  /* dialog as UAC*/

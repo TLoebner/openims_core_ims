@@ -51,44 +51,15 @@
  * 
  *  \author Ancuta Onofrei	andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
  */
- 
+
 #ifndef P_CSCF_EMERG_H
 #define P_CSCF_EMERG_H 
 
 #include <libxml/parser.h>
 #include "../../sr_module.h"
 
-#define ANONYMOUS_DOMAIN_STR		"anonymous.invalid"
-#define ANONYMOUS_DOMAIN_STR_LEN	(sizeof(ANONYMOUS_DOMAIN_STR)-1)
+#include "em_numbers.h"
 
-
-
-//emergency URNs from the RFC 5031 "A Uniform Resource Name (URN) for Emergency and Other Well-Known Services"
-#define SOS_URN   		"urn:service:sos"
-#define SOS_URN_LEN		(sizeof(SOS_URN)-1)
-
-#define SOS_URN_AMB		"ambulance"
-#define SOS_URN_AMB_LEN		(sizeof(SOS_URN_AMB)-1)
-#define SOS_URN_AN_CTR		"animal-control"
-#define SOS_URN_AN_CTR_LEN	(sizeof(SOS_URN_AN_CTR)-1)
-
-#define SOS_URN_FIRE		"fire"
-#define SOS_URN_FIRE_LEN	(sizeof(SOS_URN_FIRE)-1)
-
-#define SOS_URN_GAS		"gas"
-#define SOS_URN_GAS_LEN		(sizeof(SOS_URN_GAS)-1)
-
-#define SOS_URN_MAR		"marine"
-#define SOS_URN_MAR_LEN		(sizeof(SOS_URN_MAR)-1)
-#define SOS_URN_MOUNT		"mountain"
-#define SOS_URN_MOUNT_LEN	(sizeof(SOS_URN_MOUNT)-1)
-
-#define SOS_URN_POL		"police"
-#define SOS_URN_POL_LEN		(sizeof(SOS_URN_POL)-1)
-#define SOS_URN_PHYS		"physician"
-#define SOS_URN_PHYS_LEN	(sizeof(SOS_URN_PHYS)-1)
-#define SOS_URN_POIS		"poison"
-#define SOS_URN_POIS_LEN	(sizeof(SOS_URN_POIS)-1)
 
 //name of the nodes from the XML body of an 380 Alternative Service reply, TS 24.229
 #define IMS_3GPP_XML_NODE	"ims-3gpp"
@@ -103,7 +74,11 @@
 
 int init_emergency_cntxt();
 
-int P_is_anonymous_identity(struct sip_msg *msg,char *str1,char *str2);
+void clean_emergency_cntxt();
+
+int P_accept_anonym_em_call(struct sip_msg *msg,char *str1,char *str2);
+
+int P_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2);
 
 int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2);
 
@@ -114,6 +89,8 @@ int P_enforce_sos_routes(struct sip_msg *msg, char* str1, char* str2);
 int P_emergency_serv_enabled(struct sip_msg *msg, char* str1, char* str2);
 
 int P_380_em_alternative_serv(struct sip_msg *msg, char* str1, char* str2);
+
+int P_select_ecscf(struct sip_msg * msg, char* str1, char * str2);
 
 int fixup_380_alt_serv(void** param, int param_no);
 

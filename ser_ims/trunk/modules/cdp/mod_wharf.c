@@ -40,6 +40,8 @@ wharf_mod_export_t mod_exports={
 		
 		"cdp",					/**< Module's unique name */
 		
+		WHARF_VERSION"-"WHARF_REVISION,		
+		
 		cdp_init,				/**< Module init function */
 		cdp_child_init,			/**< Module child init function */
 		cdp_destroy,			/**< Module destroy function */
@@ -107,28 +109,14 @@ void cdp_destroy(int rank)
 
 
 struct cdp_binds cdp_binding={
-	AAASendMessage,
-	AAASendMessageToPeer,
-	AAASendRecvMessage,
-	AAASendRecvMessageToPeer,
-	AAAFreeMessage,
-	
 	AAACreateRequest,
-	AAACreateResponse,	
-	
-	AAACreateSession,
-	AAADropSession,
+	AAACreateResponse,
+	AAAFreeMessage,
 
-	AAACreateAuthSession,
-	AAADropAuthSession,
-	AAATerminateAuthSession,
 
-	AAACreateTransaction,
-	AAADropTransaction,
-	
 	AAACreateAVP,
 	AAAAddAVPToMessage,
-	AAAAddAVPToList,	
+	AAAAddAVPToList,
 	AAAFindMatchingAVP,
 	AAAFindMatchingAVPList,
 	AAAGetNextAVP,
@@ -136,13 +124,34 @@ struct cdp_binds cdp_binding={
 	AAAFreeAVPList,
 	AAAGroupAVPS,
 	AAAUngroupAVPS,
-	
+
+	AAASendMessage,
+	AAASendMessageToPeer,
+	AAASendRecvMessage,
+	AAASendRecvMessageToPeer,
+
+
 	AAAAddRequestHandler,
 	AAAAddResponseHandler,
-	
-	get_session,
-	sessions_unlock,
-	sessions_lock,
+
+
+	AAACreateTransaction,
+	AAADropTransaction,
+
+
+	AAACreateSession,
+	AAAMakeSession,
+	AAAGetSession,
+	AAADropSession,
+	AAASessionsLock,
+	AAASessionsUnlock,
+
+	AAACreateClientAuthSession,
+	AAACreateServerAuthSession,
+	AAAGetAuthSession,
+	AAADropAuthSession,
+	AAATerminateAuthSession,
+
 };
 
 

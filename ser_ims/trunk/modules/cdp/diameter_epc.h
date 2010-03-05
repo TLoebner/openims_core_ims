@@ -126,7 +126,7 @@ enum {
 	AVP_EPC_3GPP_User_Location_Info						= 22,
 	AVP_EPC_3GPP_MS_TimeZone							= 23,
 	AVP_EPC_3GPP_Allocate_IP_Type						= 27,
-	AVP_EPC_3GPP_RAI									= 909, //TS29.061
+	AVP_EPC_RAI											= 909, //TS29.061
 /** 256 to 299 reserved for future use										*/
 
 
@@ -139,7 +139,7 @@ enum {
 	AVP_EPC_Subscription_Id_Type						= 450,
 	AVP_EPC_User_Equipment_Info							= 458,
 	AVP_EPC_User_Equipment_Info_Type					= 459,
-	AVP_EPC_User_Equipment_Info_Data					= 460,
+	AVP_EPC_User_Equipment_Info_Value					= 460,
 /**  or   RFC 4006 							*/
 
 /** 500 to 599 reserved for TS29.209											*/
@@ -198,7 +198,7 @@ enum {
  	AVP_EPC_QoS_Information								= 1016,
  	AVP_EPC_QoS_Jitter									= 1017,  //Not used in the EPC
  	AVP_EPC_Charging_Rule_Report						= 1018,
- 	AVP_EPC_Pcc_Rule_Status								= 1019,
+ 	AVP_EPC_PCC_Rule_Status								= 1019,
  	AVP_EPC_Bearer_Identifier							= 1020,
  	AVP_EPC_Bearer_Operation							= 1021,
  	AVP_EPC_Access_Network_Charging_Identifier_Gx		= 1022,
@@ -206,7 +206,7 @@ enum {
  	AVP_EPC_Network_Request_Support						= 1024,
  	AVP_EPC_Guaranteed_Bitrate_DL						= 1025,
  	AVP_EPC_Guaranteed_Bitrate_UL						= 1026,
- 	AVP_EPC_IPCAN_Type									= 1027,
+ 	AVP_EPC_IP_CAN_Type									= 1027,
  	AVP_EPC_QoS_Class_Identifier						= 1028,
  	AVP_EPC_QoS_Negotiation								= 1029,
  	AVP_EPC_QoS_Upgrade									= 1030,
@@ -223,14 +223,14 @@ enum {
  	AVP_EPC_APN_Aggregate_Max_Bitrate_UL				= 1041,
  	AVP_EPC_Revalidation_Time							= 1042,
  	AVP_EPC_Rule_Activation_Time						= 1043,
- 	AVP_EPC_Rule_Deactivation_Time						= 1044,
+ 	AVP_EPC_Rule_DeActivation_Time						= 1044,
  	AVP_EPC_Session_Release_Cause						= 1045,
  	AVP_EPC_ARP_Value									= 1046, //Depends on the version
  	AVP_EPC_Priority_Level								= 1046,
- 	AVP_EPC_PreEmption_Capability						= 1047,
- 	AVP_EPC_PreEmption_Vulnerability					= 1048,
+ 	AVP_EPC_Pre_emption_Capability						= 1047,
+ 	AVP_EPC_Pre_emption_Vulnerability					= 1048,
  	AVP_EPC_Default_EPS_Bearer_QoS						= 1049,
- 	AVP_EPC_ANGw_Address								= 1050,
+ 	AVP_EPC_AN_GW_Address								= 1050,
  	AVP_EPC_QoS_Rule_Install							= 1051, //Gxx
  	AVP_EPC_QoS_Rule_Remove								= 1052,
  	AVP_EPC_QoS_Rule_Definition							= 1053,
@@ -302,9 +302,9 @@ enum {
 };
 
 enum {
-	AVP_EPC_Pcc_Rule_Status_Active					=0,
-	AVP_EPC_Pcc_Rule_Status_Inactive				=1,
-	AVP_EPC_Pcc_Rule_Status_Temporarily_Inactive 	=2
+	AVP_EPC_PCC_Rule_Status_Active					=0,
+	AVP_EPC_PCC_Rule_Status_Inactive				=1,
+	AVP_EPC_PCC_Rule_Status_Temporarily_Inactive 	=2
 };
 enum {
 	AVP_EPC_Bearer_Usage_General 		=0,
@@ -425,6 +425,10 @@ enum {
 };
 
 enum {
+	AVP_EPC_Resource_Allocation_Notification_Enable_Notification = 0
+};
+
+enum {
 	AVP_EPC_Session_Linking_Indicator_Immediate					= 0,
 	AVP_EPC_Session_Linking_Indicator_Deferred					= 1,
 };
@@ -467,15 +471,29 @@ enum {
 	AVP_EPC_Specific_Action_Indication_of_Loss_of_Bearer			= 2,
 	AVP_EPC_Specific_Action_Indication_of_Recovery_of_Bearer		= 3,
 	AVP_EPC_Specific_Action_Indication_of_Release_of_Bearer			= 4,
+	AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer	= 5,
 	AVP_EPC_Specific_Action_IPCAN_Change							= 6,
-	AVP_EPC_Specific_Action_Indication_of_Out_of_Credit				= 7,
-	AVP_EPC_Specific_Action_Indication_of_Successful_Resources_Allocation = 8,
-	AVP_EPC_Specific_Action_Indication_of_Failed_Resources_Allocation = 9,
-	AVP_EPC_Specific_Action_Indication_of_Limited_PCC_Deployment	= 10,
-
-	/* not defined */
-	AVP_EPC_Specific_Action_Indication_of_Establishment_of_Bearer	= 100,
-	AVP_EPC_Specific_Action_Service_Information_Request				= 101,
-
+	AVP_EPC_Specific_Action_Indication_of_Out_of_Credit				= 7
 };
+
+enum {
+	AVP_EPC_Service_Info_Status_Final_Service_Information			= 0,
+	AVP_EPC_Service_Info_Status_Preliminary_Service_Information		= 1,
+};
+
+/* TS 29.214 */
+enum {
+	AVP_EPC_Abort_Cause_Bearer_Released								= 0,
+	AVP_EPC_Abort_Cause_Insufficient_Server_Resources				= 1,
+	AVP_ECP_Abort_Cause_Insufficient_Bearer_Resources				= 2
+};
+
+/* RFC4006 */
+enum {
+	AVP_EPC_User_Equipment_Info_Type_IMEISV							= 0,
+	AVP_EPC_User_Equipment_Info_Type_MAC							= 1,
+	AVP_EPC_User_Equipment_Info_Type_EUI64							= 2,
+	AVP_EPC_User_Equipment_Info_Type_MODIFIED_EUI64					= 3,
+};
+
 #endif /*DIAMETER_EPC_H_*/

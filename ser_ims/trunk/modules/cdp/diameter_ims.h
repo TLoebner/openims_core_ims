@@ -194,6 +194,7 @@ enum {
 	AVP_IMS_SIP_Forking_Indication						= 523,
 /** Codec-Data is from TS 29.214*/
 	AVP_IMS_Codec_Data									= 524,
+	AVP_IMS_Service_URN									= 525,
 	AVP_IMS_Acceptable_Service_Info						= 526,
 	AVP_IMS_Service_Info_Status							= 527,
 /** 600 to 699 reserved for TS29.229											*/
@@ -351,7 +352,7 @@ enum {
 	AVP_ETSI_Requested_Information						=353,
 	AVP_ETSI_Event_Type									=354,
 	
-	AVP_Line_Identifier									= 500,
+	AVP_ETSI_Line_Identifier							= 500,
 	AVP_ETSI_SIP_Authenticate 							= 501, 
 	AVP_ETSI_SIP_Authorization 							= 502, 
 	AVP_ETSI_SIP_Authentication_Info 					= 503, 
@@ -529,10 +530,15 @@ enum {
 	AVP_IMS_Flow_Status_Disabled						= 3,
 	AVP_IMS_Flow_Status_Removed							= 4
 };
-/** Flow-Usage AVP */
+
+/** Specific-Action AVP */
 enum {
-	AVP_IMS_Flow_Usage_No_Information					= 0,
-	AVP_IMS_Flow_Usage_Rtcp								= 1
+	AVP_IMS_Specific_Action_Service_Information_Request						= 0,
+	AVP_IMS_Specific_Action_Charging_Correlation_Exchange					= 1,
+	AVP_IMS_Specific_Action_Indication_Of_Loss_Of_Bearer					= 2,
+	AVP_IMS_Specific_Action_Indication_Of_Recovery_Of_Bearer				= 3,
+	AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer					= 4,
+	AVP_IMS_Specific_Action_Indication_Of_Establishment_Of_Bearer			= 5
 };
 
 /** Media-Type AVP */
@@ -559,7 +565,10 @@ enum {
 	AVP_IMS_Send_Data_Indication_User_Data_Requested		= 1
 };
 
-
+enum {
+	AVP_Re_Auth_Request_Type_Authorize_Only			=0,
+	AVP_Re_Auth_Request_Type_Authorize_Authenticate	=1,		
+};
 
 
 /**	Diameter Result Codes				*/
@@ -611,6 +620,11 @@ enum{
 /**	5061 to 5080 Reserved for TS29.209	*/
 	RC_IMS_DIAMETER_ERROR_INVALID_SERVICE_INFORMATION	= 5061,
 	RC_IMS_DIAMETER_ERROR_FILTER_RESTRICTIONS			= 5062,
+/**	5061 to 5066 Reserved for TS29.214	*/
+	RC_IMS_DIAMETER_ERROR_REQUESTED_SERVICE_NOT_AUTHORIZED		= 5063,
+	RC_IMS_DIAMETER_ERROR_DUPLICATED_AF_SESSION			= 5064,
+	RC_IMS_DIAMETER_ERROR_IPCAN_SESSION_NOT_AVAILABLE		= 5065,
+	RC_IMS_DIAMETER_ERROR_UNAUTHORIZED_NON_EMERGENCY_SESSION	= 5066,
 /**	5100 to 5119 Reserved for TS29.329	*/
 	RC_IMS_DIAMETER_ERROR_USER_DATA_NOT_RECOGNIZED		= 5100,
 	RC_IMS_DIAMETER_ERROR_OPERATION_NOT_ALLOWED			= 5101,

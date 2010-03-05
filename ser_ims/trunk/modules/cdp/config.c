@@ -196,6 +196,8 @@ inline void log_dp_config(int level,dp_config *x)
 	LOG(level,"\tQueueLen: %d\n",x->queue_length);
 	LOG(level,"\tTranTime: %d\n",x->transaction_timeout);
 	LOG(level,"\tSessHash: %d\n",x->sessions_hash_size);
+	LOG(level,"\tDefAuthT: %d\n",x->default_auth_session_timeout);
+	LOG(level,"\tMaxAuthT: %d\n",x->max_auth_session_timeout);
 	LOG(level,"\tPeers   : %d\n",x->peers_cnt);
 	for(i=0;i<x->peers_cnt;i++)
 		LOG(level,"\t\tFQDN:  %.*s \t Realm: %.*s \t Port: %d\n",

@@ -1,5 +1,5 @@
 /**
- * $Id: e2_avp.c 299 2007-05-31 18:19:30Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2006 FhG Fokus
  *
@@ -543,7 +543,7 @@ int e2_get_location_info(AAAMessage *msg, str *data)
 
 	list = cdpb.AAAUngroupAVPS(grp);
 
-	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_Line_Identifier,IMS_vendor_id_ETSI,0);
+	avp = cdpb.AAAFindMatchingAVPList(list,0,AVP_ETSI_Line_Identifier,IMS_vendor_id_ETSI,0);
 	if (!avp||!avp->data.s) {
 		cdpb.AAAFreeAVPList(&list);
 		return 0;
