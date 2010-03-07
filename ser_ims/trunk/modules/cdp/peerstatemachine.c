@@ -1195,6 +1195,8 @@ void Rcv_Process(peer *p, AAAMessage *msg)
 			 	}
 			 	break;
 			default:
+				AAASessionsUnlock(session->hash);
+				session =0;
 				break;			 
 		}
 	}else{

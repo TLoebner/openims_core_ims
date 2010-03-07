@@ -134,6 +134,8 @@ void worker_destroy()
 		shm_free(callbacks);
 	}
 
+	// to deny runing the poison queue again
+	config->workers = 0;
 	if (tasks) {
 	//	LOG(L_CRIT,"-1-\n");
 		lock_get(tasks->lock);
@@ -305,7 +307,7 @@ void cb_remove(cdp_cb_t *cb)
 		tasks->queue[tasks->end].p = p;
 		tasks->queue[tasks->end].msg = msg;
 		tasks->end = (tasks->end+1) % tasks->max;
-		if (sem_release(tasks->empty<0))
+		if (sem_release(tasks->empty)<0)
 			LOG(L_WARN,"WARN:put_task(): Error releasing tasks->empty semaphore > %s!\n",strerror(errno));
 		lock_release(tasks->lock);
 		return 1;
@@ -361,8 +363,9 @@ task_t take_task()
 void worker_poison_queue()
 {
 	int i;
+	if (config->workers&&tasks)
 	for(i=0;i<config->workers;i++)
-		if (sem_release(tasks->empty<0))
+		if (sem_release(tasks->empty)<0)
 			LOG(L_WARN,"WARN:worker_poison_queue(): Error releasing tasks->empty semaphore > %s!\n",strerror(errno));
 }
 
