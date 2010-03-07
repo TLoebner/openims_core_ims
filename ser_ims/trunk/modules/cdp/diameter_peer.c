@@ -496,9 +496,11 @@ void diameter_peer_destroy()
 		lock_release(shutdownx_lock);
 	}
 
-
+	// cdp workers are not used in Wharf
+#ifndef WHARF	
 	worker_poison_queue();
-
+#endif
+	
 	/* wait for all childs to clean up nicely (acceptor, receiver, timer, workers) */
 	LOG(L_INFO,"INFO:destroy_diameter_peer(): Terminating all childs...\n");
 	while(pid_list->tail){
