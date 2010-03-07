@@ -204,6 +204,8 @@ int cdp_sessions_destroy()
 			n = x->next;
 			free_session(x);	
 		}
+		lock_destroy(sessions[i].lock);
+		lock_dealloc((void*)sessions[i].lock);
 	}
 	shm_free(sessions);
 			
