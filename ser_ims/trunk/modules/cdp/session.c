@@ -303,7 +303,7 @@ cdp_session_t* cdp_get_session(str id)
 	cdp_session_t *x;
 	if (!id.len) return 0;
 	hash = get_str_hash(id,sessions_hash_size);
-	LOG(L_DBG,"calling get session with id %.*s and hash %u\n",id.len,id.s,hash);
+	LOG(L_DBG,"called get session with id %.*s and hash %u\n",id.len,id.s,hash);
 	AAASessionsLock(hash);
 		for(x = sessions[hash].head;x;x=x->next){
 			LOG(L_DBG,"looking for |%.*s| in |%.*s|\n",id.len,id.s,x->id.len,x->id.s);
@@ -312,6 +312,7 @@ cdp_session_t* cdp_get_session(str id)
 					return x;
 		}			
 	AAASessionsUnlock(hash);	
+	LOG(L_DBG,"no session found\n");
 	return 0;
 }
 

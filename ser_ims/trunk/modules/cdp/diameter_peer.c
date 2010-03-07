@@ -515,7 +515,6 @@ void diameter_peer_destroy()
 			continue;
 		}
 		if (!WIFEXITED(status) /*|| WIFSIGNALED(status)*/){
-			worker_poison_queue();
 			sleep(1);			
 		} else {
 			dp_del_pid(pid);
