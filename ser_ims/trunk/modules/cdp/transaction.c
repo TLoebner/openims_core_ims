@@ -82,6 +82,24 @@ int cdp_trans_init()
 	return 1;
 }
 
+int cdp_trans_destroy()
+{
+	cdp_trans_t *t=0;
+	if (trans_list){
+		lock_get(trans_list->lock);
+		while(trans_list->head){
+			t = trans_list->head;
+			trans_list->head = t->next;
+			cdp_free_trans(t);
+		}		
+		lock_destroy(trans_list->lock);
+		lock_dealloc((void*)trans_list->lock);
+		shm_free(trans_list);
+		trans_list = 0;
+	}
+	
+	return 1;
+}
 /**
  * Create and add a transaction to the transaction list.
  * @param msg - the message that this related to

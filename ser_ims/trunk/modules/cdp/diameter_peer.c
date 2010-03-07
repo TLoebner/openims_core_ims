@@ -536,6 +536,9 @@ void diameter_peer_destroy()
 	/* cleaning up sessions */
 	cdp_sessions_destroy();
 
+	/* cleaning up transactions */
+	cdp_trans_destroy();
+	
 	/* cleaning up global vars */
 /*	lock_get(pid_list_lock);*/
 	shm_free(dp_first_pid);

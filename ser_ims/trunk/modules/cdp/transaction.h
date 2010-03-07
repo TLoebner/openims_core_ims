@@ -79,6 +79,7 @@ typedef struct {
 } cdp_trans_list_t;
 
 int cdp_trans_init();
+int cdp_trans_destroy();
 
 inline cdp_trans_t* cdp_add_trans(AAAMessage *msg,AAATransactionCallback_f *cb, void *ptr,int timeout,int auto_drop);
 void del_trans(AAAMessage *msg);
