@@ -3,7 +3,7 @@
  *   
  * Copyright (C) 2009-2010 FhG Fokus
  *
- * This file is part of Open EPC - an implementation of NGMN core components
+ * This file is part of Open EPC - an implementation of EPS core components
  * 
  * The Open EPC project  is a prototype implementation of the 3GPP 
  * Release 8 and later Evolved Packet Core (EPC) that will allow academic and 
