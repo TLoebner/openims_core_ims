@@ -854,7 +854,7 @@ end:
 inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str sdpB,int number,AAA_AVP **media_sub_component,int tag)
  {
 
- 	char * newline, *rtp, *mlineA, *tcp = NULL;
+ 	char * newline=0, *rtp=0, *mlineA=0, *tcp = NULL;
  	unsigned int intportA=0,intportB=0;
 	str ipA = {0,0}, ipB = {0,0};
  	int i=0,flows=0;
