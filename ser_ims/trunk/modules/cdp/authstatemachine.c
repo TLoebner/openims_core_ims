@@ -761,13 +761,13 @@ int add_vendor_specific_application_id_group(AAAMessage * msg, unsigned int vend
 											
 	group = AAAGroupAVPS(list_grp);	
 	if(!group.s || !group.len) goto error;
-	AAAFreeAVPList(&list_grp);
 								
 	if(!(avp = AAACreateAVP(AVP_Vendor_Specific_Application_Id, AAA_AVP_FLAG_MANDATORY,0,
 					group.s, group.len,AVP_DUPLICATE_DATA))) goto error;
 
-	if(!AAAAddAVPToMessage(msg, avp, msg->avpList.tail)) goto error;
+	if(AAAAddAVPToMessage(msg, avp, msg->avpList.tail)!= AAA_ERR_SUCCESS) goto error;
 																	
+	AAAFreeAVPList(&list_grp);
 	shm_free(group.s); group.s = NULL;
 	
 	return 1;
