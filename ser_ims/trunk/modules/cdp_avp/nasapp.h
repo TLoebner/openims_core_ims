@@ -261,7 +261,7 @@ cdp_avp_ptr		(Called_Station_Id,				0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str
 		}
 		buffer[0]=0;
 		buffer[1]=ip.prefix;
-		memcpy(buffer,ip.addr.ip.v6.s6_addr,16);
+		memcpy(buffer+2,ip.addr.ip.v6.s6_addr,16);
 		return cdp_avp_add_to_list(list,
 				cdp_avp_new_OctetString(
 						AVP_Framed_IPv6_Prefix,
