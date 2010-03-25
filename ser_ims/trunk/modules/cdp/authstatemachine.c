@@ -249,6 +249,7 @@ inline int auth_client_statefull_sm_process(cdp_session_t* s, int event, AAAMess
 	x = &(s->u.auth);
 	
 	if (s->cb) (s->cb)(event,s);
+	LOG(L_INFO,"after callback of event %i\n", event);
 
 	//if (x && x->state && msg) LOG(L_ERR,"auth_client_statefull_sm_process [event %i] [state %i] endtoend %u hopbyhop %u\n",event,x->state,msg->endtoendId,msg->hopbyhopId);
 
@@ -426,6 +427,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 	x = &(s->u.auth);
 	
 	if (s->cb) (s->cb)(event,s);			
+	LOG(L_DBG,"after callback for event %i\n", event);
 
 	switch(x->state){
 		case AUTH_ST_IDLE:
@@ -495,6 +497,7 @@ inline void auth_server_statefull_sm_process(cdp_session_t* s, int event, AAAMes
 				case AUTH_EV_SESSION_TIMEOUT:
 				case AUTH_EV_SESSION_GRACE_TIMEOUT:
 					x->state=AUTH_ST_IDLE;
+					LOG(L_DBG,"before session cleanup\n");
 					Session_Cleanup(s,msg);
 					s = 0;
 					break;
@@ -656,6 +659,9 @@ int dup_routing_avps(AAAMessage* src, AAAMessage *dest){
 	AAA_AVP * avp;
 	str dest_host, dest_realm;
 
+	if(!src)
+		return 1;
+
 	avp = AAAFindMatchingAVP(src,src->avpList.head,AVP_Origin_Host,0,AAA_FORWARD_SEARCH);
 	if(avp && avp->data.s && avp->data.len) {
 		LOG(L_DBG,"DBG:dup_routing_avps: Origin Host AVP present, duplicating %.*s\n",
@@ -785,6 +791,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 	AAA_AVP *avp=0;
 	peer *p=0;
 	char x[4];
+	LOG(L_DBG, "sending STR\n");
 	//if (msg) LOG(L_DBG,"Send_STR() : sending STR for %d, flags %#1x endtoend %u hopbyhop %u\n",msg->commandCode,msg->flags,msg->endtoendId,msg->hopbyhopId);
 	//else LOG(L_DBG,"Send_STR() called from AAATerminateAuthSession or some other event\n");
 	str = AAACreateRequest(s->application_id,IMS_STR,Flag_Proxyable,s);
