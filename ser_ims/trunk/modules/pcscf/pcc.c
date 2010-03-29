@@ -554,12 +554,14 @@ error:
 
 //AF Service is IMS Services although it should be the IMS Communication Services
 static str IMS_Serv_AVP_val = {"IMS Services", 12};
+static str IMS_Reg_AVP_val = {"IMS Registration", 16};
 
 /* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
-int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struct sip_msg * res){
+int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struct sip_msg * res, int registr){
 
 	char x[4];
 	AAA_AVP * avp;
+	str af_id = {0,0};
 
 	/* Add Auth-Application-Id AVP */
 	if (pcscf_qos_release7==1){
@@ -581,7 +583,11 @@ int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struc
 	}
 	
 	/* Add AF-Application-Identifier AVP */
-	if(!PCC_add_avp(msg, IMS_Serv_AVP_val.s,IMS_Serv_AVP_val.len,
+	if(!registr)
+		af_id = IMS_Serv_AVP_val;
+	else	af_id = IMS_Reg_AVP_val;
+
+	if(!PCC_add_avp(msg, af_id.s,af_id.len,
 			AVP_IMS_AF_Application_Identifier, 
 			AAA_AVP_FLAG_MANDATORY, IMS_vendor_id_3GPP,
 			AVP_DUPLICATE_DATA, __FUNCTION__)) goto error;
@@ -694,7 +700,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	}
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
-	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res))
+	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res, is_register))
 		goto error;
 
 	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: auth_lifetime %u\n", auth_lifetime);
@@ -928,7 +934,7 @@ out_of_memory:
 		
 //cdpb.AAADropAuthSession(auth);
 
-AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth){
+AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth, int is_register){
 
 	AAAMessage* dia_str = NULL;
 	char x[4];
@@ -952,7 +958,7 @@ AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth){
 	
 	if (!dia_str) goto error;
 	
-	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL))	goto error;
+	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register))	goto error;
 
 	//Termination-Cause
 	set_4bytes(x,1);
@@ -1022,7 +1028,7 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 		}
 	}
 
-	dia_str = PCC_create_STR_auth_session_safe(auth);
+	dia_str = PCC_create_STR_auth_session_safe(auth, is_register);
 	if(dia_str){
 		cdpb.AAASessionsUnlock(auth->hash);
 		auth = 0;
@@ -1084,9 +1090,11 @@ error:
  * for dialogs: clean the data related to pcc and drop the dialog
  * TODO: release for registrations
  */
-void pcc_data_release_safe(AAASession* session){
+void pcc_data_release_safe(AAASession* session, int * is_register){
 
 	pcc_authdata_t *adata;
+
+	*is_register =0;
 
 	LOG(L_INFO,"INFO:"M_NAME":pcc_release_all_data_safe: releasing all data of the session %p\n", session);
 	if(!session)
@@ -1100,6 +1108,7 @@ void pcc_data_release_safe(AAASession* session){
 
 		r_contact * contact = pcc_auth_clean_reg(adata->host, adata->port, adata->transport);
 		if(contact) r_unlock(contact->hash);
+		*is_register =1;
 	}else{
 
 		p_dialog * dlg=get_p_dialog(adata->callid,adata->host,adata->port,adata->transport,&adata->direction);
@@ -1121,7 +1130,8 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 	AAASession* session;
 	AAA_AVP *avp=0;
 	unsigned int code =0;
-	
+	int is_register;
+
 	if (!request || !request->sessionId) return 0;
 	session=cdpb.AAAGetAuthSession(request->sessionId->data);
 	if (!session) {
@@ -1137,7 +1147,7 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 
 	LOG(L_DBG,"DBG:"M_NAME":PCC_ASA: PCRF requested an ASR.. ok, releasing all data\n");
 	
-	pcc_data_release_safe(session);
+	pcc_data_release_safe(session, &is_register);
 	
 	cdpb.AAASessionsUnlock(session->hash);
 	return 0;
@@ -1165,6 +1175,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 	AAA_AVP *avp=0;
 	AAAMessage *raa=0, *dia_str = 0;
 	unsigned int code=0, rc=0;
+	int is_register;
 	
 	if (!request && !request->sessionId) return 0;
 	session = cdpb.AAAGetAuthSession(request->sessionId->data);
@@ -1241,7 +1252,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 
 	
 terminate:
-	pcc_data_release_safe(session);
+	pcc_data_release_safe(session, &is_register);
 	//first reply to the RAR
 	if (forced_qos_peer.len){
 		cdpb.AAASendMessageToPeer(raa,&forced_qos_peer,NULL,NULL);
@@ -1250,7 +1261,7 @@ terminate:
 	}
 
 	//then generate a STR-STA
-	dia_str = PCC_create_STR_auth_session_safe(session);
+	dia_str = PCC_create_STR_auth_session_safe(session, is_register);
 	if(dia_str){
 		cdpb.AAASessionsUnlock(session->hash);
 		session = 0;
