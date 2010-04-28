@@ -216,7 +216,7 @@ typedef struct _cdp_session_list_t {
 int cdp_sessions_init(int hash_size);
 int cdp_sessions_destroy();
 void cdp_sessions_log(int level);
-void cdp_sessions_timer(time_t now, void* ptr);
+int cdp_sessions_timer(time_t now, void* ptr);
 
 cdp_session_t* cdp_get_session(str id);
 cdp_session_t* cdp_new_session(str id,cdp_session_type_t type); //this function is needed in the peerstatemachine

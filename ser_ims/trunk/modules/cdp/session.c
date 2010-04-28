@@ -425,7 +425,7 @@ void cdp_sessions_log(int level)
 	LOG(level,"-------------------------------------\n");
 }
 
-void cdp_sessions_timer(time_t now, void* ptr)
+int cdp_sessions_timer(time_t now, void* ptr)
 {
 	int hash;
 	cdp_session_t *x,*n;
@@ -472,6 +472,7 @@ void cdp_sessions_timer(time_t now, void* ptr)
 		AAASessionsUnlock(hash);
 	}
 	if (now%5==0)cdp_sessions_log(L_DBG);
+	return 1;
 }
 
 

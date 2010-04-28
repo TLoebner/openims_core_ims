@@ -106,9 +106,7 @@ int peer_manager_init(dp_config *config)
 		add_peer(p);
 	}
 	
-	i = config->tc/5;
-	if (i<=0) i=1;
-	add_timer(i,0,&peer_timer,0);
+	add_timer(0,0,&peer_timer,0);
 	
 	return 1;
 }
@@ -270,9 +268,10 @@ peer *get_peer_by_fqdn(str *fqdn)
  * @param now - time of call
  * @param ptr - generic pointer for timers - not used
  */
-void peer_timer(time_t now,void *ptr)
+int peer_timer(time_t now,void *ptr)
 {
 	peer *p,*n;
+	int i;
 	LOG(L_MEM,"DBG:peer_timer(): taking care of peers...\n");
 	lock_get(peer_list_lock);
 	p = peer_list->head;
@@ -325,7 +324,10 @@ void peer_timer(time_t now,void *ptr)
 		p = n;
 	}
 	lock_release(peer_list_lock);
-	log_peer_list(L_INFO);	
+	log_peer_list(L_INFO);
+	i = config->tc/5;
+	if (i<=0) i=1;
+	return i;
 }
 
 /**

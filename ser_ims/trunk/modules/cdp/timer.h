@@ -59,13 +59,12 @@
 #include "worker.h"
 
 /** callback function for timer event */
-typedef void (*callback_f)(time_t now,void *ptr);
+typedef int (*callback_f)(time_t now,void *ptr);
 
 /** timer element */
 typedef struct _timer_cb_t{
 	time_t expires;		/**< time of expiration */
 	int one_time;		/**< if to trigger the event just one_time and then remove */
-	int interval;		/**< original interval that this timer was set to expire in */
 	callback_f cb;		/**< callback function to be called on timer expiration */
 	void **ptr;			/**< generic parameter to call the callback with		*/
 	

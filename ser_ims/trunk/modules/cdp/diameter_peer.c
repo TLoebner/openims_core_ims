@@ -345,6 +345,37 @@ int diameter_peer_start(int blocking)
 	}
 #endif	
 
+	/* fork receiver for unknown peers */
+	receiver_init(NULL);
+	#ifdef CDP_FOR_SER		
+		pid = fork_process(1001+k,"cdp_receiver_peer_unkown",1);
+	#else
+		#ifdef WHARF
+			pid = wharf_fork("cdp_receiver_unknown",WHARF_PROCESS_CDP_RECEIVER);
+		#else
+			pid = fork();
+		#endif
+	#endif
+	if (pid==-1){
+		LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for unknown peer receiver!\n");
+		return 0;
+	}
+	if (pid==0) {
+		srandom(time(0)*k);
+		#ifdef CDP_FOR_SER
+			snprintf(pt[process_no].desc, MAX_PT_DESC,
+				"cdp receiver peer unknown");
+		#endif	
+		receiver_process(NULL);
+		LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
+		#ifdef WHARF
+			wharf_exit(-1);
+		#endif	
+		exit(-1);		
+	}else{
+		dp_add_pid(pid);
+	}
+	
 	/* fork receivers for each pre-configured peers */
 	lock_get(peer_list_lock);
 	for(p = peer_list->head,k=-1;p;p = p->next,k--){
@@ -380,36 +411,6 @@ int diameter_peer_start(int blocking)
 	}
 	lock_release(peer_list_lock);
 	
-	/* fork receiver for unknown peers */
-	receiver_init(NULL);
-	#ifdef CDP_FOR_SER		
-		pid = fork_process(1001+k,"cdp_receiver_peer_unkown",1);
-	#else
-		#ifdef WHARF
-			pid = wharf_fork("cdp_receiver_unknown",WHARF_PROCESS_CDP_RECEIVER);
-		#else
-			pid = fork();
-		#endif
-	#endif
-	if (pid==-1){
-		LOG(L_CRIT,"ERROR:init_diameter_peer(): Error on fork() for unknown peer receiver!\n");
-		return 0;
-	}
-	if (pid==0) {
-		srandom(time(0)*k);
-		#ifdef CDP_FOR_SER
-			snprintf(pt[process_no].desc, MAX_PT_DESC,
-				"cdp receiver peer unknown");
-		#endif	
-		receiver_process(NULL);
-		LOG(L_CRIT,"ERROR:init_diameter_peer(): receiver_process finished without exit!\n");
-		#ifdef WHARF
-			wharf_exit(-1);
-		#endif	
-		exit(-1);		
-	}else{
-		dp_add_pid(pid);
-	}
 
 	/* Fork the acceptor process (after receivers, so it inherits all the right sockets) */
 	#ifdef CDP_FOR_SER		
@@ -435,10 +436,7 @@ int diameter_peer_start(int blocking)
 	}else{
 		dp_add_pid(pid);
 	}
-	
-	/* run the peermanager timer once to start connecting */
-	peer_timer(time(0),0);
-	
+		
 	/* fork/become timer */
 	if (blocking) {
 		dp_add_pid(getpid());

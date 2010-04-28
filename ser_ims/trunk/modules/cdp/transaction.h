@@ -86,7 +86,7 @@ void del_trans(AAAMessage *msg);
 inline cdp_trans_t* cdp_take_trans(AAAMessage *msg);
 inline void cdp_free_trans(cdp_trans_t *x);
 
-void cdp_trans_timer(time_t now, void* ptr);
+int cdp_trans_timer(time_t now, void* ptr);
 
 /*            API Exported    */
 
