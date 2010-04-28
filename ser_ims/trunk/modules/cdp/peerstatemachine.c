@@ -114,7 +114,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					R_Accept(p,sock);
 					result_code = Process_CER(p,msg);
 					Snd_CEA(p,msg,result_code,p->R_sock);
-					AAAFreeMessage(&msg);
+					msg=0;
 					if (result_code>=2000 && result_code<3000)
 						p->state = R_Open;
 					else {
@@ -199,7 +199,6 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					}
 					else{
 						Snd_CEA(p,msg,result_code,p->R_sock);
-						AAAFreeMessage(&msg);						
 						R_Disc(p);
 						I_Disc(p);
 						p->state=Closed;
@@ -240,7 +239,6 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 							// lost the election => wait for I_Recv_CEA, then R_Disc()
 							LOG(L_INFO,"DBG:sm_process():Wait_Conn_Ack_Elect Lose Elect \n");
 							AAAFreeMessage(&p->r_cer);
-							p->r_cer = 0;
 						}
 					} else {
 						LOG(L_ERR,"ERROR:sm_process():Wait_Conn_Ack_Elect, I_Rcv_Conn_Ack, No R-CER ! \n");
@@ -252,7 +250,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					if (p->r_cer){
 						result_code = Process_CER(p,p->r_cer);
 						Snd_CEA(p,p->r_cer,result_code,p->R_sock);
-						AAAFreeMessage(&(p->r_cer));
+						p->r_cer=0;
 						if (result_code>=2000 && result_code<3000)
 							p->state = R_Open;
 						else {
@@ -293,7 +291,6 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					I_Disc(p);
 					result_code = Process_CER(p,msg);
 					Snd_CEA(p,msg,result_code,p->R_sock);
-					AAAFreeMessage(&msg);
 					if (result_code>=2000 && result_code<3000){
 						p->state = R_Open;
 					}else{
@@ -306,7 +303,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					if (p->r_cer){
 						result_code = Process_CER(p,p->r_cer);
 						Snd_CEA(p,p->r_cer,result_code,p->R_sock);
-						AAAFreeMessage(&(p->r_cer));
+						p->r_cer=0;
 						if (result_code>=2000 && result_code<3000){
 							p->state = R_Open;
 						}else{
