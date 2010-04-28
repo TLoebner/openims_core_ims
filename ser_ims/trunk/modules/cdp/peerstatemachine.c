@@ -114,6 +114,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					R_Accept(p,sock);
 					result_code = Process_CER(p,msg);
 					Snd_CEA(p,msg,result_code,p->R_sock);
+					AAAFreeMessage(&msg);
 					if (result_code>=2000 && result_code<3000)
 						p->state = R_Open;
 					else {
@@ -143,18 +144,18 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					p->state = Closed;
 					break;
 				case R_Conn_CER:
+					if (p->r_cer) AAAFreeMessage(&(p->r_cer));
 					R_Accept(p,sock);
 					result_code = Process_CER(p,msg);
 					if (result_code>=2000 && result_code<3000){
 						p->state = Wait_Conn_Ack_Elect;
-						if (p->r_cer) AAAFreeMessage(&(p->r_cer));
 						p->r_cer = msg;
 					}
 					else {
-						p->r_cer = 0;
-						p->state = Wait_Conn_Ack;
+						p->state = Closed;
 						AAAFreeMessage(&msg);
 						R_Disc(p);
+						I_Disc(p);
 					}
 					break;
 				case Timeout:
@@ -180,19 +181,30 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					log_peer_list(L_INFO);
 					break;
 				case R_Conn_CER:
+					if (p->r_cer) AAAFreeMessage(&(p->r_cer));
 					R_Accept(p,sock);
 					result_code = Process_CER(p,msg);
-					//if (!(result_code>=2000 && result_code<3000)) {
-					//	Snd_CEA(p,msg,result_code,p->R_sock);
-					//	R_Disc(p);
-					//}			/		
-					p->state = Wait_Returns;
-					if (Elect(p,msg)){
-						sm_process(p,Win_Election,msg,1,sock);
-					} else {
-						//sm_process(p,I_Peer_Disc,0,1,sock);
-						AAAFreeMessage(&msg);
+					if (result_code>=2000 && result_code<3000){
+						p->state = Wait_Returns;
+						if (Elect(p,msg)){
+							// won the election = > I_Disc(), R_Send_CEA()
+							LOG(L_INFO,"DBG:sm_process():Wait_I_CEA Win Elect \n");
+							sm_process(p,Win_Election,msg,1,sock);
+						} else {
+							// lost the election => wait for I_Recv_CEA, then R_Disc()
+							LOG(L_INFO,"DBG:sm_process():Wait_I_CEA Lose Elect \n");
+							p->r_cer = msg;
+							sm_process(p,I_Peer_Disc,0,1,p->I_sock);
+						}
 					}
+					else{
+						Snd_CEA(p,msg,result_code,p->R_sock);
+						AAAFreeMessage(&msg);						
+						R_Disc(p);
+						I_Disc(p);
+						p->state=Closed;
+						break;
+					}					
 					break;
 				case I_Peer_Disc:
 					I_Disc(p);
@@ -212,30 +224,35 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					goto error;
 			}
 			break;	
+			
 		case Wait_Conn_Ack_Elect:
 			switch(event){
 				case I_Rcv_Conn_Ack:
 					I_Snd_CER(p);
-					p->state = Wait_Returns;
 					if (p->r_cer){
+						p->state = Wait_Returns;
 						if (Elect(p,p->r_cer)){
+							// won the election = > I_Disc(), R_Send_CEA()
 							LOG(L_INFO,"DBG:sm_process():Wait_Conn_Ack_Elect Win Elect \n");
 							sm_process(p,Win_Election,p->r_cer,1,sock);
 							p->r_cer = 0;
 						} else {
+							// lost the election => wait for I_Recv_CEA, then R_Disc()
+							LOG(L_INFO,"DBG:sm_process():Wait_Conn_Ack_Elect Lose Elect \n");
 							AAAFreeMessage(&p->r_cer);
 							p->r_cer = 0;
-							LOG(L_INFO,"DBG:sm_process():Wait_Conn_Ack_Elect Lose Elect \n");
 						}
 					} else {
 						LOG(L_ERR,"ERROR:sm_process():Wait_Conn_Ack_Elect, I_Rcv_Conn_Ack, No R-CER ! \n");
+						p->state = Wait_I_CEA;
 					}
 					break;
 				case I_Rcv_Conn_NAck:
+					Cleanup(p,p->I_sock);
 					if (p->r_cer){
 						result_code = Process_CER(p,p->r_cer);
 						Snd_CEA(p,p->r_cer,result_code,p->R_sock);
-						p->r_cer = 0;
+						AAAFreeMessage(&(p->r_cer));
 						if (result_code>=2000 && result_code<3000)
 							p->state = R_Open;
 						else {
@@ -243,8 +260,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 							p->state = Closed;
 						//	p->state = R_Open; /* Or maybe I should disconnect it?*/
 						}
-					}
-					else{
+					}else{
 						LOG(L_ERR,"ERROR:sm_process():Wait_Conn_Ack_Elect, I_Rcv_Conn_NAck No R-CER ! \n");
 					}
 					break;
@@ -254,6 +270,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					break;
 				case R_Conn_CER:
 					R_Reject(p,sock);
+					AAAFreeMessage(&msg);
 					p->state = Wait_Conn_Ack_Elect;
 					break;
 				case Timeout:
@@ -267,13 +284,16 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					goto error;
 			}
 			break;
+			
 		case Wait_Returns:
 			switch(event){
 				case Win_Election:
+					/* this is the Win Election -> I is dropped, I is kept */
 					LOG(L_INFO,"DBG:sm_process():Wait_Returns Win Elect \n");
 					I_Disc(p);
 					result_code = Process_CER(p,msg);
 					Snd_CEA(p,msg,result_code,p->R_sock);
+					AAAFreeMessage(&msg);
 					if (result_code>=2000 && result_code<3000){
 						p->state = R_Open;
 					}else{
@@ -283,19 +303,23 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					break;
 				case I_Peer_Disc:
 					I_Disc(p);
-					if (msg){
-						result_code = Process_CER(p,msg);
-						Snd_CEA(p,msg,result_code,p->R_sock);
+					if (p->r_cer){
+						result_code = Process_CER(p,p->r_cer);
+						Snd_CEA(p,p->r_cer,result_code,p->R_sock);
+						AAAFreeMessage(&(p->r_cer));
 						if (result_code>=2000 && result_code<3000){
 							p->state = R_Open;
 						}else{
 							R_Disc(p);
 							p->state = Closed;
 						}
-					}else
+					}else {
+						LOG(L_ERR,"ERROR:sm_process():Wait_Returns, I_Peer_Disc No R-CER ! \n");						
+					}
 					break;
 				case I_Rcv_CEA:
-					/* this is the Lost Election case for I connections */
+					/* this is the Lost Election -> I is kept, R dropped */
+					LOG(L_INFO,"DBG:sm_process():Wait_Returns Lost Elect \n");
 					R_Disc(p);
 					result_code = Process_CEA(p,msg);
 					if (result_code>=2000 && result_code<3000)
