@@ -87,6 +87,7 @@ void timer_loop()
 	timer_cb_t *i;
 	callback_f cb=0;
 	void *ptr=0;
+	int interval=0;
 	
 	while(1){
 		if (shutdownx && *shutdownx) break;
@@ -96,24 +97,30 @@ void timer_loop()
 		do {
 			cb = 0;
 			lock_get(timers_lock);
-			i = timers->head;
-			while(i && i->expires>now) i = i->next;
-			if (i){
-				cb = i->cb;
-				ptr = *(i->ptr);
-				if (i->one_time){
-					if (i->prev) i->prev->next = i->next;
-					else timers->head = i->next;
-					if (i->next) i->next->prev = i->prev;
-					else timers->tail = i->next;
-					shm_free(i);
-				}else{
-					i->expires = now + i->interval;
+				i = timers->head;
+				while(i && i->expires>now) i = i->next;
+				if (i){
+					cb = i->cb;
+					ptr = *(i->ptr);
+					if (i->one_time){
+						if (i->prev) i->prev->next = i->next;
+						else timers->head = i->next;
+						if (i->next) i->next->prev = i->prev;
+						else timers->tail = i->next;
+						shm_free(i);
+						i=0;
+					}
 				}
-			}
 			lock_release(timers_lock);
 	
-			if (cb) cb(now,ptr);
+			if (cb) { 
+				interval = cb(now,ptr);
+				if (i){
+					lock_get(timers_lock);
+						i->expires = now + interval;
+					lock_release(timers_lock);
+				}
+			}
 	
 		} while(cb);
 				
@@ -149,7 +156,7 @@ int add_timer(int expires_in,int one_time,callback_f cb,void *ptr)
 	}
 	n->expires = expires_in + time(0);
 	n->one_time = one_time;
-	n->interval = expires_in;
+	//n->interval = expires_in;
 	n->cb = cb;
 	*(n->ptr) = ptr;
 

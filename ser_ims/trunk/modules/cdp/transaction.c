@@ -196,7 +196,7 @@ inline void cdp_free_trans(cdp_trans_t *x)
  * @param now - time of call
  * @param ptr - generic pointer, passed to the transactional callbacks
  */
-void cdp_trans_timer(time_t now, void* ptr)
+int cdp_trans_timer(time_t now, void* ptr)
 {
 	cdp_trans_t *x,*n;	
 	LOG(L_MEM,"DBG:trans_timer(): taking care of diameter transactions...\n");
@@ -222,6 +222,7 @@ void cdp_trans_timer(time_t now, void* ptr)
 			x = x->next;
 	}
 	lock_release(trans_list->lock);
+	return 1;
 }
 
 
