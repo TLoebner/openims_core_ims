@@ -105,6 +105,7 @@ str lrf_sip_uri_str={NULL, 0};
 int use_default_psap = 1;				/* policy to enable/disable using a default PSAP */
 char * default_psap_uri = "sip:default_psap@open-ims.test";	/* the URI for the default PSAP */
 str default_psap_uri_str = {0,0};
+enum user_id_type user_id = SIP_URI_ID;
 
 str ecscf_name_str;					/**< SIP URI of the node>*/
 str ecscf_record_route_mo;					/**< Record-route for originating case 				*/
@@ -157,6 +158,7 @@ static param_export_t ecscf_params[]={
 	{"min_se", 			INT_PARAM, 		&ecscf_min_se},
 	{"lrf_sip_uri",			STR_PARAM, 		&lrf_sip_uri},
 	{"use_default_psap",		INT_PARAM, 		&use_default_psap},
+	{"user_id_type",		INT_PARAM, 		&user_id},
 	{"default_psap_uri",		STR_PARAM, 		&default_psap_uri},
 	{0,0,0} 
 };

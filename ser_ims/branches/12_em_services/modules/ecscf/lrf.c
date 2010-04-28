@@ -82,6 +82,7 @@ extern str ecscf_name_str;
 extern str lrf_sip_uri_str;
 extern int use_default_psap;
 extern str default_psap_uri_str;
+extern enum user_id_type user_id;
 
 static str options_method=    {"OPTIONS",7};
 static str accept_hdr=        {"Accept: application/route+xml\r\n",31};
@@ -501,9 +502,8 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	e_dialog* d;
 	str call_id, from_uri;
 	str location_str = {0, 0};
-	str service, req_uri;
+	str service, req_uri = {0,0};
 	struct initial_tr inv_tr;
-	str contact = {0, 0};
 
 	enum e_dialog_direction dir = get_dialog_direction(str1);
 	if(dir == DLG_MOBILE_UNKNOWN){
@@ -522,12 +522,34 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		return CSCF_RETURN_FALSE;
 	}
 
-	contact = cscf_get_contact(msg);
-	if(contact.s == NULL || contact.len == 0){
-		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Contact header\n");
+	if(d->anonymous){
+		req_uri.s = anonym_user.s;
+		req_uri.len = anonym_user.len;
+	}else if(user_id==CONTACT_ADDR_ID){
+
+		req_uri = cscf_get_contact(msg);
+		if(req_uri.s == NULL || req_uri.len == 0){
+			LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Contact header\n");
+			return CSCF_RETURN_FALSE;
+		}
+
+	}else if(user_id==SIP_URI_ID){
+
+		if(cscf_get_from_uri(msg, &req_uri)!=1){
+			LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid From header\n");
+			return CSCF_RETURN_FALSE;
+		}
+		
+		if(req_uri.s == NULL || req_uri.len == 0){
+			LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Contact header\n");
+			return CSCF_RETURN_FALSE;
+		}
+	}else{
+		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: invalid user id type\n");
 		return CSCF_RETURN_FALSE;
 	}
 
+	
 	LOG(L_DBG,"DBG:"M_NAME":E_query_LRF: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	d = is_e_dialog_dir(msg, call_id,dir);
@@ -553,13 +575,6 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	inv_tr.callid.len = msg->callid->len; 
 	inv_tr.callid.s = msg->callid->name.s; 
 	service = msg->first_line.u.request.uri;
-	if(d->anonymous){
-		req_uri.s = anonym_user.s;
-		req_uri.len = anonym_user.len;
-	}else {
-		req_uri.s = contact.s;
-		req_uri.len = contact.len;
-	}
 
 	if(!send_options_req(req_uri, location_str, service, &inv_tr)){
 		goto ret_false;
