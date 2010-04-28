@@ -106,7 +106,7 @@ int peer_manager_init(dp_config *config)
 		add_peer(p);
 	}
 	
-	add_timer(0,0,&peer_timer,0);
+	add_timer(1,0,&peer_timer,0);
 	
 	return 1;
 }
