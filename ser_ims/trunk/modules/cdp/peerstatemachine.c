@@ -127,7 +127,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					p->state = Closed;
 					break;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -161,7 +161,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					Error(p,p->I_sock);
 					p->state = Closed;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -207,7 +207,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					p->state = Closed;
 					break;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -262,7 +262,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					p->state = Closed;
 					break;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -319,7 +319,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					if (p->R_sock>=0) Error(p,p->R_sock);
 					p->state = Closed;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -386,7 +386,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					log_peer_list(L_INFO);
 					break;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -452,7 +452,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					}
 					break;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
@@ -481,7 +481,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					p->state = Closed;
 					break;
 				default:
-					LOG(L_DBG,"DBG:sm_process(): In state %s invalid event %s\n",
+					LOG(L_ERR,"DBG:sm_process(): In state %s invalid event %s\n",
 						dp_states[p->state],dp_events[event-101]);
 					goto error;
 			}
