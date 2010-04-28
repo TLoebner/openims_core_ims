@@ -83,7 +83,7 @@ extern dp_config *config;		/**< Configuration for this diameter peer 	*/
 int dp_add_pid(pid_t pid);
 void dp_del_pid(pid_t pid);
 
-int receive_loop();
+int receive_loop(peer *original_peer);
 
 void receive_message(AAAMessage *msg,serviced_peer_t *sp);
 
@@ -94,8 +94,7 @@ void receive_message(AAAMessage *msg,serviced_peer_t *sp);
 int local_id=0;						/**< incrementing process local variable, to distinguish between different peer send pies */
 
 
-int fd_exchange_pipe[2];			/**< pipe to pass file descriptors towards this process */
-
+int fd_exchange_pipe_unknown_local;		/**< pipe to pass file descriptors towards the receiver process for unknown peers - local end to read from*/
 int fd_exchange_pipe_unknown;		/**< pipe to pass file descriptors towards the receiver process for unknown peers */
 
 serviced_peer_t *serviced_peers=0; 	/**< pointer to the list of peers serviced by this process */
@@ -432,12 +431,20 @@ error:
  */
 int receiver_init(peer *p)
 {
+	int fd_exchange_pipe[2];/**< pipe to pass file descriptors towards this process */
+
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd_exchange_pipe)<0){
 		 LOG(L_ERR,"ERROR:receiver_init(): socketpair(fd_exchanged_pipe) failed > %s\n",strerror(errno));
 		return 0;
 	}
-	if (p) p->fd_exchange_pipe = fd_exchange_pipe[1];
-	else fd_exchange_pipe_unknown = fd_exchange_pipe[1];
+	if (p) {
+		p->fd_exchange_pipe_local = fd_exchange_pipe[0];
+		p->fd_exchange_pipe = fd_exchange_pipe[1];
+	}
+	else {
+		fd_exchange_pipe_unknown_local = fd_exchange_pipe[0];
+		fd_exchange_pipe_unknown = fd_exchange_pipe[1];
+	}
 	
 	return 1;
 }
@@ -459,7 +466,7 @@ void receiver_process(peer *p)
 
 	log_serviced_peers(L_INFO);		
 
-	if (receive_loop()<0){
+	if (receive_loop(p)<0){
 		LOG(L_INFO,"ERROR:receiver_process(): [%.*s] receive_loop() return -1 (error)!\n",
 						p?p->fqdn.len:0,p?p->fqdn.s:0);
 				
@@ -632,7 +639,7 @@ error_and_reset:
  *  - the send pipes of all serviced peers, triggering the sending of outgoing messages
  * @returns 0 on normal exit or -1 on error
  */ 
-int receive_loop()
+int receive_loop(peer *original_peer)
 {
 	fd_set rfds,efds;
 	struct timeval tv;
@@ -641,7 +648,11 @@ int receive_loop()
 	serviced_peer_t *sp,*sp2;
 	peer *p;
 	int fd=-1;
-	
+	int fd_exchange_pipe_local=0;
+
+	if (original_peer) fd_exchange_pipe_local = original_peer->fd_exchange_pipe_local;
+	else fd_exchange_pipe_local = fd_exchange_pipe_unknown_local;
+
 //	if (shutdownx) return -1;	
 	
 	while(shutdownx&&!*shutdownx){
@@ -657,9 +668,8 @@ int receive_loop()
 			FD_ZERO(&rfds);
 			FD_ZERO(&efds);
 			
-			
-			FD_SET(fd_exchange_pipe[0],&rfds);
-			if (fd_exchange_pipe[0]>max) max = fd_exchange_pipe[0];
+			FD_SET(fd_exchange_pipe_local,&rfds);
+			if (fd_exchange_pipe_local>max) max = fd_exchange_pipe_local;
 			
 			for(sp=serviced_peers;sp;sp=sp->next){
 				if (sp->tcp_socket>=0){
@@ -693,12 +703,12 @@ int receive_loop()
 			}else
 				if (n){
 					
-					if (FD_ISSET(fd_exchange_pipe[0],&rfds)){
+					if (FD_ISSET(fd_exchange_pipe_local,&rfds)){
 						/* fd exchange */
 						LOG(L_DBG,"DBG:select_recv(): There is something on the fd exchange pipe\n");
 						p = 0;
 						fd = -1;
-						if (!receive_fd(fd_exchange_pipe[0],&fd,&p)){
+						if (!receive_fd(fd_exchange_pipe_local,&fd,&p)){
 							LOG(L_ERR,"ERROR:select_recv(): Error reading from fd exchange pipe\n");
 						}else{	
 							LOG(L_DBG,"DBG:select_recv(): fd exchange pipe says fd [%d] for peer %p:[%.*s]\n",fd,

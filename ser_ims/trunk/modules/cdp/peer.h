@@ -127,6 +127,7 @@ typedef struct _peer_t{
 	
 	str send_pipe_name;		/**< pipe to signal messages to be sent out*/
 	
+	int fd_exchange_pipe_local;	/**< pipe to communicate with the receiver process and exchange a file descriptor - local end, to read from */
 	int fd_exchange_pipe;	/**< pipe to communicate with the receiver process and exchange a file descriptor */
 
 	AAAMessage *r_cer;     /* the cer received from R-connection */
