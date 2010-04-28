@@ -345,8 +345,14 @@ int diameter_peer_start(int blocking)
 	}
 #endif	
 
+	/* init the fd_exchange pipes */
+	receiver_init(NULL);	
+	for(p = peer_list->head,k=0;p;p=p->next,k++)
+		receiver_init(p);
+	
+	
 	/* fork receiver for unknown peers */
-	receiver_init(NULL);
+	
 	#ifdef CDP_FOR_SER		
 		pid = fork_process(1001+k,"cdp_receiver_peer_unkown",1);
 	#else
@@ -379,7 +385,6 @@ int diameter_peer_start(int blocking)
 	/* fork receivers for each pre-configured peers */
 	lock_get(peer_list_lock);
 	for(p = peer_list->head,k=-1;p;p = p->next,k--){
-		receiver_init(p);
 		#ifdef CDP_FOR_SER		
 			pid = fork_process(1001+k,"cdp_receiver_peer",1);
 		#else
