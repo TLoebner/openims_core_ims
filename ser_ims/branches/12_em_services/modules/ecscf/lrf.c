@@ -212,7 +212,9 @@ out_of_memory:
  * @param opt_repl - the OPTIONS reply
  * @param inv_trans - the INVITE transaction
  * @param code - the code of the response 
- * @returns -1 in case of error, 0 for ok
+ * @returns -1 in case of error, 0 for okloose_route();
+	E_query_LRF("orig");
+
  */
 int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, int code){
 
@@ -272,7 +274,9 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 
 		d_unlock(d->hash);				
 		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: setting the dialog a 0 expire interval\n");
-		print_e_dialogs(L_INFO);
+		print_e_dialogs(L_INFO);loose_route();
+	E_query_LRF("orig");
+
 		/*if(inv_trans->nr_of_outgoings < 2){
 			del_e_dialog(d);
 			print_e_dialogs(L_INFO);
@@ -516,10 +520,18 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid Call-ID header\n");
 		return CSCF_RETURN_FALSE;
 	}
+	
+	LOG(L_DBG,"DBG:"M_NAME":E_query_LRF: Call-ID <%.*s>\n",call_id.len,call_id.s);
 
 	if(cscf_get_from_uri(msg, &from_uri)==0){
 		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: no or invalid From header\n");
 		return CSCF_RETURN_FALSE;
+	}
+
+	d = is_e_dialog_dir(msg, call_id,dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:message did not create no dialog\n");
+		return CSCF_RETURN_ERROR;
 	}
 
 	if(d->anonymous){
@@ -547,15 +559,6 @@ int E_query_LRF(struct sip_msg* msg, char* str1, char* str2){
 	}else{
 		LOG(L_ERR,"ERR:"M_NAME":E_query_LRF: invalid user id type\n");
 		return CSCF_RETURN_FALSE;
-	}
-
-	
-	LOG(L_DBG,"DBG:"M_NAME":E_query_LRF: Call-ID <%.*s>\n",call_id.len,call_id.s);
-
-	d = is_e_dialog_dir(msg, call_id,dir);
-	if(!d){
-		LOG(L_ERR, "ERR:"M_NAME":E_query_LRF:message did not create no dialog\n");
-		return CSCF_RETURN_ERROR;
 	}
 
 	if(d->location_str.len && d->location_str.s){
