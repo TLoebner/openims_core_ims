@@ -274,13 +274,7 @@ int E_process_options_repl(struct sip_msg * opt_repl, struct cell * inv_trans, i
 
 		d_unlock(d->hash);				
 		LOG(L_DBG, "DBG:"M_NAME":E_process_options_repl: setting the dialog a 0 expire interval\n");
-		print_e_dialogs(L_INFO);loose_route();
-	E_query_LRF("orig");
-
-		/*if(inv_trans->nr_of_outgoings < 2){
-			del_e_dialog(d);
-			print_e_dialogs(L_INFO);
-		}*/
+		print_e_dialogs(L_INFO);
 
 	}else{
 		if(E_set_em_info(d, opt_repl) != CSCF_RETURN_TRUE)
