@@ -58,3 +58,4 @@ int vq_init_vq_stats (void);
 int vq_update_average (vq_timeinfo_t **ptr, struct timeval *res, struct timeval *error, int calltype);
 
 #endif // VQ_STATS_H
+
