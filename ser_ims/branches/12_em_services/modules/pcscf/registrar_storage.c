@@ -300,24 +300,54 @@ r_public* add_r_public(r_contact *c,str aor,int is_default)
 	return p;
 }
 
+/*
+ * search through the registrar for em contacts of this public id, retrieve the first one
+ */
+
+r_contact * get_next_em_r_contact(str pub_id){
+
+	r_contact * c = NULL;
+	r_public * crt_pub_id;
+	
+	unsigned int hash;
+	if (!registrar) return 0;
+	for(hash=0; hash<r_hash_size;hash++){
+		r_lock(hash);
+
+		for(c = registrar[hash].head;c!=NULL; c=c->next){
+			if(!(c->sos_flag & EMERG_REG))
+				continue;
+
+			crt_pub_id = c->head;
+			if(!crt_pub_id)
+				continue;
+			if(crt_pub_id->aor.len == pub_id.len &&
+					strncasecmp(crt_pub_id->aor.s,pub_id.s,pub_id.len)==0) return c;
+		}
+		r_unlock(hash);
+	}
+	return 0;
+}
+
+
 /**
  * Updates the r_public with the new is_default.
  * If not found, it will be inserted
  * \note Must be called with a lock on the domain to avoid races
  * @param c - the r_contact to add to
- * @param aor - the address of record
+ * @param pub_id - the public identity
  * @param is_default - if this is the default contact
  * @returns the newly added r_public, 0 on error
  */
-r_public* update_r_public(r_contact *c,str aor,int *is_default)
+r_public* update_r_public(r_contact *c,str pub_id,int *is_default)
 {
 	r_public *p;
 
 	if (!c) return 0;
-	p = get_r_public(c,aor);
+	p = get_r_public(c,pub_id);
 	if (!p){
 		if (is_default)
-			return add_r_public(c,aor,*is_default);
+			return add_r_public(c,pub_id,*is_default);
 		else return 0;
 	}else{
 		if (is_default)	p->is_default = *is_default;

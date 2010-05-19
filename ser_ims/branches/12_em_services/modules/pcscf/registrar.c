@@ -240,8 +240,11 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 	int local_time_now;
 	struct hdr_field *h;
 	contact_t *c;
+	r_contact * crt_contact;
 	r_nat_dest *pinhole;
 	int sos_reg;
+	int id_nb;
+	unsigned int reg_hash;
 	
 	
 	r_act_time();
@@ -251,6 +254,14 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 		 * then, we will update on NOTIFY */
 		return 0;
 	}	
+
+	LOG(L_DBG, "DBG:"M_NAME":update_contacts: printing %i associated public identities\n",
+			public_id_cnt);
+	for(id_nb=0;id_nb<public_id_cnt;id_nb++)
+		LOG(L_DBG, "DBG:"M_NAME":update_contacts: pub id[%i]: %.*s\n", id_nb, 
+				public_id[id_nb].len, public_id[id_nb].s);
+
+
 	for(h=rpl->contact;h;h=h->next)
 		if (h->type==HDR_CONTACT_T && h->parsed)
 		 for(c=((contact_body_t*)h->parsed)->contacts;c;c=c->next){
@@ -263,15 +274,34 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				continue;			
 			}
 			if (puri.port_no==0) puri.port_no=5060;
-			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
+			LOG(L_DBG,"DBG:"M_NAME":update_contact: nb %d-> %.*s : %d\n",
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
 			
 			sos_reg = cscf_get_sos_uri_param(c->uri);
 			if(sos_reg < 0)
 				return 0;
 
-			if(sos_reg>0)
-				LOG(L_DBG,"DBG:"M_NAME":update_contacts: with sos uri param\n");
+			if(sos_reg>0){
+				if(public_id_cnt <= 0){
+					LOG(L_DBG, "DBG:"M_NAME":update_contacts: emerg registration, no public id provided, doing nothing\n");
+					return 0;
+				}
+				LOG(L_DBG,"DBG:"M_NAME":update_contacts: emerg reg, cleaning old ones for public id %.*s\n",
+						public_id[0].len, public_id[0].s);
+				crt_contact = get_next_em_r_contact(public_id[0]);
+				//delete all the old emergency entries of the public id, only one for em registration
+				while(crt_contact){
+					reg_hash = crt_contact->hash;
+					if(crt_contact->uri.len != c->uri.len ||
+							strncmp(crt_contact->uri.s, c->uri.s, c->uri.len)!=0){
+						LOG(L_DBG,"DBG:"M_NAME":update_contacts: removing contact %.*s:%i\n",
+						   crt_contact->host.len, crt_contact->host.s, crt_contact->port);
+						del_r_contact(crt_contact);
+					}
+					r_unlock(reg_hash);
+					crt_contact = get_next_em_r_contact(public_id[0]);
+				}
+			}
 			
 			if (expires>local_time_now) {
 				if (requires_nat &&				/* only if NAT was enabled */ 
@@ -304,9 +334,12 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				if (public_id_cnt){
 					update_r_public(rc,public_id[0],&is_default);
 					is_default=0;
+					if(sos_reg && public_id_cnt>1)
+						goto unlock;
 					for(i=1;i<public_id_cnt;i++)
 						update_r_public(rc,public_id[i],&is_default);
 				}
+unlock:
 				r_unlock(rc->hash);
 			}
 	}

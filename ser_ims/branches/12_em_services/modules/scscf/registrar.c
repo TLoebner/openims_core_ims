@@ -735,6 +735,8 @@ static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri){
 
 	r_contact * c= 0;
 
+
+	LOG(L_DBG, "DBG:"M_NAME":delete_emerg_contacts: the new contact is %.*s\n", uri.len, uri.s);
 	for(c = p->head;c; c=c->next){
 		
 		if(!c->sos_flag)	
@@ -743,7 +745,6 @@ static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri){
 			continue;
 
 		c->expires = time_now;
-		r_add_contact(msg,p,c);
 		del_r_contact(p,c);
 	}
 
@@ -783,6 +784,7 @@ static int update_contacts_help(struct sip_msg* msg, int _expires_hdr,
 				if(sos_reg){
 					/*delete the previous contacts for emergency registration 
 					for the same public identity, different from the current contact*/
+					LOG(L_DBG, "DBG:"M_NAME":update_contacts_help: deleting old contacts\n");
 					has_emerg = 1;
 					delete_emerg_contacts(msg, _p, ci->uri);			     
 				}

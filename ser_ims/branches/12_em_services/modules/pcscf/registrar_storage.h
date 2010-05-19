@@ -218,6 +218,8 @@ void free_r_contact(r_contact *c);
 
 r_nat_dest * get_r_nat_pinhole(str host, int port, int transport);
 
+r_contact * get_next_em_r_contact(str pub_id);
+
 
 
 void print_r(int log_level);
