@@ -58,6 +58,7 @@
 #include "../../sr_module.h"
 #include "../../locking.h"
 #include "../cdp/cdp_load.h"
+#include "../../parser/contact/contact.h"
 
 
 /** NAT address */
@@ -218,7 +219,7 @@ void free_r_contact(r_contact *c);
 
 r_nat_dest * get_r_nat_pinhole(str host, int port, int transport);
 
-r_contact * get_next_em_r_contact(str pub_id);
+r_contact * get_next_em_r_contact(str pub_id, contact_t * contact);
 
 
 
