@@ -105,6 +105,7 @@ ACK [next_url] SIP/2.0
 Max-Forwards: 20
 [routes]
 From: <sip:alice@open-ims.test>;tag=[call_number]
+Contact: <sip:alice@[local_ip]:[local_port]>
 [last_To:]
 Call-ID: [call_id]
 CSeq: 10 ACK
@@ -112,7 +113,7 @@ Content-Length: 0
 ]]>
 </send>
 
-<pause milliseconds="5000" crlf="true" />
+<!-- <pause milliseconds="5000" crlf="true" /> -->
 
 <send retrans="500">
 <![CDATA[
@@ -140,6 +141,7 @@ ACK urn:service:sos SIP/2.0
 [last_Via:]
 Max-Forwards: 20
 From: <sip:alice@open-ims.test>;tag=[call_number]
+Contact: <sip:alice@[local_ip]:[local_port]>
 [last_To:]
 Call-ID: [call_id]
 CSeq: 10 ACK
