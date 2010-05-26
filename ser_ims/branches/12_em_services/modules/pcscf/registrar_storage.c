@@ -304,7 +304,7 @@ r_public* add_r_public(r_contact *c,str aor,int is_default)
  * search through the registrar for em contacts of this public id, retrieve the first one
  */
 
-r_contact * get_next_em_r_contact(str pub_id){
+r_contact * get_next_em_r_contact(str pub_id, contact_t * crt_contact){
 
 	r_contact * c = NULL;
 	r_public * crt_pub_id;
@@ -318,11 +318,28 @@ r_contact * get_next_em_r_contact(str pub_id){
 			if(!(c->sos_flag & EMERG_REG))
 				continue;
 
+			if(crt_contact->uri.len == c->uri.len && 
+				strncasecmp(crt_contact->uri.s, c->uri.s, crt_contact->uri.len) ==0){
+
+				LOG(L_DBG,"DBG:"M_NAME":update_contacts: found contact %.*s, but on the same host\n",
+					   crt_contact->uri.len, crt_contact->uri.s);
+				continue;
+			}
+
+
 			crt_pub_id = c->head;
 			if(!crt_pub_id)
 				continue;
+
 			if(crt_pub_id->aor.len == pub_id.len &&
-					strncasecmp(crt_pub_id->aor.s,pub_id.s,pub_id.len)==0) return c;
+					strncasecmp(crt_pub_id->aor.s,pub_id.s,pub_id.len)==0) {
+				
+				
+				LOG(L_DBG,"DBG:"M_NAME":get_next_em_r_contact: found contact %.*s:%i\n",
+					   c->host.len, c->host.s, c->port);
+				
+				return c;
+			}
 		}
 		r_unlock(hash);
 	}

@@ -81,6 +81,8 @@ extern int pcscf_nat_ping; 				/**< whether to ping anything 				*/
 extern int pcscf_nat_pingall; 			/**< whether to ping also the UA that don't look like being behind a NAT */
 extern int pcscf_nat_detection_type; 	/**< the NAT detection tests 				*/
 
+
+
 #ifdef WITH_IMS_PM
 	static str zero={0,0};
 #endif
@@ -288,18 +290,19 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				}
 				LOG(L_DBG,"DBG:"M_NAME":update_contacts: emerg reg, cleaning old ones for public id %.*s\n",
 						public_id[0].len, public_id[0].s);
-				crt_contact = get_next_em_r_contact(public_id[0]);
+				crt_contact = get_next_em_r_contact(public_id[0], c);
 				//delete all the old emergency entries of the public id, only one for em registration
 				while(crt_contact){
+			
 					reg_hash = crt_contact->hash;
-					if(crt_contact->uri.len != c->uri.len ||
-							strncmp(crt_contact->uri.s, c->uri.s, c->uri.len)!=0){
-						LOG(L_DBG,"DBG:"M_NAME":update_contacts: removing contact %.*s:%i\n",
-						   crt_contact->host.len, crt_contact->host.s, crt_contact->port);
-						del_r_contact(crt_contact);
-					}
+					
+					LOG(L_DBG,"DBG:"M_NAME":update_contacts: removing contact %.*s:%i\n",
+					   crt_contact->host.len, crt_contact->host.s, crt_contact->port);
+					del_r_contact(crt_contact);
+					
 					r_unlock(reg_hash);
-					crt_contact = get_next_em_r_contact(public_id[0]);
+					
+					crt_contact = get_next_em_r_contact(public_id[0], c);
 				}
 			}
 			
