@@ -31,7 +31,7 @@ depends		:= $(sources:.c=.d)
 
 # Defines and libs
 
-libs := -lxml2
+libs := -lxml2 -lrt
 
 defines_gen := -DSHM_MEM -DSHM_MMAP -DPKG_MALLOC -DARCH=\"i386\" -DOS=\"linux\" \
 -DFAST_LOCK -DADAPTIVE_WAIT -DHAVE_SCHED_YIELD -DADAPTIVE_WAIT_LOOPS=128 -D__CPU_i386 -DHAVE_MSGHDR_MSG_CONTROL \
