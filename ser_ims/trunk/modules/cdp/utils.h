@@ -81,7 +81,10 @@
 	#include "../utils/mem.h"
 	#include "../utils/shm_mem.h"
 	#include "../utils/locking.h"
-	
+	#include <libxml/parser.h>
+	#include "sem.h" 
+	#include <stdint.h>
+			
 #endif
 
 #ifndef LOG_NO_MEM

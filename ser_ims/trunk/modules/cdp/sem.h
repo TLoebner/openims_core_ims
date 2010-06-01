@@ -53,9 +53,11 @@
 
 #ifdef SHM_MEM
 
-	#include "../../mem/mem.h"
-	#include "../../mem/shm_mem.h"
-
+//	#include "../../mem/mem.h"
+//	#include "../../mem/shm_mem.h"
+	
+	#include "utils.h"
+	
 	#include <semaphore.h>
 
 	typedef sem_t gen_sem_t;
