@@ -424,26 +424,213 @@ cdp_avp			(SIP_Forking_Indication,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY
 cdp_avp_add_ptr	(Subscription_Data,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(Subscription_Data,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 
+cdp_avp_add_ptr	(Terminal_Information,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Terminal_Information,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(IMEI,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
+cdp_avp_ptr		(Software_Version,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
+cdp_avp_ptr		(QoS_Subscribed,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(ULR_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(ULA_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp_ptr		(Visited_PLMN_Id,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_add_ptr	(Requested_EUTRAN_Authentication_Info,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Requested_EUTRAN_Authentication_Info,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(Requested_UTRAN_GERAN_Authentication_Info,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Requested_UTRAN_GERAN_Authentication_Info,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(Number_Of_Requested_Vectors,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp_ptr		(Re_Synchronization_Info,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(Immediate_Response_Preferred,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp_add_ptr	(Authentication_Info,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Authentication_Info,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(E_UTRAN_Vector,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(E_UTRAN_Vector,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(UTRAN_Vector,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(UTRAN_Vector,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(GERAN_Vector,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(GERAN_Vector,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(Network_Access_Mode,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp			(HPLMN_ODB,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(Item_Number,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(Cancellation_Type,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp			(DSR_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(DSA_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(Context_Identifier,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(Subscriber_Status,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp			(Operator_Determined_Barring,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
 cdp_avp			(Access_Restriction_Data,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
 
 cdp_avp_ptr		(APN_OI_Replacement,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
+cdp_avp			(All_APN_Configurations_Included_Indicator,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	Enumerated,		int32_t)	
+
+cdp_avp_add_ptr	(APN_Configuration_Profile,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(APN_Configuration_Profile,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(APN_Configuration,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(APN_Configuration,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(EPS_Subscribed_QoS_Profile,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(EPS_Subscribed_QoS_Profile,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(VPLMN_Dynamic_Address_Allowed,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp_ptr		(STN_SR,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(Alert_Reason,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
 
 cdp_avp_add_ptr	(AMBR,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_add2	(AMBR,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Max_Requested_Bandwidth_UL,	uint32_t,	Max_Requested_Bandwidth_DL,	uint32_t)	
 cdp_avp_get		(AMBR,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 cdp_avp_get2	(AMBR,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Max_Requested_Bandwidth_UL,	uint32_t,	Max_Requested_Bandwidth_DL,	uint32_t)	
 
-cdp_avp_add_ptr	(APN_Configuration,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
-cdp_avp_get		(APN_Configuration,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+cdp_avp_add_ptr	(CSG_Subscription_Data,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(CSG_Subscription_Data,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 
-cdp_avp_add_ptr	(APN_Configuration_Profile,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
-cdp_avp_get		(APN_Configuration_Profile,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+cdp_avp			(CSG_Id,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
 
-cdp_avp			(Context_Identifier,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+cdp_avp			(PDN_Gw_Allocation_Type,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp			(Expiration_Date,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Time,			time_t)
+
+cdp_avp			(RAT_Frequency_Selection_Priority_ID,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(IDA_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(PUA_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(NOR_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp_ptr		(User_Id,								EPC_vendor_id_3GPP,	0,							UTF8String,		str)	
+
+cdp_avp			(Equipment_Status,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp_ptr		(Regional_Subscription_Zone_Code,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(RAND,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(XRES,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(AUTN,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(KASME,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(Trace_Collection_Entity,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)
+
+cdp_avp_ptr		(Kc,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(SRES,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
 
 cdp_avp			(PDN_Type,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
 
-cdp_avp			(VPLMN_Dynamic_Address_Allowed,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+cdp_avp			(Roaming_Restricted_Due_To_Unsupported_Feature,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	Enumerated,	int32_t)	
+
+cdp_avp_add_ptr	(Trace_Data,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Trace_Data,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(Trace_Reference,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(Trace_Depth,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp_ptr		(Trace_NE_Type_List,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(Trace_Interface_List,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(Trace_Event_List,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(OMC_Id,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_add_ptr	(GPRS_Subscription_Data,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(GPRS_Subscription_Data,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(Complete_Data_List_Included_Indicator,	EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp_add_ptr	(PDP_Context,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(PDP_Context,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(PDP_Type,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_ptr		(3GPP2_MEID,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_add_ptr	(Specific_APN_Info,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Specific_APN_Info,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(LCS_Info,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(LCS_Info,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(GMLC_Number,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_add_ptr	(LCS_Privacy_Exception,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(LCS_Privacy_Exception,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(SS_Code,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_add_ptr	(SS_Status,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(SS_Status,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(Notification_To_UE_User,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp_add_ptr	(External_Client,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(External_Client,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(Client_Identity,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(GMLC_Restriction,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp			(PLMN_Client,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp_add_ptr	(Service_Type,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Service_Type,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(Sevice_Type_Identity,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp_add_ptr	(MO_LR,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(MO_LR,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(Teleservice_List,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Teleservice_List,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(TS_Code,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp_add_ptr	(Call_Barring_Infor_List,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Call_Barring_Infor_List,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_ptr		(SGSN_Number,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
+
+cdp_avp			(IDR_Flags,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
+
+cdp_avp			(ICS_Indicator,							EPC_vendor_id_3GPP,	0,							Enumerated,		int32_t)	
+
+cdp_avp			(IMS_Voice_Over_PS_Sessions_Supported,	EPC_vendor_id_3GPP,	0,							Enumerated,		int32_t)	
+
+cdp_avp			(Homogenous_Support_of_IMS_Over_PS_Sessions, EPC_vendor_id_3GPP, 0, 					Enumerated,		int32_t)	
+
+cdp_avp			(Last_UE_Activity_Time,					EPC_vendor_id_3GPP,	0,							Time,			time_t)
+
+
 
 cdp_avp			(PDN_Gw_Address,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
 
@@ -452,11 +639,6 @@ cdp_avp_ptr		(PDN_Gw_Name,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Oc
 cdp_avp_add_ptr	(PDN_Gw_Identity,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(PDN_Gw_Identity,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 
-cdp_avp			(PDN_Gw_Allocation_Type,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
-
-
-cdp_avp_add_ptr	(EPS_Subscribed_QoS_Profile,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
-cdp_avp_get		(EPS_Subscribed_QoS_Profile,			EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 
 
 
