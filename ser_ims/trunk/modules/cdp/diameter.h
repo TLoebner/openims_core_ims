@@ -50,7 +50,7 @@
  
  *  \note This file is mostly taken from DISC http://developer.berlios.de/projects/disc/
  *  
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  * 
  */ 
 #ifndef DIAMETER_H_
@@ -301,6 +301,22 @@ typedef enum {
 	AVP_Inband_Security_Id			  =  299,
 	AVP_E2E_Sequence				  =  300,
 	
+	AVP_MIP_Reg_Request               =  320, //RFC4004
+	AVP_MIP_Reg_Reply                 =  321, //RFC4004
+	AVP_MIP_MN_AAA_Auth               =  322, //RFC4004
+	AVP_MIP_Mobile_Node_Address       =  333, //RFC4004
+	AVP_MIP_Home_Agent_Address        =  334, //RFC4004
+	AVP_MIP_Candidate_Home_Agent_Host =  336, //RFC4004
+	AVP_MIP_Feature_Vector            =  337, //RFC4004
+	AVP_MIP_Auth_Input_Data_Length    =  338, //RFC4004
+	AVP_MIP_Authenticator_Length      =  339, //RFC4004
+	AVP_MIP_Authenticator_Offset      =  340, //RFC4004
+	AVP_MIP_MN_AAA_SPI                =  341, //RFC4004
+	AVP_MIP_Filter_Rule               =  342, //RFC4004
+	AVP_MIP_FA_Challenge              =  344, //RFC4004
+	AVP_MIP_Originating_Foreign_AAA   =  347, //RFC4004
+	AVP_MIP_Home_Agent_Host           =  348, //RFC4004
+	
 	AVP_CC_Request_Number             =  415, //RFC4006
 	AVP_CC_Request_Type               =  416, //RFC4006
 	AVP_Final_Unit_Indication		  =  430, //RFC4006
@@ -316,6 +332,7 @@ typedef enum {
 	AVP_Accounting_Record_Type        =  480,
 	AVP_Accounting_Realtime_Required  =  483,
 	AVP_Accounting_Record_Number      =  485,
+	AVP_MIP6_Agent_Info				  =  486, //RFC5447
 	
 }AAA_AVPCodeNr;
 
