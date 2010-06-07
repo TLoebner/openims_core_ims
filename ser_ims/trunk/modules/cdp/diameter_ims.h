@@ -52,7 +52,7 @@
  * - TS 29.229 for IMS_Cx IMS_Dx
  * - TS 29.329 for IMS_Sh IMS_Ph
  * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  *  
  */
  
