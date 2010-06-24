@@ -640,6 +640,11 @@ cdp_avp_add_ptr	(PDN_Gw_Identity,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATOR
 cdp_avp_get		(PDN_Gw_Identity,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 
 
+/*
+ * TS 29.173  
+ * http://www.3gpp.org/ftp/Specs/html-info/29173.htm
+ */
+cdp_avp_ptr		(GMLC_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
 
 
 
