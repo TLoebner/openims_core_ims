@@ -632,7 +632,6 @@ cdp_avp			(Last_UE_Activity_Time,					EPC_vendor_id_3GPP,	0,							Time,			time_
 
 
 
-cdp_avp			(PDN_Gw_Address,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
 
 cdp_avp_ptr		(PDN_Gw_Name,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)	
 
@@ -644,7 +643,7 @@ cdp_avp_get		(PDN_Gw_Identity,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	
  * TS 29.173  
  * http://www.3gpp.org/ftp/Specs/html-info/29173.htm
  */
-cdp_avp_ptr		(GMLC_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
+cdp_avp			(GMLC_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
 
 
 
