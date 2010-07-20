@@ -286,7 +286,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 		case Wait_Returns:
 			switch(event){
 				case Win_Election:
-					/* this is the Win Election -> I is dropped, I is kept */
+					/* this is the Win Election -> I is dropped, R is kept */
 					LOG(L_INFO,"DBG:sm_process():Wait_Returns Win Elect \n");
 					I_Disc(p);
 					result_code = Process_CER(p,msg);
@@ -444,7 +444,7 @@ int sm_process(peer *p,peer_event_t event,AAAMessage *msg,int peer_locked,int so
 					break;
 				case I_Rcv_DPR:
 					Snd_DPA(p,msg,2001,p->I_sock);
-					R_Disc(p);
+					I_Disc(p);
 					p->state = Closed;
 					log_peer_list(L_INFO);
 					break;
