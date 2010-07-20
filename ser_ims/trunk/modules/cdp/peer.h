@@ -130,7 +130,7 @@ typedef struct _peer_t{
 	int fd_exchange_pipe_local;	/**< pipe to communicate with the receiver process and exchange a file descriptor - local end, to read from */
 	int fd_exchange_pipe;	/**< pipe to communicate with the receiver process and exchange a file descriptor */
 
-	AAAMessage *r_cer;     /* the cer received from R-connection */
+	AAAMessage *r_cer;      /**< the cer received from R-connection */
 	
 	struct _peer_t *next;	/**< next peer in the peer list */
 	struct _peer_t *prev;	/**< previous peer in the peer list */

@@ -805,7 +805,7 @@ void Send_STR(cdp_session_t* s, AAAMessage* msg)
 		AAAFreeMessage(&str);
 		return;
 	}
-	if(!add_vendor_specific_application_id_group(str,IMS_vendor_id_3GPP,IMS_Rx)){ 
+	if(s->vendor_id!=0 && !add_vendor_specific_application_id_group(str,s->vendor_id,s->application_id)){ 
 		LOG(L_ERR,"ERR:Send_STR(): error adding Vendor-Id-Specific-Application-Id Group!\n");
 		AAAFreeMessage(&str);
 		return;

@@ -192,6 +192,7 @@ typedef struct _cdp_session_t {
 	unsigned int hash;
 	str id;                             /**< session-ID as string */
 	unsigned int application_id;		/**< specific application id associated with this session */	
+	unsigned int vendor_id;				/**< specific vendor id for this session */
 	cdp_session_type_t type;
 	str dest_host, dest_realm; /*the destination host and realm, used only for auth, for the moment*/	
 	union {
