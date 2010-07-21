@@ -229,13 +229,20 @@ xmlNode* has_loc_info(int * code, xmlNode* presence, loc_fmt * crt_loc_fmt){
 		goto err;
 	}
 
-	ns = get_ns_prfx_len(locNode, PIDF_GEO_NS_PRFX, PIDF_GEO_NS_PRFX_LEN);
+	ns = get_ns_prfx_len(presence, PIDF_GEO_NS_PRFX, PIDF_GEO_NS_PRFX_LEN);
 	if(!ns){
 	
-		DEBUG("has_loc_info:the application/pidf+xml location-info node has no xmlns:%.*s namespace, ignoring it\n",
+		DEBUG("has_loc_info:the application/pidf+xml has no xmlns:%.*s namespace in the presence node\n",
 				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_PRFX);
-		*code = 2;
-		goto err;
+	
+		ns = get_ns_prfx_len(locNode, PIDF_GEO_NS_PRFX, PIDF_GEO_NS_PRFX_LEN);
+		if(!ns){
+	
+			DEBUG("has_loc_info:the application/pidf+xml location-info node has no xmlns:%.*s namespace, ignoring it\n",
+				PIDF_GEO_NS_PRFX_LEN, PIDF_GEO_NS_PRFX);
+			*code = 2;
+			goto err;
+		}
 	}
 	
 	if(ns->href == NULL){
