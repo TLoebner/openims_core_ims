@@ -654,7 +654,7 @@ cdp_avp			(GMLC_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Addr
  * http://www.3gpp.org/ftp/Specs/html-info/32299.htm
  */
 
-cdp_avp_ptr		(Served_Party_IP_Address,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+cdp_avp			(Served_Party_IP_Address,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
 
 
 /*
