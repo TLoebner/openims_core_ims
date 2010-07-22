@@ -53,3 +53,26 @@ bash add-imscore-user_newdb.sh -u ambulance_brussels -a
 bash add-imscore-user_newdb.sh -u fire_brussels -d
 bash add-imscore-user_newdb.sh -u fire_brussels -a
 
+# FOKUS building area1 psaps
+bash add-imscore-user_newdb.sh -u area1_police -d
+bash add-imscore-user_newdb.sh -u area1_police -a
+bash add-imscore-user_newdb.sh -u area1_ambulance -d
+bash add-imscore-user_newdb.sh -u area1_ambulance -a
+bash add-imscore-user_newdb.sh -u area1_fire -d
+bash add-imscore-user_newdb.sh -u area1_fire -a
+
+# FOKUS building area2 psaps
+bash add-imscore-user_newdb.sh -u area2_police -d
+bash add-imscore-user_newdb.sh -u area2_police -a
+bash add-imscore-user_newdb.sh -u area2_ambulance -d
+bash add-imscore-user_newdb.sh -u area2_ambulance -a
+bash add-imscore-user_newdb.sh -u area2_fire -d
+bash add-imscore-user_newdb.sh -u area2_fire -a
+# FOKUS building area3 psaps
+bash add-imscore-user_newdb.sh -u area3_police -d
+bash add-imscore-user_newdb.sh -u area3_police -a
+bash add-imscore-user_newdb.sh -u area3_ambulance -d
+bash add-imscore-user_newdb.sh -u area3_ambulance -a
+bash add-imscore-user_newdb.sh -u area3_fire -d
+bash add-imscore-user_newdb.sh -u area3_fire -a
+
