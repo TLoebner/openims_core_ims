@@ -208,18 +208,17 @@ loc_subscription* loc_subscribe(str uri,int duration, user_d * user_data)
 
 
 static str method={"SUBSCRIBE",9};
-static str event_hdr={"Event: location\r\n",17};
+static str event_hdr={"Event: presence\r\n",17};
 static str accept_hdr={"Accept: application/pidf+xml\r\n",30};
 static str content_len_hdr={"Content-Length: 0\r\n",19};
 static str max_fwds_hdr={"Max-Forwards: 10\r\n",18};
 static str expires_s={"Expires: ",9};
 static str expires_e={"\r\n",2};
 static str contact_s={"Contact: <",10};
-static str contact_e={">;g.oma.locsip=\"true\"\r\n",23};
-static str p_asserted_identity_s={"P-Asserted-Identity: <",22};
-static str p_asserted_identity_e={">\r\n",3};
+static str contact_e={">;g.oma.locsip=\"TRUE\"\r\n",23};
 /**
- * Send a subscription
+ * Send a subscription to a LOCSIP server, according to 
+ * http://member.openmobilealliance.org/ftp/public_documents/loc/Permanent_documents/OMA-TS-LOCSIP-V1_0-20100708-D.zip
  * @param s - the subsription to send for
  * @param duration - expires time
  * @returns true if OK, false if not, error on failure
