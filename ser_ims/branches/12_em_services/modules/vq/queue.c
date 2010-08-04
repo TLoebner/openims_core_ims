@@ -226,9 +226,6 @@ queueNode_t * vq_init_node (queueID_t *ident, int prio, int type)
   // updates the arrival time in the node
   memcpy (&n->arrival, &ident->time, sizeof (struct timeval));
 
-  // set time for the call
-  vq_set_call_time (&n);
-
   return n;
 }
 

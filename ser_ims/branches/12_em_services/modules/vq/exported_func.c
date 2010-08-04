@@ -80,7 +80,7 @@ int VQ_process_new_emergency_request (struct sip_msg *rpl, char *str1, char *str
   queueID_t *id;
   queueNode_t *node;
 
-  DBG ("Entering VQ_process_new_emergency_call...\n");
+  DBG ("DBG:"M_NAME":Entering VQ_process_new_emergency_call...\n");
   
   // create a queue node from the call information 
   
