@@ -1,9 +1,9 @@
 /*
- * $Id: vq_logging.c 579 2008-08-25 15:24:33Z vingarzan $
+ * $Id$
  *
  * Virtual Queue module - logging and CSV generation utilities
  *
- * Copyright (C) 2009-2010 Jordi Jaen Pallares
+ * Copyright (C) 2009-2010 FhG FOKUS
  *
  * This file is part of ser, a free SIP server.
  *
@@ -26,14 +26,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ * author 2009-2010 Jordi Jaen Pallares
  */
 
-#include "vq_logging.h"
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include "mod.h"
+#include "queue.h"
+#include "vq_logging.h"
 
 #define LINELEN 120
 
@@ -137,5 +140,76 @@ vq_close_logfile (void)
   close (fd);
   
   return;
+}
+
+//
+// Procedures to show results
+//
+
+/** prints the current queue status */
+void 
+vq_print_queue_status (queueIndex_t *ix)
+{
+  struct timeval result;
+
+  qtimerclear (result);
+
+  //lock_get (ix->lock);
+
+  qtimeradd (&ix->totalM, &ix->totalN, &result);
+
+  DBG ("Total nodes: %d\n", (ix->nodesM + ix->nodesN));
+  DBG ("\temergency: %d normal: %d\n", ix->nodesM, ix->nodesN);
+  DBG ("\ttotal emergency time: %ld.%06ld\n", ix->totalM.tv_sec, ix->totalM.tv_usec);
+  DBG ("\ttotal normal time: %ld.%06ld\n", ix->totalN.tv_sec, ix->totalN.tv_usec);
+  DBG ("\ttotal time: %ld.%06ld\n\n", result.tv_sec, result.tv_usec);
+  DBG ("current time: %ld.%06ld\n", ix->now.tv_sec, ix->now.tv_usec);
+  DBG ("incoming calls: %u\tprocessed calls: %u\trescheduled calls: %u\tlost calls: %u\n\n", 
+	ix->incoming, ix->processed, ix->rescheduled, ix->lost);
+ 
+  //lock_release (ix->lock);
+	
+  return;
+}
+
+void
+vq_print_node_info (queueNode_t *node)
+{
+  queueID_t *tmp = &node->id;
+  DBG ("[DEBUG] Node Info:\n");
+  DBG ("\tNode ID:      %s at %p", tmp->strid, node);
+  if (node->moved) 
+    DBG (" ---> Re-scheduled Node !");
+  DBG ("\n");
+  DBG ("\tPointers: next %p, prev %p\n", node->next, node->prev);
+  DBG ("\tType: 	%d\n", node->type);
+  DBG ("\tPriority:     %d\n", node->prio);
+  DBG ("\tArrival time: %ld.%06ld\n", node->arrival.tv_sec, node->arrival.tv_usec);
+  DBG ("\tTime info:    %ld.%06ld\n", node->time.tv_sec, node->time.tv_usec);
+  DBG ("\tScheduled:    %ld.%06ld\n", node->scheduled.tv_sec, node->scheduled.tv_usec);
+  DBG ("\tOut time:     %ld.%06ld\n", node->out.tv_sec, node->out.tv_usec);
+  DBG ("\tStatistic:    %d\n\n", node->stat);
+  
+  return;
+}
+
+void
+vq_print_queue (queueIndex_t *index)
+{
+  queueNode_t *ptr = index->first;
+
+  DBG ("\n******** Print Queue Info:\n\n");
+
+  DBG ("\ncurrent time: %ld.%06ld\n", index->now.tv_sec, index->now.tv_usec);
+  DBG ("\nfirst: %p\tlast: %p\n\n", index->first, index->last);
+
+  while (ptr != NULL) {
+    vq_print_node_info (ptr);
+    ptr = ptr->next;
+  }
+
+  vq_print_queue_status (index);
+
+  DBG ("******** End of Queue Info\n");
 }
 

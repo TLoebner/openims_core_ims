@@ -1,9 +1,9 @@
 /*
- * $Id: vq_stats.h 579 2008-08-25 15:24:33Z vingarzan $
+ * $Id$
  *
- * Virtual Queue module headers
+ * Virtual Queue statistics
  *
- * Copyright (C) 2009-2010 Jordi Jaen Pallares
+ * Copyright (C) 2009-2010 FhG FOKUS
  *
  * This file is part of ser, a free SIP server.
  *
@@ -25,6 +25,8 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program; if not, write to the Free Software 
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * author 2009-2010 Jordi Jaen Pallares
  */
 
 
@@ -32,6 +34,7 @@
 #define VQ_STATS_H
 
 #include "mod.h"
+#include "queue.h"
 #include "vq_time.h"
 #include "../../parser/msg_parser.h"
 
@@ -56,6 +59,8 @@ int vq_find_stat_index (int method);
 void vq_close_vq_stats (void);
 int vq_init_vq_stats (void);
 int vq_update_average (vq_timeinfo_t **ptr, struct timeval *res, struct timeval *error, int calltype);
+int vq_update_stat (queueIndex_t *index, queueNode_t *node);
+
 
 #endif // VQ_STATS_H
 
