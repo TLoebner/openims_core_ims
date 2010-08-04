@@ -42,10 +42,8 @@
  * update times in the queue done in <i>increase_index_values</i>
  *
  */
-int
-vq_schedule_call (queueIndex_t *index, queueNode_t **callin)
+int vq_schedule_call (queueIndex_t *index, queueNode_t **callin)
 {
-//  struct timeval aux;//, *ptr;
   struct timeval now;
 
   queueNode_t *call = (*callin);
@@ -55,17 +53,13 @@ vq_schedule_call (queueIndex_t *index, queueNode_t **callin)
 
   qtimerclear (call->scheduled);
   qtimerclear (now);
-  
   gettimeofday (&now, NULL);
   
-  DBG ("vq_schedule call\n");
-  
-  //ptr = &now;
-  //DBG ("*** Current time: %ld.%06ld\n", ptr->tv_sec, ptr->tv_usec);
+  DBG ("DBG:"M_NAME":vq_schedule_call with priority %i\n", call->prio);
   
   switch (call->prio) {
-    case M:
-    case N:
+    case EMERGENCY:
+    case NORMAL:
       if (prev) {
 	// There is a previous node in the queue
 	DBG ("queue not empty, scheduling call after previous call\n");
@@ -136,8 +130,7 @@ vq_increase_rescheduled_calls (queueIndex_t **index)
  *  @param *ix pointer to the queue index
  *  @param *newnode pointer to the emergency node 
  */
-int
-vq_reschedule_call (queueIndex_t *ix, queueNode_t *newnode)
+int vq_reschedule_call (queueIndex_t *ix, queueNode_t *newnode)
 {
   queueNode_t *moved;	// points to the queuenode that will be moved to the end of the queue 
   int num_nodes = 1;	// num of nodes to be rescheduled - minimum one
@@ -215,19 +208,14 @@ vq_reschedule_call (queueIndex_t *ix, queueNode_t *newnode)
       }
       qtimeradd (&moved->scheduled, &moved->time, &moved->out);
       DBG ("rescheduled in %ld.%06ld\n\n", moved->scheduled.tv_sec, moved->scheduled.tv_usec);
-      
-      // increase index
-      vq_increase_index_values (&ix, moved);
-      vq_increase_rescheduled_calls (&ix);
-      
+    
     } else {
-      lock_release (ix->lock);
-      vq_put_node (ix, moved);
-      lock_get (ix->lock);
-      // re-schedule call
-      vq_schedule_call (ix, &moved);
-      vq_increase_rescheduled_calls (&ix);
+      vq_put_node_safe (ix, moved);
     }
+   
+    vq_increase_index_values (&ix, moved);
+    vq_increase_rescheduled_calls (&ix);
+   
     
     moved = newnode->next;
 
