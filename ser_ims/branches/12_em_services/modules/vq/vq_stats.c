@@ -298,10 +298,6 @@ vq_set_call_time (queueNode_t **node)
 
   LOG (L_INFO, "INFO:"M_NAME" :Setting call time for type %d\n", n->type);
 
-// enum request_method { METHOD_UNDEF=0, METHOD_INVITE=1, METHOD_CANCEL=2, METHOD_ACK=4,
-// 	METHOD_BYE=8, METHOD_INFO=16, METHOD_REGISTER=32, METHOD_SUBSCRIBE=64,
-//         METHOD_NOTIFY=128, METHOD_OTHER=256 };
-
   // find the index in the vector with the stats
   index = vq_find_stat_index (n->type);
   
@@ -314,12 +310,7 @@ vq_set_call_time (queueNode_t **node)
     stats = (vq_timeinfo_t *)&vq_stats_n[index];
   }
 
-  //DBG ("Setting now arrival time for call\n");
-  //gettimeofday (&n->arrival, NULL);
-
-  INFO ("stats->total_calls = %ld\n", stats->total_calls);  
-  
-  if (/*stats->total_calls == 0*/stats->average.tv_sec == 0 && stats->average.tv_usec == 0) {
+  if (stats->total_calls == 0) {
     // provide standard value
     DBG ("vq_set_call_time: 'average' data empty ---> setting long term prediction for first call\n");
     n->time.tv_sec = 0;
@@ -330,8 +321,8 @@ vq_set_call_time (queueNode_t **node)
     memcpy (&n->time, &stats->average, sizeof(struct timeval));    
   }   
   
-  DBG ("Incrementing vq_stats->total_calls\n");
-  stats->total_calls++;
+  stats->total_calls = stats->total_calls+1;
+  INFO ("current stats->total_calls = %ld\n", stats->total_calls);  
 
   LOG (L_INFO, "INFO:"M_NAME" :set_call_time: New call time is %ld.%06ld\n\n", n->time.tv_sec, n->time.tv_usec);
 
