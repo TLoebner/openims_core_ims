@@ -1,9 +1,9 @@
 /*
- * $Id: vq_mod.h 579 2008-08-25 15:24:33Z vingarzan $
+ * $Id$
  *
  * Virtual Queue module headers
  *
- * Copyright (C) 2009-2010 Jordi Jaen Pallares
+ * Copyright (C) 2009-2010 FhG FOKUS
  *
  * This file is part of ser, a free SIP server.
  *
@@ -25,11 +25,13 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program; if not, write to the Free Software 
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * author Jordi Pallares
  */
 
 
-#ifndef VQ_MOD_H
-#define VQ_MOD_H
+#ifndef VQ_QUEUE_H
+#define VQ_QUEUE_H
 
 #include "vq_time.h"
 #include "vq_queueid.h"
@@ -39,26 +41,16 @@
 #include "../../sr_module.h"
 #include "../../locking.h"
 
-#define M_NAME "VIRTUAL_QUEUE"
-
 // priority types
 // M : Emergency ; N : Normal
-#define EMERGENCY_CALL	1
-#define M		1
-#define NORMAL_CALL 	2
-#define N		2
-
+#define EMERGENCY_CALL 1
+#define M 1
+#define NORMAL_CALL 2
+#define N 2
+ 	
 #define BUFSIZE 1024
-#define MAXNAME 16
+#define MAXNAME 16 
 
-/** Return and break the execution of routing script */
-#define CSCF_RETURN_BREAK       0 
-/** Return true in the routing script */
-#define CSCF_RETURN_TRUE        1
-/** Return false in the routing script */
-#define CSCF_RETURN_FALSE -1
-/** Return error in the routing script */
-#define CSCF_RETURN_ERROR -2
 
 typedef struct queueNode queueNode_t;
 
@@ -86,7 +78,7 @@ struct queueNode {
 
 
 /** Header and index for each queue. Holds queue information. */
-struct queueIndex {		
+typedef struct queueIndex {		
 
   char queueID[MAXNAME];	/// name of the queue
   gen_lock_t *lock;		/// queue lock
@@ -112,9 +104,14 @@ struct queueIndex {
   unsigned int rescheduled;	/// total number of rescheduled calls
   unsigned int lost;		/// total number of lost calls
 
+} queueIndex_t;
+
+/**< Structure to hold the timeout for the 503 and 182 responses */
+struct vq_to {
+  time_t time;		/**< seconds to retry after */
+  gen_lock_t *lock;	/**< generic lock */
 };
 
-typedef struct queueIndex queueIndex_t;
 
 
 /** Response to a call */
@@ -127,60 +124,6 @@ typedef struct queueIndex queueIndex_t;
 
 typedef struct call_response call_resp_t;
 */
-//
-// Some Macros
-//
-
-#define STR_SHM_DUP(dest,src,txt)\
-{\
-        if ((src).len==0) {\
-                (dest).s=0;\
-                (dest).len=0;\
-        }else {\
-                (dest).s = shm_malloc((src).len);\
-                if (!(dest).s){\
-                        LOG(L_ERR,"ERR:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
-                        (dest).len = 0;\
-                        goto out_of_memory;\
-                }else{\
-                        (dest).len = (src).len;\
-                        memcpy((dest).s,(src).s,(src).len);\
-                }\
-        }\
-}
-
-#define STR_PKG_DUP(dest,src,txt)\
-{\
-        if ((src).len==0) {\
-                (dest).s=0;\
-                (dest).len=0;\
-        }else {\
-                (dest).s = pkg_malloc((src).len);\
-                if (!(dest).s){\
-                        LOG(L_ERR,"ERRL:"M_NAME":"txt": Error allocating %d bytes\n",(src).len);\
-                        (dest).len = 0;\
-                        goto out_of_memory;\
-                }else{\
-                        (dest).len = (src).len;\
-                        memcpy((dest).s,(src).s,(src).len);\
-                }\
-        }\
-}
-
-#define STR_APPEND(dst,src)\
-        {memcpy((dst).s+(dst).len,(src).s,(src).len);\
-        (dst).len = (dst).len + (src).len;}
-
-/* ANSI Terminal colors */
-#define ANSI_GRAY               "\033[01;30m"
-#define ANSI_BLINK_RED  "\033[00;31m"
-#define ANSI_RED                "\033[01;31m"
-#define ANSI_GREEN              "\033[01;32m"
-#define ANSI_YELLOW     "\033[01;33m"
-#define ANSI_BLUE               "\033[01;34m"
-#define ANSI_MAGENTA    "\033[01;35m"
-#define ANSI_CYAN               "\033[01;36m"
-#define ANSI_WHITE              "\033[01;37m"
 
 
 #define FParam_INT(val) { \
@@ -217,6 +160,8 @@ int vq_put_node (queueIndex_t *ix, queueNode_t *newnode);
 void vq_increase_index_values (queueIndex_t **index, queueNode_t *newnode);
 int vq_delete_node (queueIndex_t *ix, queueNode_t *node);
 queueNode_t *vq_get_node_by_id (queueIndex_t *ix, queueID_t *id);
+
+int vq_check_retransmission (queueIndex_t *index, queueID_t *id);
 
 //
 // Debug functions

@@ -1,9 +1,9 @@
 /*
- * $Id: vq_time.c 579 2008-08-25 15:24:33Z vingarzan $
+ * $Id$
  *
  * Virtual Queue module
  *
- * Copyright (C) 2009-2010 Jordi Jaen Pallares
+ * Copyright (C) 2009-2010 FhG FOKUS
  *
  * This file is part of ser, a free SIP server.
  *
@@ -26,6 +26,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ * author 2009-2010 Jordi Jaen Pallares
  */
 
 #include <stdint.h>

@@ -1,9 +1,9 @@
 /*
- * $Id: vq_logging.h 579 2008-08-25 15:24:33Z vingarzan $
+ * $Id $
  *
  * Virtual Queue module headers
  *
- * Copyright (C) 2009-2010 Jordi Jaen Pallares
+ * Copyright (C) 2009-2010 FhG FOKUS
  *
  * This file is part of ser, a free SIP server.
  *
@@ -25,17 +25,18 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program; if not, write to the Free Software 
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * author 2009-2010 Jordi Jaen Pallares
  */
 
 
 #ifndef VQ_LOGGING_H
 #define VQ_LOGGING_H
 
-#include "vq_mod.h"
+#include "mod.h"
 #include "vq_time.h"
 #include "../../dprint.h"
 #include "../../lock_alloc.h"
-#include "vq_mod.h"
 
 void vq_set_initial_log_time (void);
 
