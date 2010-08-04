@@ -244,7 +244,7 @@ vq_update_stat (queueIndex_t *index, queueNode_t *node)
   LOG (L_INFO, "Estimation error: %ld.%06ld\n", error.tv_sec, error.tv_usec);
   
   // update stats
-  if (node->prio == EMERGENCY_CALL) {
+  if (node->prio == EMERGENCY) {
     // select the emergency struct
     DBG ("Updating emergency stats\n");
     ptr = &vq_stats[i];
@@ -262,7 +262,7 @@ vq_update_stat (queueIndex_t *index, queueNode_t *node)
     DBG ("Setting node->stat to true\n");
     node->stat = 1;
     if (ptr->total_calls > 0) {
-      ptr->total_calls--;
+      //ptr->total_calls--;
     }
     
     return CSCF_RETURN_TRUE;
@@ -302,7 +302,7 @@ vq_set_call_time (queueNode_t **node)
   index = vq_find_stat_index (n->type);
   
   // update pointer
-  if (n->prio == EMERGENCY_CALL) {
+  if (n->prio == EMERGENCY) {
     DBG ("vq_set_call_time: selected emergency statistics\n");
     stats = (vq_timeinfo_t *)&vq_stats[index];
   } else {
@@ -342,17 +342,12 @@ vq_update_average (vq_timeinfo_t **ptr, struct timeval *res, struct timeval *err
   if (info->total_calls == 0) {
     DBG ("initializing stats for new call type\n");
     gettimeofday (&info->start, NULL);
-    //info->total_calls++;
     info->call_type = calltype;
     memcpy (&info->average, res, sizeof (struct timeval));   
     INFO ("Finished vq_update_average\n");
     return 1;
   }
   
-  //DBG ("vq_update_average: Incrementing info->total_calls\n");
-  //info->total_calls++;
-  //DBG ("vq_update_average (after incrementing): ---> total_calls : %ld\n", info->total_calls);
-
   qtimerclear (updated);
   DBG ("timeinfo at %p\tcall type: %d\ttotal calls: %ld\n", info, info->call_type, info->total_calls);
 

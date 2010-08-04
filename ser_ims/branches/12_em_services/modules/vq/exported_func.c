@@ -57,10 +57,9 @@ int VQ_process_new_normal_request (struct sip_msg *rpl, char *str1, char *str2)
   id = vq_get_call_id (rpl);
   
   // get the type of method from the sip_msg
-  node = vq_init_node (id, NORMAL_CALL, rpl->REQ_METHOD);
+  node = vq_init_node (id, NORMAL, rpl->REQ_METHOD);
   lock_get (index->lock);
   index->incoming++;
-  lock_release (index->lock);
 
   // check retransmissions
   ret = vq_check_retransmission (index, id);
@@ -69,8 +68,10 @@ int VQ_process_new_normal_request (struct sip_msg *rpl, char *str1, char *str2)
   // with the scheduled time and the queue length
   // estimate the waiting time for the response
  
-  return (vq_put_node (index, node));
+  ret = vq_put_node_safe (index, node);
+  lock_release (index->lock);
     
+  return ret;
 }
 
 int VQ_process_new_emergency_request (struct sip_msg *rpl, char *str1, char *str2)
@@ -87,8 +88,10 @@ int VQ_process_new_emergency_request (struct sip_msg *rpl, char *str1, char *str
   // calculate the ID
   id = vq_get_call_id (rpl);
   
-  node = vq_init_node (id, EMERGENCY_CALL, rpl->REQ_METHOD);
+  node = vq_init_node (id, EMERGENCY, rpl->REQ_METHOD);
   index->incoming++;
+
+  lock_get(index->lock);
 
   // check retransmissions
   ret = vq_check_retransmission (index, id);
@@ -97,8 +100,10 @@ int VQ_process_new_emergency_request (struct sip_msg *rpl, char *str1, char *str
   // with the scheduled time and the queue length
   // estimate the waiting time for the response
 
-  return (vq_put_node (index, node));
-  
+  ret = vq_put_node_safe (index, node);
+  lock_release(index->lock);
+
+  return ret;
 }
 
 static fparam_t fp_503 = FParam_INT(503);
@@ -163,7 +168,7 @@ int VQ_is_empty (struct sip_msg *rpl, char *str1, char *str2)
     return CSCF_RETURN_ERROR;
   }
   
-  if (queue->first) {
+  if (!queue->first) {
     LOG (L_INFO, "INFO:"M_NAME": queue empty\n");
     return CSCF_RETURN_TRUE;
   }
@@ -179,16 +184,17 @@ int VQ_update_stats (struct sip_msg *rpl, char *str1, char *str2)
   
   LOG( L_INFO, "INFO:"M_NAME": - update stats !!!\n");
   
-  //lock_get (index->lock);
+  lock_get (index->lock);
   
   // get ID from call
   id = vq_get_call_id (rpl);
     
   // lookup in the queue
-  node = vq_get_node_by_id (index, id);
+  node = vq_get_node_by_id_safe (index, id);
   
   if (!node) {
    WARN ("VQ_update_stats: node id %.*s is not in the queue\n", HASHLEN*2, id->strid);
+   lock_release (index->lock);
    return CSCF_RETURN_TRUE;
   }
   
@@ -196,7 +202,7 @@ int VQ_update_stats (struct sip_msg *rpl, char *str1, char *str2)
   
   vq_update_stat (index, node);
   
-  //lock_release (index->lock);
+  lock_release (index->lock);
   
   return CSCF_RETURN_TRUE;
 }
@@ -206,10 +212,8 @@ Drops calls that have been too much time in the queue.
 Updates the log file. */
 int VQ_update_queue (struct sip_msg *rpl, char *str1, char *str2)
 {
-  queueNode_t *current;
-  queueNode_t *aux;
+  queueNode_t *current,  *aux;
   queueIndex_t *index = queue;
-//  queueID_t *id = NULL;
   
   struct timeval *now;
   time_t diff;
@@ -255,9 +259,9 @@ int VQ_update_queue (struct sip_msg *rpl, char *str1, char *str2)
     aux = current;
     current = current->next;
     
-    if (diff > vq_timeout) {
+    if (diff > vq_timeout || aux->stat  == 1) {
       
-      DBG ("VQ_update_queue: Removing lost node\n");
+      DBG (M_NAME":VQ_update_queue: cleaning\n");
      
       if (index->first == aux) {
 	aux = vq_pop_node (index);
@@ -269,36 +273,19 @@ int VQ_update_queue (struct sip_msg *rpl, char *str1, char *str2)
       }
       
       vq_decrease_index_values (&index, aux);
-      index->lost++;
-      INFO ("Lost calls count up to: %u\n", index->lost);
+      if(diff>vq_timeout){
+      	index->lost++;
+	INFO ("Lost calls count up to: %u\n", index->lost);
+      }else{
+      	index->processed++;
+	INFO ("Processed calls up to %u\n", index->processed);
+      }
       shm_free (aux);
 
     //
     // check whether the node has finished processing
     //
       
-    } else if (aux->stat == 1) {  
-
-      DBG ("DBG:"M_NAME": call has been finished\n");
-      
-      if (index->first == aux) {
-	aux = vq_pop_node (index);
-	DBG ("VQ_update_queue: After pop_node. 'aux' node at %p\n", aux);
-	
-      } else {
-	vq_delete_node (index, aux);
-	DBG ("VQ_update_queue: After deleting node. 'aux' node at %p\n", aux);
-      }
-      
-      vq_decrease_index_values (&index, aux);
-      index->processed++;
-      INFO ("Processed calls up to %u\n", index->processed);
-      shm_free (aux);
-    
-    //
-    // node is not too old and still not finished processing
-    //
-    
     } else {
       DBG ("Node stat: %d, diff: %ld\n", aux->stat, diff);
     }

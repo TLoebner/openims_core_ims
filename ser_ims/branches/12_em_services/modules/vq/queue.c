@@ -37,31 +37,13 @@
 
 extern struct timeval tv_timeout;	
 extern struct vq_to *timeout;
-static int plus = 0;
-static int minus = 0;
-
-
-int VQ_put_node (struct sip_msg *rpl, char *str1, char *str2)
-{
-  LOG( L_INFO, "INFO:"M_NAME": - put node %d !!!\n" , plus);
-  plus++;
-  return CSCF_RETURN_TRUE;
-}
-
-int VQ_take_node (struct sip_msg *rpl, char *str1, char *str2)
-{
-  LOG( L_INFO, "INFO:"M_NAME": - take node %d !!!\n" , minus );
-  minus++;
-  return CSCF_RETURN_TRUE;
-}
-
 
 int vq_check_retransmission (queueIndex_t *index, queueID_t *id)
 {
   queueNode_t *inqueue;	// check retransmission if the same node is already in the queue
   
   // lookup the id in the queue
-  inqueue = vq_get_node_by_id (index, id);
+  inqueue = vq_get_node_by_id_safe (index, id);
   
   if (inqueue) {
     INFO ("Detected a packet retransmission for \"%.*s\"\n", 2*HASHLEN, id->strid);
@@ -173,14 +155,14 @@ void vq_decrease_index_values (queueIndex_t **index, queueNode_t *oldnode)
 
   switch (oldnode->prio) {
 
-    case M:
+    case EMERGENCY:
       qtimersub (&ix->totalM, &oldnode->time, &result);
       ix->totalM.tv_sec = result.tv_sec;
       ix->totalM.tv_usec = result.tv_usec;
       ix->nodesM = ix->nodesM--;
       break;
 
-    case N:
+    case NORMAL:
       qtimersub (&ix->totalN, &oldnode->time, &result);
       ix->totalN.tv_sec = result.tv_sec;
       ix->totalN.tv_usec = result.tv_usec;
@@ -269,7 +251,7 @@ int vq_put_emergency_call (queueIndex_t *ix, queueNode_t **node)
   //
   
   // if first node is non-prioritized
-  if (aux->prio == N) {
+  if (aux->prio == NORMAL) {
     INFO ("Incoming emergency node after -first- non-prioritized node in the queue\n");
     // if a normal node is being served let it finish
     // add the new emergency node at the end of the emergency calls
@@ -280,8 +262,8 @@ int vq_put_emergency_call (queueIndex_t *ix, queueNode_t **node)
 
   DBG ("Current node priority: %d\n", aux->prio);
 
-  if (aux->prio == M) {
-    while (aux->prio == M && aux->next != NULL) {	
+  if (aux->prio == EMERGENCY) {
+    while (aux->prio == EMERGENCY && aux->next != NULL) {	
       DBG ("going to the last prioritized node: aux: %p aux->next: %p\n", aux, aux->next);
       aux = aux->next;
     }
@@ -297,7 +279,7 @@ int vq_put_emergency_call (queueIndex_t *ix, queueNode_t **node)
   DBG ("last: %p\n", ix->last);
   
   // adding a generic emergency node
-  DBG ("add M node !\n");
+  DBG ("add emergency node !\n");
 
   // add node: update pointers
 
@@ -312,7 +294,7 @@ int vq_put_emergency_call (queueIndex_t *ix, queueNode_t **node)
       aux->prev = newnode;
 
     // check re-scheduling
-    if (next->prio == N) {
+    if (next->prio == NORMAL) {
       DBG ("Marking nodes for re-scheduling\n");
       do_res = 1;
     }
@@ -393,7 +375,7 @@ int vq_put_normal_call (queueIndex_t *ix, queueNode_t **node)
  *  This procedure is also used to schedule the calls.
  *
  */
-int vq_put_node (queueIndex_t *ix, queueNode_t *newnode)
+int vq_put_node_safe (queueIndex_t *ix, queueNode_t *newnode)
 {
   //check what time it is now or leave it synchronized with VQ_update_queue ?
   //struct timeval now;
@@ -402,9 +384,6 @@ int vq_put_node (queueIndex_t *ix, queueNode_t *newnode)
   // re-initialize the 'next' pointer to NULL
   newnode->next = NULL;
 
-  // get lock
-  lock_get (ix->lock);
-  
   gettimeofday (&ix->now, NULL);
   
   if ( ix->first == NULL) { 	// adding first node
@@ -426,10 +405,10 @@ int vq_put_node (queueIndex_t *ix, queueNode_t *newnode)
 
     switch (newnode->prio) {
 
-      case M:
+      case EMERGENCY:
 	      vq_put_emergency_call (ix, &newnode);
 	      break;
-      case N:
+      case NORMAL:
 	      vq_put_normal_call (ix, &newnode);
 	      break;
       default:
@@ -438,9 +417,6 @@ int vq_put_node (queueIndex_t *ix, queueNode_t *newnode)
     }
 
   }
-
-  // lock release
-  lock_release (ix->lock);
 
   // if the scheduled time is greater than 'now' + 'max delay' we have to send a response
   DBG ("Call scheduled in %ld.%06ld\n", newnode->scheduled.tv_sec, newnode->scheduled.tv_usec);
@@ -489,14 +465,14 @@ void vq_increase_index_values (queueIndex_t **index, queueNode_t *newnode)
 
   switch (newnode->prio) {
 
-    case M:
+    case EMERGENCY:
       qtimeradd (&ix->totalM, &newnode->time, &result);
       ix->totalM.tv_sec = result.tv_sec;
       ix->totalM.tv_usec = result.tv_usec;
       ix->nodesM = ix->nodesM++;
       break;
 
-    case N:
+    case NORMAL:
       qtimeradd (&ix->totalN, &newnode->time, &result);
       ix->totalN.tv_sec = result.tv_sec;
       ix->totalN.tv_usec = result.tv_usec;
@@ -592,34 +568,29 @@ int vq_delete_node (queueIndex_t *ix, queueNode_t *node)
  * @param *ix pointer to the queue index
  * @param *id pointer to the binary form of the id of HASHLEN bytes 
  */
-queueNode_t * vq_get_node_by_id (queueIndex_t *ix, queueID_t *id)
+queueNode_t * vq_get_node_by_id_safe(queueIndex_t *ix, queueID_t *id)
 {
   queueNode_t *aux;
 
   DBG ("searching node id: %.*s...\n", 2*HASHLEN, id->strid);
 
-  lock_get (ix->lock);
-  
   aux = ix->first;
   if (!aux) {
-    DBG ("vq_get_node_by_id: empty queue\n");
-    lock_release (ix->lock);
+    DBG ("vq_get_node_by_id_safe: empty queue\n");
     return NULL;
   }
   
   do {
       
       if (!memcmp (&aux->id.id, id->id, HASHLEN)) {
-	DBG ("vq_get_node_by_id: node id found\n");
-	lock_release (ix->lock);
+	DBG ("vq_get_node_by_id_safe: node id found\n");
 	return aux;
       }
       aux = (queueNode_t *)aux->next;	
       
   } while (aux);
   
-  WARN ("vq_get_node_by_id: node id NOT found\n");
-  lock_release (ix->lock);
+  WARN ("vq_get_node_by_id_safe: node id NOT found\n");
   
   return NULL;
 }

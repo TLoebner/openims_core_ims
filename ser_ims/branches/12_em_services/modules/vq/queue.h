@@ -43,24 +43,21 @@
 
 // priority types
 // M : Emergency ; N : Normal
-#define EMERGENCY_CALL 1
-#define M 1
-#define NORMAL_CALL 2
-#define N 2
+#define EMERGENCY 1
+#define NORMAL 2
  	
 #define BUFSIZE 1024
 #define MAXNAME 16 
 
 
-typedef struct queueNode queueNode_t;
 
 /** Queue node description. */
-struct queueNode {
+typedef struct queueNode {
 
   queueID_t id;			/// node ID
   int type;			/// type of call (SIP method)
-  queueNode_t *next;		/// pointer to next node
-  queueNode_t *prev;		/// pointer to previous node
+  struct queueNode *next;		/// pointer to next node
+  struct queueNode *prev;		/// pointer to previous node
   int prio;			/// type of priority
 
   int moved;			/// queue node has been recollocated
@@ -74,7 +71,7 @@ struct queueNode {
   struct timeval out;		/// 'scheduled' time + 'time' duration
   
   int stat;			/// 'true' if the node has been counted for statistics
-};
+} queueNode_t;
 
 
 /** Header and index for each queue. Holds queue information. */
@@ -148,18 +145,22 @@ typedef struct call_response call_resp_t;
 //
 
 queueIndex_t *vq_init_index (char *name);
-queueNode_t *vq_pop_node (queueIndex_t *index); 
 void vq_decrease_index_values (queueIndex_t **index, queueNode_t *oldnode);
+void vq_increase_index_values (queueIndex_t **index, queueNode_t *newnode);
+
 void vq_update_queue (queueIndex_t *index);
+
 int vq_process_call (void *call, queueIndex_t *index);
-queueNode_t *vq_init_node (queueID_t *id, int prio, int type);
+int vq_schedule_call (queueIndex_t *index, queueNode_t **callin);
 int vq_reschedule_call (queueIndex_t *ix, queueNode_t *newnode);
 void vq_increase_rescheduled_calls (queueIndex_t **index);
-int vq_schedule_call (queueIndex_t *index, queueNode_t **callin);
-int vq_put_node (queueIndex_t *ix, queueNode_t *newnode);
-void vq_increase_index_values (queueIndex_t **index, queueNode_t *newnode);
+
+queueNode_t *vq_init_node (queueID_t *id, int prio, int type);
+int vq_put_node_safe (queueIndex_t *ix, queueNode_t *newnode);
+queueNode_t *vq_pop_node (queueIndex_t *index); 
 int vq_delete_node (queueIndex_t *ix, queueNode_t *node);
-queueNode_t *vq_get_node_by_id (queueIndex_t *ix, queueID_t *id);
+
+queueNode_t *vq_get_node_by_id_safe (queueIndex_t *ix, queueID_t *id);
 
 int vq_check_retransmission (queueIndex_t *index, queueID_t *id);
 
