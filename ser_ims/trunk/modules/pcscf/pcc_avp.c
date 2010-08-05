@@ -396,6 +396,9 @@ int PCC_AAR_add_avps_for_register(AAAMessage *msg, struct sip_uri* parsed_uri){
 	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
 				AVP_EPC_Specific_Action_IPCAN_Change)) goto error;
 
+	if(!cdp_avp->epcapp.add_Specific_Action(&msg->avpList, 
+				AVP_EPC_Specific_Action_Indication_of_Generic_Gateway_Change)) goto error;
+
 	return 1;
 error:
 	return 0;
