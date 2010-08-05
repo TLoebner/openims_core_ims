@@ -605,6 +605,7 @@ enum {
 	AVP_EPC_Specific_Action_Indication_of_Out_of_Credit				= 7,
 	AVP_EPC_Specific_Action_Indication_of_Succ_Resource_Allocation			= 8,
 	AVP_EPC_Specific_Action_Indication_of_Failed_Resource_Allocation		= 9,
+	AVP_EPC_Specific_Action_Indication_of_Generic_Gateway_Change			= 10,
 };
 
 enum {
