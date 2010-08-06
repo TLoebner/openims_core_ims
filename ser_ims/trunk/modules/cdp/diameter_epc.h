@@ -73,6 +73,7 @@
 #define EPC_S9 	16777267
 #define EPC_S6b	16777272
 #define EPC_Sp	16777280 //not in current standards
+#define EPC_PCRF_MC	16777281	//not in current standards
 
 #define EPC_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
 #define EPC_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
@@ -400,6 +401,8 @@ enum {
 	AVP_EPC_GG_Enforce								= 42006, 
 	AVP_EPC_GG_IP									= 42007, 
 	AVP_EPC_UE_Locator								= 42008, 
+	AVP_EPC_UE_Locator_Id_Group							= 42009, 
+	AVP_EPC_IMSI									= 42010, 
 };
 
 /** Flow-Usage AVP */
