@@ -196,6 +196,12 @@ error:
 	return 0;
 }
 
+void close_gg_socket(){
+
+	if(gg_af_socket)
+		close(gg_af_socket);
+}
+
 /*
 static str s_orig={";orig",5};
 static str s_term={";term",5};
@@ -1192,21 +1198,14 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 	ip_address gg_ip, ue_ip;
 	int count = 0;
 	str gg_ip_s = {0,0}, ue_ip_s = {0,0};
-	char buf[64];
+	char buf[64], timestamp_s;
+	int timestamp_len;
+	time_t timestamp = time(NULL);
 	
 	msg->s = 0; msg->len = 0;
 	if(!cdp_avp->epcapp.get_GG_Enforce(rar->avpList,&gg_enforce,0)){
 		LOG(L_ERR, "could not find the GG_Enforce AVP\n");
 		return -1;
-	}
-	
-	while(cdp_avp->epcapp.get_UE_Locator(gg_enforce, &ue_ip, 0)){
-		count++;
-	}
-
-	if(!count){
-		LOG(L_DBG, "no UE IP avp, no reason doing anything more");
-		return 0;
 	}
 
 	if(!cdp_avp->epcapp.get_GG_IP(gg_enforce, &gg_ip, 0)){
@@ -1214,29 +1213,38 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 		return -1;	
 	}
 
+	if(!(cdp_avp->epcapp.get_UE_Locator(gg_enforce, &ue_ip, 0))){
+		LOG(L_ERR, "could not find the UE_IP AVP\n");
+		return -1;	
+	}
+
 	ip_address_to_str(&gg_ip, &gg_ip_s, buf, pkg);
 	LOG(L_DBG, "the GG IP address is %.*s\n", gg_ip_s.len, gg_ip_s.s);
-	
-	msg->len = gg_update_cmd.len + (count+1)*(MAX_IP_ADDRESS_LEN
-			+space.len) + 1;
+
+	ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
+	LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
+			ue_ip_s.len, ue_ip_s.s);
+
+	timestamp_s = int2str((unsigned int) timestamp, &timestamp_len);
+
+	msg->len = gg_update_cmd.len + gg_ip_s.len + ue_ip_s.len + timestamp_len
+	       	+ 3*space.len + 1;
 	if(!(msg->s = pkg_malloc(msg->len)))
 		goto out_of_memory;
+	
 	msg->len = sprintf(msg->s, "%.*s", gg_update_cmd.len, gg_update_cmd.s);
+	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
+
+	msg->len += sprintf(msg->s+msg->len, " %.*s", ue_ip_s.len, ue_ip_s.s);
 	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
 
 	msg->len += sprintf(msg->s+msg->len, " %.*s", gg_ip_s.len, gg_ip_s.s);
 	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
-	
-	while(cdp_avp->epcapp.get_UE_Locator(gg_enforce, &ue_ip, 0)){
-		ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
-		LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
-				ue_ip_s.len, ue_ip_s.s);
 
-		msg->len += sprintf(msg->s+msg->len, " %.*s", ue_ip_s.len, ue_ip_s.s);
-		LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
-		pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
-	}
-	
+	msg->len += sprintf(msg->s+msg->len, " %.*s", timestamp_len, timestamp_s);
+	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
+
+	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
 	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
 	
 	return 1;
