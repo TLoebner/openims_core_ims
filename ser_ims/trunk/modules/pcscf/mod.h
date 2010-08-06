@@ -213,6 +213,7 @@ int P_trans_in_processing(struct sip_msg* msg, char* str1, char* str2);
 	{memcpy((dst).s+(dst).len,(src).s,(src).len);\
 	(dst).len = (dst).len + (src).len;}
 
+
 /* ANSI Terminal colors */
 #define ANSI_GRAY		"\033[01;30m"
 #define ANSI_BLINK_RED 	"\033[00;31m"

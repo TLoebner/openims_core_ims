@@ -397,6 +397,9 @@ enum {
 	AVP_EPC_PDN_Gw_Name									= 42003, 
 	AVP_EPC_PDN_Gw_Identity								= 42004, 
 	AVP_EPC_QoS_Profile_Name							= 42005, 
+	AVP_EPC_GG_Enforce								= 42006, 
+	AVP_EPC_GG_IP									= 42007, 
+	AVP_EPC_UE_Locator								= 42008, 
 };
 
 /** Flow-Usage AVP */
