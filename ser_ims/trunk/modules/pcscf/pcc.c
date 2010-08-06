@@ -1194,11 +1194,10 @@ static str space         = {" ", 1};
 
 int gg_change_event_handler(AAAMessage * rar, str * msg){
 
-	AAA_AVP_LIST        gg_enforce;
+	AAA_AVP_LIST        gg_enforce, avp_list;
 	ip_address gg_ip, ue_ip;
-	int count = 0;
 	str gg_ip_s = {0,0}, ue_ip_s = {0,0};
-	char buf[64], timestamp_s;
+	char buf[64], *timestamp_s;
 	int timestamp_len;
 	time_t timestamp = time(NULL);
 	
@@ -1213,8 +1212,13 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 		return -1;	
 	}
 
-	if(!(cdp_avp->epcapp.get_UE_Locator(gg_enforce, &ue_ip, 0))){
-		LOG(L_ERR, "could not find the UE_IP AVP\n");
+	if(!(cdp_avp->epcapp.get_UE_Locator_Id_Group(gg_enforce, &avp_list, 0))){
+		LOG(L_ERR, "could not find the UE Locator Id AVP\n");
+		return -1;	
+	}
+
+	if(!(cdp_avp->epcapp.get_UE_Locator(avp_list, &ue_ip, 0))){
+		LOG(L_ERR, "could not find the UE Locator AVP\n");
 		return -1;	
 	}
 

@@ -679,6 +679,13 @@ cdp_avp (GG_IP,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,
 cdp_avp (UE_Locator,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		
 		Address,	ip_address)	
 
+cdp_avp_ptr (IMSI,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		OctetString,	str)
+
+cdp_avp_add_ptr	(UE_Locator_Id_Group,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+
+cdp_avp_get (UE_Locator_Id_Group,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp_get2	(UE_Locator_Id_Group,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UE_Locator,	ip_address,	IMSI,	str)	
 
 
 /*

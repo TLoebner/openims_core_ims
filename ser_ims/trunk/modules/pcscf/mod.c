@@ -729,7 +729,7 @@ int fix_parameters()
 	pcc_dest_realm.s = pcc_dest_realm_s;
 	pcc_dest_realm.len = strlen(pcc_dest_realm_s);
 
-	if(gg_af_ip && pcscf_pcc_use){
+	if(gg_af_ip && pcscf_use_pcc){
 
 		if(gg_af_port<=0 || gg_af_port > 65535) {
 			LOG(L_ERR, "invalid port number %i\n", gg_af_port);
@@ -1025,7 +1025,7 @@ static void mod_destroy(void)
         shm_free(current_spi);
 	}
 	
-	if(gg_af_ip && pcscf_pcc_use){
+	if(gg_af_ip && pcscf_use_pcc){
 		close_gg_socket();
 	}
 	
