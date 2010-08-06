@@ -63,6 +63,7 @@
 
 
 
+
 typedef struct pcc_authdata {
 	str callid;
 	str host;
@@ -76,6 +77,7 @@ typedef struct pcc_authdata {
 } pcc_authdata_t;
 
 
+int create_gg_socket();
 int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
 void terminate_pcc_session(str session_id);
 

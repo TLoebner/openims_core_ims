@@ -54,6 +54,7 @@
 #ifndef __PCC_AVP_H
 #define __PCC_AVP_H
 
+#include <arpa/inet.h>
 #include "../../sr_module.h"
 #include "mod.h"
 #include "../cdp/cdp_load.h"
@@ -70,6 +71,53 @@
 
 #include <string.h>
 #include <stdio.h>
+
+/**
+ * Convert an ip_address to the str text representation
+ * @param src - the source ip address
+ * @param dst - where to write to
+ * @param in_shm - whether to allocate memory for the result in shm or pkg
+ * @return the number of bytes in the text, or 0 on error
+ */
+#define ip_address_to_str(src, dst, buf, mem)\
+do{\
+	(dst)->s = 0;	(dst)->len = 0;   \
+	switch ((src)->ai_family){        \
+	case AF_INET:			\
+		if (!inet_ntop((src)->ai_family,&((src)->ip.v4),buf,64)) goto error; \
+		break;								\
+	case AF_INET6:								\
+		if (!inet_ntop((src)->ai_family,&((src)->ip.v6),buf,64)) goto error; \
+		break;									\
+	default:									\
+		goto error;								\
+	}										\
+	(dst)->s = mem##_malloc(strlen(buf)+1);						\
+	if(!(dst)->s)	goto out_of_memory;						\
+	memcpy((dst)->s, buf, strlen(buf)*sizeof(char));				\
+	(dst)->len = strlen(buf);							\
+}while(0);
+
+/**
+ * Convert a str text representation of an IPv4/6 address to the ip_address structure
+ * @param src - string of the address 
+ * @param dst - where to write the result
+ * @return - AF_INET/AF_INET6 or 0 on error
+ */
+#define str_to_ip_address(src, dst)\
+do{					\
+	char buf[64];			\
+	bzero((dst),sizeof(ip_address));	\
+	if (!(src).len) goto error;		\
+						\
+	sprintf(buf,"%.*s",(src).len,(src).s);	\
+						\
+	if (inet_pton(AF_INET6,buf,(void*)&((dst)->ip.v6))>0)	\
+		(dst)->ai_family = AF_INET6;			\
+	else if (inet_pton(AF_INET,buf,&((dst)->ip.v4))>0) 	\
+		(dst)->ai_family = AF_INET;			\
+}while(0);
+
 
 
 /** NO DATA WILL BE DUPLICATED OR FREED - DO THAT AFTER SENDING THE MESSAGE!!! */

@@ -240,6 +240,8 @@ unsigned short port_for_signaling = 4060;
 
 char* pcc_dest_realm_s = "open-ims.test";
 str pcc_dest_realm;
+char * gg_af_ip = NULL;
+uint32_t gg_af_port = 0;
 
 
 /** 
@@ -547,6 +549,8 @@ static param_export_t pcscf_params[]={
 	
 	{"pcc_dest_realm",					STR_PARAM,		&pcc_dest_realm_s},
 	{"pcc_use_ports",					INT_PARAM,		&pcc_use_ports},
+	{"gg_ip",					STR_PARAM,		&gg_af_ip},
+	{"gg_port",					INT_PARAM,		&gg_af_port},
 
 	{"ecscf_uri",						STR_PARAM, 		&ecscf_uri},
 	{"emerg_support",					INT_PARAM, 		&emerg_support},
@@ -724,6 +728,16 @@ int fix_parameters()
 	
 	pcc_dest_realm.s = pcc_dest_realm_s;
 	pcc_dest_realm.len = strlen(pcc_dest_realm_s);
+
+	if(gg_af_ip){
+		if(gg_af_port<=0 || gg_af_port > 65535) {
+			LOG(L_ERR, "invalid port number %i\n", gg_af_port);
+			return 0;
+		}
+		
+		if(!create_gg_socket())
+			return 0;
+	}
 
 	return 1;
 }

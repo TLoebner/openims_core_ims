@@ -66,14 +66,20 @@
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
 
-/**< Structure with pointers to cdp funcs */
+/**< Structure with pointers to cdp and cdp_avp funcs */
 extern struct cdp_binds cdpb;
+extern cdp_avp_bind_t *cdp_avp;
 
 /**< FQDN of PDF, defined in mod.c */
 extern str forced_qos_peer; /*its the PCRF in this case*/
 
 /* the destination realm*/
 extern str pcc_dest_realm;
+
+extern char * gg_af_ip;
+extern uint32_t gg_af_port;
+int gg_af_socket;
+ip_address gg_af_addr;
 
 extern int pcscf_qos_release7;
 extern int pcscf_qos_side;
@@ -167,6 +173,29 @@ int cscf_get_mobile_side(struct sip_msg *msg, int is_shm)
 	}
 
 }
+
+int create_gg_socket(){
+
+	str gg_ip_s;
+
+	gg_ip_s.s = gg_af_ip;
+	gg_ip_s.len = strlen(gg_af_ip);
+
+	str_to_ip_address(gg_ip_s, &gg_af_addr);
+
+	if ( (gg_af_socket = socket(gg_af_addr.ai_family, SOCK_DGRAM, IPPROTO_UDP)) < 0){ 	
+		LOG(L_ERR, "Error opening udp socket. socket() said %s\n",
+				strerror(errno));
+		return 0;
+	}
+
+	return gg_af_socket;
+
+error:
+	LOG(L_ERR, "could not cnvert well the ip %s\n", gg_af_ip);
+	return 0;
+}
+
 /*
 static str s_orig={";orig",5};
 static str s_term={";term",5};
@@ -1153,6 +1182,132 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 	return 0;
 }
 
+static str gg_update_cmd = {"gg.update_route", 15};
+static str space         = {" ", 1};
+#define MAX_IP_ADDRESS_LEN	64
+
+int gg_change_event_handler(AAAMessage * rar, str * msg){
+
+	AAA_AVP_LIST        gg_enforce;
+	ip_address gg_ip, ue_ip;
+	int count = 0;
+	str gg_ip_s = {0,0}, ue_ip_s = {0,0};
+	char buf[64];
+	
+	msg->s = 0; msg->len = 0;
+	if(!cdp_avp->epcapp.get_GG_Enforce(rar->avpList,&gg_enforce,0)){
+		LOG(L_ERR, "could not find the GG_Enforce AVP\n");
+		return -1;
+	}
+	
+	while(cdp_avp->epcapp.get_UE_Locator(gg_enforce, &ue_ip, 0)){
+		count++;
+	}
+
+	if(!count){
+		LOG(L_DBG, "no UE IP avp, no reason doing anything more");
+		return 0;
+	}
+
+	if(!cdp_avp->epcapp.get_GG_IP(gg_enforce, &gg_ip, 0)){
+		LOG(L_ERR, "could not find the GG_IP AVP\n");
+		return -1;	
+	}
+
+	ip_address_to_str(&gg_ip, &gg_ip_s, buf, pkg);
+	LOG(L_DBG, "the GG IP address is %.*s\n", gg_ip_s.len, gg_ip_s.s);
+	
+	msg->len = gg_update_cmd.len + (count+1)*(MAX_IP_ADDRESS_LEN
+			+space.len) + 1;
+	if(!(msg->s = pkg_malloc(msg->len)))
+		goto out_of_memory;
+	msg->len = sprintf(msg->s, "%.*s", gg_update_cmd.len, gg_update_cmd.s);
+	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
+
+	msg->len += sprintf(msg->s+msg->len, " %.*s", gg_ip_s.len, gg_ip_s.s);
+	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
+	
+	while(cdp_avp->epcapp.get_UE_Locator(gg_enforce, &ue_ip, 0)){
+		ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
+		LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
+				ue_ip_s.len, ue_ip_s.s);
+
+		msg->len += sprintf(msg->s+msg->len, " %.*s", ue_ip_s.len, ue_ip_s.s);
+		LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
+		pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
+	}
+	
+	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
+	
+	return 1;
+error:
+	if(msg->s) pkg_free(msg->s);
+	if(gg_ip_s.s) pkg_free(gg_ip_s.s);
+	if(ue_ip_s.s) pkg_free(ue_ip_s.s);
+	LOG(L_ERR, "error while converting AVP value to string\n");
+	return -1;
+out_of_memory:
+	if(msg->s) pkg_free(msg->s);
+	if(gg_ip_s.s) pkg_free(gg_ip_s.s);
+	if(ue_ip_s.s) pkg_free(ue_ip_s.s);
+	LOG(L_ERR, "out of pkg memory\n");
+	return -1;
+}
+
+int udp_socket_send(str msg,int socket,ip_address to_addr,uint16_t to_port)
+{
+	struct sockaddr_in saddr4;	
+	struct sockaddr_in6 saddr6;
+	struct sockaddr *saddr=0;
+	socklen_t to_addr_len = 0;
+	int len=0;
+	bzero(&saddr4,to_addr_len);
+	
+	switch (to_addr.ai_family) {
+		case AF_INET:
+			to_addr_len = sizeof(struct sockaddr_in);
+			saddr4.sin_family = to_addr.ai_family;
+			saddr4.sin_addr = to_addr.ip.v4;
+			saddr4.sin_port = htons(to_port);	
+			saddr = (struct sockaddr*)&saddr4;		
+			break;
+		case AF_INET6:
+			to_addr_len = sizeof(struct sockaddr_in6);
+			saddr6.sin6_family = to_addr.ai_family;
+			memcpy(&(saddr6.sin6_addr),&(to_addr.ip.v6),sizeof(to_addr.ip.v6));
+			saddr6.sin6_port = htons(to_port);	
+			saddr = (struct sockaddr*)&saddr6;		
+			break;
+		default:
+			LOG(L_ERR,"Not handled ai_family %d!",to_addr.ai_family);
+			return 0;
+	}
+	
+	
+	len = sendto(socket,
+			msg.s,msg.len,
+			0,
+			saddr,
+			to_addr_len);
+	if (len==msg.len) LOG(L_DBG,"Successfully sent %d bytes.\n",len);
+	else LOG(L_ERR,"Error sending %d bytes!\n",len);
+	
+	return len;
+}
+
+void gg_send_notify(str notify){
+
+	if(!notify.s || !notify.len)
+		return;
+	
+	if(!gg_af_socket) {
+		LOG(L_ERR, "no corresponding GG was configured\n");
+		return;
+	}
+	
+	LOG(L_DBG, "sending the notify %.*s\n", notify.len, notify.s);
+	udp_socket_send(notify, gg_af_socket, gg_af_addr, gg_af_port);
+}
 
 /*
  * TODO:
@@ -1176,6 +1331,7 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 	AAAMessage *raa=0, *dia_str = 0;
 	unsigned int code=0, rc=0;
 	int is_register;
+	str notify_msg = {0,0};
 	
 	if (!request && !request->sessionId) return 0;
 	session = cdpb.AAAGetAuthSession(request->sessionId->data);
@@ -1235,6 +1391,14 @@ AAAMessage* PCC_RAA(AAAMessage *request)
 				break;
 			case AVP_IMS_Specific_Action_Service_Information_Request:
 				LOG(L_DBG,"DBG:"M_NAME":PCC_RAA: specific action service information request :\n\t pull mode until AF not supported\n");
+				break;
+			case AVP_EPC_Specific_Action_Indication_of_Generic_Gateway_Change:
+				LOG(L_DBG,"DBG:"M_NAME":PCC_RAA: specific action generic gateway change\n");
+				if(gg_change_event_handler(request, 
+							&notify_msg)<0)
+					goto error;
+				gg_send_notify(notify_msg);
+				if(notify_msg.s) pkg_free(notify_msg.s);
 				break;
 			default:
 				LOG(L_DBG,"DBG:"M_NAME":PCC_RAA: specific action received unknown %d\n",code);

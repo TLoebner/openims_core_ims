@@ -665,6 +665,20 @@ cdp_avp_ptr		(Service_Selection,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY
 
 cdp_avp_ptr		(QoS_Profile_Name,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
+/*
+ * Generic Gateway related AVPs
+ */
+
+cdp_avp_add_ptr	(GG_Enforce,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+
+cdp_avp_get (GG_Enforce,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp (GG_IP,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		
+		Address,	ip_address)	
+
+cdp_avp (UE_Locator,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		
+		Address,	ip_address)	
+
 
 
 /*
