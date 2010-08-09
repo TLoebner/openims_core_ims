@@ -720,6 +720,36 @@ cdp_avp			(Reservation_Priority,						IMS_vendor_id_ETSI,	0,							Unsigned32,		
 	 * 
 	 */
 
+	int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, str imsi, 
+		ip_address ue_ip, ip_address gg_ip, AVPDataStatus status){
+
+		AAA_AVP_LIST        avp_list = {0,0}, avp_list2 = {0,0};
+
+		if(!cdp_avp_add_UE_Locator(&avp_list, ue_ip))
+			goto error;
+
+		if(imsi.len && imsi.s){
+			if(!cdp_avp_add_IMSI(&avp_list, imsi, status))
+				goto error;
+		}
+
+		if(!cdp_avp_add_UE_Locator_Id_Group(&avp_list2, 
+				&avp_list, AVP_FREE_DATA))
+			goto error;
+
+		if(!cdp_avp_add_GG_IP(&avp_list2, gg_ip))
+			goto error;
+	
+		if(!cdp_avp_add_GG_Enforce(avpList, &avp_list2,AVP_FREE_DATA)){
+			LOG(L_ERR, "could not find the GG_Enforce AVP\n");
+			goto error;
+		}
+		return 1;
+	error:
+		LOG(L_ERR, "error while adding the GG change AVPs\n");
+		return 0;
+	}
+
 
 #elif defined(CDP_AVP_EXPORT)
 
@@ -731,7 +761,7 @@ cdp_avp			(Reservation_Priority,						IMS_vendor_id_ETSI,	0,							Unsigned32,		
 	 *  
 	 */
 
-
+	cdp_avp_add_GG_Enforce_Group_f		add_GG_Enforce_Group;	
 #elif defined(CDP_AVP_INIT)
 
 	/*
@@ -744,7 +774,7 @@ cdp_avp			(Reservation_Priority,						IMS_vendor_id_ETSI,	0,							Unsigned32,		
 	 * 
 	 */
 
-
+	cdp_avp_add_GG_Enforce_Group,
 #elif defined(CDP_AVP_REFERENCE)
 	/*
 	 * Put here what you want to get in the reference. Typically:
@@ -754,6 +784,7 @@ cdp_avp			(Reservation_Priority,						IMS_vendor_id_ETSI,	0,							Unsigned32,		
 	 * 
 	 */
 
+	int CDP_AVP_MODULE.add_GG_Enforce_Group(AAA_AVP_LIST * avpList, str imsi, ip_address ue_ip, ip_address gg_ip, AVPDataStatus status);
 	
 #elif defined(CDP_AVP_EMPTY_MACROS)
 	
@@ -778,7 +809,8 @@ cdp_avp			(Reservation_Priority,						IMS_vendor_id_ETSI,	0,							Unsigned32,		
 	#ifndef _CDP_AVP_EPCAPP_H_2
 	#define _CDP_AVP_EPCAPP_H_2
 
-
+		int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, str imsi, ip_address ue_ip, ip_address gg_ip, AVPDataStatus status);
+		typedef int (*cdp_avp_add_GG_Enforce_Group_f) (AAA_AVP_LIST * avpList, str imsi, ip_address ue_ip, ip_address gg_ip, AVPDataStatus status);
 
 
 	#endif //_CDP_AVP_EPCAPP_H_2
