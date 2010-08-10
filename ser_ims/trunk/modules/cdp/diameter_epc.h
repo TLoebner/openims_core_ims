@@ -127,6 +127,9 @@
 #define Diameter_ECR		324
 #define Diameter_ECA		324
 
+/*not standard interfaces*/
+#define Diameter_MC_AF_UP	400
+
 /**	EPC Specific Result Codes				*/
 enum{
 /** 1001 to 1999	Informational			*/
