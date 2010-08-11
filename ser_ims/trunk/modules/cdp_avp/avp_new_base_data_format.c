@@ -176,12 +176,15 @@ inline AAA_AVP *cdp_avp_new_Grouped(int avp_code,int avp_flags,int avp_vendorid,
 inline AAA_AVP* cdp_avp_new_Address(int avp_code,int avp_flags,int avp_vendorid,ip_address data)
 {
 	char x[18];
-	str s={x,0};
+	str s;
+	s.s = x;
+	s.len = 0;
+
 	switch (data.ai_family){
 		case AF_INET:
 			x[0]=0;
 			x[1]=1;
-			*((uint32_t*)x+2) = htonl(data.ip.v4.s_addr);
+			memcpy(x+2, (char*)(&data.ip.v4.s_addr), 4);
 			s.len=6;
 			break;
 		case AF_INET6:

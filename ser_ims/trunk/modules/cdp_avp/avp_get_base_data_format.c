@@ -160,7 +160,6 @@ inline int cdp_avp_get_Float64(AAA_AVP *avp,double *data)
 	}
 	y = cdp_avp_get_Unsigned64(avp,(uint64_t*)data);//TODO - check if this is correct
 	memcpy(&x,&y,sizeof(uint64_t));
-	//*((uint64_t*)&x)=y;
 	if (data) *data = y;
 	return 1;
 }
@@ -195,7 +194,7 @@ inline int cdp_avp_get_Address(AAA_AVP *avp,ip_address *data)
 	switch (x.ai_family){
 		case 1:
 			x.ai_family = AF_INET;
-			x.ip.v4.s_addr = ntohl(*((uint32_t*)avp->data.s+2));
+			memcpy(&(x.ip.v4.s_addr), avp->data.s+2, 4);
 			break;
 		case 2:
 			x.ai_family = AF_INET6;
