@@ -658,10 +658,10 @@ cdp_avp			(Served_Party_IP_Address,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATOR
 
 
 /*
- *	http://tools.ietf.org/html/draft-ietf-dime-mip6-split-17
+ *	http://tools.ietf.org/html/rfc5778#section-6.2
  */
 
-cdp_avp_ptr		(Service_Selection,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+cdp_avp_ptr		(Service_Selection,										 0,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 cdp_avp_ptr		(QoS_Profile_Name,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
