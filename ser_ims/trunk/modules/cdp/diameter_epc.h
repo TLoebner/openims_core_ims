@@ -186,7 +186,9 @@ enum {
 	AVP_EPC_User_Equipment_Info_Type					= 459,
 	AVP_EPC_User_Equipment_Info_Value					= 460,
 /**  or   RFC 4006 							*/
-
+	
+	AVP_EPC_Service_Selection							= 493, /**< http://tools.ietf.org/html/rfc5778 */
+	
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_EPC_Abort_Cause									= 500,
 	AVP_EPC_Access_Network_Charging_Address				= 501,
@@ -396,7 +398,7 @@ enum {
 	
 	
 /** Not yet allocated */	
-	AVP_EPC_Service_Selection							= 42001, /**< http://tools.ietf.org/html/draft-ietf-dime-mip6-split-17#section-6.2 */
+
 	AVP_EPC_PDN_Gw_Address								= 42002, 
 	AVP_EPC_PDN_Gw_Name									= 42003, 
 	AVP_EPC_PDN_Gw_Identity								= 42004, 
