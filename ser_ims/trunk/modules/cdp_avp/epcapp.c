@@ -77,13 +77,47 @@ extern struct cdp_binds *cdp;
 
 
 #include "epcapp.h"
+#include "ccapp.h"
 
 
 #define CDP_AVP_DEFINITION
 
 	#include "epcapp.h"
+	int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, str imsi, 
+		ip_address ue_ip, ip_address gg_ip, AVPDataStatus status){
+
+		AAA_AVP_LIST        avp_list = {0,0}, avp_list2 = {0,0};
+
+		if(!cdp_avp_add_UE_Locator(&avp_list, ue_ip))
+			goto error;
+
+		if(imsi.len && imsi.s){
+			if(!cdp_avp_add_Subscription_Id_Group(&avp_list,
+					AVP_EPC_Subscription_Id_Type_End_User_IMSI,
+					imsi,
+					AVP_DUPLICATE_DATA))
+				goto error;
+		}
+
+		if(!cdp_avp_add_UE_Locator_Id_Group(&avp_list2, 
+				&avp_list, AVP_FREE_DATA))
+			goto error;
+
+		if(!cdp_avp_add_GG_IP(&avp_list2, gg_ip))
+			goto error;
+	
+		if(!cdp_avp_add_GG_Enforce(avpList, &avp_list2,AVP_FREE_DATA)){
+			LOG(L_ERR, "could not find the GG_Enforce AVP\n");
+			goto error;
+		}
+		return 1;
+	error:
+		LOG(L_ERR, "error while adding the GG change AVPs\n");
+		return 0;
+	}
 
 #undef CDP_AVP_DEFINITION
+
 
 
 
