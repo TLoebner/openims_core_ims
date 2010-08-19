@@ -407,7 +407,6 @@ enum {
 	AVP_EPC_GG_IP									= 42007, 
 	AVP_EPC_UE_Locator								= 42008, 
 	AVP_EPC_UE_Locator_Id_Group							= 42009, 
-	AVP_EPC_IMSI									= 42010, 
 };
 
 /** Flow-Usage AVP */
