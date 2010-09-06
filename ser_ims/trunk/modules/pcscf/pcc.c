@@ -1192,14 +1192,51 @@ static str gg_update_cmd = {"gg.update_route", 15};
 static str space         = {" ", 1};
 #define MAX_IP_ADDRESS_LEN	64
 
+str create_update_cmd(int32_t subs_type, str subs_name, 
+		str ue_ip_s, str gg_ip_s, time_t timestamp){
+
+	str msg = {0,0};
+	int timestamp_len;
+	int subs_type_len;
+	char * timestamp_s, * subs_type_s;
+
+	int2str((unsigned int) timestamp, &timestamp_len);
+	int2str((unsigned int) subs_type, &subs_type_len);
+
+	msg.len = gg_update_cmd.len + subs_type_len + subs_name.len +
+		gg_ip_s.len + ue_ip_s.len + timestamp_len + 5*space.len + 1;
+	if(!(msg.s = pkg_malloc(msg.len)))
+		return msg;
+	
+	msg.len = sprintf(msg.s, "%.*s", gg_update_cmd.len, gg_update_cmd.s);
+	
+	subs_type_s = int2str((unsigned int) subs_type, &subs_type_len);
+	msg.len += sprintf(msg.s+msg.len, " %.*s", subs_type_len, subs_type_s);
+
+	msg.len += sprintf(msg.s+msg.len, " %.*s", subs_name.len, subs_name.s);
+
+	msg.len += sprintf(msg.s+msg.len, " %.*s", ue_ip_s.len, ue_ip_s.s);
+
+	msg.len += sprintf(msg.s+msg.len, " %.*s", gg_ip_s.len, gg_ip_s.s);
+
+	timestamp -= time(NULL);
+	timestamp_s = int2str((unsigned int) timestamp, &timestamp_len);
+	msg.len += sprintf(msg.s+msg.len, " %.*s", timestamp_len, timestamp_s);
+	LOG(L_DBG, "cmd is %.*s", msg.len, msg.s);
+	
+	return msg;
+}
+
 int gg_change_event_handler(AAAMessage * rar, str * msg){
 
 	AAA_AVP_LIST        gg_enforce, avp_list;
 	ip_address gg_ip, ue_ip;
 	str gg_ip_s = {0,0}, ue_ip_s = {0,0};
-	char buf[64], *timestamp_s;
-	int timestamp_len;
+	char buf[64];
+
 	time_t timestamp = time(NULL);
+	int32_t subs_type;
+	str subs_name;
 	
 	msg->s = 0; msg->len = 0;
 	if(!cdp_avp->epcapp.get_GG_Enforce(rar->avpList,&gg_enforce,0)){
@@ -1222,6 +1259,22 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 		return -1;	
 	}
 
+	if(!cdp_avp->ccapp.get_Subscription_Id_Group(avp_list,
+						&subs_type,
+						&subs_name,
+						NULL)){
+		LOG(L_ERR, "could not find the Subscription Id AVP\n");
+		return -1;
+	}
+
+	if (subs_type!=AVP_EPC_Subscription_Id_Type_End_User_IMSI){
+		
+		LOG(L_ERR, "unexpected subscription type in Locator_Id_Group\n");
+		return -1;
+	}
+
+	//LOG(L_DBG, "IMSI is %.*s\n", subs_name.len, subs_name.s);
+
 	ip_address_to_str(&gg_ip, &gg_ip_s, buf, pkg);
 	LOG(L_DBG, "the GG IP address is %.*s\n", gg_ip_s.len, gg_ip_s.s);
 
@@ -1229,24 +1282,9 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 	LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
 			ue_ip_s.len, ue_ip_s.s);
 
-	timestamp_s = int2str((unsigned int) timestamp, &timestamp_len);
-
-	msg->len = gg_update_cmd.len + gg_ip_s.len + ue_ip_s.len + timestamp_len
-	       	+ 3*space.len + 1;
-	if(!(msg->s = pkg_malloc(msg->len)))
-		goto out_of_memory;
-	
-	msg->len = sprintf(msg->s, "%.*s", gg_update_cmd.len, gg_update_cmd.s);
-	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
-
-	msg->len += sprintf(msg->s+msg->len, " %.*s", ue_ip_s.len, ue_ip_s.s);
-	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
-
-	msg->len += sprintf(msg->s+msg->len, " %.*s", gg_ip_s.len, gg_ip_s.s);
-	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
-
-	msg->len += sprintf(msg->s+msg->len, " %.*s", timestamp_len, timestamp_s);
-	LOG(L_DBG, "cmd is %.*s", msg->len, msg->s);
+	*msg  = create_update_cmd(subs_type, subs_name, ue_ip_s, gg_ip_s, timestamp);
+	if(!msg->s || !msg->len)
+		goto error;
 
 	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
 	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
@@ -1256,7 +1294,6 @@ error:
 	if(msg->s) pkg_free(msg->s);
 	if(gg_ip_s.s) pkg_free(gg_ip_s.s);
 	if(ue_ip_s.s) pkg_free(ue_ip_s.s);
-	LOG(L_ERR, "error while converting AVP value to string\n");
 	return -1;
 out_of_memory:
 	if(msg->s) pkg_free(msg->s);
