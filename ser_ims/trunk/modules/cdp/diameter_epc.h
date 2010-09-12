@@ -128,7 +128,8 @@
 #define Diameter_ECA		324
 
 /*not standard interfaces*/
-#define Diameter_MC_AF_UP	400
+#define Diameter_MC_AF_ROUTE_UP		400
+#define Diameter_MC_AF_ROUTE_DEL	401
 
 /**	EPC Specific Result Codes				*/
 enum{
