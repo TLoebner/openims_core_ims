@@ -83,18 +83,21 @@ extern struct cdp_binds *cdp;
 #define CDP_AVP_DEFINITION
 
 	#include "epcapp.h"
-	int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, str imsi, 
-		ip_address ue_ip, ip_address gg_ip, AVPDataStatus status){
+	int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, 
+		int32_t type, str id, 
+		ip_address ue_ip, ip_address gg_ip, 
+		uint32_t interval,
+		AVPDataStatus status){
 
 		AAA_AVP_LIST        avp_list = {0,0}, avp_list2 = {0,0};
 
 		if(!cdp_avp_add_UE_Locator(&avp_list, ue_ip))
 			goto error;
 
-		if(imsi.len && imsi.s){
+		if(id.len && id.s){
 			if(!cdp_avp_add_Subscription_Id_Group(&avp_list,
-					AVP_EPC_Subscription_Id_Type_End_User_IMSI,
-					imsi,
+					type,
+					id,
 					AVP_DUPLICATE_DATA))
 				goto error;
 		}
