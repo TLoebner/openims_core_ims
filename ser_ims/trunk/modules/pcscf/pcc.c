@@ -1189,16 +1189,27 @@ AAAMessage* PCC_ASA(AAAMessage *request)
 }
 
 static str gg_update_cmd = {"gg.update_route", 15};
+static str gg_delete_cmd = {"gg.delete_route", 15};
 static str space         = {" ", 1};
 #define MAX_IP_ADDRESS_LEN	64
 
 str create_update_cmd(int32_t subs_type, str subs_name, 
-		str ue_ip_s, str gg_ip_s, time_t timestamp){
+		ip_address ue_ip, ip_address gg_ip, 
+		time_t timestamp){
 
 	str msg = {0,0};
 	int timestamp_len;
 	int subs_type_len;
 	char * timestamp_s, * subs_type_s;
+	str ue_ip_s, gg_ip_s;
+	char buf[64];
+
+	ip_address_to_str(&gg_ip, &gg_ip_s, buf, pkg);
+	LOG(L_DBG, "the GG IP address is %.*s\n", gg_ip_s.len, gg_ip_s.s);
+
+	ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
+	LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
+			ue_ip_s.len, ue_ip_s.s);
 
 	int2str((unsigned int) timestamp, &timestamp_len);
 	int2str((unsigned int) subs_type, &subs_type_len);
@@ -1206,7 +1217,7 @@ str create_update_cmd(int32_t subs_type, str subs_name,
 	msg.len = gg_update_cmd.len + subs_type_len + subs_name.len +
 		gg_ip_s.len + ue_ip_s.len + timestamp_len + 5*space.len + 1;
 	if(!(msg.s = pkg_malloc(msg.len)))
-		return msg;
+		goto end;
 	
 	msg.len = sprintf(msg.s, "%.*s", gg_update_cmd.len, gg_update_cmd.s);
 	
@@ -1223,6 +1234,41 @@ str create_update_cmd(int32_t subs_type, str subs_name,
 	timestamp_s = int2str((unsigned int) timestamp, &timestamp_len);
 	msg.len += sprintf(msg.s+msg.len, " %.*s", timestamp_len, timestamp_s);
 	LOG(L_DBG, "cmd is %.*s", msg.len, msg.s);
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+end:
+error:
+	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
+	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
+	
+	return msg;
+}
+
+str create_delete_cmd(ip_address ue_ip){
+
+	str msg = {0,0};
+	str ue_ip_s;
+	char buf[64];
+
+	ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
+	LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
+			ue_ip_s.len, ue_ip_s.s);
+
+	msg.len = gg_delete_cmd.len + ue_ip_s.len + 1;
+	if(!(msg.s = pkg_malloc(msg.len)))
+		goto end;
+	
+	msg.len = sprintf(msg.s, "%.*s", gg_delete_cmd.len, gg_delete_cmd.s);
+	
+	msg.len += sprintf(msg.s+msg.len, " %.*s", ue_ip_s.len, ue_ip_s.s);
+
+	LOG(L_DBG, "cmd is %.*s", msg.len, msg.s);
+
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+end:
+error:
+	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
 	
 	return msg;
 }
@@ -1231,28 +1277,29 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 
 	AAA_AVP_LIST        gg_enforce, avp_list;
 	ip_address gg_ip, ue_ip;
-	str gg_ip_s = {0,0}, ue_ip_s = {0,0};
-	char buf[64];
 
 	time_t timestamp = time(NULL);
 	int32_t subs_type;
 	str subs_name;
+	int is_update = 0;
 	
 	msg->s = 0; msg->len = 0;
-	if(!cdp_avp->epcapp.get_GG_Enforce(rar->avpList,&gg_enforce,0)){
-		LOG(L_ERR, "could not find the GG_Enforce AVP\n");
-		return -1;
-	}
 
-	if(!cdp_avp->epcapp.get_GG_IP(gg_enforce, &gg_ip, 0)){
-		LOG(L_ERR, "could not find the GG_IP AVP\n");
-		return -1;	
-	}
+	if(cdp_avp->epcapp.get_GG_Enforce(rar->avpList,&gg_enforce,0)){
+		
+			is_update= 1;
 
-	if(!(cdp_avp->epcapp.get_UE_Locator_Id_Group(gg_enforce, &avp_list, 0))){
-		LOG(L_ERR, "could not find the UE Locator Id AVP\n");
-		return -1;	
-	}
+		if(!cdp_avp->epcapp.get_GG_IP(gg_enforce, &gg_ip, 0)){
+			LOG(L_ERR, "could not find the GG_IP AVP\n");
+			return -1;	
+		}
+
+		if(!(cdp_avp->epcapp.get_UE_Locator_Id_Group(gg_enforce, &avp_list, 0))){
+			LOG(L_ERR, "could not find the UE Locator Id AVP\n");
+			return -1;	
+		}
+	}else
+		avp_list = rar->avpList;
 
 	if(!(cdp_avp->epcapp.get_UE_Locator(avp_list, &ue_ip, 0))){
 		LOG(L_ERR, "could not find the UE Locator AVP\n");
@@ -1275,31 +1322,17 @@ int gg_change_event_handler(AAAMessage * rar, str * msg){
 
 	//LOG(L_DBG, "IMSI is %.*s\n", subs_name.len, subs_name.s);
 
-	ip_address_to_str(&gg_ip, &gg_ip_s, buf, pkg);
-	LOG(L_DBG, "the GG IP address is %.*s\n", gg_ip_s.len, gg_ip_s.s);
-
-	ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
-	LOG(L_DBG, "the UE Locator IP address is %.*s\n", 
-			ue_ip_s.len, ue_ip_s.s);
-
-	*msg  = create_update_cmd(subs_type, subs_name, ue_ip_s, gg_ip_s, timestamp);
+	if(is_update)
+		*msg  = create_update_cmd(subs_type, subs_name, ue_ip, gg_ip, timestamp);
+	else	
+		*msg  = create_delete_cmd(ue_ip);
 	if(!msg->s || !msg->len)
 		goto error;
 
-	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
-	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
-	
+		
 	return 1;
 error:
 	if(msg->s) pkg_free(msg->s);
-	if(gg_ip_s.s) pkg_free(gg_ip_s.s);
-	if(ue_ip_s.s) pkg_free(ue_ip_s.s);
-	return -1;
-out_of_memory:
-	if(msg->s) pkg_free(msg->s);
-	if(gg_ip_s.s) pkg_free(gg_ip_s.s);
-	if(ue_ip_s.s) pkg_free(ue_ip_s.s);
-	LOG(L_ERR, "out of pkg memory\n");
 	return -1;
 }
 
