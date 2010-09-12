@@ -776,8 +776,12 @@ cdp_avp			(Reservation_Priority,						IMS_vendor_id_ETSI,	0,							Unsigned32,		
 	#ifndef _CDP_AVP_EPCAPP_H_2
 	#define _CDP_AVP_EPCAPP_H_2
 
-		int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, str imsi, ip_address ue_ip, ip_address gg_ip, AVPDataStatus status);
-		typedef int (*cdp_avp_add_GG_Enforce_Group_f) (AAA_AVP_LIST * avpList, str imsi, ip_address ue_ip, ip_address gg_ip, AVPDataStatus status);
+		int cdp_avp_add_GG_Enforce_Group(AAA_AVP_LIST * avpList, int32_t type, str id, 
+				ip_address ue_ip, ip_address gg_ip, uint32_t interval,
+				AVPDataStatus status);
+		typedef int (*cdp_avp_add_GG_Enforce_Group_f) (AAA_AVP_LIST * avpList, int32_t type, str id, 
+				ip_address ue_ip, ip_address gg_ip, uint32_t interval,
+				AVPDataStatus status);
 
 
 	#endif //_CDP_AVP_EPCAPP_H_2
