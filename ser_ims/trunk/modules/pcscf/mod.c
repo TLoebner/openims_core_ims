@@ -738,6 +738,8 @@ int fix_parameters()
 		
 		if(!create_gg_socket())
 			return 0;
+		LOG(L_DBG, "using the AF ip %s and port %i\n",
+				gg_af_ip, gg_af_port);
 	}
 
 	return 1;
