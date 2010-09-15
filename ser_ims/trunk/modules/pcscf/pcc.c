@@ -1201,7 +1201,7 @@ str create_update_cmd(int32_t subs_type, str subs_name,
 	int timestamp_len;
 	int subs_type_len;
 	char * timestamp_s, * subs_type_s;
-	str ue_ip_s, gg_ip_s;
+	str ue_ip_s ={0,0}, gg_ip_s={0,0};
 	char buf[64];
 
 	ip_address_to_str(&gg_ip, &gg_ip_s, buf, pkg);
@@ -1234,9 +1234,13 @@ str create_update_cmd(int32_t subs_type, str subs_name,
 	timestamp_s = int2str((unsigned int) timestamp, &timestamp_len);
 	msg.len += sprintf(msg.s+msg.len, " %.*s", timestamp_len, timestamp_s);
 	LOG(L_DBG, "cmd is %.*s", msg.len, msg.s);
+end:
+	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
+	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
+	
+	return msg;
 out_of_memory:
 	LOG(L_ERR, "out of pkg memory\n");
-end:
 error:
 	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
 	pkg_free(gg_ip_s.s); gg_ip_s.s = NULL;
@@ -1247,7 +1251,7 @@ error:
 str create_delete_cmd(ip_address ue_ip){
 
 	str msg = {0,0};
-	str ue_ip_s;
+	str ue_ip_s = {0,0};
 	char buf[64];
 
 	ip_address_to_str(&ue_ip, &ue_ip_s, buf, pkg);
@@ -1263,10 +1267,12 @@ str create_delete_cmd(ip_address ue_ip){
 	msg.len += sprintf(msg.s+msg.len, " %.*s", ue_ip_s.len, ue_ip_s.s);
 
 	LOG(L_DBG, "cmd is %.*s", msg.len, msg.s);
+end:
+	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
+	return msg;
 
 out_of_memory:
 	LOG(L_ERR, "out of pkg memory\n");
-end:
 error:
 	pkg_free(ue_ip_s.s); ue_ip_s.s = NULL;
 	
