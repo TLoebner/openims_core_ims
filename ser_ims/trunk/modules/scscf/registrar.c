@@ -376,7 +376,7 @@ int S_assign_server(struct sip_msg *msg,char *str1,char *str2 )
 					for(ci=((contact_body_t*)h->parsed)->contacts;ci;ci=ci->next){
 						if (get_r_contact(p,ci->uri)){
 							n_contacts++;
-							sos_reg = cscf_get_sos_uri_param(ci);
+							sos_reg = cscf_get_sos_uri_param(ci->uri);
 				     		if(sos_reg<0)
 					     		goto error;
 							if(sos_reg>0){
@@ -761,7 +761,7 @@ static int update_contacts_help(struct sip_msg* msg, int _expires_hdr,
 					ci->uri.len,ci->uri.s);
 					goto error;
 				}
-				sos_reg = cscf_get_sos_uri_param(ci);
+				sos_reg = cscf_get_sos_uri_param(ci->uri);
 				if(sos_reg<0) goto error;
 				
 				/*if it is the second contact for emergency registration, 
