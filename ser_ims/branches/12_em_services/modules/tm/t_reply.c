@@ -1974,7 +1974,7 @@ void rpc_reply(rpc_t* rpc, void* c)
 /* context of a transaction means transaction pointer and rmode
  * Switch to the context of another transaction, but keep the current one referenced
  * get the current Rmode as it will be used in the future in t_exit_ctx
- * --used in the module ECSCF, similar to lock A lock B
+ * --used in the modules ECSCF and LRF, similar to lock A lock B
  * Ancuta Onofrei
  */
 int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
@@ -2007,7 +2007,7 @@ int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
 	return 0;
 }
 /* switch to the context of the transaction that was processed before t_enter_ctx
- * similar to unlock A unlock B
+ * similar to unlock B unlock A
  * -- use it after t_enter_exit, with appropriate parameters
  * Ancuta Onofrei
  */
