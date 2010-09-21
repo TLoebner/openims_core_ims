@@ -2420,7 +2420,9 @@ str cscf_get_realm_from_uri(str uri)
    	LOG(L_DBG, "DBG:"M_NAME":cscf_get_realm_from_uri: realm <%.*s>.\n",realm.len,realm.s);
 	return realm;	
 }
-
+/* Cleans non SHM lumps that were added to the message in order to forward it, for example
+ * otherwise, if it is a request and an error response is received, run_failure_handlers from the TM will probably crash
+ */
 void cscf_del_nonshm_lumps(struct sip_msg *msg){
 
  
@@ -3135,10 +3137,10 @@ static str sos_uri_par={"sos", 3};
  * Check if the contact has an URI parameter with the value "sos",
  * used for detecting an Emergency Registration
  * http://tools.ietf.org/html/draft-patel-ecrit-sos-parameter-0x
- * @param contact - contact to be checked
+ * @param uri - contact uri to be checked
  * @return 1 if found, 0 if not, -1 on error
  */
-int cscf_get_sos_uri_param(contact_t * contact)
+int cscf_get_sos_uri_param(str uri)
 {
 	struct sip_uri puri;
 	param_hooks_t h;
@@ -3149,9 +3151,9 @@ int cscf_get_sos_uri_param(contact_t * contact)
 	ret = 0;
 	p = NULL;
 	
-	if(parse_uri(contact->uri.s, contact->uri.len, &puri)<0){
+	if(parse_uri(uri.s, uri.len, &puri)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_sos_uri_param: failed to parse %.*s\n",
-				contact->uri.len, contact->uri.s);
+				uri.len, uri.s);
 		return -1;
 	}
 	if(puri.params.len <= 0)

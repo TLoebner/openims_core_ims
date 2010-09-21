@@ -58,6 +58,7 @@
 #include "../../sr_module.h"
 #include "../../locking.h"
 #include "../cdp/cdp_load.h"
+#include "../../parser/contact/contact.h"
 
 /** NAT address */
 typedef struct _r_nat_dest{
@@ -126,6 +127,13 @@ typedef struct _r_security {
 	float q;
 } r_security;
 
+/* Registration type:
+ * 1 for normal registration only
+ * 2 if emergency registration only
+ * 3 one of the above types
+ */
+typedef enum reg_type_{NORMAL_REG = 1, EMERG_REG = 2, ANY_REG = 3} r_reg_type;
+
 /** Registrar Contact Structure */
 typedef struct _r_contact {
 	unsigned int hash;			/**< the hash value 					*/
@@ -146,7 +154,7 @@ typedef struct _r_contact {
 	str *service_route;			/**< service route entries				*/
 
 	r_nat_dest * pinhole;		/**< address of the receive				*/ 
-	int sos_flag;				/** address used to do an IMS Emergency Registration*/
+	r_reg_type sos_flag;				/** address used to do an IMS Emergency Registration*/
 	
 	str pcc_session_id;			/** Session used for Subscription to Signaling Path status  when PCC applies*/
 
@@ -196,21 +204,22 @@ r_security *new_r_security(str sec_header,r_security_type type,float q);
 void free_r_security(r_security *s);
 
 r_contact* new_r_contact(str host,int port,int transport,str uri,enum Reg_States reg_state,int expires,
-	str *service_route,int service_route_cnt);	
-r_contact* get_r_contact(str host,int port,int transport);
+	str *service_route,int service_route_cnt, r_reg_type sos_flag);	
+r_contact* get_r_contact(str host,int port,int transport, r_reg_type sos_mask);
 r_contact* add_r_contact(str host,int port,int transport,str uri,
-	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest * pinhole, int sos_flag);
+	enum Reg_States reg_state,int expires,str *service_route,int service_route_cnt, r_nat_dest * pinhole, r_reg_type sos_flag);
 r_contact* update_r_contact(str host,int port,int transport,
 				str *uri,enum Reg_States  *reg_state,int *expires,str **service_route,
 				int *service_route_cnt, r_nat_dest ** pinhole, int *sos_flag);
 r_contact* update_r_contact_sec(str host,int port,int transport,
 	str *uri,enum Reg_States *reg_state,int *expires,
-	r_security *s);
+	r_security *s, int * sos_flag);
 void del_r_contact(r_contact *c);
 void free_r_contact(r_contact *c);
 
 r_nat_dest * get_r_nat_pinhole(str host, int port, int transport);
 
+r_contact * get_next_em_r_contact(str pub_id, contact_t * contact);
 
 
 void print_r(int log_level);

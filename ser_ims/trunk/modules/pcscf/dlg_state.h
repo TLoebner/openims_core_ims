@@ -87,13 +87,8 @@ enum p_dialog_direction {
 	DLG_MOBILE_UNKNOWN=2
 };
 
-enum em_state{
-	NON_EMERG_DLG = 0,
-	EMERG_DLG = 1
-};
-
 typedef struct _em_info{
-	enum em_state em_dialog; /*0 if not emergency, 1 if emergency*/
+	int em_dialog; /*0 if not emergency, 1 if emergency*/
 	str ecscf_uri;
 	str service_urn;
 }p_dialog_em_info;
@@ -149,6 +144,7 @@ inline void d_lock(unsigned int hash);
 inline void d_unlock(unsigned int hash);
 
 int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *host,int *port,int *transport);
+int fixup_save_dialog(void ** param, int param_no);
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
 int is_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);

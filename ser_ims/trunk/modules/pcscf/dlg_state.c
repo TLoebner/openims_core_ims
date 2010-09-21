@@ -839,12 +839,63 @@ error:
 	return CSCF_RETURN_FALSE;
 }		
 
+int fixup_save_dialog(void** param, int param_no){
+
+	char* str;
+	int len;
+	fparam_t * p;
+
+	if(param_no!=2){
+		return 0;
+	}
+
+	str = (char*) *param;
+	if(!str || str[0] == '\0'){
+	
+		LOG(L_ERR, "ERR:"M_NAME":fixup_save_dialog: NULL param 2\n");
+		return -1;
+	}
+
+	len = strlen(str);
+
+	if(len == 5 && strncmp(str, "emerg", 5) == 0){
+		str[0] = '1';
+	}else if (len ==9 && strncmp(str, "non-emerg", 9)==0){
+		str[0] = '0';
+	}else {
+		LOG(L_ERR, "ERR:"M_NAME":fixup_save_dialog: invalid param 2, "
+				"possible values are \"emerg\" or \"non-emerg\"\n");
+		return -1;
+	}	
+
+	p = (fparam_t*)pkg_malloc(sizeof(fparam_t));
+	if (!p) {
+		ERR("No memory left\n");
+		return E_OUT_OF_MEM;
+    	}
+	memset(p, 0, sizeof(fparam_t));
+	p->orig = *param;
+
+	switch(str[0]){
+	
+		case '0':
+			p->v.i = 0;
+			break;
+		case '1':
+			p->v.i = 1;
+			break;
+	}
+
+	*param = (void*)p;
+
+	return 0;
+}
 
 /**
  * Saves a dialog.
  * @param msg - the initial request
  * @param str1 - direction - "orig" or "term"
- * @param str2 - not used
+ * @param str2 - type of dialog: "emerg"|"non-emerg"
  * @returns #CSCF_RETURN_TRUE if ok, #CSCF_RETURN_FALSE if not or #CSCF_RETURN_BREAK on error 
  */
 int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
@@ -861,9 +912,13 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	struct hdr_field *h;
 	unsigned int hash;
 	enum p_dialog_direction dir;
+	int em_dialog;
 	str service_urn = {0,0};
 	
 	dir = get_dialog_direction(str1);
+
+	fparam_t * param = (fparam_t*)str2;
+	em_dialog = param->v.i;
 	
 	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
 		LOG(L_ERR,"ERR:"M_NAME":P_is_in_dialog(): Error retrieving %s contact\n",str1);
@@ -889,23 +944,16 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d->first_cseq = cscf_get_cseq(msg,0);
 	d->last_cseq = d->first_cseq;
 	d->state = DLG_STATE_INITIAL;
-	d->em_info.em_dialog = NON_EMERG_DLG;
-	
-	if(dir == DLG_MOBILE_ORIGINATING){
-
+	d->em_info.em_dialog = em_dialog;
+	if(em_dialog){
 		urn_t urn_type = is_emerg_ruri(msg->first_line.u.request.uri, &service_urn);
+		//maybe other services than emergency should be also prioritized
 		if(urn_type == NOT_URN || urn_type == NOT_EM_URN){
-			LOG(L_DBG,"DBG:"M_NAME":P_save_dialog: no corresponding "
-				"emergency URN for the dialog\n");
-		}else{
-			d->em_info.em_dialog = EMERG_DLG;
-			//the returned service_urn includes "urn:"
-			STR_SHM_DUP(d->em_info.service_urn, service_urn, "P_save_dialog");
-			LOG(L_INFO,"INFO:"M_NAME":P_save_dialog: service urn is %.*s\n",
-					d->em_info.service_urn.len,
-					d->em_info.service_urn.s);
-
+			LOG(L_ERR,"BUG:"M_NAME":P_save_dialog: no corresponding "
+					"emergency URN for the emergency dialog\n");	
+			return CSCF_RETURN_BREAK;
 		}
+		STR_SHM_DUP(d->em_info.service_urn, service_urn, "P_save_dialog");
 	}
 	
 	d->uac_supp_timer = supports_extension(msg, &str_ext_timer);

@@ -60,7 +60,7 @@
 #include "../../locking.h"
 #include "../../parser/parse_from.h"
 #include "../../modules/tm/tm_load.h"
-
+#include "../../dset.h"
 #include "mod.h"
 #include "sip.h"
 #include "emerg.h"
@@ -72,9 +72,11 @@
 #include "dlg_state.h"
 
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
+extern char * ecscf_uri;
 extern int emerg_support;
 extern str ecscf_uri_str;
 extern int anonym_em_call_support;
+extern str pcscf_path_orig_em_uri_str;
 
 /*global variables*/
 str ecscf_uri_str;
@@ -92,6 +94,10 @@ int init_emergency_cntxt(){
 	xmlInitParser();
 
 	if(emerg_support){
+		ecscf_uri_str.s = ecscf_uri;
+		ecscf_uri_str.len = strlen(ecscf_uri);
+		LOG(L_INFO, "INFO"M_NAME"mod_init:E-CSCF uri is %.*s\n",
+				ecscf_uri_str.len, ecscf_uri_str.s);
 		if(store_em_numbers())
 			return -1;
 	}
@@ -261,7 +267,7 @@ int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
 	for(c=contact_bd->contacts;c;c=c->next){
 		LOG(L_DBG,"DBG:"M_NAME":P_emergency_flag: contact <%.*s>\n",c->uri.len,c->uri.s);
 			
-		sos_reg += cscf_get_sos_uri_param(c);
+		sos_reg += cscf_get_sos_uri_param(c->uri);
 		if(sos_reg < 0)
 			return CSCF_RETURN_FALSE;
 	}
@@ -270,6 +276,36 @@ int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2)
 		return CSCF_RETURN_TRUE;
 
 	return CSCF_RETURN_FALSE;
+}
+
+/**
+ * Finds if the message comes from an emergency registered UE at this P-CSCF
+ * @param msg - the SIP message
+ * @param str1 - the realm to look into
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if registered, #CSCF_RETURN_FALSE if not 
+ */
+int P_is_em_registered(struct sip_msg *msg,char *str1,char *str2)
+{
+	int ret=CSCF_RETURN_FALSE;
+	struct via_body *vb;
+
+	LOG(L_INFO,"DBG:"M_NAME":P_is_em_registered: Looking if it has emergency registered\n");
+//	print_r(L_INFO);
+
+	vb = cscf_get_ue_via(msg);
+
+	
+	if (vb->port==0) vb->port=5060;
+	LOG(L_INFO,"DBG:"M_NAME":P_is_em_registered: Looking for <%d://%.*s:%d>\n",
+		vb->proto,vb->host.len,vb->host.s,vb->port);
+	
+	if (r_is_registered(vb->host,vb->port,vb->proto, EMERG_REG)) 
+		ret = CSCF_RETURN_TRUE;
+	else 
+		ret = CSCF_RETURN_FALSE;	
+	
+	return ret;
 }
 
 int select_ECSCF(str * ecscf_used){
@@ -346,54 +382,107 @@ static str route_e={">\r\n",3};
  */
 int P_enforce_sos_routes(struct sip_msg *msg,char *str1,char*str2)
 {
+	int sos;
 	str newuri={0,0};
-	str x;
-	str sel_ecscf_uri;
-		
-	if(select_ECSCF(&sel_ecscf_uri))
-		goto error;
+	str x = {0,0}, urn = {0,0};
+	p_dialog *d = NULL;
+	str call_id, host;
+	int port,transport;
+	enum p_dialog_direction dir;
+	str ruri = {msg->first_line.u.request.uri.s,
+			msg->first_line.u.request.uri.len};
 
-	x.len = route_s.len + route_e.len + sel_ecscf_uri.len;
+	sos = is_emerg_ruri(ruri, &urn);
+	if(sos == NOT_URN || sos == NOT_EM_URN){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: invalid use: no emergency request URI\n");
+		return CSCF_RETURN_ERROR;
+	}
+
+	LOG(L_DBG, "DBG:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
+				urn.len, urn.s);
+
+	
+	dir = DLG_MOBILE_ORIGINATING;
+	
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes(): Error retrieving orig contact\n");
+		return CSCF_RETURN_BREAK;
+	}		
+		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":P_enforce_sos_routes(): Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if(!d){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not find the emergency dialog\n");
+		return CSCF_RETURN_BREAK;
+	}
+
+	if(!d->em_info.em_dialog){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: script error: trying to use Emergency Services to route a non-emergency call\n");
+		goto error;
+	}
+
+	if(!d->em_info.ecscf_uri.len || !d->em_info.ecscf_uri.s){
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: script_error: no selected ecscf uri in the dialog info\n");
+		goto error;
+	}
+
+	x.len = route_s.len + route_e.len + d->em_info.ecscf_uri.len;
 			
 	x.s = pkg_malloc(x.len);
 	if (!x.s){
 		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Error allocating %d bytes\n",
 			x.len);
 		x.len=0;
-		return CSCF_RETURN_ERROR;
+		goto error;
 	}
 	x.len=0;
 	STR_APPEND(x,route_s);
-	STR_APPEND(x,sel_ecscf_uri);
+	STR_APPEND(x,d->em_info.ecscf_uri);
 	STR_APPEND(x,route_e);
 	
-	newuri.s = pkg_malloc(sel_ecscf_uri.len);
-	if (!newuri.s){
-		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Error allocating %d bytes\n",
-			sel_ecscf_uri.len);
-		return CSCF_RETURN_ERROR;
-	}
-	newuri.len = sel_ecscf_uri.len;
-	memcpy(newuri.s,sel_ecscf_uri.s,newuri.len);
-	msg->dst_uri = newuri;
+	if(set_dst_uri(msg, &d->em_info.ecscf_uri)){
 	
+		LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: Could not set the destination uri %.*s\n",
+				d->em_info.ecscf_uri.len, d->em_info.ecscf_uri.s);
+		goto error;
+	}
+
+	if(urn.len && urn.s){
+		LOG(L_DBG,"DBG:"M_NAME":P_enforce_sos_routes: rewritting uri with <%.*s>\n",
+				urn.len, urn.s);
+
+		if(rewrite_uri(msg, &urn) < 0) {
+			LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: Error rewritting uri with <%.*s>\n",
+				urn.len, urn.s);
+			goto error;	
+		}
+	} 
+
+
 	if (cscf_add_header_first(msg,&x,HDR_ROUTE_T)) {
 		if (cscf_del_all_headers(msg,HDR_ROUTE_T))
-			return CSCF_RETURN_TRUE;
+			goto end;
 		else {
 			LOG(L_ERR,"ERR:"M_NAME":P_enforce_sos_routes: new Route header added, but failed to drop old ones.\n");
-			return CSCF_RETURN_ERROR;
 		}
-	}
-	else {
-		if (x.s) pkg_free(x.s);
-		return CSCF_RETURN_ERROR;
 	}
 
 error:
-	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not select an ECSCF\n");
+	LOG(L_ERR, "ERR:"M_NAME":P_enforce_sos_routes: could not enforce the E-CSCF URI\n");
+	if(d) d_unlock(d->hash);
+	if (x.s) pkg_free(x.s);
+	if(newuri.s) pkg_free(newuri.s);
 	return CSCF_RETURN_ERROR;
-	
+end:
+	LOG(L_DBG, "DBG:"M_NAME":P_enforce_sos_routes: modified the info in order to be fwd to the E-CSCF %.*s\n",
+			d->em_info.ecscf_uri.len, d->em_info.ecscf_uri.s);
+	d_unlock(d->hash);
+	return CSCF_RETURN_TRUE;
 }
 
 /* Check if the module has Emergency Services enabled
@@ -488,5 +577,106 @@ int P_380_em_alternative_serv(struct sip_msg * msg, char* str1, char* str2){
  		return 0;
  	}
 
+	return CSCF_RETURN_TRUE;
+}
+
+/* part of an own security solution for securing the interface between the P-CSCF and the E-CSCF
+ * using the Path header
+ */
+int P_add_em_path(struct sip_msg * msg, char* str1, char* str2){
+
+	urn_t sos;
+	str x={0,0};
+	str urn;
+
+	str ruri = {msg->first_line.u.request.uri.s,
+			msg->first_line.u.request.uri.len};
+
+	sos = is_emerg_ruri(ruri, &urn);
+	if(sos == NOT_URN || sos == NOT_EM_URN){
+		LOG(L_ERR, "ERR:"M_NAME":P_add_em_path: invalid use: no emergency request URI\n");
+		return CSCF_RETURN_ERROR;
+	}
+
+
+	STR_PKG_DUP(x, pcscf_path_orig_em_uri_str, "pkg");
+	if (!x.s) return CSCF_RETURN_ERROR;
+	if (cscf_add_header(msg,&x,HDR_OTHER_T)) return CSCF_RETURN_TRUE;
+	else {
+		pkg_free(x.s);
+		return CSCF_RETURN_ERROR;
+	}
+out_of_memory:
+	return CSCF_RETURN_ERROR;	
+}
+
+static str path_header_name = {"Path", 4};
+/* part of an own security solution for securing the interface between the P-CSCF and the E-CSCF
+ * using the Path header*/
+int P_check_em_path(struct sip_msg * msg, char * str1, char * str2){
+
+	struct hdr_field* hdr;
+	str path_body;
+	str call_id;
+	enum p_dialog_direction dir;
+	struct sip_msg * req;
+	str host;
+	int port,transport;
+	p_dialog *d;
+
+	if(msg->first_line.type == SIP_REQUEST){
+		if(msg->first_line.u.request.method.len == 3 && 
+			strncasecmp(msg->first_line.u.request.method.s,"ACK",3)==0)
+			return CSCF_RETURN_TRUE;
+		req = msg;
+		dir = DLG_MOBILE_TERMINATING;	
+	}else{
+		req = cscf_get_request_from_reply(msg);
+		dir = DLG_MOBILE_ORIGINATING;	
+	}
+	
+	if (!find_dialog_contact(req,dir,&host,&port,&transport)){
+		LOG(L_ERR,"ERR:"M_NAME":P_check_em_path(): Error retrieving orig contact\n");
+		return CSCF_RETURN_BREAK;
+	}		
+		
+	call_id = cscf_get_call_id(msg,0);
+	if (!call_id.len)
+		return CSCF_RETURN_FALSE;
+
+	LOG(L_DBG,"DBG:"M_NAME":P_check_em_path(): Call-ID <%.*s>\n",call_id.len,call_id.s);
+
+	d = get_p_dialog(call_id,host,port,transport,&dir);
+	if (!d)
+		d = get_p_dialog(call_id,host,port,transport,0);
+	if (!d){
+		LOG(L_CRIT,"ERR:"M_NAME":P_update_dialog: dialog does not exists!\n");
+		return CSCF_RETURN_FALSE;
+	}
+	if(!d->em_info.em_dialog){
+		d_unlock(d->hash);
+		return CSCF_RETURN_TRUE;
+	}
+
+	d_unlock(d->hash);
+
+	hdr = cscf_get_header(msg, path_header_name);
+	if(!hdr){
+		LOG(L_ERR, "ERR:"M_NAME":P_check_em_path: invalid use: no Path header\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	path_body = hdr->body;
+	if(!path_body.s || !path_body.len){
+		LOG(L_ERR, "ERR:"M_NAME":P_check_em_path: invalid use: null Path header body\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
+	if(path_body.len != pcscf_path_orig_em_uri_str.len ||
+			strncmp(path_body.s, pcscf_path_orig_em_uri_str.s, path_body.len)!=0){
+		LOG(L_ERR, "ERR:"M_NAME":P_check_em_path: invalid use: invalid Path header body\n");
+		return CSCF_RETURN_FALSE;
+	}
+	
 	return CSCF_RETURN_TRUE;
 }

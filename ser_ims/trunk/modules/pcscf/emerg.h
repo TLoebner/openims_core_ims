@@ -82,6 +82,8 @@ int P_is_anonymous_user(struct sip_msg *msg,char *str1,char *str2);
 
 int P_emergency_flag(struct sip_msg *msg,char *str1,char *str2);
 
+int P_is_em_registered(struct sip_msg *msg,char *str1,char *str2);
+
 int P_emergency_ruri(struct sip_msg *msg, char* str1, char* str2);
 
 int P_enforce_sos_routes(struct sip_msg *msg, char* str1, char* str2);
@@ -93,5 +95,9 @@ int P_380_em_alternative_serv(struct sip_msg *msg, char* str1, char* str2);
 int P_select_ecscf(struct sip_msg * msg, char* str1, char * str2);
 
 int fixup_380_alt_serv(void** param, int param_no);
+
+int P_add_em_path(struct sip_msg * msg, char* str1, char* str2);
+
+int P_check_em_path(struct sip_msg * msg, char * str1, char * str2);
 
 #endif
