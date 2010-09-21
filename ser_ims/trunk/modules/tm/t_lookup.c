@@ -1286,6 +1286,37 @@ int t_unref( struct sip_msg* p_msg  )
 	return 1;
 }
 
+/* used to unref a transaction without calling t_lookup_ident because it increment the reference count
+ * and calling t_unref will lead to the same state as before
+ * Ancuta Onofrei*/
+int t_unref_ident(unsigned int hash_index, unsigned int label)
+{
+    	struct cell* p_cell;
+
+	if(hash_index >= TABLE_ENTRIES){
+		LOG(L_ERR,"ERROR: t_unref_trans: invalid hash_index=%u\n",hash_index);
+		return -1;
+	}
+
+	LOCK_HASH(hash_index);
+
+	/* all the transactions from the entry are compared */
+	for ( p_cell = get_tm_table()->entrys[hash_index].first_cell;
+	  p_cell; p_cell = p_cell->next_cell )
+	{
+		if(p_cell->label == label){
+			UNREF_UNSAFE( p_cell );
+    			UNLOCK_HASH(hash_index);
+			return 1;
+		}
+	}
+
+	UNLOCK_HASH(hash_index);
+	LOG(L_ERR, "ERROR: t_unref_trans: could not find the transaction\n");
+	return -1;
+
+}
+
 int t_get_trans_ident(struct sip_msg* p_msg, unsigned int* hash_index, unsigned int* label)
 {
     struct cell* t;

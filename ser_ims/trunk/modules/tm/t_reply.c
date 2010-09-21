@@ -161,6 +161,14 @@ static unsigned short resp_class_prio[]={
    before t_relay is called
 */
 
+enum route_mode get_rmode(){
+	return rmode;
+}
+
+void set_rmode(enum route_mode crt_rmode){
+	
+	rmode = crt_rmode;
+}
 
 void t_on_negative( unsigned int go_to )
 {
@@ -1961,3 +1969,61 @@ void rpc_reply(rpc_t* rpc, void* c)
 		return;
 	}
 }
+
+/* context of a transaction means transaction pointer and rmode
+ * Switch to the context of another transaction, but keep the current one referenced
+ * get the current Rmode as it will be used in the future in t_exit_ctx
+ * --used in the modules ECSCF and LRF, similar to lock A lock B
+ * Ancuta Onofrei
+ */
+int t_enter_ctx(unsigned int new_hash_index, unsigned int new_label,
+		enum route_mode * crt_rmode, enum route_mode new_rmode, 
+		struct cell** crt_trans, struct cell** new_trans){
+	
+	struct cell * t;
+	if(!crt_rmode || !crt_trans || !new_trans){
+		ERR("t_enter_ctx: NULL parameters\n");
+		return -1;
+	}
+	
+	t = get_t();
+	if(t == NULL || t == T_UNDEFINED)
+		ERR("t_enter_ctx: null crt trans\n");
+	else {DEBUG("t_enter_ctx: ref number is %i\n", t->ref_count);
+		*crt_trans = get_t(); 
+	}
+	*crt_rmode = get_rmode();
+
+	if(t_lookup_ident(new_trans, new_hash_index, new_label) < 0 ) {
+		ERR("t_enter_ctx: transaction lookup failed\n");
+		return -1;
+	}
+
+	t = get_t();
+	set_rmode(new_rmode);
+	global_msg_id = t->uas.request->id;
+	
+	return 0;
+}
+/* switch to the context of the transaction that was processed before t_enter_ctx
+ * similar to unlock B unlock A
+ * -- use it after t_enter_exit, with appropriate parameters
+ * Ancuta Onofrei
+ */
+int t_exit_ctx(struct cell * new_trans, enum route_mode new_rmode){
+	
+	struct cell * crt_trans;
+
+	if(!new_trans){
+		ERR("t_exit_ctx: NULL trans parameter\n");
+		return -1;
+	}
+	crt_trans = get_t();
+	UNREF(crt_trans);
+
+	set_t(new_trans);
+	set_rmode(new_rmode);
+
+	return 0;
+}
+
