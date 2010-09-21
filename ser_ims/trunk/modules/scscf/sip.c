@@ -2421,6 +2421,14 @@ str cscf_get_realm_from_uri(str uri)
 	return realm;	
 }
 
+void cscf_del_nonshm_lumps(struct sip_msg *msg){
+
+ 
+	del_nonshm_lump(&msg->add_rm);
+	del_nonshm_lump(&msg->body_lumps);
+	del_nonshm_lump_rpl(&msg->reply_lump);
+}
+
 /**
  * Returns the content of the P-Associated-URI header
  * Public_id is pkg_alloced and should be later freed.

@@ -735,7 +735,7 @@ static inline int find_dialog_aor(struct sip_msg *msg,enum e_dialog_direction d,
 static inline enum e_dialog_direction find_dialog_route_dir(struct sip_msg *msg)
 {
 	str r;	
-	r = cscf_get_first_route(msg,0);
+	r = cscf_get_first_route(msg,0,0);
 	
 	LOG(L_DBG,"DBG:"M_NAME":find_dialog_route_dir(): Route <%.*s>\n",r.len,r.s);
 
@@ -1089,7 +1089,7 @@ int update_dialog_on_reply(struct sip_msg *msg, e_dialog *d)
 	{
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
-			expires = cscf_get_expires_hdr(msg);
+			expires = cscf_get_expires_hdr(msg,0);
 			if (expires >= 0)
 			{
 			     d->expires = d_act_time()+expires;
@@ -1259,7 +1259,7 @@ int E_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		}
 		else
 		{
-                        expires = cscf_get_expires_hdr(msg);
+                        expires = cscf_get_expires_hdr(msg,0);
                         if (expires >= 0)
                         {
                                 d->expires = d_act_time()+expires;

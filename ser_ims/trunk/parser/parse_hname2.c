@@ -92,7 +92,7 @@ static inline char* skip_ws(char* p, unsigned int size)
 #include "case_subs.h"     /* Subscription-State */
 #include "case_requ.h"     /* Require */
 #include "case_www.h"      /* WWW-Authenticate */
-
+#include "case_geol.h"     /* Geolocation */
 
 #define READ(val) \
 (*(val + 0) + (*(val + 1) << 8) + (*(val + 2) << 16) + (*(val + 3) << 24))
@@ -133,7 +133,7 @@ static inline char* skip_ws(char* p, unsigned int size)
 	case _min__: min_CASE;  \
 	case _requ_: requ_CASE;  \
 	case _www__: www_CASE; \
-
+	case _geol_: geol_CASE; \
 
 
 #define PARSE_COMPACT(id)          \
