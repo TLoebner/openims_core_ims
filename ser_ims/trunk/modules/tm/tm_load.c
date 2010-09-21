@@ -194,6 +194,18 @@ int load_tm( struct tm_binds *tmb)
 		LOG( L_ERR, LOAD_ERROR "'cancel_uacs' not found\n");
 		return -1;
 	}
+	if (!(tmb->t_unref_ident=(tunref_ident_f)find_export("t_unref_ident",NO_SCRIPT,0))) {
+		LOG( L_ERR, LOAD_ERROR "'t_unref_ident' not found\n");
+		return -1;
+	}
+	if (!(tmb->t_enter_ctx=(tenter_ctx_f)find_export("t_enter_ctx",NO_SCRIPT,0))) {
+		LOG( L_ERR, LOAD_ERROR "'t_enter_ctx' not found\n");
+		return -1;
+	}
+	if (!(tmb->t_exit_ctx=(texit_ctx_f)find_export("t_exit_ctx",NO_SCRIPT,0))) {
+		LOG( L_ERR, LOAD_ERROR "'t_exit_ctx' not found\n");
+		return -1;
+	}
 
 	tmb->prepare_request_within = prepare_req_within;
 	tmb->send_prepared_request = send_prepared_request;

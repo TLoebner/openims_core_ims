@@ -313,6 +313,9 @@ static cmd_export_t cmds[]={
 	{"t_unref",            (cmd_function)t_unref,           NO_SCRIPT,   0, 0},
 	{"run_failure_handlers", (cmd_function)run_failure_handlers, NO_SCRIPT,   0, 0},
 	{"cancel_uacs",        (cmd_function)cancel_uacs,       NO_SCRIPT,   0, 0},
+	{"t_unref_ident",         (cmd_function)t_unref_ident,           NO_SCRIPT,   0, 0},
+	{"t_enter_ctx",	 (cmd_function)t_enter_ctx,	NO_SCRIPT,	0,	0},
+	{"t_exit_ctx",	 (cmd_function)t_exit_ctx,	NO_SCRIPT,	0,	0},
 	{0,0,0,0,0}
 };
 
@@ -1119,7 +1122,7 @@ inline static int w_t_relay( struct sip_msg  *p_msg ,
 		return t_relay_to( p_msg,
 		(struct proxy_l *) 0 /* no proxy */, PROTO_NONE,
 		0 /* no replication */ );
-	LOG(L_CRIT, "ERROR: w_t_relay_to: unsupported mode: %d\n", rmode);
+	LOG(L_CRIT, "ERROR: w_t_relay: unsupported mode: %d\n", rmode);
 	return 0;
 }
 
