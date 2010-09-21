@@ -959,7 +959,7 @@ int update_dialog_on_reply(struct sip_msg *msg, lrf_dialog *d)
 	{
 		if (!d->uac_supp_timer || !d->lr_session_expires)
 		{
-			expires = cscf_get_expires_hdr(msg);
+			expires = cscf_get_expires_hdr(msg,0);
 			if (expires >= 0)
 			{
 				d->expires = d_act_time()+expires;	
@@ -1133,7 +1133,7 @@ int LRF_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 		}
 		else
 		{
-			expires = cscf_get_expires_hdr(msg);
+			expires = cscf_get_expires_hdr(msg,0);
 			if (expires >= 0) 
 			{
 				LOG(L_INFO,"DBG:"M_NAME":LRF_update_dialog(%.*s): Update expiration time to %d via Expire header 2\n",call_id.len,call_id.s,expires);
@@ -1187,7 +1187,7 @@ int LRF_update_dialog(struct sip_msg* msg, char* str1, char* str2)
 			/* destroy dialogs on specific methods */
 			switch (d->method){
 				case DLG_METHOD_OTHER:							
-					expires = cscf_get_expires_hdr(msg);
+					expires = cscf_get_expires_hdr(msg,0);
 					if (expires >= 0)
 					{
 						d->expires = d_act_time()+expires;

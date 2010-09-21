@@ -373,7 +373,7 @@ void loc_subscribe_response(struct cell *t,int type,struct tmcb_params *ps)
 		return;
 	}
 	if (ps->code>=200 && ps->code<300){
-		expires = cscf_get_expires_hdr(ps->rpl);
+		expires = cscf_get_expires_hdr(ps->rpl,0);
 		tmb.dlg_response_uac(s->dialog, ps->rpl, IS_TARGET_REFRESH);
 		update_loc_subscription(s,expires);
 	}else if(ps->code >= 300){

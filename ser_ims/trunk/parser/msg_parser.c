@@ -181,6 +181,7 @@ char* get_hdr_field(char* buf, char* end, struct hdr_field* hdr)
 			DBG("DEBUG: get_hdr_body : content_length=%d\n",
 					(int)(long)hdr->parsed);
 			break;
+		case HDR_GEOLOCATION_T:
 		case HDR_SUPPORTED_T:
 		case HDR_REQUIRE_T:
 		case HDR_CONTENTTYPE_T:
@@ -458,6 +459,10 @@ int parse_headers(struct sip_msg* msg, hdr_flags_t flags, int next)
 				if (msg->subscription_state==0) msg->subscription_state = hf;
 				msg->parsed_flag|=HDR_SUBSCRIPTION_STATE_F;
 				break;
+			case HDR_GEOLOCATION_T:
+ 				if (msg->geolocation==0) msg->geolocation = hf;
+ 				msg->parsed_flag|=HDR_GEOLOCATION_F;
+ 				break;
 			case HDR_VIA_T:
 				msg->parsed_flag|=HDR_VIA_F;
 				DBG("parse_headers: Via found, flags=%llx\n",

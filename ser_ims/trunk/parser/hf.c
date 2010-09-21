@@ -47,6 +47,7 @@
 #include "parse_subscription_state.h"
 #include "contact/parse_contact.h"
 #include "parse_disposition.h"
+#include "parse_geoloc.h"
 #include "../ut.h"
 
 
@@ -119,7 +120,9 @@ void clean_hdr_field(struct hdr_field* hf)
 
 		case HDR_SUPPORTED_T:
 			break;
-
+		case HDR_GEOLOCATION_T:
+ 			free_geoloc((struct geoloc_body **)h_parsed);
+ 			break;
 		case HDR_REQUIRE_T:
 			break;
 			

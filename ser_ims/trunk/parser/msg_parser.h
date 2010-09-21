@@ -233,6 +233,7 @@ struct sip_msg {
 	struct hdr_field* min_se;
 	struct hdr_field* sipifmatch;
 	struct hdr_field* subscription_state;
+	struct hdr_field* geolocation;
 
 	char* eoh;        /* pointer to the end of header (if found) or null */
 	char* unparsed;   /* here we stopped parsing*/

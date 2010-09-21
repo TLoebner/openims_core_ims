@@ -18,7 +18,7 @@ ifeq ($(CFG_NAME),sip-router)
 	LIBS += -L/usr/local/lib -L../lib/cds -L../lib/lost -llost_client -lcds
 else
 	DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
-	LIBS += -L/usr/local/lib -L../../lib/cds -L../../lib/lost -l_lost_client
+	LIBS += -L/usr/local/lib -L../../lib/cds -L../../lib/lost -llost_client
 endif	
 LIBS += -lxml2 
 
