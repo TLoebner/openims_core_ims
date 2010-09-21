@@ -344,6 +344,7 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 	int expires,pending_expires=60;
 	struct sip_uri puri;
 	r_security *s=0;
+	int sos_reg = 0;
 	
 	b = cscf_parse_contacts(req);
 	
@@ -368,6 +369,10 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 		if (puri.port_no==0) puri.port_no=5060;
 		LOG(L_DBG,"DBG:"M_NAME":save_contact_security: %d %.*s : %d\n",
 			puri.proto, puri.host.len,puri.host.s,puri.port_no);
+
+		sos_reg = cscf_get_sos_uri_param(c->uri);
+		if(sos_reg<0)
+			return 0;
 
 		if (type == SEC_TLS) 
 			puri.proto = PROTO_TLS;
@@ -498,7 +503,7 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 	}
 	
 	rc = update_r_contact_sec(puri.host,puri.port_no,puri.proto,
-			&(c->uri),&reg_state,&expires,s);						
+			&(c->uri),&reg_state,&expires,s, &sos_reg);						
 
 	if (shmed && b) {
                 req->contact->parsed = 0;
@@ -572,7 +577,7 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 
 	LOG(L_INFO,"DBG:"M_NAME":P_verify_security: Looking for <%d://%.*s:%d> \n",	vb->proto,vb->host.len,vb->host.s,vb->port);
 
-	c = get_r_contact(vb->host,vb->port,vb->proto);
+	c = get_r_contact(vb->host,vb->port,vb->proto, ANY_REG);
 
 	r_act_time();
 	if (!c){
@@ -819,7 +824,7 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 	LOG(L_DBG,"DBG:"M_NAME":P_security_200: Looking for <%d://%.*s:%d> \n",
 		vb->proto,vb->host.len,vb->host.s,vb->port);
 
-	c = get_r_contact(vb->host,vb->port,vb->proto);
+	c = get_r_contact(vb->host,vb->port,vb->proto, ANY_REG);
 		
 	r_act_time();
 	if (!c){

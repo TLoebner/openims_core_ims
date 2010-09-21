@@ -277,7 +277,7 @@ void callback_for_pccsession(int event,void *session)
 					//its a registration that is being released
 					LOG(L_WARN,"WARN: received end of session for %.*s:%d\n",pcc_data->host.len,pcc_data->host.s,pcc_data->port);
 
-					contact=get_r_contact(pcc_data->host,pcc_data->port,pcc_data->transport);
+					contact=get_r_contact(pcc_data->host,pcc_data->port,pcc_data->transport, ANY_REG);
 					if (!contact)
 					{
 						LOG(L_ERR,"ERR:callback_for_pccsession:no contact associated\n");
@@ -326,7 +326,7 @@ void callback_for_pccsession(int event,void *session)
 					//its a registration that is being released
 					LOG(L_WARN,"WARN: received end of session for %.*s:%d\n",pcc_data->host.len,pcc_data->host.s,pcc_data->port);
 
-					contact=get_r_contact(pcc_data->host,pcc_data->port,pcc_data->transport);
+					contact=get_r_contact(pcc_data->host,pcc_data->port,pcc_data->transport, ANY_REG);
 					if (!contact) {
 						LOG(L_ERR,"ERR:callback_for_pccsession:no contact associated\n");
 					} else {
@@ -360,7 +360,7 @@ void pcc_auth_clean_reg_safe(r_contact* contact){
 
 r_contact* pcc_auth_clean_reg(str host, unsigned int port, unsigned int proto){
 	
-	r_contact * contact = get_r_contact(host, port, proto);
+	r_contact * contact = get_r_contact(host, port, proto, ANY_REG);
 
 	if (!contact){
 		LOG(LOG_CRIT,"BUG:"M_NAME":pcc_auth_clean_reg: no contact "\
@@ -400,7 +400,7 @@ AAASession * pcc_auth_clean_register(r_contact * cnt, contact_t* aor, int from_r
 		}
 	
 		r_contact * contact = get_r_contact(parsed_cnt.host, parsed_cnt.port_no, 
-				parsed_cnt.proto);
+				parsed_cnt.proto, ANY_REG);
 
 		if (!contact){
 			LOG(LOG_CRIT,"BUG:"M_NAME":pcc_auth_clean_register: contact not found in the registrar\n");
@@ -434,7 +434,7 @@ int pcc_auth_init_register(contact_t * aor, unsigned int * expireReg, AAASession
 	}
 	
 	contact = get_r_contact(parsed_aor->host, parsed_aor->port_no, 
-			parsed_aor->proto);
+			parsed_aor->proto, ANY_REG);
 	if(!contact){
 		LOG(L_ERR,"ERR:"M_NAME":pcc_auth_init_register: not sending subscription to path status, for unknown contact\n");
 		goto end;
@@ -562,7 +562,7 @@ int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int p
 		*auth_lifetime = dlg->expires-time(0);
 	}
 	
-	if(dlg->em_info.em_dialog == EMERG_DLG){
+	if(dlg->em_info.em_dialog){
 		//the stored urn includes "urn:", 
 		//the PCRF expects the service urn without it
 		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_dlg: emergency dialog towards %.*s\n",

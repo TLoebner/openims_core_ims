@@ -57,6 +57,7 @@
  
 #include "registration.h"
 
+#include "../../sr_module.h"
 #include "../../data_lump.h"
 #include "../../mem/mem.h"
 #include "../../locking.h"
@@ -464,7 +465,7 @@ int P_is_registered(struct sip_msg *msg,char *str1,char *str2)
 	LOG(L_INFO,"DBG:"M_NAME":P_is_registered: Looking for <%d://%.*s:%d>\n",
 		vb->proto,vb->host.len,vb->host.s,vb->port);
 	
-	if (r_is_registered(vb->host,vb->port,vb->proto)) 
+	if (r_is_registered(vb->host,vb->port,vb->proto, NORMAL_REG)) 
 		ret = CSCF_RETURN_TRUE;
 	else 
 		ret = CSCF_RETURN_FALSE;	
@@ -472,6 +473,58 @@ int P_is_registered(struct sip_msg *msg,char *str1,char *str2)
 	return ret;
 }
 
+int fixup_assert_id(void** param, int param_no){
+
+	char* str1;
+	int len;
+	fparam_t * p;
+
+	if(param_no!=1){
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: invalid param number\n");
+		return -1;
+	}
+
+	str1 = (char*) *param;
+	if(!str1 || str1[0] == '\0'){
+	
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: NULL param 1\n");
+		return -1;
+	}
+
+	len = strlen(str1);
+
+	if(len == 5 && strncmp(str1, "emerg", 5) == 0){
+		str1[0] = '1';
+	}else if (len ==9 && strncmp(str1, "non-emerg", 9)==0){
+		str1[0] = '0';
+	}else {
+		LOG(L_ERR, "ERR:"M_NAME":fixup_assert_id: invalid param 1, "
+				"possible values are \"emerg\" or \"non-emerg\"\n");
+		return -1;
+	}	
+
+	p = (fparam_t*)pkg_malloc(sizeof(fparam_t));
+	if (!p) {
+		ERR("No memory left\n");
+		return E_OUT_OF_MEM;
+    	}
+	memset(p, 0, sizeof(fparam_t));
+	p->orig = *param;
+
+	switch(str1[0]){
+	
+		case '0':
+			p->v.i = NORMAL_REG;
+			break;
+		case '1':
+			p->v.i = EMERG_REG;
+			break;
+	}
+
+	*param = (void*)p;
+
+	return 0;
+}
 
 static str p_asserted_identity_s={"P-Asserted-Identity: ",21};
 static str p_asserted_identity_m={"<",1};
@@ -479,7 +532,7 @@ static str p_asserted_identity_e={">\r\n",3};
 /**
  * Asserts the P-Preferred-Identity if registered and inserts the P-Asserted-Identity.
  * @param msg - the SIP message
- * @param str1 - the realm to look into
+ * @param str1 - "emerg"|"non-emerg", if it is about an emergency registration or not
  * @param str2 - not used
  * @returns #CSCF_RETURN_TRUE if asseted, #CSCF_RETURN_FALSE if not, #CSCF_RETURN_ERROR on error 
  */
@@ -490,9 +543,14 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 	struct hdr_field *h=0;
 	name_addr_t preferred,asserted;
 	str x={0,0};
+	r_reg_type reg_type;
+
+	fparam_t * param = (fparam_t*)str1;
 
 	LOG(L_INFO,"INF:"M_NAME":P_assert_identity: Asserting Identity\n");
 //	print_r(L_INFO);
+
+	reg_type = param->v.i;
 	
 	vb = cscf_get_ue_via(msg);
 	
@@ -508,7 +566,7 @@ int P_assert_identity(struct sip_msg *msg,char *str1,char *str2)
 		vb->proto,vb->host.len,vb->host.s,vb->port,
 		preferred.uri.len,preferred.uri.s);
 
-	asserted = r_assert_identity(vb->host,vb->port,vb->proto,preferred);
+	asserted = r_assert_identity(vb->host,vb->port,vb->proto,preferred, reg_type);
 	if (!asserted.uri.len){
 		ret = CSCF_RETURN_FALSE;	
 	}else{
@@ -614,19 +672,19 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 	str content_type,body;
 	r_notification *n=0;
 	int expires;
-	LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Checking NOTIFY\n");
+	LOG(L_DBG,"DBG:"M_NAME":P_process_notification: Checking NOTIFY\n");
 	
 //	print_r(L_INFO);
 
 	/* check if we received what we should */
 	if (msg->first_line.type!=SIP_REQUEST) {
-		LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: The message is not a request\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_process_notification: The message is not a request\n");
 		goto error;
 	}
 	if (msg->first_line.u.request.method.len!=6||
 		memcmp(msg->first_line.u.request.method.s,"NOTIFY",6)!=0)
 	{
-		LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: The method is not a NOTIFY\n");
+		LOG(L_ERR,"ERR:"M_NAME":P_process_notification: The method is not a NOTIFY\n");
 		goto error;		
 	}
 
@@ -639,15 +697,15 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 	{
 		body.s = get_body(msg);
 		if (!body.s){
-			LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: No body extracted\n");									
+			LOG(L_ERR,"ERR:"M_NAME":P_process_notification: No body extracted\n");									
 			goto error;
 		}else{
 			body.len = cscf_get_content_len(msg);
-			LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Found body: %.*s\n",
+			LOG(L_DBG,"DBG:"M_NAME":P_process_notification: Found body: %.*s\n",
 				body.len,body.s);
 			n = r_notification_parse(body);
 			if (!n){
-				LOG(L_DBG,"DBG:"M_NAME":P_NOTIFY: Error parsing XML\n");
+				LOG(L_DBG,"DBG:"M_NAME":P_process_notification: Error parsing XML\n");
 			}else {				
 				#ifdef WITH_IMS_PM
 					ims_pm_notify_reg(n,cscf_get_call_id(msg,0),cscf_get_cseq(msg,0));
@@ -658,7 +716,7 @@ int P_process_notification(struct sip_msg *msg,char *str1,char *str2)
 			}
 		}
 	}else{
-		LOG(L_ERR,"ERR:"M_NAME":P_NOTIFY: The content should be %.*s but it is %.*s\n",
+		LOG(L_ERR,"ERR:"M_NAME":P_process_notification: The content should be %.*s but it is %.*s\n",
 			reginfo.len,reginfo.s,content_type.len,content_type.s);
 		goto error;		
 	}
@@ -768,7 +826,7 @@ int P_follows_service_routes(struct sip_msg *msg,char *str1,char *str2)
 	vb = cscf_get_ue_via(msg);
 	
 	if (vb->port==0) vb->port=5060;
-	c = get_r_contact(vb->host,vb->port,vb->proto);
+	c = get_r_contact(vb->host,vb->port,vb->proto, ANY_REG);
 	if (!c) return CSCF_RETURN_FALSE;
 
 	hdr = cscf_get_next_route(msg,0);
@@ -854,7 +912,7 @@ int P_enforce_service_routes(struct sip_msg *msg,char *str1,char*str2)
 	
 	if (vb->port==0) vb->port=5060;
 	
-	c = get_r_contact(vb->host,vb->port,vb->proto);
+	c = get_r_contact(vb->host,vb->port,vb->proto, ANY_REG);
 	if (!c) return CSCF_RETURN_FALSE;
 	if (!c->service_route_cnt){
 		r_unlock(c->hash);
@@ -984,7 +1042,7 @@ int P_NAT_relay(struct sip_msg * msg, char * str1, char * str2)
 		if(uri.port_no == 0)
 			uri.port_no=5060;
 		
-		c = get_r_contact(uri.host, uri.port_no, uri.proto);
+		c = get_r_contact(uri.host, uri.port_no, uri.proto, ANY_REG);
 		
 		if(c==NULL || c->pinhole == NULL) {
 			LOG(L_DBG, "ERR:"M_NAME":P_NAT_relay: we cannot find the pinhole for contact %.*s. Sorry\n", req_uri.len, req_uri.s);
@@ -1098,7 +1156,7 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 		dst.len += sprintf(dst.s + dst.len, ":%d;transport=tls", req->rcv.src_port);
 	}	
 	else {
-		c = get_r_contact(host,port,proto);
+		c = get_r_contact(host,port,proto, ANY_REG);
 		if (!c || !c->security || c->security->type==SEC_NONE) {
 			LOG(L_DBG, "ERR:"M_NAME":P_security_relay: we cannot find the contact or its IPSec/TLS SAs for <%d://%.*s:%d>.\n", 
 				proto,host.len,host.s,port);

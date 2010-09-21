@@ -240,10 +240,13 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 	int local_time_now;
 	struct hdr_field *h;
 	contact_t *c;
+	r_contact * crt_contact;
 	r_nat_dest *pinhole;
 	int sos_reg;
-	
-	
+	int id_nb;
+	unsigned int reg_hash;
+
+
 	r_act_time();
 	local_time_now = time_now;
 	if (is_star){
@@ -266,12 +269,34 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
 			
-			sos_reg = cscf_get_sos_uri_param(c);
+			sos_reg = cscf_get_sos_uri_param(c->uri);
 			if(sos_reg < 0)
 				return 0;
 
-			if(sos_reg>0)
+			if(sos_reg>0){
 				LOG(L_DBG,"DBG:"M_NAME":with sos uri param\n");
+				if(public_id_cnt <= 0){
+					LOG(L_DBG, "DBG:"M_NAME":update_contacts: emerg registration, no public id provided, doing nothing\n");
+					return 0;
+				}
+				LOG(L_DBG,"DBG:"M_NAME":update_contacts: emerg reg, cleaning old ones for public id %.*s\n",
+						public_id[0].len, public_id[0].s);
+				crt_contact = get_next_em_r_contact(public_id[0], c);
+				//delete all the old emergency entries of the public id, only one for em registration
+				while(crt_contact){
+			
+					reg_hash = crt_contact->hash;
+					
+					LOG(L_DBG,"DBG:"M_NAME":update_contacts: removing contact %.*s:%i\n",
+					   crt_contact->host.len, crt_contact->host.s, crt_contact->port);
+					del_r_contact(crt_contact);
+					
+					r_unlock(reg_hash);
+					
+					crt_contact = get_next_em_r_contact(public_id[0], c);
+				}
+
+			}
 			
 			if (expires>local_time_now) {
 				if (requires_nat &&				/* only if NAT was enabled */ 
@@ -304,9 +329,12 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				if (public_id_cnt){
 					update_r_public(rc,public_id[0],&is_default);
 					is_default=0;
+					if(sos_reg && public_id_cnt>1)
+						goto unlock;
 					for(i=1;i<public_id_cnt;i++)
 						update_r_public(rc,public_id[i],&is_default);
 				}
+unlock:
 				r_unlock(rc->hash);
 			}
 	}
@@ -400,7 +428,7 @@ int r_is_integrity_protected(str host,int port,int r_port,int transport, unsigne
 //		transport,host.len,host.s,port);
 
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, ANY_REG);
 
 	if (!c) return 0;
 	
@@ -450,7 +478,7 @@ int r_is_integrity_protected(str host,int port,int r_port,int transport, unsigne
  * @param transport - transport of the UE
  * @returns 1 if registered, 0 if not or error
  */
-int r_is_registered(str host,int port,int transport)
+int r_is_registered(str host,int port,int transport, r_reg_type sos_mask)
 {
 	int ret=0;
 	r_contact *c;
@@ -460,7 +488,7 @@ int r_is_registered(str host,int port,int transport)
 //		transport,host.len,host.s,port);
 
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, sos_mask);
 
 	if (!c){		
 		return 0;
@@ -483,7 +511,7 @@ int r_is_registered(str host,int port,int transport)
  * @param preferred - the P-Preferred-Identity header value
  * @returns 1 if registered, {0,0} if not or error
  */
-name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t preferred)
+name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t preferred, r_reg_type reg_type)
 {
 	r_contact *c;
 	r_public *p;
@@ -495,7 +523,7 @@ name_addr_t r_assert_identity(str host,int port,int transport,name_addr_t prefer
 	LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Asserting preferred id <%.*s>\n",
 		preferred.uri.len,preferred.uri.s);
 //	print_r(L_INFO);
-	c = get_r_contact(host,port,transport);
+	c = get_r_contact(host,port,transport, reg_type);
 
 	if (!c){
 		LOG(L_DBG,"DBG:"M_NAME":r_assert_identity: Contact not found\n");		

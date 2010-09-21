@@ -80,7 +80,7 @@ static str method_ACK_s={"ACK",3};
 static str method_BYE_s={"BYE",3};
 
 
-void alter_dialog_route_set(dlg_t *,enum p_dialog_direction,enum release_call_situation situation);
+int alter_dialog_route_set(dlg_t *,enum p_dialog_direction,enum release_call_situation situation);
 int send_request(str ,str ,dlg_t *,transaction_cb , enum p_dialog_direction);
 void confirmed_response(struct cell *,int ,struct tmcb_params *);
 
@@ -164,7 +164,13 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 		 * the route_set in the dlg , because the route set
 		 * in the dialog is for the UAC everything which was in the 
 		 * Record-Routes (including local address)*/
-		alter_dialog_route_set(d->dialog_c,d->direction,RELEASE_CALL_CONFIRMED);		
+		if(alter_dialog_route_set(d->dialog_c,d->direction,RELEASE_CALL_CONFIRMED)<0){
+			LOG(L_ERR,"ERR:"M_NAME":release_call_confirmed(): had to delete silently dialog %.*s in direction %i\n",
+					d->call_id.len,d->call_id.s,d->direction);
+			del_p_dialog(d);
+			goto error;
+	
+		}		
 		
 		/*first generate the bye for called user*/
 		/*then generate the bye for the calling user*/
@@ -327,7 +333,11 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 		goto error;
 	}
 	
-	alter_dialog_route_set(d->dialog_c,d->direction,situation);
+	if(alter_dialog_route_set(d->dialog_c,d->direction,situation)<0){
+		LOG(L_ERR,"ERR:"M_NAME":release_call_previous(): had to delete silently dialog %.*s in direction %i\n",d->call_id.len,d->call_id.s,d->direction);
+		del_p_dialog(d);
+		goto error;
+	}
 	
 	d->state=DLG_STATE_TERMINATED_ONE_SIDE;
 	/*this is just a trick to use the same callback function*/	
@@ -653,7 +663,7 @@ static rr_t *revert_route(rr_t *r)
  * @param d - the dialog to modify the Record-Routes
  * @param dir - the direction
  */
-void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_call_situation situation)
+int alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_call_situation situation)
 {
 	rr_t *r;
 	rr_t *r_new;
@@ -670,12 +680,12 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 			break;
 		case DLG_MOBILE_TERMINATING:
 			p = pcscf_record_route_mt_uri;
+			d->route_set=revert_route(d->route_set);
 	
 			break;
 		default:
-			return;
+			return -1;
 	}
-	d->route_set=revert_route(d->route_set);
 		
 	//LOG(L_CRIT,"Looking for <%.*s> in\n",p.len,p.s);
 	//for(r=d->route_set;r!=NULL;r=r->next) 
@@ -690,10 +700,11 @@ void alter_dialog_route_set(dlg_t *d,enum p_dialog_direction dir,enum release_ca
 				r->next=NULL;
 				shm_free_rr(&d->route_set);
 				d->route_set = r_new;
-  	            return;	
+			        return 0;	
 			}
 					
 	}	
+	return 0;
 }		
 
 

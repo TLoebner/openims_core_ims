@@ -134,7 +134,7 @@ char* pcscf_ipsec_P_Drop	="/opt/OpenIMSCore/ser_ims/modules/pcscf/ipsec_P_Drop.s
 
 int registrar_hash_size=1024;				/**< the size of the hash table for registrar		*/
 
-char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/pcscf/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
+char *pcscf_reginfo_dtd="/opt/OpenIMSCore/ser_ims/modules/pcscf/reginfo.dtd";/**< DTD to check the reginfo/xml in the NOTIFY to reg */
 int pcscf_subscribe_retries = 1;			/**< times to retry subscribe to reg on failure 	*/
 
 int pcscf_assert_fallback = 0;				/**< whether to fallback and use the From header on 
@@ -187,6 +187,8 @@ str ecscf_uri_str;
 int emerg_support = 1;
 int anonym_em_call_support = 1;
 char* emerg_numbers_file="/opt/OpenIMSCore/ser_ims/modules/pcscf/emerg_info.xml";
+str pcscf_path_orig_em_uri_str={0,0};
+char * pcscf_path_orig_em_uri = "Path: sip:orig.em@pcscf.open-ims.test\r\n";
 
 str pcscf_record_route_mo;					/**< Record-route for originating case 				*/
 str pcscf_record_route_mo_uri;				/**< URI for Record-route originating				*/ 
@@ -347,7 +349,7 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_save_location",				P_save_location, 			0, 0, ONREPLY_ROUTE},	
 	{"P_subscribe",					P_subscribe, 				0, 0, ONREPLY_ROUTE},	
 	{"P_is_registered",				P_is_registered, 			0, 0, REQUEST_ROUTE},
-	{"P_assert_identity",			P_assert_identity, 			0, 0, REQUEST_ROUTE},
+	{"P_assert_identity",			P_assert_identity, 			1, fixup_assert_id, REQUEST_ROUTE},
 	{"P_is_deregistration",			P_is_deregistration, 		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 
 	{"P_process_notification",		P_process_notification, 	0, 0, REQUEST_ROUTE},
@@ -356,13 +358,13 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_remove_route",				P_remove_route, 			1, 0, REQUEST_ROUTE},
 	
 	{"P_NAT_relay", 				P_NAT_relay, 				0, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
-	{"P_SDP_manipulate", 			P_SDP_manipulate, 			1, 0, REQUEST_ROUTE | ONREPLY_ROUTE },
+	{"P_SDP_manipulate", 			P_SDP_manipulate, 			0, 0, REQUEST_ROUTE | ONREPLY_ROUTE },
 	
 	{"P_follows_service_routes",	P_follows_service_routes, 	0, 0, REQUEST_ROUTE},
 	{"P_enforce_service_routes",	P_enforce_service_routes, 	0, 0, REQUEST_ROUTE},
 
 	{"P_is_in_dialog",				P_is_in_dialog, 			1, 0, REQUEST_ROUTE},
-	{"P_save_dialog",				P_save_dialog, 				1, 0, REQUEST_ROUTE},
+	{"P_save_dialog",				P_save_dialog, 				2, fixup_save_dialog, REQUEST_ROUTE},
 	{"P_update_dialog",				P_update_dialog, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE},
 	{"P_drop_dialog",				P_drop_dialog, 				1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{"P_follows_dialog_routes",		P_follows_dialog_routes, 	1, 0, REQUEST_ROUTE},
@@ -398,7 +400,9 @@ static cmd_export_t pcscf_cmds[]={
 	{"P_emergency_serv_enabled",		P_emergency_serv_enabled,	0, 0, REQUEST_ROUTE},
 	{"P_select_ecscf",			P_select_ecscf,			0, 0, REQUEST_ROUTE},
 	{"P_enforce_sos_routes",		P_enforce_sos_routes, 		0, 0, REQUEST_ROUTE},
-
+	{"P_is_em_registered",			P_is_em_registered, 		0, 0, REQUEST_ROUTE},
+	{"P_add_em_path", 			P_add_em_path,			0, 0, REQUEST_ROUTE},
+	{"P_check_em_path", 			P_check_em_path,		0, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 
 	/* For Gq or Rx*/
 	{"P_release_call_onreply",		P_release_call_onreply,		1, 0, ONREPLY_ROUTE}, 
@@ -556,7 +560,7 @@ static param_export_t pcscf_params[]={
 	{"emerg_support",					INT_PARAM, 		&emerg_support},
 	{"anonym_em_call_support",			INT_PARAM, 		&anonym_em_call_support},
 	{"emerg_numbers_file",				STR_PARAM,		&emerg_numbers_file},
-
+	{"pcscf_path_orig_em_uri",				STR_PARAM, &pcscf_path_orig_em_uri},
 	{0,0,0} 
 };
 
@@ -708,6 +712,9 @@ int fix_parameters()
 		ecscf_uri_str.s = ecscf_uri;
 		ecscf_uri_str.len = strlen(ecscf_uri);
 		LOG(L_INFO, "INFO"M_NAME":mod_init: E-CSCF uri is %.*s\n", ecscf_uri_str.len, ecscf_uri_str.s);
+		pcscf_path_orig_em_uri_str.s = pcscf_path_orig_em_uri;
+		pcscf_path_orig_em_uri_str.len = strlen(pcscf_path_orig_em_uri);
+
 	}
 
 
