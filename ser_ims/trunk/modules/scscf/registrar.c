@@ -105,6 +105,17 @@ extern int append_branches;				/**< if to append branches						*/
         static str zero={0,0};
 #endif
 
+inline int append_branch_help( struct sip_msg * msg, str * c, str* dst, qvalue_t qvalue, struct socket_info* socket){
+
+#ifdef SER_MOD_INTERFACE
+		return append_branch(msg, c, dst, NULL, qvalue, 0, socket);
+#else
+	if(dst)
+		return append_branch(msg, c->s, c->len, dst->s, dst->len, qvalue, socket);
+	else
+		return append_branch(msg, c->s, c->len, 0, 0, qvalue, socket);
+#endif
+}
 
 /**
  * The Registrar timer looks for expires contacts and removes them
@@ -731,7 +742,6 @@ static void delete_emerg_contacts(struct sip_msg* msg, r_public * p, str uri){
 			continue;
 
 		c->expires = time_now;
-		r_add_contact(msg,p,c);
 		del_r_contact(p,c);
 	}
 
@@ -1422,7 +1432,7 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 						) {
 					LOG(L_DBG,"DEBUG:"M_NAME":S_lookup: MODE_ONFAILURE, appending branch\n");
 					/* need to append_branch for this first contact */
-					if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {
+					if (append_branch_help(msg, &c->uri, &dst, c->qvalue, 0) == -1) {
 						LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
 							c->uri.len,c->uri.s);
 					}
@@ -1445,7 +1455,7 @@ int S_lookup(struct sip_msg *msg,char *str1,char *str2)
 					c = c->next;
 					while(c){
 						if (r_valid_contact(c)) 														
-							if (append_branch(msg, c->uri.s, c->uri.len, dst.s,dst.len, c->qvalue, 0) == -1) {
+							if (append_branch_help(msg, &c->uri, &dst, c->qvalue, 0) == -1) {
 								LOG(L_ERR,"ERR:"M_NAME":S_lookup: Error appending branch <%.*s>\n",
 									c->uri.len,c->uri.s);
 							} 
