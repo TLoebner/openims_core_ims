@@ -132,7 +132,7 @@ int I_UAR(struct sip_msg* msg, char* str1, char* str2)
 
 	for(c=b->contacts;c;c=c->next){
 	
-		sos_reg = cscf_get_sos_uri_param(c);
+		sos_reg = cscf_get_sos_uri_param(c->uri);
 		if(sos_reg == -1){
 			/*error case*/
 			cscf_reply_transactional(msg,400, MSG_400_MALFORMED_CONTACT);

@@ -1,4 +1,4 @@
-DEFS     += 
+DEFS     += -fPIC
 INCLUDES += -I/usr/include/libxml2 -I/usr/local/include/libxml2 -I/usr/include/curl -I/usr/local/include -I../../ -I../cds/ -I../../mem/ 
 LIBS     += -L/usr/local/lib -L../cds -lxml2 -lcds -lcurl
 
