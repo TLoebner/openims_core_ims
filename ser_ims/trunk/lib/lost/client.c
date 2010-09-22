@@ -69,12 +69,12 @@ int get_time(char * expires_str, expire_type * exp_type, time_t * exp_timestamp)
 //define pkg_malloc(s) shm_malloc((s))
 //so...do not define SHM_MEM and USE_SHM_MEM simultaneous, otherwise pkg is shm
 
-void* my_pkg_malloc(unsigned int size){
+void* my_pkg_malloc(size_t size){
 	
 	return pkg_malloc(size);
 }
 
-void* my_pkg_realloc(void * p, unsigned int size){
+void* my_pkg_realloc(void * p, size_t size){
 
 	return pkg_realloc(p, size);
 }
