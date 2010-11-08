@@ -132,7 +132,7 @@ c2) If no LoST server: using a default PSAP URI, no new user in the HSS database
 	------------------------------------------------------------------------
 	* set "using_lost_srv" parameter  in the lrf.cfg to "0", default value is "1" 
 		modparam("lrf","using_lost_srv","0")
-	* set the default psap_uri in the lrf.cfg as 
+	* set the default psap_uri in the ecscf.cfg as 
 		modparam("lrf","default_psap","sip:bob@open-ims.test")
 	* start the components : P/I/S/E-CSCF, HSS, LRF in parallel
 	* Bob registeres as normal IMS registration
