@@ -85,8 +85,8 @@ int AAAAddRequestHandler(AAARequestHandler_f *f,void *param)
 {
 	handler *h = shm_malloc(sizeof(handler));
 	if (!h) {
-		LOG(L_ERR,"ERR:AAAAddRequestHandler: error allocating %d bytes in shm\n",
-			sizeof(handler));
+		LOG(L_ERR,"ERR:AAAAddRequestHandler: error allocating %ld bytes in shm\n",
+			(long int)sizeof(handler));
 		return 0;
 	}
 	h->type = REQUEST_HANDLER;
@@ -112,8 +112,8 @@ int AAAAddResponseHandler(AAAResponseHandler_f *f,void *param)
 {
 	handler *h = shm_malloc(sizeof(handler));
 	if (!h) {
-		LOG(L_ERR,"ERR:AAAAddResponseHandler: error allocating %d bytes in shm\n",
-			sizeof(handler));
+		LOG(L_ERR,"ERR:AAAAddResponseHandler: error allocating %ld bytes in shm\n",
+			(long int)sizeof(handler));
 		return 0;
 	}
 	h->type = RESPONSE_HANDLER;

@@ -703,8 +703,8 @@ void save_peer_applications(peer *p,AAAMessage *msg)
 	p->applications_cnt = 0;
 	p->applications = shm_malloc(sizeof(app_config)*total_cnt);
 	if (!p->applications){	
-		LOG(L_ERR,"ERROR:save_peer_applications(): Error allocating %d bytes! No applications saved...\n",
-			sizeof(app_config)*total_cnt);
+		LOG(L_ERR,"ERROR:save_peer_applications(): Error allocating %ld bytes! No applications saved...\n",
+			(long int)(sizeof(app_config)*total_cnt));
 		return;
 	}
 	for(avp=msg->avpList.head;avp;avp = avp->next)

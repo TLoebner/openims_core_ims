@@ -264,7 +264,7 @@ void cb_remove(cdp_cb_t *cb)
 		task_t *t=0;
 		t = shm_malloc(sizeof(task_t));
 		if (!t){
-			LOG(L_ERR,"Error allocating %d bytes of shm!\n",sizeof(task_t));
+			LOG(L_ERR,"Error allocating %ld bytes of shm!\n",(long int)sizeof(task_t));
 			return 0;
 		}
 		t->p = p;

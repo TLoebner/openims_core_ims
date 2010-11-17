@@ -342,7 +342,7 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 			}
 			x->acceptors_cnt++;		
 		}
-		else if (xmlStrlen(child->name)==4 && ((char*)strncasecmp((char*)child->name,"Auth",4)==0||
+		else if (xmlStrlen(child->name)==4 && (strncasecmp((char*)child->name,"Auth",4)==0||
 			strncasecmp((char*)child->name,"Acct",4)==0)){
 			//Application
 			xc = xmlGetProp(child,(xmlChar*)"id");	
@@ -361,7 +361,7 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 				x->applications[x->applications_cnt].type = DP_ACCOUNTING;										
 			x->applications_cnt++;		
 		}	
-		else if (xmlStrlen(child->name)==12 && ((char*)strncasecmp((char*)child->name,"DefaultRoute",12)==0)){
+		else if (xmlStrlen(child->name)==12 && (strncasecmp((char*)child->name,"DefaultRoute",12)==0)){
 			if (!x->r_table) {
 				x->r_table = shm_malloc(sizeof(routing_table));
 				memset(x->r_table,0,sizeof(routing_table));
@@ -398,7 +398,7 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 				}
 			}					
 		}
-		else if (xmlStrlen(child->name)==5 && ((char*)strncasecmp((char*)child->name,"Realm",5)==0)){
+		else if (xmlStrlen(child->name)==5 && (strncasecmp((char*)child->name,"Realm",5)==0)){
 			if (!x->r_table) {
 				x->r_table = shm_malloc(sizeof(routing_table));
 				memset(x->r_table,0,sizeof(routing_table));
@@ -416,7 +416,7 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 				}			
 				for(nephew = child->children; nephew; nephew = nephew->next)
 					if (nephew->type == XML_ELEMENT_NODE){
-						if (xmlStrlen(nephew->name)==5 && ((char*)strncasecmp((char*)nephew->name,"Route",5)==0))
+						if (xmlStrlen(nephew->name)==5 && (strncasecmp((char*)nephew->name,"Route",5)==0))
 						{
 							re = new_routing_entry();
 							if (re) {
