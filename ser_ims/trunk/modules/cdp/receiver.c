@@ -384,8 +384,8 @@ again:
 		goto error;
 	}
 	if (ret!=sizeof(peer *)){
-		LOG(L_WARN, "WARNING: receive_fd: different number of bytes received than expected (%d from %d)"
-				    "trying to fix...\n", ret, sizeof(peer*));
+		LOG(L_WARN, "WARNING: receive_fd: different number of bytes received than expected (%d from %ld)"
+				    "trying to fix...\n", ret, (long int)sizeof(peer*));
 		goto error;
 	}
 	
