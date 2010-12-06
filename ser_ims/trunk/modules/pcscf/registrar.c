@@ -190,9 +190,10 @@ static inline int r_calc_expires(contact_t *c,int expires_hdr, int local_time_no
 {
 	unsigned int r;
 	if (expires_hdr>=0) r = expires_hdr;
-	if (c) 
+
+	if (c && c->expires && c->expires->body.len){ 
 		str2int(&(c->expires->body), (unsigned int*)&r);
-		
+	}	
 	return local_time_now+r;
 }
 
@@ -265,6 +266,8 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 				LOG(L_DBG,"DBG:"M_NAME":update_contact: Error parsing Contact URI <%.*s>\n",c->uri.len,c->uri.s);
 				continue;			
 			}
+
+			
 			if (puri.port_no==0) puri.port_no=5060;
 			LOG(L_DBG,"DBG:"M_NAME":update_contact: %d %.*s : %d\n",
 				puri.proto, puri.host.len,puri.host.s,puri.port_no);
@@ -296,6 +299,9 @@ static inline int update_contacts(struct sip_msg *req,struct sip_msg *rpl,unsign
 					crt_contact = get_next_em_r_contact(public_id[0], c);
 				}
 
+			}else {
+				LOG(L_DBG,"DBG:"M_NAME":without sos uri param\n");
+			
 			}
 			
 			if (expires>local_time_now) {
@@ -362,13 +368,12 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	int expires;
 	str *service_route=0;
 	int service_route_cnt;
-		
+	
 	req = cscf_get_request_from_reply(rpl);
 	if (!req){
 		LOG(L_ERR,"ERR:"M_NAME":P_save_location: No transactional request found.\n");
 		goto error;
 	}
-	
 	expires_hdr = cscf_get_expires_hdr(rpl,0);
 	/** Removed because this would parse the hdr, but then it will fail to free the hdr->parsed */
 //	if (expires_hdr<0) 
@@ -401,6 +406,7 @@ int P_save_location(struct sip_msg *rpl,char *str1, char *str2)
 	
 	if (service_route)	pkg_free(service_route);
 	if (public_id) pkg_free(public_id);
+
 	return CSCF_RETURN_TRUE;
 error:
 	if (service_route)	pkg_free(service_route);
