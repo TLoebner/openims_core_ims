@@ -589,10 +589,11 @@ error:
 
 //AF Service is IMS Services although it should be the IMS Communication Services
 static str IMS_Serv_AVP_val = {"IMS Services", 12};
+static str IMS_Em_Serv_AVP_val = {"Emergency IMS Call", 18};
 static str IMS_Reg_AVP_val = {"IMS Registration", 16};
 
 /* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
-int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struct sip_msg * res, int registr){
+int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struct sip_msg * res, int registr, int sos){
 
 	char x[4];
 	AAA_AVP * avp;
@@ -618,8 +619,11 @@ int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struc
 	}
 	
 	/* Add AF-Application-Identifier AVP */
-	if(!registr)
-		af_id = IMS_Serv_AVP_val;
+	if(!registr){
+		if(sos)
+			af_id = IMS_Em_Serv_AVP_val;
+		else af_id = IMS_Serv_AVP_val;
+	}
 	else	af_id = IMS_Reg_AVP_val;
 
 	if(!PCC_add_avp(msg, af_id.s,af_id.len,
@@ -735,7 +739,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	}
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
-	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res, is_register))
+	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res, is_register, service_urn.len>0))
 		goto error;
 
 	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: auth_lifetime %u\n", auth_lifetime);
@@ -993,7 +997,7 @@ AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth, int is_register
 	
 	if (!dia_str) goto error;
 	
-	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register))	goto error;
+	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register, 0))	goto error;
 
 	//Termination-Cause
 	set_4bytes(x,1);
