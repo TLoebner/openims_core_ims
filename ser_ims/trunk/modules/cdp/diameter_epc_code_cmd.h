@@ -45,7 +45,7 @@
  
 /**
  * \file 
- * CDiameterPeer Diameter EPC IANA defined numbers
+ * CDiameterPeer Diameter IMS IANA defined numbers
  * 
  * This is a compilation of different 3GPP TSs for EPC:
  * 
@@ -55,22 +55,58 @@
  */
 
 
-#ifndef DIAMETER_EPC_H_
-#define DIAMETER_EPC_H_
+#ifndef DIAMETER_EPC_CODE_CMD_H_
+#define DIAMETER_EPC_CODE_CMD_H_
+/*	Command Codes used in the EPC 	*/
+
+/*		The Rx Interface 			*/
+#define Diameter_AAR		265		/**< Bearer-Authorization		Request	*/
+#define Diameter_AAA		265		/**< Bearer-Authorization		Answer	*/
+#define Diameter_RAR		258		/**< Re-Auth					Request */
+#define Diameter_RAA		258		/**< Re-Auth					Answer	*/
+#define Diameter_STR		275		/**< Session Termination 		Request */
+#define Diameter_STA		275		/**< Session Termination 		Answer	*/
+#define Diameter_ASR		274		/**< Abort-Session-Request		Request */
+#define Diameter_ASA		274		/**< Abort-Session-Request		Answer	*/
+/* The Gx and Gxx Interface */
+#define Diameter_CCR		272
+#define Diameter_CCA		272
+
+/* The Sh/Sp interface */
+#define Diameter_UDR 		306
+#define Diameter_UDA 		306
+#define Diameter_PUR		307
+#define Diameter_PUA		307
+#define Diameter_SNR		308
+#define Diameter_SNA		308
+#define Diameter_PNR		309
+#define Diameter_PNA		309
 
 
-#include "diameter_epc_code_app.h"
-#include "diameter_epc_code_avp.h"
-#include "diameter_epc_code_cmd.h"
-#include "diameter_epc_code_result.h"
+/* The S6a/S6d Interfaces */
+#define Diameter_ULR		316
+#define Diameter_ULA		316
+#define Diameter_CLR		317
+#define Diameter_CLA		317
+#define Diameter_AIR		318
+#define Diameter_AIA		318
+#define Diameter_IDR		319
+#define Diameter_IDA		319
+#define Diameter_DSR		320
+#define Diameter_DSA		320
+#define Diameter_PurgeUER	321
+#define Diameter_PurgeUEA	321
+#define Diameter_RSR		322
+#define Diameter_RSA		322
+#define Diameter_NOR		323
+#define Diameter_NOA		323
 
-// Diameter Application Identifier used in the EPC
+/* The S13 Interface */
+#define Diameter_ECR		324
+#define Diameter_ECA		324
 
-#define EPC_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
-#define EPC_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
-#define EPC_vendor_id_3GPP_len	5			/**< len of char value for 3GPP's Vendor Id */
+/*not standard interfaces*/
+#define Diameter_MC_AF_ROUTE_UP		400
+#define Diameter_MC_AF_ROUTE_DEL	401
 
-
-
-
-#endif /*DIAMETER_EPC_H_*/
+#endif /*DIAMETER_EPC_CODE_CMD_H_*/

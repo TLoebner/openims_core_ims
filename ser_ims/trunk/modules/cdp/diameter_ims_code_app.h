@@ -1,7 +1,7 @@
 /**
  * $Id$
  *  
- * Copyright (C) 2009 FhG Fokus
+ * Copyright (C) 2004-2006 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -45,32 +45,25 @@
  
 /**
  * \file 
- * CDiameterPeer Diameter EPC IANA defined numbers
+ * CDiameterPeer Diameter IMS IANA defined Application Identifiers
  * 
- * This is a compilation of different 3GPP TSs for EPC:
- * 
- *  \author Alberto Diez   alberto dot diez -at- fokus dot fraunhofer dot de
  *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
  *  
  */
+ 
+#ifndef __DIAMETER_IMS_CODE_APP_H
+#define __DIAMETER_IMS_CODE_APP_H
 
+/* Application Identifiers	*/
+#define IMS_Gq	16777222	/**< Gq interface between P-CSCF and PDF 		*/
+#define IMS_Cx	16777216	/**< Cx interface between I/S-CSCF and HSS 		*/
+#define IMS_Dx	16777216	/**< Cx interface between I/S-CSCF and SLF 		*/
+#define IMS_Sh	16777217	/**< Sh interface between AS and HSS	 		*/
+#define IMS_e2	16777231	/**< e2 interface between CLF and AF	 		*/
+#define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
+#define IMS_Rx  16777236	/**< Rx interface between P-CSCF and PCRF 		*/
+#define IMS_Gx	16777224	/**< Gx interface between PCRF and PCEF 		*/
+#define IMS_Rf  16777223    /**< Rf interface between P/I/S-CSCF and CDF, 
+								according to TS32.299 R7    */ 
 
-#ifndef DIAMETER_EPC_H_
-#define DIAMETER_EPC_H_
-
-
-#include "diameter_epc_code_app.h"
-#include "diameter_epc_code_avp.h"
-#include "diameter_epc_code_cmd.h"
-#include "diameter_epc_code_result.h"
-
-// Diameter Application Identifier used in the EPC
-
-#define EPC_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
-#define EPC_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
-#define EPC_vendor_id_3GPP_len	5			/**< len of char value for 3GPP's Vendor Id */
-
-
-
-
-#endif /*DIAMETER_EPC_H_*/
+#endif /* __DIAMETER_IMS_CODE_APP_H */
