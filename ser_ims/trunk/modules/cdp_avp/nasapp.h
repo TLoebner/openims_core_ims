@@ -180,6 +180,18 @@
  */
 
 
+cdp_avp			(Accounting_Input_Octets,		0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp			(Accounting_Input_Packets,		0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp			(Accounting_Output_Octets,		0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp			(Accounting_Output_Packets,		0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp_ptr		(Filter_Id,						0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
+
+
+
 cdp_avp_ptr		(Called_Station_Id,				0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
 
 

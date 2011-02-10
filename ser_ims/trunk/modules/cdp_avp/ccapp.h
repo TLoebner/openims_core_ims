@@ -57,7 +57,7 @@
 /**
  * \file
  * 
- * CDiameter AVP Operations modules - CC APP 4006 AVPs
+ * CDiameter AVP Operations modules - CC APP RFC4006 AVPs
  * 
  * 
  *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
@@ -180,32 +180,120 @@
  */
 
 
+cdp_avp_ptr		(CC_Correlation_Id,				0,	0,						OctetString,		str)
+
+cdp_avp			(CC_Input_Octets,				0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp_add_ptr	(CC_Money,						0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(CC_Money,						0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp			(CC_Output_Octets,				0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
 cdp_avp			(CC_Request_Number,				0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
 
 cdp_avp			(CC_Request_Type,				0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(CC_Service_Specific_Units,		0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp			(CC_Session_Failover,			0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(CC_Sub_Session_Id,				0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp			(CC_Time,						0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
+
+cdp_avp			(CC_Total_Octets,				0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
+
+cdp_avp			(CC_Unit_Type,					0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(Check_Balance_Result,			0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp_add_ptr	(Cost_Information,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Cost_Information,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_ptr		(Cost_Unit,						0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
+
+cdp_avp			(Credit_Control,				0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(Credit_Control_Failure_Handling,0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(Currency_Code,					0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
+
+cdp_avp			(Direct_Debiting_Failure_Handling,0,AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(Exponent,						0,	AAA_AVP_FLAG_MANDATORY,	Integer32,			int32_t)
 
 cdp_avp			(Final_Unit_Action,				0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
 
 cdp_avp_add_ptr	(Final_Unit_Indication,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
 cdp_avp_get		(Final_Unit_Indication,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
 
+cdp_avp_add_ptr	(Granted_Service_Unit,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Granted_Service_Unit,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp			(G_S_U_Pool_Identifier,			0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
+
+cdp_avp_add_ptr	(G_S_U_Pool_Reference,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(G_S_U_Pool_Reference,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(Multiple_Services_Credit_Control,0,AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Multiple_Services_Credit_Control,0,AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp			(Multiple_Services_Indicator,	0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
 cdp_avp			(Rating_Group,					0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
+
+cdp_avp			(Redirect_Address_Type,			0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp_add_ptr	(Redirect_Server,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Redirect_Server,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_ptr		(Redirect_Server_Address,		0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
+
+cdp_avp			(Requested_Action,				0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp_add_ptr	(Requested_Service_Unit,		0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Requested_Service_Unit,		0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_ptr		(Restriction_Filter_Rule,		0,	AAA_AVP_FLAG_MANDATORY,	IPFilterRule,		str)
+
+cdp_avp_ptr		(Service_Context_Id,			0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
 
 cdp_avp			(Service_Identifier,			0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
 
-cdp_avp			(Subscription_Id_Type,			0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+cdp_avp_add_ptr	(Service_Parameter_Info,		0,	0,						Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Service_Parameter_Info,		0,	0,						Grouped,			AAA_AVP_LIST)
 
-cdp_avp_ptr		(Subscription_Id_Data,			0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
+cdp_avp			(Service_Parameter_Type,		0,	0,						Unsigned32,			uint32_t)
+
+cdp_avp_ptr		(Service_Parameter_Value,		0,	0,						OctetString,		str)
 
 cdp_avp_add_ptr	(Subscription_Id,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
 cdp_avp_get		(Subscription_Id,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
 
-cdp_avp			(User_Equipment_Info_Type,		0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+cdp_avp_ptr		(Subscription_Id_Data,			0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
 
-cdp_avp_ptr		(User_Equipment_Info_Value,		0,	AAA_AVP_FLAG_MANDATORY,	OctetString,		str)
+cdp_avp			(Subscription_Id_Type,			0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
 
-cdp_avp_add_ptr	(User_Equipment_Info,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
-cdp_avp_get		(User_Equipment_Info,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+cdp_avp			(Tariff_Change_Usage,			0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,			int32_t)
+
+cdp_avp			(Tariff_Time_Change,			0,	AAA_AVP_FLAG_MANDATORY,	Time,				time_t)
+
+cdp_avp_add_ptr	(Unit_Value,					0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Unit_Value,					0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(Used_Service_Unit,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(Used_Service_Unit,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_add_ptr	(User_Equipment_Info,			0,	0,						Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(User_Equipment_Info,			0,	0,						Grouped,			AAA_AVP_LIST)
+
+cdp_avp			(User_Equipment_Info_Type,		0,	0,						Enumerated,			int32_t)
+
+cdp_avp_ptr		(User_Equipment_Info_Value,		0,	0,						OctetString,		str)
+
+cdp_avp			(Value_Digits,					0,	AAA_AVP_FLAG_MANDATORY, Integer64,			int64_t)
+
+cdp_avp			(Validity_Time,					0,	AAA_AVP_FLAG_MANDATORY,	Unsigned32,			uint32_t)
 
 /*
  * From here-on you can define/export/init/declare functions which can not be generate with the macros
@@ -246,7 +334,7 @@ cdp_avp_get		(User_Equipment_Info,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_A
 	{
 		AAA_AVP_LIST list_grp={0,0};
 		AAA_AVP *avp = cdp_avp_get_next_from_list(list,
-				AVP_EPC_Subscription_Id,
+				AVP_Subscription_Id,
 				0,
 				avp_ptr?*avp_ptr:0);
 		if (avp_ptr) *avp_ptr= avp; 
@@ -271,7 +359,7 @@ cdp_avp_get		(User_Equipment_Info,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_A
 		if (!cdp_avp_add_User_Equipment_Info_Value(&list_grp,data,data_do)) goto error;
 		return cdp_avp_add_to_list(list,
 				cdp_avp_new_Grouped(
-						AVP_EPC_User_Equipment_Info,
+						AVP_User_Equipment_Info,
 						AAA_AVP_FLAG_MANDATORY,
 						0,
 						&list_grp,
@@ -286,7 +374,7 @@ cdp_avp_get		(User_Equipment_Info,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_A
 	{
 		AAA_AVP_LIST list_grp={0,0};
 		AAA_AVP *avp = cdp_avp_get_next_from_list(list,
-				AVP_EPC_User_Equipment_Info,
+				AVP_User_Equipment_Info,
 				0,
 				avp_ptr?*avp_ptr:0);
 		if (avp_ptr) *avp_ptr= avp;  
