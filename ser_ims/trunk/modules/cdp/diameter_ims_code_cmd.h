@@ -45,7 +45,7 @@
  
 /**
  * \file 
- * CDiameterPeer Diameter IMS IANA defined numbers
+ * CDiameterPeer Diameter IMS IANA defined Command Codes
  * 
  * This is a compilation of different 3GPP TSs:
  * - TS 29.209 for IMS_Gq
@@ -56,27 +56,9 @@
  *  
  */
  
-#ifndef __DIAMETER_IMS_H
-#define __DIAMETER_IMS_H
+#ifndef __DIAMETER_IMS_CODE_CMD_H
+#define __DIAMETER_IMS_CODE_CMD_H
 
-#include "diameter_ims_code_app.h"
-#include "diameter_ims_code_avp.h"
-#include "diameter_ims_code_cmd.h"
-#include "diameter_ims_code_result.h"
-
-/* Vendor ID	*/
-
-#define IMS_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
-#define IMS_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
-#define IMS_vendor_id_3GPP_len	5			/**< len of char value for 3GPP's Vendor Id */
-
-#define IMS_vendor_id_ETSI 		13019		/**< Vendor Id for ETSI */
-#define IMS_vendor_id_ETSI_char "13019" 	/**< char value for ETSI's Vendor Id */
-#define IMS_vendor_id_ETSI_len	5			/**< len of char value for 3GPP's Vendor Id */
-
-#define IMS_vendor_id_CableLabs 	 4491	/**< Vendor Id for CableLabs */
-#define IMS_vendor_id_CableLabs_char "4491"	/**< char value for ETSI's Vendor Id */
-#define IMS_vendor_id_CableLabs_len	 4		/**< len of char value for 3GPP's Vendor Id */
 
 /*	Command Codes alocated for IMS	*/
 /*		The Gq Interface 			*/
@@ -124,4 +106,4 @@
 #define IMS_13A		313
 
 
-#endif /* __DIAMETER_IMS_H */
+#endif /* __DIAMETER_IMS_CODE_CMD_H */

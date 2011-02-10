@@ -45,7 +45,7 @@
  
 /**
  * \file 
- * CDiameterPeer Diameter EPC IANA defined numbers
+ * CDiameterPeer Diameter IMS IANA defined numbers
  * 
  * This is a compilation of different 3GPP TSs for EPC:
  * 
@@ -55,22 +55,25 @@
  */
 
 
-#ifndef DIAMETER_EPC_H_
-#define DIAMETER_EPC_H_
-
-
-#include "diameter_epc_code_app.h"
-#include "diameter_epc_code_avp.h"
-#include "diameter_epc_code_cmd.h"
-#include "diameter_epc_code_result.h"
+#ifndef DIAMETER_EPC_CODE_APP_H_
+#define DIAMETER_EPC_CODE_APP_H_
 
 // Diameter Application Identifier used in the EPC
 
-#define EPC_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
-#define EPC_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
-#define EPC_vendor_id_3GPP_len	5			/**< len of char value for 3GPP's Vendor Id */
+//this applications are specific to the PCC
+#define EPC_Rx 	16777236
+#define EPC_Gx 	16777238
+#define EPC_Sta 16777250
+#define EPC_S6a 16777251
+#define EPC_S6d 16777251
+#define EPC_S13 16777252
+#define EPC_SWm 16777264
+#define EPC_SWx 16777265
+#define EPC_Gxx 16777266
+#define EPC_S9 	16777267
+#define EPC_S6b	16777272
+#define EPC_Sp	16777280 //not in current standards
+#define EPC_PCRF_MC	16777281	//not in current standards
 
 
-
-
-#endif /*DIAMETER_EPC_H_*/
+#endif /*DIAMETER_EPC_CODE_APP_H_*/

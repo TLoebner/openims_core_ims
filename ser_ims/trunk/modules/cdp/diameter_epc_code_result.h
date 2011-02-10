@@ -45,7 +45,7 @@
  
 /**
  * \file 
- * CDiameterPeer Diameter EPC IANA defined numbers
+ * CDiameterPeer Diameter IMS IANA defined numbers
  * 
  * This is a compilation of different 3GPP TSs for EPC:
  * 
@@ -55,22 +55,23 @@
  */
 
 
-#ifndef DIAMETER_EPC_H_
-#define DIAMETER_EPC_H_
+#ifndef DIAMETER_EPC_CODE_RESULT_H_
+#define DIAMETER_EPC_CODE_RESULT_H_
+
+/**	EPC Specific Result Codes				*/
+enum{
+/** 1001 to 1999	Informational			*/
+/** 2001 to 2999	Success					*/
+/** 4001 to 4999	Transient Failures		*/
+	RC_EPC_DIAMETER_AUTHENTICATION_DATA_UNAVAILABLE		= 4181,
+/** 5001 to 5999	Permanent Failures		*/
+	RC_EPC_DIAMETER_ERROR_USER_UNKNOWN					= 5001,
+	RC_EPC_DIAMETER_ERROR_ROAMING_NOT_ALLOWED			= 5004,
+	RC_EPC_DIAMETER_ERROR_UNKNOWN_EPS_SUBSCRIPTION		= 5420,
+	RC_EPC_DIAMETER_ERROR_RAT_NOT_ALLOWED				= 5421,
+	RC_EPC_DIAMETER_ERROR_EQUIPMENT_UNKNOWN				= 5422,
+};
 
 
-#include "diameter_epc_code_app.h"
-#include "diameter_epc_code_avp.h"
-#include "diameter_epc_code_cmd.h"
-#include "diameter_epc_code_result.h"
 
-// Diameter Application Identifier used in the EPC
-
-#define EPC_vendor_id_3GPP 		10415		/**< Vendor Id for 3GPP */
-#define EPC_vendor_id_3GPP_char "10415" 	/**< char value for 3GPP's Vendor Id */
-#define EPC_vendor_id_3GPP_len	5			/**< len of char value for 3GPP's Vendor Id */
-
-
-
-
-#endif /*DIAMETER_EPC_H_*/
+#endif /*DIAMETER_EPC_CODE_RESULT_H_*/
