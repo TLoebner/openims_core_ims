@@ -436,15 +436,6 @@ enum {
 	AVP_IMS_Deregistration_Reason_Remove_S_CSCF			= 3
 };
 
-/** Subscription-ID-Type						*/
-enum {
-	AVP_IMS_Subscription_Id_Type_E164					= 0,
-	AVP_IMS_Subscription_Id_Type_IMSI					= 1,
-	AVP_IMS_Subscription_Id_Type_SIP_URI				= 2,
-	AVP_IMS_Subscription_Id_Type_NAI					= 3,
-	AVP_IMS_Subscription_Id_Type_USER_PRIVATE			= 4
-};
-
 
 /** Abort-Cause AVP */
 enum {
@@ -501,37 +492,6 @@ enum {
 };
 
 
-/***************************	  NAS PORT TYPE		*************************** */
-
-typedef enum
-{
-	NAS_Port_Async					= 0,
-	NAS_Port_Sync 					= 1, 
-	NAS_Port_ISDN_Sync 				= 2, 
-	NAS_Port_ISDN_Async_V120 		= 3,
-	NAS_Port_ISDN_Async_V110		= 4,
-	NAS_Port_Virtual				= 5, 
-	NAS_Port_PIAFS					= 6, 	
-	NAS_Port_HDLC_Clear_Channel		= 7, 
-	NAS_Port_X_25					= 8, 
-	NAS_Port_X_75					= 9, 
-	NAS_Port_G_3_Fax				=10,
-	NAS_Port_Symmetric_DSL			=11, 	
-	NAS_Port_ADSL					=12,
-	NAS_Port_ADSL_DMT				=13, 
-	NAS_Port_IDSL					=14, 
-	NAS_Port_Ethernet				=15, 
-	NAS_Port_xDSL					=16, 
-	NAS_Port_Cable					=17, 
-	NAS_Port_Wireless_Other			=18,
-	NAS_Port_Wireless_IEEE_802_11	=19,
-	NAS_Port_Token_Ring				=20, 
-	NAS_Port_FDDI					=21,
-	NAS_Port_Wireless_CDMA2000		=22,
-	NAS_Port_Wireless_UMTS			=23,
-	NAS_Port_Wireless_1X_EV			=24,
-	NAS_Port_IAPP  					=25
-}	nas_port_type;						
 
 /*
 access-info for each access type  
