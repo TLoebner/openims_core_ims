@@ -93,14 +93,6 @@ enum {
 /** 300 to 399 reserved for TS29.234											*/
 	
 /** 400 to 499 reserved for TS29.109 */
-	AVP_EPC_Service_Identifier							= 439,
-	AVP_EPC_Subscription_Id								= 443,
-	AVP_EPC_Subscription_Id_Data						= 444,
-	AVP_EPC_Subscription_Id_Type						= 450,
-	AVP_EPC_User_Equipment_Info							= 458,
-	AVP_EPC_User_Equipment_Info_Type					= 459,
-	AVP_EPC_User_Equipment_Info_Value					= 460,
-/**  or   RFC 4006 							*/
 	
 	AVP_EPC_Service_Selection							= 493, /**< http://tools.ietf.org/html/rfc5778 */
 	
@@ -545,13 +537,6 @@ enum {
 	AVP_ECP_Abort_Cause_Insufficient_Bearer_Resources				= 2
 };
 
-/* RFC4006 */
-enum {
-	AVP_EPC_User_Equipment_Info_Type_IMEISV							= 0,
-	AVP_EPC_User_Equipment_Info_Type_MAC							= 1,
-	AVP_EPC_User_Equipment_Info_Type_EUI64							= 2,
-	AVP_EPC_User_Equipment_Info_Type_MODIFIED_EUI64					= 3,
-};
 
 /* TS 29.272 */
 
