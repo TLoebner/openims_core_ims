@@ -538,6 +538,15 @@ enum {
 	AVP_Origin_AAA_Protocol_RADIUS	= 1,
 };
 
+enum {
+	AVP_Accounting_Record_Type_Event_Record		= 1,
+	AVP_Accounting_Record_Type_Start_Record		= 2,
+	AVP_Accounting_Record_Type_Interim_Record	= 3,
+	AVP_Accounting_Record_Type_Stop_Record		= 4,			
+};
+
+
+
 
 
 typedef enum {

@@ -74,6 +74,7 @@ enum {
 	AVP_EPC_3GPP_IMSI_MCC_MNC							= 8,
 	AVP_EPC_3GPP_GGSN_MCC_MNC							= 9,
 	AVP_EPC_3GPP_NSAPI									= 10,
+	AVP_EPC_3GPP_Session_Stop_Indicator					= 11,// TS32.299
 	AVP_EPC_3GPP_Selection_Mode							= 12,
 	AVP_EPC_3GPP_Charging_Characteristics				= 13,
 	AVP_EPC_3GPP_CG_IPv6_Address						= 14,
@@ -130,8 +131,40 @@ enum {
 /** 800 to 899 reserved for TS29.299											*/
 
 /** 32.299 Partial																*/
+	AVP_EPC_Event_Type									= 823,
+	AVP_EPC_SIP_Method									= 824,
+	AVP_EPC_Event										= 825,
+	AVP_EPC_Role_Of_Node								= 829,
+	AVP_EPC_User_Session_Id								= 830,
+	AVP_EPC_Calling_Party_Address						= 831,
+	AVP_EPC_Called_Party_Address						= 832,
+	AVP_EPC_Time_Stamps									= 833,
+	AVP_EPC_SIP_Request_Timestamp						= 834,
+	AVP_EPC_SIP_Response_Timestamp						= 835,
+	AVP_EPC_Application_Server							= 836,
+	AVP_EPC_Application_Provided_Called_Party_Address	= 837,
+	AVP_EPC_Inter_Operator_Identifier					= 838,
+	AVP_EPC_Originating_IOI								= 839,
+	AVP_EPC_Terminating_IOI								= 840,
+	AVP_EPC_IMS_Charging_Identifier						= 841,
+	AVP_EPC_CG_Address									= 846,
 	AVP_EPC_Served_Party_IP_Address						= 848,
-	AVP_EPC_PDP_Address									= 1227,
+	AVP_EPC_Authorized_QoS								= 849,
+	AVP_EPC_Application_Server_Information				= 850,
+	AVP_EPC_Bearer_Service								= 854,
+	AVP_EPC_Service_ID									= 855,
+	AVP_EPC_Associated_URI								= 856,
+	AVP_EPC_Charged_Party								= 857,
+	AVP_EPC_Cause_Code									= 861,
+	AVP_EPC_Node_Functionality							= 862,
+	AVP_EPC_Service_Specific_Data						= 863,
+	AVP_EPC_Service_Information							= 873,
+	AVP_EPC_IMS_Information								= 876,
+	AVP_EPC_Expires										= 888,
+	AVP_EPC_Address_Data								= 897,
+	AVP_EPC_Address_Domain								= 898,
+	AVP_EPC_Address_Type								= 899,
+	AVP_EPC_CN_IP_Multicast_Distribution				= 921,
 	
 /** 1000   from TS29.212 */
 	AVP_EPC_Bearer_Usage								= 1000,
@@ -202,6 +235,27 @@ enum {
 	AVP_EPC_Session_Linking_Indicator					= 1064,
 	AVP_EPC_PDN_Connection_ID							= 1065,
  	
+/** TS 32.299  */
+	
+	AVP_EPC_Additional_Type_Information					= 1205,
+	AVP_EPC_Additional_Content_Information				= 1207,
+	AVP_EPC_Addressee_Type								= 1208,
+	AVP_EPC_Class_Identifier							= 1214,
+	AVP_EPC_Adaptations									= 1217,
+	AVP_EPC_Applic_ID									= 1218,
+	AVP_EPC_Aux_Applic_Info								= 1219,
+	AVP_EPC_Content_Class								= 1220,
+	AVP_EPC_PDP_Address									= 1227,
+	AVP_EPC_Service_Specific_Info						= 1249,
+	AVP_EPC_Called_Asserted_Identity					= 1250,
+	AVP_EPC_Requested_Party_Address						= 1251,
+	AVP_EPC_Service_Specific_Type						= 1257,
+	AVP_EPC_Access_Network_Information					= 1263,
+	AVP_EPC_Base_Time_Interval							= 1265,
+	AVP_EPC_AF_Correlation_Information					= 1276,
+	AVP_EPC_Alternate_Charged_Party_Address				= 1280,
+	
+	
 /** TS 29.272  */
 	AVP_EPC_Subscription_Data							= 1400,
 	AVP_EPC_Terminal_Information						= 1401,
@@ -298,6 +352,35 @@ enum {
 	AVP_EPC_Homogenous_Support_of_IMS_Over_PS_Sessions	= 1493,
 	AVP_EPC_Last_UE_Activity_Time						= 1494,
 
+/** TS 32.299  */
+	
+	AVP_EPC_Client_Address								= 2018,
+	AVP_EPC_Carrier_Select_Routing_Information			= 2023,
+	AVP_EPC_Associated_Party_Address					= 2035,
+	AVP_EPC_Change_Condition							= 2037,
+	AVP_EPC_Change_Time									= 2038,
+	AVP_EPC_Accumulated_Cost							= 2052,
+	AVP_EPC_AoC_Cost_Information						= 2053,
+	AVP_EPC_AoC_Information								= 2054,
+	AVP_EPC_AoC_Request_Type							= 2055,
+	AVP_EPC_Charging_Characteristics_Selection_Mode		= 2066,
+	AVP_EPC_Application_Server_ID						= 2101,
+	AVP_EPC_Application_Service_Type					= 2102,
+	AVP_EPC_Application_Session_ID						= 2103,
+	AVP_EPC_Content_ID									= 2116,
+	AVP_EPC_Content_Provide_ID							= 2117,
+	AVP_EPC_SIP_Request_Timestamp_Fraction				= 2301,
+	AVP_EPC_SIP_Response_Timestamp_Fraction				= 2302,	
+	AVP_EPC_Account_Expiration							= 2309,
+	AVP_EPC_AoC_Cost_Format								= 2310,
+	AVP_EPC_AoC_Service									= 2311,
+	AVP_EPC_AoC_Service_Obligatory_Type					= 2312,
+	AVP_EPC_AoC_Service_Type							= 2313,
+	AVP_EPC_AoC_Subscription_Information				= 2314,
+	AVP_EPC_Outgoing_Session_Id							= 2320,
+	
+	
+	
 /** 2400 to 2407 reserved for TS29.173											*/
 
 	AVP_EPC_GMLC_Address								= 2405,
@@ -310,9 +393,9 @@ enum {
 	AVP_EPC_PDN_Gw_Name									= 42003, 
 	AVP_EPC_PDN_Gw_Identity								= 42004, 
 	AVP_EPC_QoS_Profile_Name							= 42005, 
-	AVP_EPC_GG_Enforce								= 42006, 
-	AVP_EPC_GG_IP									= 42007, 
-	AVP_EPC_UE_Locator								= 42008, 
+	AVP_EPC_GG_Enforce									= 42006, 
+	AVP_EPC_GG_IP										= 42007, 
+	AVP_EPC_UE_Locator									= 42008, 
 	AVP_EPC_UE_Locator_Id_Group							= 42009, 
 };
 
@@ -761,6 +844,40 @@ enum {
 
 enum {
 	AVP_EPC_Current_Location_Retrieved_Active_Location_Retrieval	= 0			
+};
+
+enum {
+	AVP_EPC_Role_Of_Node_Originating_Role	= 0,
+	AVP_EPC_Role_Of_Node_Terminating_Role	= 1,
+};
+
+enum {
+	AVP_EPC_Node_Functionality_S_CSCF	= 0,
+	AVP_EPC_Node_Functionality_P_CSCF	= 1,
+	AVP_EPC_Node_Functionality_I_CSCF	= 2,
+	AVP_EPC_Node_Functionality_MRFC		= 3,
+	AVP_EPC_Node_Functionality_MGCF		= 4,
+	AVP_EPC_Node_Functionality_BGCF		= 5,
+	AVP_EPC_Node_Functionality_AS		= 6,
+	AVP_EPC_Node_Functionality_IBCF		= 7,
+	AVP_EPC_Node_Functionality_S_GW		= 8,
+	AVP_EPC_Node_Functionality_P_GW		= 9,
+	AVP_EPC_Node_Functionality_HSGW		= 10,	
+};
+
+enum {
+	AVP_EPC_Cause_Code_Normal_End_Of_Session		= 0,
+	AVP_EPC_Cause_Code_Successful_Transaction		= -1,
+	AVP_EPC_Cause_Code_End_Of_Subscribe_Dialog		= -2,
+	AVP_EPC_Cause_Code_2xx_Final_Response			= -200, /**< use the actual response code */
+	AVP_EPC_Cause_Code_3xx_Redirection				= -300, /**< use the actual response code */
+	AVP_EPC_Cause_Code_End_Of_REGISTER_Dialog		= -3,
+	AVP_EPC_Cause_Code_Unspecified_Error			= 1,
+	AVP_EPC_Cause_Code_4xx_Request_Failure			= 400, /**< use the actual response code */
+	AVP_EPC_Cause_Code_5xx_Request_Failure			= 500, /**< use the actual response code */
+	AVP_EPC_Cause_Code_6xx_Global_Failure			= 600, /**< use the actual response code */
+	AVP_EPC_Cause_Code_Unsuccessful_Session_Setup	= 2,
+	AVP_EPC_Cause_Code_Internal_Error				= 3,
 };
 
 #endif /*DIAMETER_EPC_H_*/
