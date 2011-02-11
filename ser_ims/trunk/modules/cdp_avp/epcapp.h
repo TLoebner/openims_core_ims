@@ -658,6 +658,9 @@ cdp_avp_ptr		(Application_Provided_Called_Party_Address,EPC_vendor_id_3GPP,AAA_A
 
 cdp_avp_ptr		(Application_Server,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
+cdp_avp_add_ptr	(Application_Server_Information,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Application_Server_Information,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
+
 cdp_avp_ptr		(Called_Asserted_Identity,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 cdp_avp_ptr		(Called_Party_Address,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
@@ -689,6 +692,8 @@ cdp_avp_ptr		(Outgoing_Session_Id,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATOR
 
 cdp_avp			(Role_Of_Node,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
 
+cdp_avp_ptr		(Requested_Party_Address,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
 cdp_avp			(Served_Party_IP_Address,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)	
 
 cdp_avp_ptr		(Service_ID,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
@@ -712,6 +717,8 @@ cdp_avp			(SIP_Request_Timestamp,					EPC_vendor_id_3GPP,	0,							Time,			time_
 cdp_avp			(SIP_Response_Timestamp_Fraction,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
 
 cdp_avp			(SIP_Response_Timestamp,				EPC_vendor_id_3GPP,	0,							Time,			time_t)
+
+cdp_avp_ptr		(Terminating_IOI,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 cdp_avp_add_ptr	(Time_Stamps,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(Time_Stamps,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
