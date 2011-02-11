@@ -349,12 +349,12 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	set_4bytes(x,revalue);
 	
 	/*identification is just a pointer to something reserved somewhere else and a number...*/
-	type=cdpb.AAACreateAVP(AVP_IMS_Subscription_Id_Type,
+	type=cdpb.AAACreateAVP(AVP_Subscription_Id_Type,
  											AAA_AVP_FLAG_MANDATORY,
  											0,x,4,
  											AVP_DUPLICATE_DATA);
 	
-	data=cdpb.AAACreateAVP(AVP_IMS_Subscription_Id_Data,
+	data=cdpb.AAACreateAVP(AVP_Subscription_Id_Data,
  											AAA_AVP_FLAG_MANDATORY,
  											0,identification.s,identification.len,
  											AVP_DUPLICATE_DATA);
@@ -364,7 +364,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	
 	identification=cdpb.AAAGroupAVPS(list);
   	 		
-  	PCC_add_avp(msg,identification.s,identification.len,AVP_IMS_Subscription_Id,
+  	PCC_add_avp(msg,identification.s,identification.len,AVP_Subscription_Id,
  				AAA_AVP_FLAG_MANDATORY,0,
  				AVP_FREE_DATA,
  				__FUNCTION__);
@@ -1456,9 +1456,9 @@ int extract_id(struct sip_msg *r,int tag,str *identification)
 	
 	if (*(identification->s+1)=='t' && *(identification->s+2)=='e' && *(identification->s+3)=='l')
 	{
-		return AVP_IMS_Subscription_Id_Type_E164;
+		return AVP_Subscription_Id_Type_E164;
 	} else {
-		return AVP_IMS_Subscription_Id_Type_SIP_URI;
+		return AVP_Subscription_Id_Type_SIP_URI;
 	}
 	
 }
