@@ -68,6 +68,9 @@
 #define Diameter_STA		275		/**< Session Termination 		Answer	*/
 #define Diameter_ASR		274		/**< Abort-Session-Request		Request */
 #define Diameter_ASA		274		/**< Abort-Session-Request		Answer	*/
+/*		The Rf Interface			*/
+#define Diameter_ACR		271		/**< Accounting Request */
+#define Diameter_ACA		271		/**< Accounting Answer  */
 /* The Gx and Gxx Interface */
 #define Diameter_CCR		272
 #define Diameter_CCA		272
