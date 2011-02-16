@@ -122,8 +122,7 @@ struct module_exports exports = {
 
 
 /* Global variables and imported functions */
-struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs				*/
-cdp_avp_bind_t *cdp_avp=0;
+cdp_avp_bind_t *cavpb=0;
 
 /**< link to the stateless reply function in sl module */
 int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2); 
@@ -191,17 +190,12 @@ static int mod_init(void)
 		goto error;
 	}
 
-	if (load_cdp(&cdpb) == -1){
-		LOG(L_ERR, "DBG:"M_NAME":mod_init: loading cdp module unsuccessful. exiting\n");
-		goto error;
-	}
-		
 	if (!(load_cdp_avp = (cdp_avp_get_bind_f)find_export("cdp_avp_get_bind",NO_SCRIPT,0))) {
 		LOG(L_ERR, "DBG:"M_NAME":mod_init: loading cdp_avp module unsuccessful. exiting\n");			
 		goto error;
 	}	
-	cdp_avp = load_cdp_avp();
-	if (!cdp_avp)
+	cavpb = load_cdp_avp();
+	if (!cavpb)
 		goto error;
 
 
@@ -224,7 +218,7 @@ static int mod_child_init(int rank)
 		return 0;
 
 	lock_get(process_lock);
-		cdpb.AAAAddResponseHandler(RfChargingResponseHandler, NULL);
+		cavpb->cdp->AAAAddResponseHandler(RfChargingResponseHandler, NULL);
 	lock_release(process_lock);
 			
 	return 0;
