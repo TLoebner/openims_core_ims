@@ -53,6 +53,7 @@
  */
 
 #include "../cdp/diameter_epc_code_cmd.h"
+#include "Rf_data.h"
 #include "diameter_rf.h"
 
 #ifdef WHARF
