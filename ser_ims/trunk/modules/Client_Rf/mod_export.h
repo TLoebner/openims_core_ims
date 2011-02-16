@@ -19,16 +19,17 @@
 
 #ifdef WHARF
 
-#ifndef _Client_Rf__H
-#define _Client_Rf__H
+#ifndef _Client_Rf_EXPORT__H
+#define _Client_Rf_EXPORT__H
 
-#include "../../base/mod.h"
+#include "../cdp/session.h"
+
+typedef int (*AAASendAccRequest_f)(AAASession *session);
 
 
-int client_rf_init(str config);
-int client_rf_child_init(int rank);
-void client_rf_destroy(int rank);
-void* client_rf_get_bind();
+struct client_rf_binds{
+	AAASendAccRequest_f	AAASendACR;
+};
 
 #endif
 

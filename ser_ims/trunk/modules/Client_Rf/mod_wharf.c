@@ -30,9 +30,7 @@
 #include "../../utils/utils.h"
 
 #include "mod_wharf.h"
-
-#include "../../cdp_load.h"
-
+#include "mod_export.h"
 #include "diameter_rf.h"
 
 /** This variable has to be called exactly mod_exports, as it is searched by the wharf base */
@@ -42,11 +40,11 @@ wharf_mod_export_t mod_exports={
 		
 		WHARF_VERSION"-"WHARF_REVISION,		
 		
-		mod_init,				/**< Module init function */
-		mod_child_init,			/**< Module child init function */
-		mod_destroy,			/**< Module destroy function */
+		client_rf_init,				/**< Module init function */
+		client_rf_child_init,			/**< Module child init function */
+		client_rf_destroy,			/**< Module destroy function */
 		
-		mod_get_bind			/**< Module get binding function */
+		client_rf_get_bind			/**< Module get binding function */
 		
 };	
 
@@ -57,7 +55,7 @@ wharf_mod_export_t mod_exports={
  * - Initializes the Rf module using the provided configuration file.
  * - Registers with pt the required number of processes.
  */
-int mod_init(str config_data)
+int client_rf_init(str config_data)
 {
 	LOG(L_INFO," Client_Rf initializing\n");
 	return 1;
@@ -72,7 +70,7 @@ int mod_init(str config_data)
  * @return 1 on success or 0 on failure
  */
 
-int mod_child_init(int rank)
+int client_rf_child_init(int rank)
 {
 	if (rank == WHARF_PROCESS_ATTENDANT) { 
 		LOG(L_INFO,"Client_Rf starting ...\n");		
@@ -86,7 +84,7 @@ int mod_child_init(int rank)
  * Should clean-up and do nice shut-down.
  * \note Will be called multiple times, once from each process, although crashed processes might not.
  */
-void mod_destroy(int rank)
+void client_rf_destroy(int rank)
 {
 }
 
@@ -102,7 +100,7 @@ struct client_rf_binds client_rf_binding={
  * functions and data to be used from other processes.
  * @return the pointer to the binding.
  */
-void* mod_get_bind()
+void* client_rf_get_bind()
 {
 	return &client_rf_binding;
 }

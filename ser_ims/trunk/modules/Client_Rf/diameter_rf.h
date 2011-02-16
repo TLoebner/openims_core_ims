@@ -59,6 +59,8 @@
 #include "../cdp/cdp_load.h"
 #include "../cdp_avp/mod_export.h"
 
+int AAASendACR(AAASession * session);
+
 void RfChargingResponseHandler(AAAMessage *response,void *param);
 
 #endif /* __CLIENT_RF_DIAMETER_RF_H */

@@ -59,6 +59,12 @@
 #define M_NAME "Client_Rf"
 #endif
 
+
+int AAASendACR(AAASession *session){
+
+	return 1;
+}
+
 /**
  * Handler for incoming Diameter requests.
  * @param request - the received request
