@@ -10,7 +10,7 @@
 /**
  * \file
  * 
- * Wharf CDF_Rf module - Rf Data structures
+ * Client_Rf module - Rf Data structures
  * 
  * 
  *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
