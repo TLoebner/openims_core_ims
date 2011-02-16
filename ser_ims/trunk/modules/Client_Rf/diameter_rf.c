@@ -51,7 +51,12 @@
  * 
  */
 
+#include "../cdp/diameter_epc_code_cmd.h"
 #include "diameter_rf.h"
+
+#ifdef WHARF
+#define M_NAME "Client_Rf"
+#endif
 
 /**
  * Handler for incoming Diameter requests.
@@ -63,7 +68,9 @@ void RfChargingResponseHandler(AAAMessage *response,void *param)
 {
 	switch(response->applicationId){
         	case IMS_Rf:
-			switch(response->commandCode){				
+			switch(response->commandCode){	
+				case Diameter_ACR:
+					break;			
 				default :
 					LOG(L_ERR,"ERR:"M_NAME":RfChargingResponseHandler: - "
 							"Received unknown request for Rf command %d, flags %#1x endtoend %u hopbyhop %u\n",

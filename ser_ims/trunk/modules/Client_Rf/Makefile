@@ -17,11 +17,17 @@ ifeq ($(CFG_NAME),sip-router)
 	DEFS += -I/usr/include/libxml2 -I../lib -DSER -I../..
 	DEFS += -I../../lib 
 	LIBS += -L/usr/local/lib -L../lib/cds -lcds
+endif
+
+ifeq ($(CFG_NAME),Wharf)
+	DEFS += -DWHARF
 else
+	DEFS += -DCDP_FOR_SER
 	DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
 	LIBS += -L/usr/local/lib -L../../lib/cds
 endif	
 
-DEFS += -DCDP_FOR_SER
+DEFS += -I/usr/include/libxml2
+LIBS += -L$(LOCALBASE)/lib -lxml2 -lrt
 
 include ../../Makefile.modules
