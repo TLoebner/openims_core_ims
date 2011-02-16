@@ -80,6 +80,7 @@
 #include "../cdp_avp/mod_export.h"
 
 #include "diameter_rf.h"
+#include "ims_rf.h"
 
 MODULE_VERSION
 
@@ -96,7 +97,7 @@ int * shutdown_singleton;
  *
  */
 static cmd_export_t client_rf_cmds[]={
-//	{"Send_ACR",			Send_ACR, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"Rf_Send_ACR",			Rf_Send_ACR, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 

@@ -91,6 +91,7 @@ int client_rf_child_init(int rank)
 {
 	if (rank == WHARF_PROCESS_ATTENDANT) { 
 		LOG(L_INFO,"Client_Rf starting ...\n");		
+		cavpb->cdp->AAAAddResponseHandler(RfChargingResponseHandler, NULL);
 		LOG(L_INFO," ... Client_Rf started\n");		
 	}
 	return 1;
@@ -103,6 +104,7 @@ int client_rf_child_init(int rank)
  */
 void client_rf_destroy(int rank)
 {
+	LOG(L_INFO," ... Client_Rf destroy\n");
 }
 
 
