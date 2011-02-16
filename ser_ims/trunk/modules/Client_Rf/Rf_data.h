@@ -23,6 +23,26 @@
 #include "../cdp/diameter.h"
 
 /**
+ * Allocate and blank a memory area
+ */
+#define mem_new(dst,len,mem) \
+do {\
+	if (!(len)) (dst)=0;\
+	else {\
+		(dst) = mem##_malloc(len);\
+		if (!(dst)) {\
+			LOG(L_ERR,"Error allocating %ld bytes in %s!\n",(long int)len,#mem);\
+			goto out_of_memory;\
+		}\
+		bzero((dst),(len));\
+	}\
+} while(0)
+
+#define struct_new(dst,type,mem) \
+		men_new(dst,sizeof(type),mem)
+
+
+/**
  * Duplicate an arbitrary memory area
  */
 #define mem_dup(dst,src,len,mem) \
@@ -150,6 +170,29 @@ do {\
 	(list)->tail=0;\
 } while(0)
 
+/* List of str */
+
+typedef struct _str_list_t_slot {
+	str data;
+	struct _str_list_t_slot *prev,*next;
+} str_list_slot_t;
+
+typedef struct {
+	str_list_slot_t *head,*tail;
+} str_list_t;
+
+#define str_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_free((x)->data,mem);\
+		mem##_free(x);\
+		(x)=0;\
+	}\
+}while(0)
+
+
+#define str_list_t_copy(dst,src,mem) \
+	str_dup((dst)->data,(src)->data,mem)
 
 
 typedef struct {
