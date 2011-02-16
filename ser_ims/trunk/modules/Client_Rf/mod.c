@@ -51,6 +51,7 @@
  * 
  */
  
+#ifdef CDP_FOR_SER
 
 #include <ctype.h>
 #include <sys/types.h>
@@ -266,3 +267,4 @@ int trans_in_processing(struct sip_msg* msg, char* str1, char* str2)
 	return CSCF_RETURN_TRUE;	
 }
 
+#endif /*CDP_FOR_SER*/
