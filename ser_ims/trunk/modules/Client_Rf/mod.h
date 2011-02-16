@@ -1,4 +1,6 @@
 /*
+ * $Id$
+ *
  * Copyright (C) 2008-2009 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
@@ -39,8 +41,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
- * author Ancuta Onofrei, 
- * 	email andreea dot ancuta dot onofrei -at- fokus dot fraunhofer dot de
+ * author Ancuta Corici, 
+ * 	email andreea dot ancuta dot corici -at- fokus dot fraunhofer dot de
  */
 
 /**
