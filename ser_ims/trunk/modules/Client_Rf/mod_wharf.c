@@ -31,7 +31,10 @@
 
 #include "mod_wharf.h"
 #include "mod_export.h"
+#include "../cdp/cdp_load.h"
 #include "diameter_rf.h"
+
+cdp_avp_bind_t *cavpb=0;				/**< Structure with pointers to cdp_avp funcs*/
 
 /** This variable has to be called exactly mod_exports, as it is searched by the wharf base */
 wharf_mod_export_t mod_exports={
@@ -58,6 +61,20 @@ wharf_mod_export_t mod_exports={
 int client_rf_init(str config_data)
 {
 	LOG(L_INFO," Client_Rf initializing\n");
+	LOG(L_DBG, "initializing module Checking cdp\n");
+	if (!mod_is_loaded("cdp"))	{
+			LOG(L_ERR,"The C Diameter Peer module has not been loaded and is needed by Client_Rf\n");
+			return 0;
+	}
+	LOG(L_DBG, "initializing module Checking cdp_avp\n");
+	if (!mod_is_loaded("cdp_avp"))
+	{
+		LOG(L_ERR,"The C Diameter Peer module AVP helper has not been loaded and is needed by Client_Rx\n");
+		return 0;
+	} else {
+		cavpb = (cdp_avp_bind_t *) mod_get_bind("cdp_avp");
+	}
+
 	return 1;
 }
 
