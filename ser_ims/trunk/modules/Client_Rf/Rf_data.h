@@ -119,6 +119,16 @@ do {\
 /**
  * list operations 
  */
+
+#define WL_APPEND(list,add)                                                      \
+do {                                                                             \
+  (add)->next = NULL;															 \
+  (add)->prev = (list)->tail;													 \
+  if ((list)->tail) ((list)->tail)->next=(add);									 \
+  else (list)->head = (add);                                                     \
+  (list)->tail=(add);                                                        	 \
+} while (0)
+
 #define WL_FREE(el,list_type,mem)												\
 	list_type##_free(el,mem)
 
@@ -336,7 +346,7 @@ do{\
 #define subscription_id_list_t_copy(dst,src,mem) \
 do {\
 	(dst)->type = (src)->type;\
-	str_dup((dst)->s.id,(src)->s.id,mem);\
+	str_dup((dst)->id,(src)->id,mem);\
 } while(0)
 
 
@@ -386,7 +396,9 @@ void service_information_free(service_information_t *x);
 Rf_ACR_t * new_Rf_ACR(str origin_host, str origin_realm,
 		str destination_realm,
 		str * user_name, str * service_context_id,
-		str callid, int side);
+		str * sip_method, str * event, uint32_t * expires,
+		str * callid, str * calling_uri, str * called_uri, 
+		int side, subscription_id_t * subscription);
 void Rf_free_ACR(Rf_ACR_t *x);
 //void Rf_free_ACA(Rf_ACA_t *x);
 

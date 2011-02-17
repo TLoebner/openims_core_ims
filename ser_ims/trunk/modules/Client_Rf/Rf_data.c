@@ -63,12 +63,108 @@ do {\
 
 #endif /* WHARF */
 
+event_type_t * new_event_type(str * sip_method,
+				str * event,
+				uint32_t * expires)
+{
+	event_type_t * x = 0;
+	
+	mem_new(x, sizeof(event_type_t), pkg);
+	if(sip_method)
+		str_dup_ptr(x->sip_method, *sip_method,pkg);
+	if(event)
+		str_dup_ptr(x->event,*event,pkg);
+	if(expires){
+		mem_new(x->expires, sizeof(uint32_t), pkg);
+		*(x->expires) = *expires;
+	}
+	return x;
+
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+	event_type_free(x);
+	return NULL;
+}
+
+ims_information_t * new_ims_information(event_type_t * event_type,
+					str  * user_session_id, 
+					str  * calling_party,
+					str  * called_party)
+{
+
+	str_list_slot_t *sl =0;
+	ims_information_t *x = 0;
+	mem_new(x, sizeof(ims_information_t), pkg);
+
+	x->event_type = event_type;
+	
+//	mem_free(x->role_of_node,pkg);
+
+//	str_dup_ptr(x->outgoing_session_id,outgoing_session_id, pkg);
+
+	if(user_session_id)
+		str_dup_ptr(x->user_session_id, *user_session_id, pkg);
+	
+	if(calling_party){
+		mem_new(sl, sizeof(str_list_slot_t), pkg);
+		str_dup(sl->data, *calling_party, pkg);
+		WL_APPEND(&(x->calling_party_address), sl);
+	}
+
+	if(called_party)
+		str_dup_ptr(x->called_party_address, *called_party, pkg);
+
+	//WL_FREE_ALL(&(x->called_asserted_identity),str_list_t,pkg);
+	//str_free_ptr(x->requested_party_address,pkg);
+	
+//	time_stamps_free(x->time_stamps);
+	
+//	WL_FREE_ALL(&(x->ioi),ioi_list_t,pkg);
+//	str_free_ptr(x->icid,pkg);
+	
+	return x;
+
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+	ims_information_free(x);
+	return NULL;
+}
+
+service_information_t * new_service_information(ims_information_t * ims_info,
+		subscription_id_t * subscription)
+{
+	service_information_t * x = 0;
+	subscription_id_list_element_t * sl =0;
+
+	mem_new(x, sizeof(service_information_t), pkg);
+	
+	x->ims_information = ims_info;
+	if(subscription){
+		mem_new(sl, sizeof(subscription_id_list_element_t), pkg);
+		subscription_id_list_t_copy(&(sl->s),subscription,pkg); 
+		WL_APPEND(&(x->subscription_id),sl);
+	}
+	
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+	service_information_free(x);
+	return 0;
+}
+
+
 Rf_ACR_t * new_Rf_ACR(str origin_host, str origin_realm,
 		str destination_realm,
 		str * user_name, str * service_context_id,
-		str callid, int side){
+		str * sip_method, str * event, uint32_t * expires,
+		str *user_session_id, str * calling_party, str * called_party,
+		int side, subscription_id_t * subscription){
+
 
 	Rf_ACR_t *x=0;
+	event_type_t * event_type = 0;
+	ims_information_t * ims_info =0;
+	service_information_t * service_info=0;
+	
 	mem_new(x, sizeof(Rf_ACR_t), pkg);
 
 	str_dup(x->origin_host, origin_host, pkg);
@@ -79,10 +175,24 @@ Rf_ACR_t * new_Rf_ACR(str origin_host, str origin_realm,
 		str_dup_ptr_ptr(x->user_name, user_name, pkg);
 	if(service_context_id)
 		str_dup_ptr(x->service_context_id, *service_context_id, pkg);
+	
+	if(!(event_type = new_event_type(sip_method, event, expires)))
+		goto error;
+
+	if(!(ims_info = new_ims_information(event_type, 
+					user_session_id, calling_party,called_party)))
+		goto error;
+	if(!(service_info = new_service_information(ims_info, subscription)))
+		goto error;
+
+	x->service_information = service_info;
+
 	return x;
 
 out_of_memory:
 	LOG(L_ERR, "out of pkg memory\n");
+error:
+	Rf_free_ACR(x);
 	return 0;
 }
 
