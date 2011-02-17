@@ -81,6 +81,7 @@
 
 #include "diameter_rf.h"
 #include "ims_rf.h"
+#include "config.h"
 
 MODULE_VERSION
 
@@ -90,6 +91,12 @@ static void mod_destroy(void);
 
 /* parameters storage */
 int * shutdown_singleton;
+char * rf_origin_host_s = "scscf.open-ims.test";
+char * rf_origin_realm_s = "open-ims.test";
+char * rf_destination_realm_s = "open-ims.test";
+char * rf_service_context_id_s = "32260@3gpp.org";
+client_rf_cfg cfg;
+
 
 
 /** 
@@ -105,6 +112,11 @@ static cmd_export_t client_rf_cmds[]={
  * Exported parameters.
  */	
 static param_export_t client_rf_params[]={ 
+	{"node_functionality", INT_PARAM, &(cfg.node_functionality)},
+	{"origin_host", STR_PARAM, &rf_origin_host_s},
+	{"origin_realm", STR_PARAM, &rf_origin_realm_s},
+	{"destination_realm", STR_PARAM, &rf_destination_realm_s},
+	{"service_context_id", STR_PARAM, &rf_service_context_id_s},
 	{0,0,0} 
 };
 
@@ -137,6 +149,24 @@ struct tm_binds tmb;
 int fix_parameters()
 {
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
+	
+	cfg.origin_host.s = rf_origin_host_s;
+	cfg.origin_host.len = strlen(rf_origin_host_s);
+
+	cfg.origin_realm.s = rf_origin_realm_s;
+	cfg.origin_realm.len = strlen(rf_origin_realm_s);
+
+	cfg.destination_realm.s = rf_destination_realm_s;
+	cfg.destination_realm.len = strlen(rf_destination_realm_s);
+
+	cfg.service_context_id = shm_malloc(sizeof(str));
+	if(!cfg.service_context_id){
+		LOG(L_ERR, "ERR:"M_NAME":fix_parameters:not enough shm memory\n");
+		return 0;
+	}
+
+	cfg.service_context_id->s = rf_service_context_id_s;
+	cfg.service_context_id->len = strlen(rf_service_context_id_s);
 
 	return 1;
 }

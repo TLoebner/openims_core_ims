@@ -71,6 +71,7 @@
 #endif
 
 #include "../cdp/cdp_load.h"
+#include "../cdp/diameter_code_avp.h"
 #include "../cdp_avp/mod_export.h"
 
 #include "diameter_rf.h"
@@ -80,10 +81,6 @@
 
 extern struct tm_binds tmb;
 extern cdp_avp_bind_t *cavpb;
-str rf_origin_host = {"pcscf.open-ims.test",19};
-str rf_origin_realm = {"open-ims.test",13};
-str rf_destination_realm = {"open-ims.test",13};
-str rf_service_context_id = {"abc",3};
 
 /**
  * Retrieves the SIP request that generated a diameter transaction
@@ -103,8 +100,24 @@ struct sip_msg * trans_get_request_from_current_reply()
 	else return 0;
 }
 
-int get_ACR_info(struct sip_msg * msg, str * callid, str * from_uri, str * to_uri){
+int get_ACR_info(struct sip_msg * msg, 
+		int32_t * acc_record_type,
+		str * sip_method,
+		str * event, uint32_t * expires,
+		str * callid, str * from_uri, str * to_uri){
 
+	sip_method->s = msg->first_line.u.request.method.s;
+	sip_method->len = msg->first_line.u.request.method.len;
+
+	if(strncmp(sip_method->s, "INVITE",6) == 0)
+		*acc_record_type = AAA_ACCT_START;
+	else if	(strncmp(sip_method->s, "BYE",3) == 0)
+		*acc_record_type = AAA_ACCT_STOP;
+	else	
+		*acc_record_type = AAA_ACCT_EVENT;
+
+	*event = cscf_get_event(msg);
+	*expires = cscf_get_expires_hdr(msg, 0);
 	*callid = cscf_get_call_id(msg, NULL);
 
 	if(!cscf_get_from_uri(msg, from_uri))
@@ -130,27 +143,51 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg,
 
 	Rf_ACR_t * rf_data=0;
 	AAASession * auth = NULL;
-	str user_name ={0,0};
+	str user_name ={0,0}, sip_method = {0,0}, event = {0,0}; 
+	uint32_t expires;
 	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0};
 
-	if(!get_ACR_info(msg, &callid, &from_uri, &to_uri))
+	event_type_t * event_type = 0;
+	ims_information_t * ims_info = 0;
+	time_stamps_t * time_stamps = 0;
+	time_t req_timestamp, reply_timestamp;
+	int32_t acc_record_type;
+
+	*authp = 0;
+
+	if(!get_ACR_info(msg, &acc_record_type, 
+				&sip_method, &event, &expires, 
+				&callid, &from_uri, &to_uri))
 		goto error;
 
-	rf_data = new_Rf_ACR(rf_origin_host, rf_origin_realm, rf_destination_realm,
-			&user_name, &rf_service_context_id,
-			NULL, NULL, NULL,
-			&callid, &from_uri, &to_uri, dir, NULL);
+	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
+		goto error;
+
+	if(!(time_stamps = new_time_stamps(&req_timestamp, NULL,
+						&reply_timestamp, NULL)))
+		goto error;
+
+	if(!(ims_info = new_ims_information(event_type, 
+					time_stamps,
+					&callid, &callid,
+					&from_uri, &to_uri)))
+		goto error;
+
+	event_type = 0;
+	time_stamps = 0;
+
+	rf_data = new_Rf_ACR(acc_record_type,
+			&user_name, ims_info, NULL);
 	if(!rf_data) {
 		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_session: no memory left for generic\n");
 		goto out_of_memory;
 	}
+	ims_info = 0;
 
 	LOG(L_INFO,"INFO:"M_NAME":dlg_create_rf_session: creating Rf Session\n");
 	auth = cavpb->cdp->AAACreateClientAuthSession(1,NULL,(void *)rf_data);
 	if (!auth) {
 		LOG(L_ERR,"INFO:"M_NAME":dlg_create_rf_session: unable to create the Rf Session\n");
-		Rf_free_ACR(rf_data);
-		rf_data = 0;
 		goto error;
 	}
 
@@ -159,30 +196,21 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg,
 
 out_of_memory:
 error:
-	if(rf_data) Rf_free_ACR(rf_data);
+	time_stamps_free(time_stamps);
+	event_type_free(event_type);
+	ims_information_free(ims_info);
+	Rf_free_ACR(rf_data);
 	return NULL;
 }
 
-
-/**
- * Send an ACR to the CDF based on the SIP message (request or reply)
- * @param msg - SIP message
- * @param str1 - not used
- * @param str2 - not used
- * @returns #CSCF_RETURN_TRUE if OK, #CSCF_RETURN_ERROR on error
- */
-int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
+int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASession ** auth){
 	
 	struct sip_msg * req;
-	AAASession * auth = 0;
-	Rf_ACR_t * rf_data = 0;
-	AAAMessage * acr = 0;
-	int dir =0;
 
 	if(msg->first_line.type == SIP_REQUEST){
 		/*end of session*/
 		if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 ){
-			if(!(rf_data = dlg_create_rf_session(msg, &auth, dir)))
+			if(!(*rf_data = dlg_create_rf_session(msg, auth, dir)))
 				goto error;
 		}
 	}else{
@@ -196,10 +224,32 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 		if(msg->first_line.u.reply.statuscode == 200 &&
 		   strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
 
-			if(!(rf_data = dlg_create_rf_session(req, &auth, dir)))
+			if(!(*rf_data = dlg_create_rf_session(req, auth, dir)))
 				goto error;
 		}
 	}
+
+	return 1;
+error:
+	return 0;
+}
+
+/**
+ * Send an ACR to the CDF based on the SIP message (request or reply)
+ * @param msg - SIP message
+ * @param str1 - not used
+ * @param str2 - not used
+ * @returns #CSCF_RETURN_TRUE if OK, #CSCF_RETURN_ERROR on error
+ */
+int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
+	
+	AAASession * auth = 0;
+	Rf_ACR_t * rf_data = 0;
+//	AAAMessage * acr = 0;
+	int dir =0;
+	
+	if(!sip_create_rf_data(msg, dir, &rf_data, &auth))
+		goto error;
 
 	if(!auth) goto error;
 

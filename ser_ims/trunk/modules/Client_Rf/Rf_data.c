@@ -19,6 +19,7 @@
 
 
 #include "Rf_data.h"
+#include "config.h"
 
 #ifndef WHARF
 
@@ -63,6 +64,9 @@ do {\
 
 #endif /* WHARF */
 
+
+extern client_rf_cfg cfg;
+
 event_type_t * new_event_type(str * sip_method,
 				str * event,
 				uint32_t * expires)
@@ -86,10 +90,50 @@ out_of_memory:
 	return NULL;
 }
 
+time_stamps_t * new_time_stamps(time_t	*sip_request_timestamp,
+		uint32_t *sip_request_timestamp_fraction,
+		time_t 	*sip_response_timestamp,
+		uint32_t *sip_response_timestamp_fraction){
+
+	time_stamps_t * x= 0;
+
+	mem_new(x, sizeof(time_stamps_t),pkg);
+
+	if(sip_request_timestamp){
+		mem_new(x->sip_request_timestamp, sizeof(time_t), pkg);
+		*(x->sip_request_timestamp) = *sip_request_timestamp;
+	}
+
+	if(sip_request_timestamp_fraction){
+		mem_new(x->sip_request_timestamp_fraction, sizeof(uint32_t), pkg);
+		*(x->sip_request_timestamp_fraction) = *sip_request_timestamp_fraction;
+	}
+
+	if(sip_response_timestamp){
+		mem_new(x->sip_response_timestamp, sizeof(time_t), pkg);
+		*(x->sip_response_timestamp) = *sip_response_timestamp;
+	}
+
+	if(sip_response_timestamp_fraction){
+		mem_new(x->sip_response_timestamp_fraction, sizeof(uint32_t), pkg);
+		*(x->sip_response_timestamp_fraction) = *sip_response_timestamp_fraction;
+	}
+
+
+	return x;
+
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+	time_stamps_free(x);
+	return 0;
+}
+
 ims_information_t * new_ims_information(event_type_t * event_type,
-					str  * user_session_id, 
-					str  * calling_party,
-					str  * called_party)
+					time_stamps_t * time_stamps,
+					str * user_session_id, 
+					str * outgoing_session_id,
+					str * calling_party,
+					str * called_party)
 {
 
 	str_list_slot_t *sl =0;
@@ -97,10 +141,13 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	mem_new(x, sizeof(ims_information_t), pkg);
 
 	x->event_type = event_type;
-	
-//	mem_free(x->role_of_node,pkg);
+	x->time_stamps = time_stamps;
 
-//	str_dup_ptr(x->outgoing_session_id,outgoing_session_id, pkg);
+	mem_new(x->role_of_node,sizeof(int32_t),pkg);
+	*(x->role_of_node) = cfg.node_functionality;
+
+	if(outgoing_session_id)
+		str_dup_ptr(x->outgoing_session_id,*outgoing_session_id, pkg);
 
 	if(user_session_id)
 		str_dup_ptr(x->user_session_id, *user_session_id, pkg);
@@ -117,8 +164,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	//WL_FREE_ALL(&(x->called_asserted_identity),str_list_t,pkg);
 	//str_free_ptr(x->requested_party_address,pkg);
 	
-//	time_stamps_free(x->time_stamps);
-	
+
 //	WL_FREE_ALL(&(x->ioi),ioi_list_t,pkg);
 //	str_free_ptr(x->icid,pkg);
 	
@@ -152,40 +198,33 @@ out_of_memory:
 }
 
 
-Rf_ACR_t * new_Rf_ACR(str origin_host, str origin_realm,
-		str destination_realm,
-		str * user_name, str * service_context_id,
-		str * sip_method, str * event, uint32_t * expires,
-		str *user_session_id, str * calling_party, str * called_party,
-		int side, subscription_id_t * subscription){
+Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type, 
+			str * user_name, ims_information_t * ims_info,
+			subscription_id_t * subscription){
 
 
 	Rf_ACR_t *x=0;
-	event_type_t * event_type = 0;
-	ims_information_t * ims_info =0;
 	service_information_t * service_info=0;
 	
 	mem_new(x, sizeof(Rf_ACR_t), pkg);
 
-	str_dup(x->origin_host, origin_host, pkg);
-	str_dup(x->origin_realm, origin_realm, pkg);
-	str_dup(x->destination_realm, destination_realm, pkg);
+	str_dup(x->origin_host, cfg.origin_host, pkg);
+	str_dup(x->origin_realm, cfg.origin_realm, pkg);
+	str_dup(x->destination_realm, cfg.destination_realm, pkg);
 
 	if(user_name)
 		str_dup_ptr_ptr(x->user_name, user_name, pkg);
-	if(service_context_id)
-		str_dup_ptr(x->service_context_id, *service_context_id, pkg);
 	
-	if(!(event_type = new_event_type(sip_method, event, expires)))
-		goto error;
-
-	if(!(ims_info = new_ims_information(event_type, 
-					user_session_id, calling_party,called_party)))
-		goto error;
+	if(cfg.service_context_id && cfg.service_context_id->s)
+		str_dup_ptr(x->service_context_id, *(cfg.service_context_id), pkg);
+	
 	if(!(service_info = new_service_information(ims_info, subscription)))
 		goto error;
+	
+	ims_info = 0;
 
 	x->service_information = service_info;
+	service_info = 0;
 
 	return x;
 
@@ -193,6 +232,8 @@ out_of_memory:
 	LOG(L_ERR, "out of pkg memory\n");
 error:
 	Rf_free_ACR(x);
+	service_information_free(service_info);
+
 	return 0;
 }
 
