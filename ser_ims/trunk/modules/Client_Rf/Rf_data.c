@@ -144,7 +144,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	x->time_stamps = time_stamps;
 
 	mem_new(x->role_of_node,sizeof(int32_t),pkg);
-	*(x->role_of_node) = cfg.node_functionality;
+	*(x->role_of_node) = cfg.node_func;
 
 	if(outgoing_session_id)
 		str_dup_ptr(x->outgoing_session_id,*outgoing_session_id, pkg);
