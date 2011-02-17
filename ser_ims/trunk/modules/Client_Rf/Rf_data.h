@@ -21,6 +21,7 @@
 #define __CDF_Rf_data_H
 
 #include "../cdp/diameter.h"
+#include "../cdp/diameter_epc.h"
 
 #ifndef WHARF
 /**
@@ -72,34 +73,6 @@ do {\
 } while(0)
 
 
-/**
- * Duplicate a str, safely.
- * \Note This checks if:
- *  - src was an empty string
- *  - malloc failed
- * \Note On any error, the dst values are reset for safety
- * \Note A label "out_of_memory" must be defined in the calling function to handle
- * allocation errors. 
- * @param dst - destination str
- * @param src - source src
- * @param mem - type of mem to duplicate into (shm/pkg)
- */
-#define str_dup(dst,src,mem) \
-do {\
-	if ((src).len) {\
-		(dst).s = mem##_malloc((src).len);\
-		if (!(dst).s){\
-			LOG(L_ERR,"Error allocating %d bytes in %s!\n",(src).len,#mem);\
-			(dst).len = 0;\
-			goto out_of_memory;\
-		}\
-		memcpy((dst).s,(src).s,(src).len);\
-		(dst).len = (src).len;\
-	}else{\
-		(dst).s=0;(dst).len=0;\
-	}\
-} while (0)
-
 #define str_dup_ptr(dst,src,mem) \
 do {\
 	dst = mem##_malloc(sizeof(str));\
@@ -134,17 +107,6 @@ do {\
 	}\
 } while (0)
 
-
-/**
- * Frees a str content.
- * @param x - the str to free
- * @param mem - type of memory that the content is using (shm/pkg)
- */
-#define str_free(x,mem) \
-do {\
-	if ((x).s) mem##_free((x).s);\
-	(x).s=0;(x).len=0;\
-} while(0)
 
 #define str_free_ptr(x,mem) \
 do {\
@@ -339,8 +301,47 @@ typedef struct {
 	
 } ims_information_t;
 
+typedef enum {
+	Subscription_Type_MSISDN	= AVP_EPC_Subscription_Id_Type_End_User_E164,
+	Subscription_Type_IMSI		= AVP_EPC_Subscription_Id_Type_End_User_IMSI,
+	Subscription_Type_IMPU		= AVP_EPC_Subscription_Id_Type_End_User_SIP_URI,
+	Subscription_Type_NAI		= AVP_EPC_Subscription_Id_Type_End_User_NAI,	
+	Subscription_Type_IMPI 		= AVP_EPC_Subscription_Id_Type_End_User_Private,	
+} subscription_id_type_e;
+
+typedef struct _subscription_id_t {
+	int32_t type;
+	str id;
+} subscription_id_t;
+
+typedef struct _subscription_id_list_t_slot {
+	subscription_id_t s;
+	struct _subscription_id_list_t_slot *next,*prev;
+} subscription_id_list_element_t;
+
 typedef struct {
-	//subscription_id_list_t subscription_id;
+	subscription_id_list_element_t *head,*tail;
+} subscription_id_list_t;
+
+
+#define subscription_id_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_free((x)->s.id,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+#define subscription_id_list_t_copy(dst,src,mem) \
+do {\
+	(dst)->type = (src)->type;\
+	str_dup((dst)->s.id,(src)->s.id,mem);\
+} while(0)
+
+
+typedef struct {
+	subscription_id_list_t subscription_id;
 	
 	ims_information_t *ims_information;
 	
@@ -382,9 +383,12 @@ void time_stamps_free(time_stamps_t *x);
 void ims_information_free(ims_information_t *x);
 void service_information_free(service_information_t *x);
 
-
+Rf_ACR_t * new_Rf_ACR(str origin_host, str origin_realm,
+		str destination_realm,
+		str * user_name, str * service_context_id,
+		str callid, int side);
 void Rf_free_ACR(Rf_ACR_t *x);
-void Rf_free_ACA(Rf_ACA_t *x);
-Rf_ACA_t* Rf_new_ACA_from_ACR(Rf_ACR_t *r);
+//void Rf_free_ACA(Rf_ACA_t *x);
+
 
 #endif /* __CDF_Rf_data_H */

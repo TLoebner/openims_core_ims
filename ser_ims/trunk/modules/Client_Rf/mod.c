@@ -130,7 +130,6 @@ int (*sl_reply)(struct sip_msg* _msg, char* _str1, char* _str2);
 
 /**< Structure with pointers to tm funcs 		*/
 struct tm_binds tmb;            						
-dlg_func_t dialogb;	
 
 /**
  * Fix the configuration parameters.
@@ -151,7 +150,6 @@ static int mod_init(void)
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
 	cdp_avp_get_bind_f load_cdp_avp;
-	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
 	shutdown_singleton=shm_malloc(sizeof(int));
@@ -175,16 +173,6 @@ static int mod_init(void)
 	}
 	if (load_tm(&tmb) == -1)
 		goto error;
-
-	/* bind to the dialog module */
-	load_dlg = (bind_dlg_mod_f)find_export("bind_dlg_mod", -1, 0);
-	if (!load_dlg) {
-		LOG(L_ERR, "ERR"M_NAME":mod_init:  Can not import bind_dlg_mod. This module requires dialog module\n");
-		return -1;
-	}
-	if (load_dlg(&dialogb) != 0) {
-		return -1;
-	}
 
 	if (!(load_cdp = (load_cdp_f)find_export("load_cdp",NO_SCRIPT,0))) {
 		LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_cdp. This module requires cdp module.\n");
