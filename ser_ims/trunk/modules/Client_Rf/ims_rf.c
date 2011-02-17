@@ -76,6 +76,7 @@
 #include "diameter_rf.h"
 #include "ims_rf.h"
 #include "Rf_data.h"
+#include "sip.h"
 
 extern struct tm_binds tmb;
 extern cdp_avp_bind_t *cavpb;
@@ -102,9 +103,19 @@ struct sip_msg * trans_get_request_from_current_reply()
 	else return 0;
 }
 
-int get_ACR_info(struct sip_msg * msg, str * callid){
+int get_ACR_info(struct sip_msg * msg, str * callid, str * from_uri, str * to_uri){
+
+	*callid = cscf_get_call_id(msg, NULL);
+
+	if(!cscf_get_from_uri(msg, from_uri))
+		goto error;
+
+	if(!cscf_get_to_uri(msg, to_uri))
+		goto error;
 
 	return 1;
+error:
+	return 0;
 }
 
 /*
@@ -120,14 +131,15 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg,
 	Rf_ACR_t * rf_data=0;
 	AAASession * auth = NULL;
 	str user_name ={0,0};
-	str callid = {0,0};
+	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0};
 
-	if(!get_ACR_info(msg, &callid))
+	if(!get_ACR_info(msg, &callid, &from_uri, &to_uri))
 		goto error;
 
 	rf_data = new_Rf_ACR(rf_origin_host, rf_origin_realm, rf_destination_realm,
 			&user_name, &rf_service_context_id,
-			callid, dir);
+			NULL, NULL, NULL,
+			&callid, &from_uri, &to_uri, dir, NULL);
 	if(!rf_data) {
 		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_session: no memory left for generic\n");
 		goto out_of_memory;
