@@ -61,11 +61,15 @@
 
 #include "../../sr_module.h"
 #include "../../parser/contact/parse_contact.h"
+#include "../../parser/parse_rr.h"
 
 
 str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr);
 int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
 int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
+int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm);
+str cscf_get_event(struct sip_msg *msg);
+str cscf_get_asserted_identity(struct sip_msg *msg);
 
 #endif /* CLIENT_RF_SIP_H */
 

@@ -156,4 +156,111 @@ int cscf_get_to_uri(struct sip_msg* msg,str *local_uri)
 	
 }
 
+/**
+ * Returns the expires value from the Expires header in the message.
+ * It searches into the Expires header and if not found returns -1
+ * @param msg - the SIP message, if available
+ * @is_shm - msg from from shared memory 
+ * @returns the value of the expire or -1 if not found
+ */
+int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm)
+{
+	exp_body_t *exp;
+	int expires;
+	if (!msg) return -1;
+	/*first search in Expires header */
+	if (parse_headers(msg,HDR_EXPIRES_F,0)!=0) {
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_expires_hdr: Error parsing until header EXPIRES: \n");
+		return -1;
+	}
+	if (msg->expires){		
+		if (!msg->expires->parsed) {
+			parse_expires(msg->expires);
+		}
+		if (msg->expires->parsed) {
+			exp = (exp_body_t*) msg->expires->parsed;
+			if (exp->valid) {
+				expires = exp->val;
+				LOG(L_DBG,"DBG:"M_NAME":cscf_get_expires_hdr: <%d> \n",expires);
+				if(is_shm) {
+					free_expires((exp_body_t**)&exp);
+					msg->expires->parsed = 0;	
+				}
+				return expires;
+			}
+		}
+	}
+	
+	return -1;
+}
+
+/**
+ * Looks for the Event header and extracts its content.
+ * @param msg - the sip message
+ * @returns the string event value or an empty string if none found
+ */
+str cscf_get_event(struct sip_msg *msg)
+{
+	str e={0,0};
+	if (!msg) return e;
+	if (parse_headers(msg, HDR_EVENT_F, 0) != -1 && msg->event &&
+	    msg->event->body.len > 0) 
+	{
+		e.len = msg->event->body.len;
+		e.s = msg->event->body.s;
+	}
+	return e;
+}
+
+str s_asserted_identity={"P-Asserted-Identity",19};
+/**
+ * Looks for the P-Asserted-Identity header and extracts its content
+ * @param msg - the sip message
+ * @returns the asserted identity
+ */
+str cscf_get_asserted_identity(struct sip_msg *msg)
+{
+	name_addr_t id;
+	struct hdr_field *h;
+	rr_t *r;
+	memset(&id,0,sizeof(name_addr_t));
+	if (!msg) return id.uri;
+	if (parse_headers(msg, HDR_EOH_F, 0)<0) {
+		return id.uri;
+	}
+	h = msg->headers;
+	while(h)
+	{
+		if (h->name.len == s_asserted_identity.len  &&
+			strncasecmp(h->name.s,s_asserted_identity.s,s_asserted_identity.len)==0)
+		{
+			if (parse_rr(h)<0){
+				//This might be an old client
+				LOG(L_CRIT,"WARN:"M_NAME":cscf_get_asserted_identity: P-Asserted-Identity header must contain a Nameaddr!!! Fix the client!\n");
+				id.name.s = h->body.s;
+				id.name.len = 0;
+				id.len = h->body.len;
+				id.uri = h->body;
+				while(id.uri.len && (id.uri.s[0]==' ' || id.uri.s[0]=='\t' || id.uri.s[0]=='<')){
+					id.uri.s = id.uri.s+1;
+					id.uri.len --;
+				}
+				while(id.uri.len && (id.uri.s[id.uri.len-1]==' ' || id.uri.s[id.uri.len-1]=='\t' || id.uri.s[id.uri.len-1]=='>')){
+					id.uri.len--;
+				}
+				return id.uri;	
+			}
+			r = (rr_t*) h->parsed;
+			id = r->nameaddr; 
+			free_rr(&r);
+			h->parsed=r;
+			//LOG(L_CRIT,"%.*s",id.uri.len,id.uri.s);
+			return id.uri;
+		}
+		h = h->next;
+	}
+	return id.uri;
+}
+
+
 #endif /* WHARF*/

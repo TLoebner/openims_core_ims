@@ -388,17 +388,29 @@ typedef struct {
 } Rf_ACA_t;
 
 
+event_type_t * new_event_type(str * sip_method,
+				str * event,
+				uint32_t * expires);
+
+time_stamps_t * new_time_stamps(time_t	*sip_request_timestamp,
+		uint32_t *sip_request_timestamp_fraction,
+		time_t 	*sip_response_timestamp,
+		uint32_t *sip_response_timestamp_fraction);
+
+ims_information_t * new_ims_information(event_type_t * event_type,
+					time_stamps_t * time_stamps,
+					str * user_session_id, 
+					str * outgoing_session_id,
+					str * calling_party,
+					str * called_party);
+
 void event_type_free(event_type_t *x);
 void time_stamps_free(time_stamps_t *x);
 void ims_information_free(ims_information_t *x);
 void service_information_free(service_information_t *x);
 
-Rf_ACR_t * new_Rf_ACR(str origin_host, str origin_realm,
-		str destination_realm,
-		str * user_name, str * service_context_id,
-		str * sip_method, str * event, uint32_t * expires,
-		str * callid, str * calling_uri, str * called_uri, 
-		int side, subscription_id_t * subscription);
+Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type,
+		str * user_name, ims_information_t * ims_info, subscription_id_t * subscription);
 void Rf_free_ACR(Rf_ACR_t *x);
 //void Rf_free_ACA(Rf_ACA_t *x);
 
