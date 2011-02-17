@@ -57,6 +57,7 @@
 
 #include "mod.h"
 
+#include "../../parser/msg_parser.h"
 #include "../../parser/parse_uri.h"
 #include "../../sr_module.h"
 #include "../../socket_info.h"
@@ -74,6 +75,81 @@
 
 #include "diameter_rf.h"
 #include "ims_rf.h"
+#include "Rf_data.h"
+
+extern struct tm_binds tmb;
+extern cdp_avp_bind_t *cavpb;
+str rf_origin_host = {"pcscf.open-ims.test",19};
+str rf_origin_realm = {"open-ims.test",13};
+str rf_destination_realm = {"open-ims.test",13};
+str rf_service_context_id = {"abc",3};
+
+/**
+ * Retrieves the SIP request that generated a diameter transaction
+ * @param hash - the tm hash value for this request
+ * @param label - the tm label value for this request
+ * @returns the SIP request
+ */
+struct sip_msg * trans_get_request_from_current_reply()
+{
+	struct cell *t;
+	t = tmb.t_gett();
+	if (!t || t==(void*) -1){
+		LOG(L_ERR,"ERR:"M_NAME":trans_get_request_from_current_reply: Reply without transaction\n");
+		return 0;
+	}
+	if (t) return t->uas.request;
+	else return 0;
+}
+
+int get_ACR_info(struct sip_msg * msg, str * callid){
+
+	return 1;
+}
+
+/*
+ * creates the rf session for a session establishment
+ * @param aor: the aor to be handled
+ * @return: 0 - ok, -1 - error, -2 - out of memory
+ */
+
+Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg, 
+				AAASession ** authp, 
+				int dir){
+
+	Rf_ACR_t * rf_data=0;
+	AAASession * auth = NULL;
+	str user_name ={0,0};
+	str callid = {0,0};
+
+	if(!get_ACR_info(msg, &callid))
+		goto error;
+
+	rf_data = new_Rf_ACR(rf_origin_host, rf_origin_realm, rf_destination_realm,
+			&user_name, &rf_service_context_id,
+			callid, dir);
+	if(!rf_data) {
+		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_session: no memory left for generic\n");
+		goto out_of_memory;
+	}
+
+	LOG(L_INFO,"INFO:"M_NAME":dlg_create_rf_session: creating Rf Session\n");
+	auth = cavpb->cdp->AAACreateClientAuthSession(1,NULL,(void *)rf_data);
+	if (!auth) {
+		LOG(L_ERR,"INFO:"M_NAME":dlg_create_rf_session: unable to create the Rf Session\n");
+		Rf_free_ACR(rf_data);
+		rf_data = 0;
+		goto error;
+	}
+
+	*authp = auth;
+	return rf_data;
+
+out_of_memory:
+error:
+	if(rf_data) Rf_free_ACR(rf_data);
+	return NULL;
+}
 
 
 /**
@@ -85,7 +161,49 @@
  */
 int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	
+	struct sip_msg * req;
+	AAASession * auth = 0;
+	Rf_ACR_t * rf_data = 0;
+	AAAMessage * acr = 0;
+	int dir =0;
+
+	if(msg->first_line.type == SIP_REQUEST){
+		/*end of session*/
+		if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 ){
+			if(!(rf_data = dlg_create_rf_session(msg, &auth, dir)))
+				goto error;
+		}
+	}else{
+
+		req = trans_get_request_from_current_reply();
+		if(!req) {
+			LOG(L_ERR, "could not retrieve request from current transaction\n");
+			return CSCF_RETURN_ERROR;
+		}
+		/*start of session*/
+		if(msg->first_line.u.reply.statuscode == 200 &&
+		   strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
+
+			if(!(rf_data = dlg_create_rf_session(req, &auth, dir)))
+				goto error;
+		}
+	}
+
+	if(!auth) goto error;
+
+	//acr = Rf_new_ACR(auth);
+
+	//sendACR(acr);
+
+	//cdpb.AAATerminateAuthSession(auth);
+
+	Rf_free_ACR(rf_data);
+
 	return CSCF_RETURN_TRUE;
+error:
+	Rf_free_ACR(rf_data);
+
+	return CSCF_RETURN_ERROR;
 }
 
 
