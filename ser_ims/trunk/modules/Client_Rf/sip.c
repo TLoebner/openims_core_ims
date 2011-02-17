@@ -262,5 +262,103 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
 	return id.uri;
 }
 
+/**
+ * Returns the first header structure for a given header name. 
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @returns the hdr_field on success or NULL if not found  
+ */
+struct hdr_field* cscf_get_header(struct sip_msg * msg , str header_name)
+{		
+	struct hdr_field *h;
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_get_path: error parsing headers\n");
+		return NULL;
+	}
+	h = msg->headers;
+	while(h){
+		if (h->name.len==header_name.len &&
+			strncasecmp(h->name.s,header_name.s,header_name.len)==0)
+				break;
+		h = h->next;
+	}
+	return h;
+}
+
+
+
+static str p_charging_vector={"P-Charging-Vector",17};
+/*static str p_charging_vector_1={"\";icid-generated-at=",20};
+static str p_charging_vector_2={";orig-ioi=\"",11};
+static str p_charging_vector_e={"\"\r\n",3};
+static char hex_chars[17]="0123456789abcdef";*/
+
+/**
+ * Retrieves the P-Charging-Vector header information
+ * P-Charging-Vector:
+ * @param msg - the SIP message to retrieve from
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_FALSE on error
+ */
+int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, str * term_ioi)
+{
+	struct hdr_field* header = 0;
+	str header_body = {0,0};
+	char * p;
+	
+	header = cscf_get_header(msg, p_charging_vector);
+	if(!header)
+		return 0;
+	header_body = header->body;
+	if(!header_body.s || !header_body.len)
+		return 0;
+	
+	p = strtok (header_body.s, " ;:\r\t\n\"=");
+loop:	
+	if(p> (header_body.s+header_body.len))
+		return 1;
+
+	if(strncmp(p, "icid-value",10) == 0){
+		p = strtok(NULL, " ;:\r\t\n\"=");
+		if(p> (header_body.s+header_body.len)){
+			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
+			return 0;
+		}
+		icid->s = p;
+		icid->len = 0;
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r')
+			icid->len = icid->len +1;
+		p = strtok(NULL, " ;:\r\t\n\"=");
+			goto loop;
+	} else if (strncmp(p, "orig-ioi",8) == 0){
+
+		p = strtok(NULL, " ;:\r\t\n\"=");
+		if(p> (header_body.s+header_body.len)){
+			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
+			return 0;
+		}
+		orig_ioi->s = p;
+		orig_ioi->len = 0;
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r')
+			orig_ioi->len = orig_ioi->len +1;
+		p = strtok(NULL, " ;:\r\t\n\"=");
+			goto loop;
+	} else if (strncmp(p, "term-ioi",8) == 0){
+
+		p = strtok(NULL, " ;:\r\t\n\"=");
+		if(p> (header_body.s+header_body.len)){
+			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
+			return 0;
+		}
+		term_ioi->s = p;
+		term_ioi->len = 0;
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r')
+			term_ioi->len = term_ioi->len +1;
+		p = strtok(NULL, " ;:\r\t\n\"=");
+			goto loop;
+	}
+
+	return 1;
+}
+
 
 #endif /* WHARF*/

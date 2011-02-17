@@ -78,6 +78,7 @@
 #include "ims_rf.h"
 #include "Rf_data.h"
 #include "sip.h"
+#include "acr.h"
 
 extern struct tm_binds tmb;
 extern cdp_avp_bind_t *cavpb;
@@ -100,15 +101,16 @@ struct sip_msg * trans_get_request_from_current_reply()
 	else return 0;
 }
 
-int get_ACR_info(struct sip_msg * msg, 
+int get_sip_header_info(struct sip_msg * req,
+	        struct sip_msg * reply,	
 		int32_t * acc_record_type,
 		str * sip_method,
 		str * event, uint32_t * expires,
 		str * callid, str * from_uri, str * to_uri){
 
-	sip_method->s = msg->first_line.u.request.method.s;
-	sip_method->len = msg->first_line.u.request.method.len;
-
+	sip_method->s = req->first_line.u.request.method.s;
+	sip_method->len = req->first_line.u.request.method.len;
+	
 	if(strncmp(sip_method->s, "INVITE",6) == 0)
 		*acc_record_type = AAA_ACCT_START;
 	else if	(strncmp(sip_method->s, "BYE",3) == 0)
@@ -116,19 +118,43 @@ int get_ACR_info(struct sip_msg * msg,
 	else	
 		*acc_record_type = AAA_ACCT_EVENT;
 
-	*event = cscf_get_event(msg);
-	*expires = cscf_get_expires_hdr(msg, 0);
-	*callid = cscf_get_call_id(msg, NULL);
+	*event = cscf_get_event(req);
+	*expires = cscf_get_expires_hdr(req, 0);
+	*callid = cscf_get_call_id(req, NULL);
 
-	if(!cscf_get_from_uri(msg, from_uri))
+	if(!cscf_get_from_uri(req, from_uri))
 		goto error;
 
-	if(!cscf_get_to_uri(msg, to_uri))
+	if(!cscf_get_to_uri(req, to_uri))
 		goto error;
 
 	return 1;
 error:
 	return 0;
+}
+
+int get_ims_charging_info(struct sip_msg *req, 
+			struct sip_msg * reply, 
+			str * icid, 
+			str * orig_ioi, 
+			str * term_ioi){
+
+	cscf_get_p_charging_vector(req, icid, orig_ioi, term_ioi);
+	cscf_get_p_charging_vector(reply, icid, orig_ioi, term_ioi);
+
+	return 1;
+}
+
+int get_timestamps(struct sip_msg * req, 
+			struct sip_msg * reply, 
+			time_t * req_timestamp, 
+			time_t * reply_timestamp){
+
+	if(reply)
+		*reply_timestamp = time(NULL);
+	if(req)
+		*req_timestamp = time(NULL);
+	return 1;
 }
 
 /*
@@ -137,7 +163,8 @@ error:
  * @return: 0 - ok, -1 - error, -2 - out of memory
  */
 
-Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg, 
+Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
+	       			struct sip_msg * reply,	
 				AAASession ** authp, 
 				int dir){
 
@@ -145,7 +172,8 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg,
 	AAASession * auth = NULL;
 	str user_name ={0,0}, sip_method = {0,0}, event = {0,0}; 
 	uint32_t expires;
-	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0};
+	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0}, 
+	    icid= {0,0}, orig_ioi = {0,0}, term_ioi = {0,0};
 
 	event_type_t * event_type = 0;
 	ims_information_t * ims_info = 0;
@@ -155,9 +183,15 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * msg,
 
 	*authp = 0;
 
-	if(!get_ACR_info(msg, &acc_record_type, 
+	if(!get_sip_header_info(req, reply, &acc_record_type, 
 				&sip_method, &event, &expires, 
 				&callid, &from_uri, &to_uri))
+		goto error;
+
+	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
+		goto error;
+
+	if(!get_timestamps(req, reply, &req_timestamp, &reply_timestamp))
 		goto error;
 
 	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
@@ -210,7 +244,7 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 	if(msg->first_line.type == SIP_REQUEST){
 		/*end of session*/
 		if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 ){
-			if(!(*rf_data = dlg_create_rf_session(msg, auth, dir)))
+			if(!(*rf_data = dlg_create_rf_session(msg, NULL, auth, dir)))
 				goto error;
 		}
 	}else{
@@ -224,7 +258,7 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 		if(msg->first_line.u.reply.statuscode == 200 &&
 		   strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
 
-			if(!(*rf_data = dlg_create_rf_session(req, auth, dir)))
+			if(!(*rf_data = dlg_create_rf_session(msg, req, auth, dir)))
 				goto error;
 		}
 	}
@@ -245,7 +279,7 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	
 	AAASession * auth = 0;
 	Rf_ACR_t * rf_data = 0;
-//	AAAMessage * acr = 0;
+	AAAMessage * acr = 0;
 	int dir =0;
 	
 	if(!sip_create_rf_data(msg, dir, &rf_data, &auth))
@@ -253,7 +287,7 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 
 	if(!auth) goto error;
 
-	//acr = Rf_new_ACR(auth);
+	acr = Rf_new_acr(auth, rf_data);
 
 	//sendACR(acr);
 
