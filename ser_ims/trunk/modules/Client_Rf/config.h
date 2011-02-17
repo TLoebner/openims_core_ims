@@ -57,6 +57,7 @@
 #ifndef __CLIENT_RF_CONFIG_H
 #define __CLIENT_RF_CONFIG_H
 
+
 typedef struct {
 	str origin_host;
 	str origin_realm;
@@ -65,7 +66,24 @@ typedef struct {
 	/* Node functionality:
 	 *  S-CSCF: 0, P-CSCF: 1, I-CSCF: 2, MRFC: 3, MGCF: 4, BGCF: 5, 
 	 *  AS: 6, IBCF: 7, S-GW: 8, P-GW: 9, HSGW: 10 */
-	int32_t node_functionality;
+	int32_t node_func;
 } client_rf_cfg;
+
+#ifdef WHARF
+
+#define CLIENT_RF_CONFIG_DTD "\
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+<!ELEMENT Client_Rf ( Rf )>\
+\
+<!ELEMENT Rf (#PCDATA)>\
+<!ATTLIST Rf\
+	node_func			CDATA	#REQUIRED\
+>\
+\
+";
+
+int client_rf_parse_config(str config);
+
+#endif /* WHARF*/
 
 #endif /* __CLIENT_RF_CONFIG_H*/

@@ -33,8 +33,10 @@
 #include "mod_export.h"
 #include "../cdp/cdp_load.h"
 #include "diameter_rf.h"
+#include "config.h"
 
 cdp_avp_bind_t *cavpb=0;				/**< Structure with pointers to cdp_avp funcs*/
+client_rf_cfg cfg;
 
 /** This variable has to be called exactly mod_exports, as it is searched by the wharf base */
 wharf_mod_export_t mod_exports={
@@ -73,6 +75,10 @@ int client_rf_init(str config_data)
 		return 0;
 	} else {
 		cavpb = (cdp_avp_bind_t *) mod_get_bind("cdp_avp");
+	}
+
+	if(!client_rf_parse_config(config_data)){
+		return 0;
 	}
 
 	return 1;

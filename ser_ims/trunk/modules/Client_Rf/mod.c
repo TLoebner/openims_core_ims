@@ -112,7 +112,7 @@ static cmd_export_t client_rf_cmds[]={
  * Exported parameters.
  */	
 static param_export_t client_rf_params[]={ 
-	{"node_functionality", INT_PARAM, &(cfg.node_functionality)},
+	{"node_functionality", INT_PARAM, &(cfg.node_func)},
 	{"origin_host", STR_PARAM, &rf_origin_host_s},
 	{"origin_realm", STR_PARAM, &rf_origin_realm_s},
 	{"destination_realm", STR_PARAM, &rf_destination_realm_s},
