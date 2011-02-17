@@ -70,6 +70,7 @@ int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
 int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm);
 str cscf_get_event(struct sip_msg *msg);
 str cscf_get_asserted_identity(struct sip_msg *msg);
+int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, str * term_ioi);
 
 #endif /* CLIENT_RF_SIP_H */
 
