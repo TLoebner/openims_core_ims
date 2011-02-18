@@ -81,7 +81,7 @@ void RfChargingResponseHandler(AAAMessage *response,void *param)
 					break;			
 				default :
 					LOG(L_ERR,"ERR:"M_NAME":RfChargingResponseHandler: - "
-							"Received unknown request for Rf command %d, flags %#1x endtoend %u hopbyhop %u\n",
+							"Received unknown response for Rf command %d, flags %#1x endtoend %u hopbyhop %u\n",
 							response->commandCode,response->flags, 
 							response->endtoendId, response->hopbyhopId);
 					return;
@@ -89,9 +89,9 @@ void RfChargingResponseHandler(AAAMessage *response,void *param)
 			}
 			break;
 		default:
-			LOG(L_ERR,"DBG:"M_NAME":RfChargingResponseHandler(): - Received unknown request for app %d command %d\n",
+			/*LOG(L_ERR,"DBG:"M_NAME":RfChargingResponseHandler(): - Received unknown response for app %d command %d\n",
 				response->applicationId,
-				response->commandCode);
+				response->commandCode);*/
 				return;
 							
 	}

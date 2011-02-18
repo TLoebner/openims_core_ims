@@ -270,11 +270,11 @@ str cscf_get_asserted_identity(struct sip_msg *msg)
  */
 struct hdr_field* cscf_get_header(struct sip_msg * msg , str header_name)
 {		
-	struct hdr_field *h;
-	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+	struct hdr_field *h = 0;
+	/*if (parse_headers(msg, HDR_EOH_F, 0)<0){
 		LOG(L_ERR,"ERR:"M_NAME":cscf_get_path: error parsing headers\n");
 		return NULL;
-	}
+	}*/
 	h = msg->headers;
 	while(h){
 		if (h->name.len==header_name.len &&
@@ -304,13 +304,18 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	struct hdr_field* header = 0;
 	str header_body = {0,0};
 	char * p;
-	
+
+	LOG(L_DBG, "get_p_charging_vector\n");	
 	header = cscf_get_header(msg, p_charging_vector);
-	if(!header)
+	if(!header){
+		LOG(L_DBG, "no header %.*s was found\n", p_charging_vector.len, p_charging_vector.s);
 		return 0;
+	}
 	header_body = header->body;
 	if(!header_body.s || !header_body.len)
 		return 0;
+
+	LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
 	
 	p = strtok (header_body.s, " ;:\r\t\n\"=");
 loop:	
@@ -325,8 +330,10 @@ loop:
 		}
 		icid->s = p;
 		icid->len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r')
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
 			icid->len = icid->len +1;
+			p++;
+		}
 		p = strtok(NULL, " ;:\r\t\n\"=");
 			goto loop;
 	} else if (strncmp(p, "orig-ioi",8) == 0){
@@ -338,8 +345,10 @@ loop:
 		}
 		orig_ioi->s = p;
 		orig_ioi->len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r')
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
 			orig_ioi->len = orig_ioi->len +1;
+			p++;
+		}
 		p = strtok(NULL, " ;:\r\t\n\"=");
 			goto loop;
 	} else if (strncmp(p, "term-ioi",8) == 0){
@@ -351,8 +360,13 @@ loop:
 		}
 		term_ioi->s = p;
 		term_ioi->len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r')
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
 			term_ioi->len = term_ioi->len +1;
+			p++;
+		}
+		p = strtok(NULL, " ;:\r\t\n\"=");
+			goto loop;
+	} else {
 		p = strtok(NULL, " ;:\r\t\n\"=");
 			goto loop;
 	}

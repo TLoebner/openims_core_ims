@@ -74,11 +74,11 @@ event_type_t * new_event_type(str * sip_method,
 	event_type_t * x = 0;
 	
 	mem_new(x, sizeof(event_type_t), pkg);
-	if(sip_method)
+	if(sip_method && sip_method->s)
 		str_dup_ptr(x->sip_method, *sip_method,pkg);
-	if(event)
+	if(event && event->s)
 		str_dup_ptr(x->event,*event,pkg);
-	if(expires){
+	if(expires && *expires!=0){
 		mem_new(x->expires, sizeof(uint32_t), pkg);
 		*(x->expires) = *expires;
 	}
@@ -99,22 +99,22 @@ time_stamps_t * new_time_stamps(time_t	*sip_request_timestamp,
 
 	mem_new(x, sizeof(time_stamps_t),pkg);
 
-	if(sip_request_timestamp){
+	if(sip_request_timestamp && *sip_request_timestamp>0){
 		mem_new(x->sip_request_timestamp, sizeof(time_t), pkg);
 		*(x->sip_request_timestamp) = *sip_request_timestamp;
 	}
 
-	if(sip_request_timestamp_fraction){
+	if(sip_request_timestamp_fraction && *sip_request_timestamp_fraction>0){
 		mem_new(x->sip_request_timestamp_fraction, sizeof(uint32_t), pkg);
 		*(x->sip_request_timestamp_fraction) = *sip_request_timestamp_fraction;
 	}
 
-	if(sip_response_timestamp){
+	if(sip_response_timestamp && *sip_response_timestamp>0){
 		mem_new(x->sip_response_timestamp, sizeof(time_t), pkg);
 		*(x->sip_response_timestamp) = *sip_response_timestamp;
 	}
 
-	if(sip_response_timestamp_fraction){
+	if(sip_response_timestamp_fraction && *sip_response_timestamp_fraction>0){
 		mem_new(x->sip_response_timestamp_fraction, sizeof(uint32_t), pkg);
 		*(x->sip_response_timestamp_fraction) = *sip_response_timestamp_fraction;
 	}
@@ -146,19 +146,19 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	mem_new(x->role_of_node,sizeof(int32_t),pkg);
 	*(x->role_of_node) = cfg.node_func;
 
-	if(outgoing_session_id)
+	if(outgoing_session_id && outgoing_session_id->s)
 		str_dup_ptr(x->outgoing_session_id,*outgoing_session_id, pkg);
 
-	if(user_session_id)
+	if(user_session_id && user_session_id->s)
 		str_dup_ptr(x->user_session_id, *user_session_id, pkg);
 	
-	if(calling_party){
+	if(calling_party && calling_party->s){
 		mem_new(sl, sizeof(str_list_slot_t), pkg);
 		str_dup(sl->data, *calling_party, pkg);
 		WL_APPEND(&(x->calling_party_address), sl);
 	}
 
-	if(called_party)
+	if(called_party && called_party->s)
 		str_dup_ptr(x->called_party_address, *called_party, pkg);
 
 	//WL_FREE_ALL(&(x->called_asserted_identity),str_list_t,pkg);
@@ -191,8 +191,10 @@ service_information_t * new_service_information(ims_information_t * ims_info,
 		WL_APPEND(&(x->subscription_id),sl);
 	}
 	
+	return x;
+
 out_of_memory:
-	LOG(L_ERR, "out of pkg memory\n");
+	LOG(L_ERR, "new service information: out of pkg memory\n");
 	service_information_free(x);
 	return 0;
 }
@@ -212,17 +214,17 @@ Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type,
 	str_dup(x->origin_realm, cfg.origin_realm, pkg);
 	str_dup(x->destination_realm, cfg.destination_realm, pkg);
 
-	if(user_name)
+	if(user_name){
 		str_dup_ptr_ptr(x->user_name, user_name, pkg);
+	}
 	
 	if(cfg.service_context_id && cfg.service_context_id->s)
 		str_dup_ptr(x->service_context_id, *(cfg.service_context_id), pkg);
-	
-	if(!(service_info = new_service_information(ims_info, subscription)))
-		goto error;
-	
-	ims_info = 0;
 
+	if(ims_info)	
+		if(!(service_info = new_service_information(ims_info, subscription)))
+			goto error;
+	
 	x->service_information = service_info;
 	service_info = 0;
 
