@@ -201,9 +201,9 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	if(dir == 0)	user_name = from_uri;
 	else 		user_name = to_uri;
 
-/*	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
+	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
 		goto error;
-*/
+
 	LOG(L_DBG, "retrieved ims charging info icid %.*s orig_ioi %.*s term_ioi %.*s\n",
 			icid.len, icid.s, orig_ioi.len, orig_ioi.s, term_ioi.len, term_ioi.s);
 
@@ -220,7 +220,8 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	if(!(ims_info = new_ims_information(event_type, 
 					time_stamps,
 					&callid, &callid,
-					&from_uri, &to_uri)))
+					&from_uri, &to_uri, 
+					&icid, &orig_ioi, &term_ioi)))
 		goto error;
 	event_type = 0;
 	time_stamps = 0;

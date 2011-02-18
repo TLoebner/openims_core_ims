@@ -89,6 +89,46 @@
 #include "mod.h"
 
 /**
+ * Duplicate a str, safely.
+ * \Note This checks if:
+ *  - src was an empty string
+ *  - malloc failed
+ * \Note On any error, the dst values are reset for safety
+ * \Note A label "out_of_memory" must be defined in the calling function to handle
+ * allocation errors. 
+ * @param dst - destination str
+ * @param src - source src
+ * @param mem - type of mem to duplicate into (shm/pkg)
+ */
+#define str_dup(dst,src,mem) \
+do {\
+	if ((src).len) {\
+		(dst).s = mem##_malloc((src).len);\
+		if (!(dst).s){\
+			LOG(L_ERR,"Error allocating %d bytes in %s!\n",(src).len,#mem);\
+			(dst).len = 0;\
+			goto out_of_memory;\
+		}\
+		memcpy((dst).s,(src).s,(src).len);\
+		(dst).len = (src).len;\
+	}else{\
+		(dst).s=0;(dst).len=0;\
+	}\
+} while (0)
+
+/**
+ * Frees a str content.
+ * @param x - the str to free
+ * @param mem - type of memory that the content is using (shm/pkg)
+ */
+#define str_free(x,mem) \
+do {\
+	if ((x).s) mem##_free((x).s);\
+	(x).s=0;(x).len=0;\
+} while(0)
+
+
+/**
  * Looks for the Call-ID header
  * @param msg - the sip message
  * @param hr - ptr to return the found hdr_field 
@@ -304,6 +344,8 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	struct hdr_field* header = 0;
 	str header_body = {0,0};
 	char * p;
+	int index;
+	str temp = {0,0};
 
 	LOG(L_DBG, "get_p_charging_vector\n");	
 	header = cscf_get_header(msg, p_charging_vector);
@@ -311,9 +353,10 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 		LOG(L_DBG, "no header %.*s was found\n", p_charging_vector.len, p_charging_vector.s);
 		return 0;
 	}
-	header_body = header->body;
-	if(!header_body.s || !header_body.len)
+	if(!header->body.s || !header->body.len)
 		return 0;
+	
+	str_dup(header_body, header->body, pkg);
 
 	LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
 	
@@ -328,12 +371,17 @@ loop:
 			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
 			return 0;
 		}
-		icid->s = p;
-		icid->len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
-			icid->len = icid->len +1;
+		temp.s = p;
+		temp.len = 0;
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r' && *p!='"'){
+			temp.len = temp.len +1;
 			p++;
 		}
+		icid->len = temp.len;
+		index = temp.s - header_body.s;
+		LOG(L_DBG, "icid len %i, index %i\n", temp.len, index);
+		icid->s = header->body.s + index;
+		LOG(L_DBG, "icid is %.*s\n", icid->len, icid->s);
 		p = strtok(NULL, " ;:\r\t\n\"=");
 			goto loop;
 	} else if (strncmp(p, "orig-ioi",8) == 0){
@@ -343,12 +391,17 @@ loop:
 			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
 			return 0;
 		}
-		orig_ioi->s = p;
-		orig_ioi->len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
-			orig_ioi->len = orig_ioi->len +1;
+		temp.s = p;
+		temp.len = 0;
+		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r' && *p!='"'){
+			temp.len = temp.len +1;
 			p++;
 		}
+		orig_ioi->len = temp.len;
+		index = temp.s - header_body.s;
+		LOG(L_DBG, "orig ioi len %i, index %i\n", temp.len, index);
+		orig_ioi->s = header->body.s + index;
+		LOG(L_DBG, "orig_ioi is %.*s\n", orig_ioi->len, orig_ioi->s);
 		p = strtok(NULL, " ;:\r\t\n\"=");
 			goto loop;
 	} else if (strncmp(p, "term-ioi",8) == 0){
@@ -358,12 +411,14 @@ loop:
 			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
 			return 0;
 		}
-		term_ioi->s = p;
-		term_ioi->len = 0;
+		temp.s = p;
+		temp.len = 0;
 		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
-			term_ioi->len = term_ioi->len +1;
+			temp.len = temp.len +1;
 			p++;
 		}
+		term_ioi->len = temp.len;
+		term_ioi->s = header->body.s + (temp.s-header_body.s);
 		p = strtok(NULL, " ;:\r\t\n\"=");
 			goto loop;
 	} else {
@@ -371,7 +426,12 @@ loop:
 			goto loop;
 	}
 
+	LOG(L_DBG, "end\n");
+	str_free(header_body, pkg);
 	return 1;
+out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector:out of pkg memory\n");
+	return 0;
 }
 
 
