@@ -133,11 +133,16 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * user_session_id, 
 					str * outgoing_session_id,
 					str * calling_party,
-					str * called_party)
+					str * called_party,
+					str * icid,
+					str * orig_ioi,
+					str * term_ioi)
 {
 
 	str_list_slot_t *sl =0;
 	ims_information_t *x = 0;
+	ioi_list_element_t * ioi_elem = 0;
+
 	mem_new(x, sizeof(ims_information_t), pkg);
 
 	x->event_type = event_type;
@@ -164,9 +169,17 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	//WL_FREE_ALL(&(x->called_asserted_identity),str_list_t,pkg);
 	//str_free_ptr(x->requested_party_address,pkg);
 	
+	if ((orig_ioi && orig_ioi->s) || 
+			(term_ioi && term_ioi->s)){
+		mem_new(ioi_elem, sizeof(ioi_list_element_t),pkg) ;
+		if(orig_ioi)
+			str_dup_ptr_ptr(ioi_elem->info.originating_ioi, orig_ioi, pkg);
+		if(term_ioi)
+			str_dup_ptr_ptr(ioi_elem->info.terminating_ioi, term_ioi, pkg);
+	}
 
-//	WL_FREE_ALL(&(x->ioi),ioi_list_t,pkg);
-//	str_free_ptr(x->icid,pkg);
+	if (icid && icid->s)
+		str_dup_ptr(x->icid,*icid,pkg);
 	
 	return x;
 

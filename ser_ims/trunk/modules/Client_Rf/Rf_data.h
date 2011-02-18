@@ -402,7 +402,10 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * user_session_id, 
 					str * outgoing_session_id,
 					str * calling_party,
-					str * called_party);
+					str * called_party,
+					str * icid,
+					str * orig_ioi,
+					str * term_ioi);
 
 void event_type_free(event_type_t *x);
 void time_stamps_free(time_stamps_t *x);
