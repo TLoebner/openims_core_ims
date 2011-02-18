@@ -226,6 +226,7 @@ Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type,
 	str_dup(x->origin_host, cfg.origin_host, pkg);
 	str_dup(x->origin_realm, cfg.origin_realm, pkg);
 	str_dup(x->destination_realm, cfg.destination_realm, pkg);
+	x->acct_record_type = acc_record_type;
 
 	if(user_name){
 		str_dup_ptr_ptr(x->user_name, user_name, pkg);

@@ -94,6 +94,7 @@ int * shutdown_singleton;
 char * rf_origin_host_s = "scscf.open-ims.test";
 char * rf_origin_realm_s = "open-ims.test";
 char * rf_destination_realm_s = "open-ims.test";
+char * rf_destination_host_s = "cdf.open-ims.test";
 char * rf_service_context_id_s = "32260@3gpp.org";
 client_rf_cfg cfg;
 
@@ -116,6 +117,7 @@ static param_export_t client_rf_params[]={
 	{"origin_host", STR_PARAM, &rf_origin_host_s},
 	{"origin_realm", STR_PARAM, &rf_origin_realm_s},
 	{"destination_realm", STR_PARAM, &rf_destination_realm_s},
+	{"destination_host", STR_PARAM, &rf_destination_host_s},
 	{"service_context_id", STR_PARAM, &rf_service_context_id_s},
 	{0,0,0} 
 };
@@ -158,6 +160,10 @@ int fix_parameters()
 
 	cfg.destination_realm.s = rf_destination_realm_s;
 	cfg.destination_realm.len = strlen(rf_destination_realm_s);
+
+	cfg.destination_host.s = rf_destination_host_s;
+	cfg.destination_host.len = strlen(rf_destination_host_s);
+
 
 	cfg.service_context_id = shm_malloc(sizeof(str));
 	if(!cfg.service_context_id){
