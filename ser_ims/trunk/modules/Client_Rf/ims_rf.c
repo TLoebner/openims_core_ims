@@ -108,6 +108,7 @@ int get_sip_header_info(struct sip_msg * req,
 		str * event, uint32_t * expires,
 		str * callid, str * from_uri, str * to_uri){
 
+	LOG(L_DBG, "retrieving sip info\n");
 	sip_method->s = req->first_line.u.request.method.s;
 	sip_method->len = req->first_line.u.request.method.len;
 	
@@ -128,6 +129,11 @@ int get_sip_header_info(struct sip_msg * req,
 	if(!cscf_get_to_uri(req, to_uri))
 		goto error;
 
+	LOG(L_DBG, "retrieved sip info : sip_method %.*s acc_record_type %i, event %.*s expires %u "
+			"call_id %.*s from_uri %.*s to_uri %.*s\n", 
+			sip_method->len, sip_method->s, *acc_record_type, event->len, event->s, *expires, 
+			callid->len, callid->s, from_uri->len, from_uri->s, to_uri->len, to_uri->s);
+
 	return 1;
 error:
 	return 0;
@@ -139,8 +145,11 @@ int get_ims_charging_info(struct sip_msg *req,
 			str * orig_ioi, 
 			str * term_ioi){
 
-	cscf_get_p_charging_vector(req, icid, orig_ioi, term_ioi);
-	cscf_get_p_charging_vector(reply, icid, orig_ioi, term_ioi);
+	LOG(L_DBG, "get ims charging info\n");
+	if(req)
+		cscf_get_p_charging_vector(req, icid, orig_ioi, term_ioi);
+	if(reply)
+		cscf_get_p_charging_vector(reply, icid, orig_ioi, term_ioi);
 
 	return 1;
 }
@@ -171,32 +180,39 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	Rf_ACR_t * rf_data=0;
 	AAASession * auth = NULL;
 	str user_name ={0,0}, sip_method = {0,0}, event = {0,0}; 
-	uint32_t expires;
+	uint32_t expires = 0;
 	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0}, 
 	    icid= {0,0}, orig_ioi = {0,0}, term_ioi = {0,0};
 
 	event_type_t * event_type = 0;
 	ims_information_t * ims_info = 0;
 	time_stamps_t * time_stamps = 0;
-	time_t req_timestamp, reply_timestamp;
+	time_t req_timestamp=0, reply_timestamp=0;
 	int32_t acc_record_type;
 
 	*authp = 0;
+
+	LOG(L_DBG, "in dlg_create_rf_session\n");
 
 	if(!get_sip_header_info(req, reply, &acc_record_type, 
 				&sip_method, &event, &expires, 
 				&callid, &from_uri, &to_uri))
 		goto error;
+	if(dir == 0)	user_name = from_uri;
+	else 		user_name = to_uri;
 
-	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
+/*	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
 		goto error;
+*/
+	LOG(L_DBG, "retrieved ims charging info icid %.*s orig_ioi %.*s term_ioi %.*s\n",
+			icid.len, icid.s, orig_ioi.len, orig_ioi.s, term_ioi.len, term_ioi.s);
 
 	if(!get_timestamps(req, reply, &req_timestamp, &reply_timestamp))
 		goto error;
 
 	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
 		goto error;
-
+	
 	if(!(time_stamps = new_time_stamps(&req_timestamp, NULL,
 						&reply_timestamp, NULL)))
 		goto error;
@@ -206,7 +222,6 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 					&callid, &callid,
 					&from_uri, &to_uri)))
 		goto error;
-
 	event_type = 0;
 	time_stamps = 0;
 
@@ -241,6 +256,7 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 	
 	struct sip_msg * req;
 
+	LOG(L_DBG, "creating rf data\n");
 	if(msg->first_line.type == SIP_REQUEST){
 		/*end of session*/
 		if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 ){
@@ -248,6 +264,9 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 				goto error;
 		}
 	}else{
+		LOG(L_DBG, "reply code is %i\n", msg->first_line.u.reply.statuscode);
+		if(msg->first_line.u.reply.statuscode != 200)
+		       return 1;
 
 		req = trans_get_request_from_current_reply();
 		if(!req) {
@@ -255,10 +274,9 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 			return CSCF_RETURN_ERROR;
 		}
 		/*start of session*/
-		if(msg->first_line.u.reply.statuscode == 200 &&
-		   strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
+		 if(strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
 
-			if(!(*rf_data = dlg_create_rf_session(msg, req, auth, dir)))
+			if(!(*rf_data = dlg_create_rf_session(req, msg, auth, dir)))
 				goto error;
 		}
 	}
@@ -282,22 +300,33 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	AAAMessage * acr = 0;
 	int dir =0;
 	
+	LOG(L_DBG, "trying to create and send acr\n");
 	if(!sip_create_rf_data(msg, dir, &rf_data, &auth))
 		goto error;
 
+	if (!rf_data)
+		return CSCF_RETURN_TRUE;
+
 	if(!auth) goto error;
 
-	acr = Rf_new_acr(auth, rf_data);
+	if(!(acr = Rf_new_acr(auth, rf_data)))
+		goto error;
 
-	//sendACR(acr);
+	cavpb->cdp->AAASessionsUnlock(auth->hash);
+	//cavpb->cdp->AAASendMessage(acr, NULL, NULL);
 
-	//cdpb.AAATerminateAuthSession(auth);
-
+	cavpb->cdp->AAAFreeMessage(&acr);
 	Rf_free_ACR(rf_data);
+	cavpb->cdp->AAADropSession(auth);
 
+	LOG(L_DBG, "Rf_Send_ACR:"M_NAME": request was created and sent\n");
 	return CSCF_RETURN_TRUE;
 error:
 	Rf_free_ACR(rf_data);
+	if(auth){
+		cavpb->cdp->AAASessionsUnlock(auth->hash);
+		cavpb->cdp->AAADropSession(auth);
+	}
 
 	return CSCF_RETURN_ERROR;
 }
