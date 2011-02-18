@@ -79,9 +79,11 @@
 #include "Rf_data.h"
 #include "sip.h"
 #include "acr.h"
+#include "config.h"
 
 extern struct tm_binds tmb;
 extern cdp_avp_bind_t *cavpb;
+extern client_rf_cfg cfg;
 
 /**
  * Retrieves the SIP request that generated a diameter transaction
@@ -189,6 +191,7 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	time_stamps_t * time_stamps = 0;
 	time_t req_timestamp=0, reply_timestamp=0;
 	int32_t acc_record_type;
+	subscription_id_t subscr;
 
 	*authp = 0;
 
@@ -201,9 +204,9 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	if(dir == 0)	user_name = from_uri;
 	else 		user_name = to_uri;
 
-	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
+/*	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
 		goto error;
-
+*/
 	LOG(L_DBG, "retrieved ims charging info icid %.*s orig_ioi %.*s term_ioi %.*s\n",
 			icid.len, icid.s, orig_ioi.len, orig_ioi.s, term_ioi.len, term_ioi.s);
 
@@ -226,8 +229,12 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	event_type = 0;
 	time_stamps = 0;
 
+	subscr.type = Subscription_Type_IMPU;
+	subscr.id.s = from_uri.s;
+	subscr.id.len = from_uri.len;
+
 	rf_data = new_Rf_ACR(acc_record_type,
-			&user_name, ims_info, NULL);
+			&user_name, ims_info, &subscr);
 	if(!rf_data) {
 		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_session: no memory left for generic\n");
 		goto out_of_memory;
@@ -314,9 +321,9 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 		goto error;
 
 	cavpb->cdp->AAASessionsUnlock(auth->hash);
-	//cavpb->cdp->AAASendMessage(acr, NULL, NULL);
+	cavpb->cdp->AAASendMessageToPeer(acr, &cfg.destination_host, 0,0);
 
-	cavpb->cdp->AAAFreeMessage(&acr);
+	//cavpb->cdp->AAAFreeMessage(&acr);
 	Rf_free_ACR(rf_data);
 	cavpb->cdp->AAADropSession(auth);
 

@@ -62,6 +62,7 @@ typedef struct {
 	str origin_host;
 	str origin_realm;
 	str destination_realm;
+	str destination_host;
 	str * service_context_id;
 	/* Node functionality:
 	 *  S-CSCF: 0, P-CSCF: 1, I-CSCF: 2, MRFC: 3, MGCF: 4, BGCF: 5, 
