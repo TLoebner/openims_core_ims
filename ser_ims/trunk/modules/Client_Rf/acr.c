@@ -69,7 +69,11 @@ error:
 
 int Rf_write_ims_information_avps(AAA_AVP_LIST * avp_list, ims_information_t* x)
 {
-	
+	str_list_slot_t * sl = 0;
+	AAA_AVP_LIST aList = {0,0};
+	service_specific_info_list_element_t * info = 0;
+	ioi_list_element_t * ioi_elem = 0;
+
 	if (x->event_type)
 		if(!Rf_write_event_type_avps(avp_list, x->event_type))
 			goto error;
@@ -87,69 +91,86 @@ int Rf_write_ims_information_avps(AAA_AVP_LIST * avp_list, ims_information_t* x)
 		if (cavpb->epcapp.add_Outgoing_Session_Id(avp_list,*(x->outgoing_session_id),0))	
 			goto error;
 
-/*	avp=0;
-	while(cavpb->epcapp.add_Calling_Party_Address(avp_list,&s,&avp)){
-		WL_NEW(sl,str_list_t,pkg);		
-		str_dup(sl->data,s,pkg);
-		WL_APPEND(&(x->calling_party_address),sl);
+	for(sl = x->calling_party_address.head; sl; sl=sl->next){
+		if(!cavpb->epcapp.add_Calling_Party_Address(avp_list,sl->data,0))
+			goto error;
 	}
-	if (cavpb->epcapp.add_Called_Party_Address(avp_list,&s,0)) str_dup_ptr(x->called_party_address,s,pkg);	
-	avp=0;
-	while(cavpb->epcapp.add_Called_Asserted_Identity(avp_list,&s,&avp)){
-		WL_NEW(sl,str_list_t,pkg);		
-		str_dup(sl->data,s,pkg);
-		WL_APPEND(&(x->called_asserted_identity),sl);
+	
+	if (x->called_party_address)
+		if (!cavpb->epcapp.add_Called_Party_Address(avp_list,*(x->called_party_address),0))
+			goto error;	
+
+	for(sl = x->called_asserted_identity.head;sl;sl=sl->next){
+		if(!cavpb->epcapp.add_Called_Asserted_Identity(avp_list,sl->data,0))
+			goto error;
 	}
-	if (cavpb->epcapp.add_Requested_Party_Address(avp_list,&s,0)) str_dup_ptr(x->requested_party_address,s,pkg);	
-*/
+
+	if (x->requested_party_address)
+		if (!cavpb->epcapp.add_Requested_Party_Address(avp_list,*(x->requested_party_address),0))
+			goto error;
 
 	if (x->time_stamps)
 		if(!Rf_write_time_stamps_avps(avp_list, x->time_stamps))
 			goto error;
 	
-/*	avp=0;
-	while(cavpb->epcapp.add_Inter_Operator_Identifier(avp_list,&ioi_list,&avp)){
-		WL_NEW(ioi,ioi_list_t,pkg);		
-		if (cavpb->epcapp.add_Originating_IOI(ioi_list,&s,0)) str_dup_ptr(ioi->info.originating_ioi,s,pkg);
-		if (cavpb->epcapp.add_Terminating_IOI(ioi_list,&s,0)) str_dup_ptr(ioi->info.terminating_ioi,s,pkg);
-		WL_APPEND(&(x->ioi),ioi);
-		cavpb->data.free_Grouped(&ioi_list);
-	}
-	if (cavpb->epcapp.add_IMS_Charging_Identifier(avp_list,&s,0)) str_dup_ptr(x->icid,s,pkg);	
-	
-	if (cavpb->epcapp.add_Service_ID(avp_list,&s,0)) str_dup_ptr(x->service_id,s,pkg);
+	for (ioi_elem = x->ioi.head; ioi_elem; ioi_elem = ioi_elem->next){
+		
+		if (ioi_elem->info.originating_ioi)
+			if (!cavpb->epcapp.add_Originating_IOI(&aList,*(ioi_elem->info.originating_ioi),0))
+				goto error;
 
-	avp=0;
-	while(cavpb->epcapp.add_Service_Specific_Info(avp_list,&ss_info_list,&avp)){
-		WL_NEW(ss_info,service_specific_info_list_t,pkg);		
-		if (cavpb->epcapp.add_Service_Specific_Data(ss_info_list,&s,0)) str_dup_ptr(ss_info->info.data,s,pkg);
-		if (cavpb->epcapp.add_Service_Specific_Type(ss_info_list,&u32,0)) {
-			mem_new(ss_info->info.type,sizeof(uint32_t),pkg);
-			*(ss_info->info.type) = u32;
-		}
-		WL_APPEND(&(x->service_specific_info),ss_info);
-		cavpb->data.free_Grouped(&ss_info_list);
-	}	 
-	
-	if (cavpb->epcapp.add_Cause_Code(avp_list,&i32,0)) {
-		mem_new(x->cause_code,sizeof(int32_t),pkg);
-		*(x->cause_code) = i32;
+		if (ioi_elem->info.terminating_ioi)
+			if (!cavpb->epcapp.add_Terminating_IOI(&aList,*(ioi_elem->info.terminating_ioi),0))
+				goto error;
+		
+		if (!cavpb->epcapp.add_Inter_Operator_Identifier(avp_list,&aList,0))
+			goto error;
+		aList.head = aList.tail = 0;
 	}
-*/	
+
+	if (x->icid)
+		if (!cavpb->epcapp.add_IMS_Charging_Identifier(avp_list,*(x->icid),0)) 
+			goto error;
+
+	if (x->service_id)	
+		if (!cavpb->epcapp.add_Service_ID(avp_list,*(x->service_id),0)) 
+			goto error;
+	
+	for (info = x->service_specific_info.head; info; info = info->next){
+		
+		if(info->info.data)		
+			if (!cavpb->epcapp.add_Service_Specific_Data(&aList,*(info->info.data),0))
+				goto error;
+		if (info->info.type)
+			if (!cavpb->epcapp.add_Service_Specific_Type(&aList,*(info->info.type))) 
+				goto error;
+		
+		if (!cavpb->epcapp.add_Service_Specific_Info(avp_list, &aList, 0))
+			goto error;
+		aList.head = aList.tail = 0;
+	}
+
+	if (x->cause_code)
+		if (!cavpb->epcapp.add_Cause_Code(avp_list,*(x->cause_code))) 
+			goto error;
+	
 	return 1;
 error:
+	/*free aList*/
+	cavpb->cdp->AAAFreeAVPList(&aList);
 	return 0;
 }
 
 int Rf_write_service_information_avps(AAA_AVP_LIST * avp_list, service_information_t* x)
 {
-/*	while(cavpb->ccapp.add_Subscription_Id_Group(avp_list,&type,&id,&avp)){
-		WL_NEW(subs_id,subscription_id_list_t,pkg);
-		subs_id->s.type = type;
-		str_dup(subs_id->s.id,id,pkg);
-		WL_APPEND(&(x->subscription_id),subs_id);
+	subscription_id_list_element_t * elem = 0;
+
+	for (elem = x->subscription_id.head; elem; elem= elem->next){
+
+		if(!cavpb->ccapp.add_Subscription_Id_Group(avp_list,elem->s.type,elem->s.id,0))
+			goto error;
 	}
-*/	
+	
 	if (x->ims_information)
 		if(!Rf_write_ims_information_avps(avp_list, x->ims_information))
 			goto error;
