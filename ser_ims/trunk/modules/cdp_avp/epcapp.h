@@ -663,6 +663,8 @@ cdp_avp_ptr		(Application_Server,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY
 cdp_avp_add_ptr	(Application_Server_Information,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(Application_Server_Information,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
 
+cdp_avp_ptr		(Authorized_QoS,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
 cdp_avp_ptr		(Called_Asserted_Identity,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 cdp_avp_ptr		(Called_Party_Address,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
