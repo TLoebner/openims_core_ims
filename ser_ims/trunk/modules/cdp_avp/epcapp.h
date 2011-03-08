@@ -344,6 +344,8 @@ cdp_avp			(Session_Linking_Indicator,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDAT
  * TS 29.061 Gi/SGi
  */
 
+cdp_avp_ptr		(3GPP_Charging_Id,						EPC_vendor_id_3GPP,	0,							OctetString,	str)
+
 cdp_avp_ptr		(3GPP_SGSN_Address,						EPC_vendor_id_3GPP,	0,							OctetString,	str)	
 
 cdp_avp_ptr		(3GPP_SGSN_IPv6_Address,				EPC_vendor_id_3GPP,	0,							OctetString,	str)	
