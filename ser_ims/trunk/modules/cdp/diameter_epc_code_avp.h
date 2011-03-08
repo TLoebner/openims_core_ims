@@ -134,6 +134,9 @@ enum {
 	AVP_EPC_Event_Type									= 823,
 	AVP_EPC_SIP_Method									= 824,
 	AVP_EPC_Event										= 825,
+	AVP_EPC_Content_Type								= 826,
+	AVP_EPC_Content_Length								= 827,
+	AVP_EPC_Content_Disposition							= 828,
 	AVP_EPC_Role_Of_Node								= 829,
 	AVP_EPC_User_Session_Id								= 830,
 	AVP_EPC_Calling_Party_Address						= 831,
@@ -147,6 +150,10 @@ enum {
 	AVP_EPC_Originating_IOI								= 839,
 	AVP_EPC_Terminating_IOI								= 840,
 	AVP_EPC_IMS_Charging_Identifier						= 841,
+	AVP_EPC_SDP_Session_Description						= 842,
+	AVP_EPC_SDP_Media_Component							= 843,
+	AVP_EPC_SDP_Media_Name								= 844,
+	AVP_EPC_SDP_Media_Description						= 845,
 	AVP_EPC_CG_Address									= 846,
 	AVP_EPC_Served_Party_IP_Address						= 848,
 	AVP_EPC_Authorized_QoS								= 849,
@@ -158,9 +165,12 @@ enum {
 	AVP_EPC_Cause_Code									= 861,
 	AVP_EPC_Node_Functionality							= 862,
 	AVP_EPC_Service_Specific_Data						= 863,
+	AVP_EPC_Originator									= 864,
 	AVP_EPC_Service_Information							= 873,
 	AVP_EPC_IMS_Information								= 876,
+	AVP_EPC_Media_Initiator_Flag						= 882,
 	AVP_EPC_Expires										= 888,
+	AVP_EPC_Message_Body								= 889,
 	AVP_EPC_Address_Data								= 897,
 	AVP_EPC_Address_Domain								= 898,
 	AVP_EPC_Address_Type								= 899,
@@ -238,6 +248,7 @@ enum {
 /** TS 32.299  */
 	
 	AVP_EPC_Additional_Type_Information					= 1205,
+	AVP_EPC_Content_Size								= 1206,
 	AVP_EPC_Additional_Content_Information				= 1207,
 	AVP_EPC_Addressee_Type								= 1208,
 	AVP_EPC_Class_Identifier							= 1214,
@@ -252,8 +263,13 @@ enum {
 	AVP_EPC_Service_Specific_Type						= 1257,
 	AVP_EPC_Access_Network_Information					= 1263,
 	AVP_EPC_Base_Time_Interval							= 1265,
+	AVP_EPC_Early_Media_Description						= 1272,
+	AVP_EPC_SDP_TimeStamps								= 1273,
+	AVP_EPC_SDP_Offer_TimeStamp							= 1274,
+	AVP_EPC_SDP_Answer_TimeStamp						= 1275,
 	AVP_EPC_AF_Correlation_Information					= 1276,
 	AVP_EPC_Alternate_Charged_Party_Address				= 1280,
+	AVP_EPC_Media_Initiator_Party						= 1288,
 	
 	
 /** TS 29.272  */
@@ -357,6 +373,7 @@ enum {
 	AVP_EPC_Client_Address								= 2018,
 	AVP_EPC_Carrier_Select_Routing_Information			= 2023,
 	AVP_EPC_Associated_Party_Address					= 2035,
+	AVP_EPC_SDP_Type									= 2036,
 	AVP_EPC_Change_Condition							= 2037,
 	AVP_EPC_Change_Time									= 2038,
 	AVP_EPC_Accumulated_Cost							= 2052,
@@ -880,4 +897,19 @@ enum {
 	AVP_EPC_Cause_Code_Internal_Error				= 3,
 };
 
+enum {
+	AVP_EPC_Media_Initiator_Flag_Called_Party		= 0,
+	AVP_EPC_Media_Initiator_Flag_Calling_Party		= 1,
+	AVP_EPC_Media_Initiator_Flag_Unknown			= 2,	
+};
+
+enum {
+	AVP_EPC_Originator_Calling_Party		= 0,
+	AVP_EPC_Originator_Called_Party			= 1,
+};
+
+enum {
+	AVP_EPC_SDP_Type_SDP_Offer				= 0,
+	AVP_EPC_SDP_Type_SDP_Answer				= 1,
+};
 #endif /*DIAMETER_EPC_H_*/
