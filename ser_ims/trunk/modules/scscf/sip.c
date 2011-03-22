@@ -3011,7 +3011,6 @@ error:
 	return r;
 }
 
-
 /**
  * Get the sent-by parameter of the last Via header in the message.
  * @param msg - the SIP message to loog into

@@ -373,7 +373,7 @@ loop:
 		}
 		temp.s = p;
 		temp.len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r' && *p!='"'){
+		while(*p != '\"'){
 			temp.len = temp.len +1;
 			p++;
 		}
@@ -393,7 +393,7 @@ loop:
 		}
 		temp.s = p;
 		temp.len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r' && *p!='"'){
+		while(*p != '\"'){
 			temp.len = temp.len +1;
 			p++;
 		}
@@ -413,7 +413,7 @@ loop:
 		}
 		temp.s = p;
 		temp.len = 0;
-		while(*p != ' ' && *p != ';' && *p!= '\n' && *p!='\t' && *p!='\r'){
+		while(*p != '\"'){
 			temp.len = temp.len +1;
 			p++;
 		}
