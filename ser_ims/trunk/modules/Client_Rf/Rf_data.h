@@ -405,7 +405,8 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * called_party,
 					str * icid,
 					str * orig_ioi,
-					str * term_ioi);
+					str * term_ioi,
+					int node_role);
 
 void event_type_free(event_type_t *x);
 void time_stamps_free(time_stamps_t *x);
