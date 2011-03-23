@@ -224,7 +224,7 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 					time_stamps,
 					&callid, &callid,
 					&from_uri, &to_uri, 
-					&icid, &orig_ioi, &term_ioi)))
+					&icid, &orig_ioi, &term_ioi, dir)))
 		goto error;
 	event_type = 0;
 	time_stamps = 0;
@@ -309,6 +309,15 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	int dir =0;
 	
 	LOG(L_DBG, "trying to create and send acr\n");
+	if(str1[0] == 'o' || str1[0] == 'O')
+		dir = 0;
+	else if (str1[0] == 't' || str1[0] == 'T')
+		dir = 1;
+	else {
+		LOG(L_ERR, "ERR:"M_NAME":Rf_Send_ACR: invalid direction %s (accepted \"orig\" or \"term\")\n", str1);
+		return CSCF_RETURN_ERROR;
+	}
+
 	if(!sip_create_rf_data(msg, dir, &rf_data, &auth))
 		goto error;
 
