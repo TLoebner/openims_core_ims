@@ -878,13 +878,44 @@ int peer_connect(peer *p)
 			continue;
 		}
 
-		if (connect(sock,ainfo->ai_addr,ainfo->ai_addrlen)!=0) {
-			LOG(L_WARN,"WARNING:peer_connect(): Error opening connection to to %s port %s >%s\n",
-				host,serv,strerror(errno));
-			close(sock);		
-			continue;
+		{// Connect with timeout
+			int x;
+			x=fcntl(sock,F_GETFL,0);
+			fcntl(sock,F_SETFL,x | O_NONBLOCK);
+			int res = connect(sock,ainfo->ai_addr,ainfo->ai_addrlen);
+			if (res<0){
+				if (errno==EINPROGRESS){
+					  struct timeval tv={
+						  .tv_sec = 5,
+						  .tv_usec = 0,
+					  };
+					  fd_set myset; 
+					  FD_ZERO(&myset); 
+					  FD_SET(sock, &myset);
+					  if (select(sock+1, NULL, &myset, NULL, &tv) > 0) { 
+						  socklen_t lon = sizeof(int);
+						  int  valopt;
+						  getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon); 
+						  if (valopt) { 
+					    	  LOG(L_WARN,"WARNING:peer_connect(): Error opening connection to to %s port %s >%s\n",host,serv,strerror(valopt));
+					    	  close(sock);		
+					    	  continue;
+					      } 
+					  }else{ 
+				    	  LOG(L_WARN,"WARNING:peer_connect(): Timeout or error opening connection to to %s port %s >%s\n",host,serv,strerror(errno));
+				    	  close(sock);		
+				    	  continue;
+					  } 					  
+				}
+			}else{
+				LOG(L_WARN,"WARNING:peer_connect(): Error opening connection to to %s port %s >%s\n",host,serv,strerror(errno));
+				close(sock);		
+				continue;
+			}
+			
+			x=fcntl(sock,F_GETFL,0);
+			fcntl(sock,F_SETFL,x & (~O_NONBLOCK));
 		}
-	
 		setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&option,sizeof(option));
 	
 		LOG(L_INFO,"INFO:peer_connect(): Peer %.*s:%d connected\n",p->fqdn.len,p->fqdn.s,p->port);

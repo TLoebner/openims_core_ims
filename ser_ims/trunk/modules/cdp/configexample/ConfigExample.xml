@@ -20,6 +20,7 @@
      this Diameter peer is overloaded in processing incoming requests;
      - a good choice is to have it about 2 times the number of workers. This will mean that each worker
      will have about 2 tasks in the queue to process before new incoming messages will start to block.
+  - ConnectTimeout - time in seconds to wait for an outbound TCP connection to be established.
   - TransactionTimeout - time in seconds after which the transaction timeout callback will be fired,
     when using transactional processing.
   - SessionsHashSize - size of the hash-table to use for the Diameter sessions. When searching for a 
@@ -42,6 +43,7 @@
 	Tc="30"
 	Workers="4"
 	QueueLength="32"
+	ConnectTimeout="5"
 	TransactionTimeout="5"
 	SessionsHashSize="128"
 	DefaultAuthSessionTimeout="60"
