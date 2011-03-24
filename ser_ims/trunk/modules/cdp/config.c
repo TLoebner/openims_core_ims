@@ -194,6 +194,7 @@ inline void log_dp_config(int level,dp_config *x)
 	LOG(level,"\tTc      : %d\n",x->tc);
 	LOG(level,"\tWorkers : %d\n",x->workers);
 	LOG(level,"\tQueueLen: %d\n",x->queue_length);
+	LOG(level,"\tConnTime: %d\n",x->connect_timeout);
 	LOG(level,"\tTranTime: %d\n",x->transaction_timeout);
 	LOG(level,"\tSessHash: %d\n",x->sessions_hash_size);
 	LOG(level,"\tDefAuthT: %d\n",x->default_auth_session_timeout);

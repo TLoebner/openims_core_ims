@@ -65,6 +65,7 @@
 	Tc			CDATA				#REQUIRED\
 	Workers		CDATA				#REQUIRED\
 	QueueLength	CDATA				#REQUIRED\
+	ConnectTimeout	   CDATA		#IMPLIED\
 	TransactionTimeout CDATA		#IMPLIED\
 	SessionsHashSize CDATA			#IMPLIED\
 	DefaultAuthSessionTimeout CDATA	#IMPLIED\

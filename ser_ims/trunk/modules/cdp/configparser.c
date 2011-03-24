@@ -251,6 +251,10 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 	if (xc) {x->queue_length = atoi((char*)xc);xmlFree(xc);}
 	else x->queue_length = 32;
 
+	xc = xmlGetProp(root,(xmlChar*)"ConnectTimeout");
+	if (xc) {x->connect_timeout= atoi((char*)xc);xmlFree(xc);}
+	else x->connect_timeout = 5;
+
 	xc = xmlGetProp(root,(xmlChar*)"TransactionTimeout");
 	if (xc) {x->transaction_timeout = atoi((char*)xc);xmlFree(xc);}
 	else x->transaction_timeout = 5;
