@@ -886,7 +886,7 @@ int peer_connect(peer *p)
 			if (res<0){
 				if (errno==EINPROGRESS){
 					  struct timeval tv={
-						  .tv_sec = 5,
+						  .tv_sec = config->connect_timeout,
 						  .tv_usec = 0,
 					  };
 					  fd_set myset; 
