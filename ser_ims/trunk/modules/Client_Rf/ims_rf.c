@@ -203,7 +203,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 				&callid, &from_uri, &to_uri))
 		goto error;
 
-	if(!get_subseq_acct_record_nb(callid, &acct_record_number, expires)){
+	if(!get_subseq_acct_record_nb(callid, &acct_record_number, dir, expires)){
 		LOG(L_ERR, "ERR:"M_NAME":dlg_create_rf_data: could not retrieve "
 			"accounting record number for session id %.*s\n", 
 			callid.len, callid.s);

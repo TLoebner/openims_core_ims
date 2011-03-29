@@ -105,14 +105,16 @@ int calc_hash(str id){
 	return 0;
 }
 
-int add_new_acct_record_safe(int hash_index, str id, uint32_t acct_record_number, uint32_t expires){
+int add_new_acct_record_safe(int hash_index, str id, uint32_t acct_record_number, int dir, uint32_t expires){
 
 	acct_record_info_list_slot_t * acct_rec = NULL;
 
 	mem_new(acct_rec, sizeof(acct_record_info_list_slot_t), shm);
 	acct_rec->acct_record_number = acct_record_number;
 	acct_rec->expires = expires;
+	acct_rec->dir = dir;
 	str_dup(acct_rec->id, id, shm);
+	WL_APPEND(acct_records+hash_index, acct_rec);
 
 	return 1;
 
@@ -124,16 +126,15 @@ out_of_memory:
 /**
  * search for the entry with the specific id, otherwise add it and initialize it with expires, if expires not 0 update
  */
-int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires){
+int get_subseq_acct_record_nb(str id, uint32_t * value, int dir, uint32_t expires){
 	
 	int hash_index;
 	acct_record_info_list_slot_t * acct_rec = NULL;
 
 	hash_index = calc_hash(id);
-	LOG(L_DBG, "hash_index is %i\n", hash_index);
 	lock_get(acct_records[hash_index].lock);
-		WL_FOREACH(acct_records+hash_index, acct_rec){
-			if(str_equal(acct_rec->id, id)){
+		WL_FOREACH(&(acct_records[hash_index]), acct_rec){
+			if(acct_rec->dir ==dir && str_equal(acct_rec->id, id)){
 				*value = acct_rec->acct_record_number +1;
 				acct_rec->acct_record_number = *value;
 				if(expires>0) acct_rec->expires = expires;
@@ -141,9 +142,8 @@ int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires){
 			}
 		}
 		if(!acct_rec){
-			LOG(L_DBG, "could not find the acct_record_nb entry for the id %.*s, adding one\n", id.len, id.s);
 			*value = 1;
-			if(!add_new_acct_record_safe(hash_index, id, *value, expires))
+			if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
 				goto error;
 		}
 	lock_release(acct_records[hash_index].lock);
