@@ -509,7 +509,153 @@ error:
 }
 
 
+/**
+ * Thread's loop for listening socket.
+ * @param sec_address - socket's information.
+ * @returns -1 on error
+ */
+int thread_rcv_loop(struct socket_info* sec_address)
+{
+unsigned len;
 
+#ifdef DYN_BUF
+	char* buf;
+#else
+	static char buf [BUF_SIZE+1];
+#endif
+	char *tmp;
+	union sockaddr_union* from;
+	unsigned int fromlen;
+	struct receive_info ri;
+
+
+	from=(union sockaddr_union*) pkg_malloc(sizeof(union sockaddr_union));
+	if (from==0){
+		LOG(L_ERR, "ERROR: udp_rcv_loop: out of memory\n");
+		goto error;
+	}
+	memset(from, 0 , sizeof(union sockaddr_union));
+	ri.bind_address=sec_address; /* this will not change, we do it only once*/
+	ri.dst_port=sec_address->port_no;
+	ri.dst_ip=sec_address->address;
+	ri.proto=PROTO_UDP;
+	ri.proto_reserved1=ri.proto_reserved2=0;
+	for(;;){
+       
+         
+#ifdef DYN_BUF
+		buf=pkg_malloc(BUF_SIZE+1);
+		if (buf==0){
+			LOG(L_ERR, "ERROR: udp_rcv_loop: could not allocate receive"
+					 " buffer\n");
+			goto error;
+		}
+#endif
+
+
+
+		fromlen=sockaddru_len(sec_address->su);
+
+
+
+		len=recvfrom(sec_address->socket, buf, BUF_SIZE, 0, &from->s,
+											&fromlen);
+	
+
+                     if(len==0) continue;
+
+
+		if (len==-1){
+			if (errno==EAGAIN){
+				DBG("udp_rcv_loop: packet with bad checksum received\n");
+				continue;
+			}
+			LOG(L_ERR, "ERROR: udp_rcv_loop:recvfrom:[%d] %s\n",
+						errno, strerror(errno));
+			if ((errno==EINTR)||(errno==EWOULDBLOCK)|| (errno==ECONNREFUSED))
+				continue; /* goto skip;*/
+			else goto error;
+		}
+		/* we must 0-term the messages, receive_msg expects it */
+		buf[len]=0; /* no need to save the previous char */
+
+		ri.src_su=*from;
+		su2ip_addr(&ri.src_ip, from);
+		ri.src_port=su_getport(from);
+
+
+
+
+
+#ifndef NO_ZERO_CHECKS
+#ifdef USE_STUN
+		/* STUN support can be switched off even if it's compiled */
+		if (stun_allow_stun == 0 || (unsigned char)*buf != 0x00) {
+#endif
+		  if (len<MIN_UDP_PACKET) {
+			  tmp=ip_addr2a(&ri.src_ip);
+			  DBG("udp_rcv_loop: probing packet received from %s %d\n",
+				  	tmp, htons(ri.src_port));
+			  continue;
+		  }
+#ifdef USE_STUN
+		}
+#endif
+#ifndef USE_STUN
+		if (buf[len-1]==0) {
+			tmp=ip_addr2a(&ri.src_ip);
+			LOG(L_WARN, "WARNING: udp_rcv_loop: "
+					"upstream bug - 0-terminated packet from %s %d\n",
+					tmp, htons(ri.src_port));
+			LOG(L_WARN, "WARNING: this fix was disabled as it was modifying correct messages <dvi>.\n");
+			//len--;
+		}
+#endif
+#endif
+#ifdef DBG_MSG_QA
+		if (!dbg_msg_qa(buf, len)) {
+			LOG(L_WARN, "WARNING: an incoming message didn't pass test,"
+						"  drop it: %.*s\n", len, buf );
+			continue;
+		}
+#endif
+		if (ri.src_port==0){
+			tmp=ip_addr2a(&ri.src_ip);
+			LOG(L_INFO, "udp_rcv_loop: dropping 0 port packet from %s\n", tmp);
+			continue;
+		}
+		
+#ifdef USE_STUN
+			/* STUN support can be switched off even if it's compiled */
+			if (stun_allow_stun && (unsigned char)*buf == 0x00) {
+			    /* stun_process_msg releases buf memory if necessary */
+				if ((stun_process_msg(buf, len, &ri)) != 0) {
+					continue; /* some error occurred */
+				}
+			} else
+#endif
+		/* receive_msg must free buf too!*/
+
+
+
+		receive_msg(buf, len, &ri);
+
+
+
+
+		
+	/* skip: do other stuff */
+		
+	}
+	/*
+	if (from) pkg_free(from);
+	return 0;
+	*/
+	
+error:
+	if (from) pkg_free(from);
+	return -1;
+}
 
 /* send buf:len over udp to dst (uses only the to and send_sock dst members)
  * returns the numbers of bytes sent on success (>=0) and -1 on error

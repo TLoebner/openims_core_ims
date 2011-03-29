@@ -66,6 +66,10 @@
 
 #include "security.h"
 
+#include <pthread.h>
+#include "../../tcp_conn.h"
+#include "udp_threads.h"
+#include <time.h>
 
 #include "mod.h"
 #include "sip.h"
@@ -86,6 +90,10 @@ extern char* pcscf_ipsec_P_Out_Req;		/**< Req E<-P */
 extern char* pcscf_ipsec_P_Inc_Rpl;		/**< Rpl E->P */
 extern char* pcscf_ipsec_P_Drop;		/**< Drop */
 
+#ifdef USE_TCP
+extern int unix_tcp_sock;
+extern int tcp_disable; /* 1 if tcp is disabled */
+#endif
 extern str pcscf_record_route_mt;		/**< Record-route for terminating case */
 extern str pcscf_record_route_mt_uri;	/**< URI for Record-route terminating */
 
@@ -502,7 +510,7 @@ r_contact* save_contact_security(struct sip_msg *req, str auth, str sec_hdr,r_se
 		}
 	}
 	
-	rc = update_r_contact_sec(puri.host,puri.port_no,puri.proto,
+	rc = update_r_contact_sec(puri.host,puri.port_no,req->via1->proto,
 			&(c->uri),&reg_state,&expires,s, &sos_reg);						
 
 	if (shmed && b) {
@@ -567,6 +575,8 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 	r_security *s;
 	r_security_type sec_type;
 	float sec_q;
+	int port_ipsec_c=0;
+	int port_ipsec_s=0;
 	
 	str prot, mod;
 	str ealg,alg,tmp;
@@ -610,10 +620,23 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 		if (sec_type != SEC_TLS || req->rcv.dst_port != pcscf_tls_port)
 					goto error;
 		break;
-	case SEC_IPSEC:
-		if (sec_type != SEC_IPSEC || req->rcv.dst_port != pcscf_ipsec_port_s)
+	case SEC_IPSEC:		
+              if(pcscf_use_ipsec==1)
+              {
+		port_ipsec_c=pcscf_ipsec_port_c;
+		port_ipsec_s=pcscf_ipsec_port_s;
+              }
+              else if(pcscf_use_ipsec==2)
+		{
+              port_ipsec_c=c->si_pc->port_no;
+		port_ipsec_s=c->si_ps->port_no;
+              }
+             
+
+		if (sec_type != SEC_IPSEC || req->rcv.dst_port != port_ipsec_s)
 		{
 			LOG(L_INFO,"DBG:"M_NAME":P_verify_security: Not IPSEC tunnel!.\n");
+            LOG(L_INFO,"sec_type=%d  req->rcv.dst_port=%d c->port_ps=%d\n",sec_type,req->rcv.dst_port,c->si_ps->port_no);
 			r_unlock(c->hash);
 			goto error;
 		}
@@ -635,8 +658,8 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 				(s->data.ipsec->r_alg.len != alg.len || strncasecmp(s->data.ipsec->r_alg.s, alg.s, alg.len)) || 
 				(s->data.ipsec->spi_pc != spi_pc) ||
 				(s->data.ipsec->spi_ps != spi_ps) ||
-				(pcscf_ipsec_port_c != port_pc) ||
-				(pcscf_ipsec_port_s != port_ps) ||
+				(port_ipsec_c != port_pc) ||
+				(port_ipsec_s != port_ps) ||
 				(s->data.ipsec->prot.len != prot.len || strncasecmp(s->data.ipsec->prot.s, prot.s, prot.len)) ||
 				(s->data.ipsec->mod.len != mod.len || strncasecmp(s->data.ipsec->mod.s, mod.s, mod.len)))
 		{		
@@ -645,7 +668,7 @@ int P_verify_security(struct sip_msg *req,char *str1, char *str2)
 			goto error;
 		}
 		break;
-	}
+	}extern int unix_tcp_sock;
 	r_unlock(c->hash);
 	
 	return CSCF_RETURN_TRUE;
@@ -668,14 +691,20 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 	struct hdr_field *hdr;	
 	str sec_hdr,sec_srv={0,0};
 	r_security_type sec_type;
-	char cmd[256];
+	char cmd[256],out_rpl[256],out_req[256],inc_rpl[256];
+	int unique_numb1,unique_numb2;
 	r_contact *c;
 	r_ipsec *ipsec;
 	float sec_q=-1;
 	str auth;
 
 	if (!pcscf_use_ipsec &&!pcscf_use_tls) goto	ret_false;
-	
+	if(pcscf_use_ipsec==2)
+	{
+	  srand(time(NULL));
+	  pcscf_ipsec_port_c=rand() % 5000 + 30000;
+	  pcscf_ipsec_port_s=rand() % 5000 + 35000;
+    }
 	req = cscf_get_request_from_reply(rpl);
 	if (!req){
 		LOG(L_ERR,"ERR:"M_NAME":P_security_401: No transactional request found.\n");
@@ -696,7 +725,97 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 
 
 	/* save data into registrar */
-	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q, 1);	
+	c = save_contact_security(req, auth, sec_hdr, sec_type, sec_q, 1);
+        if(pcscf_use_ipsec==2)
+        {
+          c->si_pc=shm_malloc(sizeof(struct socket_info));
+	  c->si_ps=shm_malloc(sizeof(struct socket_info));
+	  memset(c->si_pc,0,sizeof(struct socket_info));
+	  memset(c->si_ps,0,sizeof(struct socket_info));
+
+	  if(req->via1->proto==PROTO_UDP)
+	  {
+	  int create_thread_c,create_thread_s,create_thread_w;
+	  pthread_t thread_port_c,thread_port_s,thread_w;  
+          add_listen_iface(pcscf_ipsec_host, pcscf_ipsec_port_c, PROTO_UDP, 0);
+	  add_listen_iface(pcscf_ipsec_host, pcscf_ipsec_port_s, PROTO_UDP, 0);
+	  int socket_types=1;
+	  fix_all_socket_lists(&socket_types);
+
+	  str str_prm={pcscf_ipsec_host,strlen(pcscf_ipsec_host)};
+          struct socket_info * bind_address_c=grep_sock_info(&str_prm,pcscf_ipsec_port_c,PROTO_UDP);
+          struct socket_info * bind_address_s=grep_sock_info(&str_prm,pcscf_ipsec_port_s,PROTO_UDP);
+	  udp_init(bind_address_c);
+	  udp_init(bind_address_s);
+
+   	  c->si_pc->socket=bind_address_c->socket;
+   	  c->si_ps->socket=bind_address_s->socket;
+  	  c->si_pc->su=bind_address_c->su;
+	  c->si_ps->su=bind_address_s->su;
+ 	  c->si_pc->address=bind_address_c->address;
+	  c->si_ps->address=bind_address_s->address;
+	  c->si_pc->proto=bind_address_c->proto;
+	  c->si_ps->proto=bind_address_s->proto;
+
+
+	  STR_SHM_DUP(c->si_pc->port_no_str,bind_address_c->port_no_str,"new");
+	  STR_SHM_DUP(c->si_ps->port_no_str,bind_address_s->port_no_str,"new");
+	  STR_SHM_DUP(c->si_pc->address_str,bind_address_c->address_str,"new");
+	  STR_SHM_DUP(c->si_ps->address_str,bind_address_s->address_str,"new");
+	  STR_SHM_DUP(c->si_pc->name,bind_address_c->name,"new");
+	  STR_SHM_DUP(c->si_ps->name,bind_address_s->name,"new");
+
+
+  	  c->si_pc->port_no=bind_address_c->port_no;
+	  c->si_ps->port_no=bind_address_s->port_no;
+
+	  //start binding address threads
+	  create_thread_c = pthread_create(&thread_port_c, NULL, thread_rcv_func, bind_address_c);	
+	  create_thread_s = pthread_create(&thread_port_s, NULL, thread_rcv_func, bind_address_s);
+	
+          if(create_thread_c==0 && create_thread_s==0)
+	    LOG(L_INFO,"INFO:"M_NAME":successful create phreads in P_security_401 function proto UDP\n");
+	  else 
+	    LOG(L_INFO,"INFO:"M_NAME":failed create phreads in P_security_401 function proto UDP\n");
+    
+	  //start watching thread
+	  thread_watch_prms prms_thread_w={PROTO_UDP,pcscf_ipsec_port_c,pcscf_ipsec_port_s,thread_port_c,thread_port_s,c->host,c->port};
+          create_thread_w = pthread_create(&thread_w, NULL,thread_watch_func, &prms_thread_w);
+          if(create_thread_w==0)
+	    LOG(L_INFO,"INFO:"M_NAME":successful create watch phreads in P_security_401 function proto UDP\n");
+          else 
+	    LOG(L_INFO,"INFO:"M_NAME":failed create watch phreads in P_security_401 function proto UDP\n");
+	}
+	else if(req->via1->proto==PROTO_TCP)
+	{
+#ifdef USE_TCP
+ 	  if(!tcp_disable)
+	  {
+            long request[2];
+            request[0]=pcscf_ipsec_port_s;       
+	    request[1]=SOCKET_INFO_IPSEC;	
+            send_all(unix_tcp_sock, request, sizeof(request));
+		
+	    c->si_pc->socket=0;
+   	    c->si_ps->socket=0;
+	    c->si_pc->port_no=pcscf_ipsec_port_c;
+	    c->si_ps->port_no=pcscf_ipsec_port_s;
+	
+	    char * port=int2str(pcscf_ipsec_port_s,0);
+	    c->si_pc->port_no_str.len=strlen(port);
+	    c->si_pc->port_no_str.s=(char*)shm_malloc(c->si_pc->port_no_str.len+1); 
+	    memcpy(c->si_pc->port_no_str.s, port, c->si_pc->port_no_str.len+1);
+            c->si_pc->address_str.len=strlen(pcscf_ipsec_host);
+	    c->si_pc->address_str.s=(char*)shm_malloc(c->si_pc->address_str.len+1); 
+	    memcpy(c->si_pc->address_str.s, pcscf_ipsec_host, c->si_pc->address_str.len+1);
+            c->si_pc->proto=PROTO_TCP;
+            c->si_ps->proto=PROTO_TCP;
+	  }
+#endif 
+	}
+      }
+	else
+	  LOG(L_INFO,"INFO:"M_NAME":The protocol isn't UDP or TCP for dynamic ipsec\n");
 	if (!c) goto error;
 	switch(sec_type){
 		case SEC_NONE:
@@ -748,6 +867,12 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 				goto error;
 			}
 	
+            if(pcscf_use_ipsec==2)
+            {	
+              srand(time(NULL));
+              unique_numb1=rand() % 10000+1;
+              unique_numb2=rand() % 10000+1;      
+            }
 			/* run the IPSec script */	
 			/* P_Inc_Req */
 			sprintf(cmd,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
@@ -763,10 +888,65 @@ int P_security_401(struct sip_msg *rpl,char *str1, char *str2)
 				ipsec->ik.len,ipsec->ik.s,
 				ipsec->prot.len,ipsec->prot.s,
 				ipsec->mod.len,ipsec->mod.s);
+                if(pcscf_use_ipsec==2)
+				{
+                  /* P_Out_Rpl */
+			      sprintf(out_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s %d",
+				  pcscf_ipsec_P_Out_Rpl,
+				  c->host.len,c->host.s,
+				  ipsec->port_uc,
+				  pcscf_ipsec_host,
+				  pcscf_ipsec_port_s,
+				  ipsec->spi_uc,
+				  ipsec->ealg.len,ipsec->ealg.s,
+				  ipsec->ck.len,ipsec->ck.s,
+				  ipsec->alg.len,ipsec->alg.s,
+				  ipsec->ik.len,ipsec->ik.s,
+				  ipsec->prot.len,ipsec->prot.s,
+				  ipsec->mod.len,ipsec->mod.s,
+                  unique_numb1);					
+	
+	              /* P_Out_Req */
+			      sprintf(out_req,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s %d",
+				  pcscf_ipsec_P_Out_Req,
+				  c->host.len,c->host.s,
+				  ipsec->port_us,
+				  pcscf_ipsec_host,
+				  pcscf_ipsec_port_c,
+				  ipsec->spi_us,
+				  ipsec->ealg.len,ipsec->ealg.s,
+				  ipsec->ck.len,ipsec->ck.s,
+				  ipsec->alg.len,ipsec->alg.s,
+				  ipsec->ik.len,ipsec->ik.s,
+				  ipsec->prot.len,ipsec->prot.s,
+				  ipsec->mod.len,ipsec->mod.s,
+                  unique_numb2);								
+
+			      /* P_Out_Inc_Rpl */
+			      sprintf(inc_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
+				  pcscf_ipsec_P_Inc_Rpl,
+				  c->host.len,c->host.s,
+				  ipsec->port_us,
+				  pcscf_ipsec_host,
+				  pcscf_ipsec_port_c,
+				  ipsec->spi_pc,
+				  ipsec->ealg.len,ipsec->ealg.s,
+				  ipsec->ck.len,ipsec->ck.s,
+				  ipsec->alg.len,ipsec->alg.s,
+				  ipsec->ik.len,ipsec->ik.s,
+				  ipsec->prot.len,ipsec->prot.s,
+				  ipsec->mod.len,ipsec->mod.s);
+			    }
 
 			r_unlock(c->hash);
 				
 			execute_cmd(cmd);
+            if(pcscf_use_ipsec==2)
+			{
+			  execute_cmd(out_rpl);
+			  execute_cmd(out_req);
+			  execute_cmd(inc_rpl);
+			}
 			break;						
 	}
 	
@@ -775,6 +955,8 @@ ret_false:
 	return CSCF_RETURN_FALSE;
 error:
 	return CSCF_RETURN_ERROR;
+out_of_memory:
+    return CSCF_RETURN_ERROR;
 }
 
 
@@ -880,6 +1062,22 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 				goto error;
 			}
 			i = c->security->data.ipsec;
+#ifdef USE_TCP
+                        if(c->transport==PROTO_TCP && pcscf_use_ipsec==2 && !tcp_disable)
+			{
+        	            long request[2];       
+		            request[1]=ADD_CONNECTION_IPSEC;   
+        	            ip_client_prms * ip_prms=shm_malloc(sizeof(ip_client_prms));
+        	            STR_SHM_DUP(ip_prms->host_u,c->host,"new_ip_client_prms");
+        	            ip_prms->port_pc=c->si_pc->port_no;
+        	            ip_prms->port_ps=c->si_ps->port_no; 
+        	            ip_prms->proto=PROTO_TCP;
+        	            ip_prms->port_uc=i->port_uc;
+        	            ip_prms->port_us=i->port_us; 
+        	            request[0]=(long) ip_prms;        
+        	            send_all(unix_tcp_sock, request, sizeof(request));
+                        }
+#endif
 			
 			/* P_Out_Rpl */
 			sprintf(out_rpl,"%s %.*s %hu %s %d %u %.*s %.*s %.*s %.*s %.*s %.*s",
@@ -938,9 +1136,12 @@ int P_security_200(struct sip_msg *rpl,char *str1, char *str2)
 			
 			/* run the IPSec scripts */	
 			/* Registration */
-			execute_cmd(out_rpl);		
-			execute_cmd(out_req);		
-			execute_cmd(inc_rpl);
+            if(pcscf_use_ipsec!=2)
+			{
+			  execute_cmd(out_rpl);		
+			  execute_cmd(out_req);		
+			  execute_cmd(inc_rpl);
+			}
 			break;
 	}
 	
@@ -949,6 +1150,8 @@ ret_false:
 	return CSCF_RETURN_FALSE;
 error:
 	return CSCF_RETURN_ERROR;
+out_of_memory:
+    return CSCF_RETURN_ERROR;
 }
 
 
@@ -973,7 +1176,22 @@ void P_security_drop(r_contact *c,r_security *s)
 		case SEC_IPSEC:
 			i = s->data.ipsec;
 			if (!i) return;
-			sprintf(drop,"%s %.*s %hu %hu %s %d %d %u %u %u %u %.*s",
+                        if(pcscf_use_ipsec==2)
+			  sprintf(drop,"%s %.*s %hu %hu %s %d %d %u %u %u %u %.*s",
+				pcscf_ipsec_P_Drop,
+				c->host.len,c->host.s,
+				i->port_uc,
+				i->port_us,
+				pcscf_ipsec_host,
+				c->si_pc->port_no,
+				c->si_ps->port_no,
+				i->spi_uc,
+				i->spi_us,
+				i->spi_pc,
+				i->spi_ps,
+				i->prot.len,i->prot.s);
+                        else
+                          sprintf(drop,"%s %.*s %hu %hu %s %d %d %u %u %u %u %.*s",
 				pcscf_ipsec_P_Drop,
 				c->host.len,c->host.s,
 				i->port_uc,

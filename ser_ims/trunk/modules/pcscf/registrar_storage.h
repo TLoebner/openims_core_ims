@@ -160,6 +160,8 @@ typedef struct _r_contact {
 
 	r_public *head;				/**< first (and default) public identity*/
 	r_public *tail;				/**< last public identity				*/
+    struct socket_info * si_pc;
+    struct socket_info * si_ps;
 
 	struct _r_contact *next;	/**< next contact in this hash slot 	*/
 	struct _r_contact *prev;	/**< previous contact in this hash slot	*/

@@ -83,6 +83,8 @@
 #error "shared memory support needed (add -DSHM_MEM to Makefile.defs)"
 #endif
 
+#include "./modules/pcscf/mod.h" 
+
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -1250,6 +1252,13 @@ inline static int handle_ser_child(struct process_table* p, int fd_i)
 	int ret;
 	int fd;
 	
+	unsigned int port;
+        ip_client_prms * ip_prms;
+	struct socket_info * ipsec_si=0;
+        union sockaddr_union su;
+        struct tcp_connection* ipsec_conn=0;
+        struct tcp_connection* ipsec_conn_rem=0;
+
 	ret=-1;
 	if (p->unix_sock<=0){
 		/* (we can't have a fd==0, 0 is never closed )*/
@@ -1298,12 +1307,22 @@ inline static int handle_ser_child(struct process_table* p, int fd_i)
 	DBG("handle_ser_child: read response= %lx, %ld, fd %d from %d (%d)\n",
 					response[0], response[1], fd, (int)(p-&pt[0]), p->pid);
 	cmd=response[1];
-	tcpconn=(struct tcp_connection*)response[0];
-	if (tcpconn==0){
+        if(cmd==SOCKET_INFO_IPSEC || cmd==FREE_PORT_IPSEC)  
+          port=response[0];
+        else if(cmd==ADD_CONNECTION_IPSEC)
+        {
+          ip_prms=(ip_client_prms*)response[0];
+          port=ip_prms->port_pc;
+        }
+        else 
+        {
+	  tcpconn=(struct tcp_connection*)response[0];
+	  if (tcpconn==0){
 		LOG(L_CRIT, "BUG: handle_ser_child: null tcpconn pointer received"
 				 " from child %d (pid %d): %lx, %lx\n",
-				 	(int)(p-&pt[0]), p->pid, response[0], response[1]) ;
+		(int)(p-&pt[0]), p->pid, response[0], response[1]) ;
 		goto end;
+	  }
 	}
 	switch(cmd){
 		case CONN_ERROR:
@@ -1340,6 +1359,72 @@ inline static int handle_ser_child(struct process_table* p, int fd_i)
 			io_watch_add(&io_h, tcpconn->s, F_TCPCONN, tcpconn);
 			tcpconn->flags&=~F_CONN_REMOVED;
 			break;
+                case SOCKET_INFO_IPSEC:
+                         LOG(L_INFO,"L_INFO:SOCKET_INFO_IPSEC");
+			if(!grep_sock_info(&(tcp_listen->name),port,PROTO_TCP))
+                        {
+			  if(add_listen_iface(tcp_listen->name.s, port, PROTO_TCP, 0)==0)
+	  		    LOG(L_INFO,"INFO:"M_NAME":add_listen_iface  port %d\n",port);
+			  else
+	  		    LOG(L_ERR,"ERR:"M_NAME":failed add listen  port %d\n",port);
+			  int socket_types=1;
+			  if (fix_all_socket_lists(&socket_types)==0)
+			    LOG(L_INFO,"INFO:"M_NAME":good fix_all_socket_lists\n");
+			  else
+			    LOG(L_ERR,"ERR:"M_NAME":in fix_all_socket_lists\n");
+		
+			  struct socket_info * ipsec_si=grep_sock_info(&(tcp_listen->name),port,PROTO_TCP);
+			  tcp_init(ipsec_si);
+                          io_watch_add(&io_h, ipsec_si->socket, F_SOCKINFO,ipsec_si);
+                        }
+			break;
+                case ADD_CONNECTION_IPSEC:
+                        LOG(L_INFO,"L_INFO:ADD_CONNECTION_IPSEC");
+    		        if(!(ipsec_si=grep_sock_info(&(tcp_listen->name),port,PROTO_TCP)))
+                        {
+			  add_listen_iface(tcp_listen->name.s, port, PROTO_TCP, 0);
+			  int socket_types=1;
+			  fix_all_socket_lists(&socket_types);
+			  ipsec_si=grep_sock_info(&(tcp_listen->name),port,PROTO_TCP);
+			  open_socket_ipsec(ipsec_si);               
+                          sip_hostport2su(&su, &ip_prms->host_u,ip_prms->port_us,ip_prms->proto);
+                          if (tcp_blocking_connect(ipsec_si->socket, &(su.s), sockaddru_len(su))<0)
+			    LOG(L_ERR, "ERROR: tcpconn_connect: tcp_blocking_connect failed\n");
+                          ipsec_conn=tcpconn_new(ipsec_si->socket, &su, ipsec_si, ip_prms->proto, S_CONN_CONNECT);
+	                  (*tcp_connections_no)++;
+	                  ipsec_conn->s=ipsec_si->socket;
+			  /* add ipsec_conn to the list*/
+			  tcpconn_add(ipsec_conn);
+			  /* update the timeout*/
+			  ipsec_conn->timeout=get_ticks_raw()+tcp_con_lifetime;
+			  io_watch_add(&io_h, ipsec_conn->s, F_TCPCONN, ipsec_conn);
+			  ipsec_conn->flags&=~F_CONN_REMOVED;         
+                          //clear ip_prms structure
+                          shm_free(ip_prms->host_u.s);
+                          shm_free(ip_prms);                  
+		        }
+			break;
+                case FREE_PORT_IPSEC: 
+                        LOG(L_INFO,"L_INFO:DEL_SOCKET_INFO_IPSEC");
+			if(ipsec_si=grep_sock_info(&(tcp_listen->name),port,PROTO_TCP))
+                        {
+	      	         io_watch_del(&io_h, ipsec_si->socket, -1, IO_FD_CLOSING);
+                         
+ 			  int i=0;
+                          for(i=*connection_id;i>=0;i--)
+			  {
+                            ipsec_conn_rem=tcpconn_get(i,0,0,0);
+                            if(ipsec_conn_rem && ipsec_conn_rem->rcv.dst_port==port)
+			    {
+                              tcpconn_destroy(ipsec_conn_rem);
+                              break;
+                            }
+                          }	
+                          if(ipsec_si->socket!=-1)
+                          close(ipsec_si->socket);                     
+                          delete_sock_info(ipsec_si,PROTO_TCP);
+	       	        }
+                        break;
 		default:
 			LOG(L_CRIT, "BUG: handle_ser_child: unknown cmd %d\n", cmd);
 	}
@@ -1349,6 +1434,100 @@ error:
 	return -1;
 }
 
+
+
+/**
+ * Initilize and bind simple socket.
+ * @param sock_info - fill socket member.
+ * @returns 0 if ok or -1 on error 
+ */
+int open_socket_ipsec(struct socket_info* sock_info)
+{
+	union sockaddr_union* addr;
+	int optval;
+#ifdef DISABLE_NAGLE
+	int flag;
+	struct protoent* pe;
+
+	if (tcp_proto_no==-1)
+	{ 
+	  /* if not already set */
+	  pe=getprotobyname("tcp");
+	  if (pe==0)
+	  {
+	    LOG(L_ERR, "ERROR: tcp_init: could not get TCP protocol number\n");
+		tcp_proto_no=-1;
+	  }
+	  else
+	    tcp_proto_no=pe->p_proto;
+	}
+#endif
+	addr=&sock_info->su;
+	/* sock_info->proto=PROTO_TCP; */
+	if(init_su(addr, &sock_info->address, sock_info->port_no)<0)
+	{
+	  LOG(L_ERR, "ERROR: tcp_init: could no init sockaddr_union\n");
+	  goto error;
+	}
+	sock_info->socket=socket(AF2PF(addr->s.sa_family), SOCK_STREAM, 0);
+	if (sock_info->socket==-1)
+	{
+	  LOG(L_ERR, "ERROR: tcp_init: socket: %s\n", strerror(errno));
+	  goto error;
+	}
+#ifdef DISABLE_NAGLE
+	flag=1;
+	if( (tcp_proto_no!=-1) &&
+		 (setsockopt(sock_info->socket, tcp_proto_no , TCP_NODELAY,
+					 &flag, sizeof(flag))<0) )
+    {
+	  LOG(L_ERR, "ERROR: tcp_init: could not disable Nagle: %s\n",
+	  strerror(errno));
+	}
+#endif
+
+#if !defined(TCP_DONT_REUSEADDR) 
+	/* Stevens, "Network Programming", Section 7.5, "Generic Socket
+     * Options": "...server started,..a child continues..on existing
+	 * connection..listening server is restarted...call to bind fails
+	 * ... ALL TCP servers should specify the SO_REUSEADDRE option 
+	 * to allow the server to be restarted in this situation
+	 *
+	 * Indeed, without this option, the server can't restart.
+	 *   -jiri
+	 */
+	optval=1;
+	if(setsockopt(sock_info->socket, SOL_SOCKET, SO_REUSEADDR,
+				(void*)&optval, sizeof(optval))==-1)
+	{
+	  LOG(L_ERR, "ERROR: tcp_init: setsockopt %s\n",
+	  strerror(errno));
+	  goto error;
+	}
+#endif
+	/* tos */
+	optval = tos;
+	if(setsockopt(sock_info->socket, IPPROTO_IP, IP_TOS, (void*)&optval,
+				sizeof(optval)) ==-1)
+	{
+	  LOG(L_WARN, "WARNING: tcp_init: setsockopt tos: %s\n", strerror(errno));
+	  /* continue since this is not critical */
+	}
+	if(bind(sock_info->socket, &addr->s, sockaddru_len(*addr))==-1)
+	  LOG(L_ERR, "\nERROR:skrinits: tcp_init: bind() failed\n");
+			
+    LOG(L_INFO, "\nL_INFO:skrinits: tcp_init: sock_info->socket=%d\n",sock_info->socket);
+	return 0;	
+		
+error:
+	LOG(L_ERR, "\nERROR:skrinits: tcp_init: error block\n");
+	if(sock_info->socket!=-1)
+	{
+	  close(sock_info->socket);
+	  sock_info->socket=-1;
+	}
+	return -1;
+}
 
 
 /* sends a tcpconn + fd to a choosen child */

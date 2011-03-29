@@ -66,6 +66,16 @@ struct ip_addr{
 };
 
 
+typedef struct _ip_client_prms {     
+  //pcscf prms        
+  unsigned int port_pc;
+  unsigned int port_ps;      
+  //client prms
+  str host_u;
+  int proto;
+  unsigned int port_uc;
+  unsigned int port_us;   
+  } ip_client_prms;
 
 struct net{
 	struct ip_addr ip;

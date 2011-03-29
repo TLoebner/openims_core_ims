@@ -71,6 +71,7 @@
 #include "security.h"
 #include "ims_pm.h"
 
+#include "../../tcp_conn.h"
 
 extern struct tm_binds tmb;				/**< Structure with pointers to tm funcs 	*/
 extern time_t time_now;					/**< current time 							*/
@@ -80,6 +81,8 @@ extern int pcscf_nat_enable; 			/**< whether to enable NAT					*/
 extern int pcscf_nat_ping; 				/**< whether to ping anything 				*/
 extern int pcscf_nat_pingall; 			/**< whether to ping also the UA that don't look like being behind a NAT */
 extern int pcscf_nat_detection_type; 	/**< the NAT detection tests 				*/
+extern int unix_tcp_sock;
+extern int pcscf_use_ipsec;
 
 #ifdef WITH_IMS_PM
 	static str zero={0,0};
@@ -113,6 +116,8 @@ void registrar_timer(unsigned int ticks, void* param)
 					case NOT_REGISTERED:
 						LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> Not Registered and removed.\n",
 								c->uri.len,c->uri.s);
+                                                if(pcscf_use_ipsec ==2)
+                                                  del_tcp_ipsec(c);
 						del_r_contact(c);
 						break;
 					case REGISTERED:
@@ -125,7 +130,9 @@ void registrar_timer(unsigned int ticks, void* param)
 								c->expires = time_now + REGISTRATION_GRACE_PERIOD;
 							}else{
 								LOG(L_DBG,"DBG:"M_NAME":registrar_timer: Contact <%.*s> expired and removed.\n",
-									c->uri.len,c->uri.s);						
+								c->uri.len,c->uri.s);						
+                                                                if(pcscf_use_ipsec ==2)
+                                                                  del_tcp_ipsec(c);
 								del_r_contact(c);
 							}
 						}
@@ -146,6 +153,8 @@ void registrar_timer(unsigned int ticks, void* param)
 								c->uri.len,c->uri.s);		
 							P_security_drop(c,c->security);
 							P_security_drop(c,c->security_temp);
+                                                        if(pcscf_use_ipsec ==2)
+                                                          del_tcp_ipsec(c);
 							del_r_contact(c);
 						}
 						break;
@@ -155,6 +164,8 @@ void registrar_timer(unsigned int ticks, void* param)
 								c->uri.len,c->uri.s);		
 							P_security_drop(c,c->security);
 							P_security_drop(c,c->security_temp);
+                                                        if(pcscf_use_ipsec ==2)
+                                                          del_tcp_ipsec(c);
 							del_r_contact(c);
 						}
 						break;
@@ -174,6 +185,28 @@ void registrar_timer(unsigned int ticks, void* param)
 	#endif
 }
 
+
+/**
+ * Delete tcp connections for contact.
+ * @param c - user's information.
+ * @returns void
+ */
+
+inline void del_tcp_ipsec(r_contact *c)
+{
+  if(c->transport==PROTO_TCP)
+  {
+    long request[2];
+    request[1]=FREE_PORT_IPSEC;
+                                                  
+    request[0]=c->si_pc->port_no;
+	send_all(unix_tcp_sock, request, sizeof(request)); 
+    request[0]=c->si_ps->port_no;
+	send_all(unix_tcp_sock, request, sizeof(request));         
+  }
+  else
+    LOG(L_INFO,"INFO:"M_NAME":del_tcp_ipsec method has done nothing");                                      
+}
 
 /**
  * Calculates the expiration time for one contact.
