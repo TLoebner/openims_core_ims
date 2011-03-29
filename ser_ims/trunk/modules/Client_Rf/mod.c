@@ -82,6 +82,7 @@
 #include "diameter_rf.h"
 #include "ims_rf.h"
 #include "config.h"
+#include "Rf_data.h"
 
 MODULE_VERSION
 
@@ -193,6 +194,8 @@ int fix_parameters()
 		return 0;
 	}
 
+	cfg.hash_table_size = 32;
+
 
 	return 1;
 }
@@ -243,7 +246,11 @@ static int mod_init(void)
 	if (!cavpb)
 		goto error;
 
-
+	if (!init_acc_records()){
+		LOG(L_ERR, "DBG:"M_NAME":mod_init: failed to initiate local accounting records\n");			
+		goto error;
+	}
+	
 	return 0;
 error:
 	return -1;
@@ -288,6 +295,7 @@ static void mod_destroy(void)
 
 	if (do_destroy){
 		/* Then nuke it all */	
+		destroy_acc_records();
 	}
 	
 }

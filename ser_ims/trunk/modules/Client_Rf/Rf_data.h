@@ -418,5 +418,28 @@ Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type,
 void Rf_free_ACR(Rf_ACR_t *x);
 //void Rf_free_ACA(Rf_ACA_t *x);
 
+typedef struct _acc_record_info_list_t_slot{
+	str session_id;
+	int acc_record_number;
+	struct _acc_record_info_list_t_slot * next, * previous;
+} acc_record_info_list_slot_t;
+
+typedef struct _acc_record_info_list_t{
+	gen_lock_t * lock;
+	struct _acc_record_info_list_t_slot * head, * tail;
+} acc_record_info_list_t;
+
+#define acc_record_info_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_free((x)->session_id,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+int init_acc_records();
+void destroy_acc_records();
+
 
 #endif /* __CDF_Rf_data_H */

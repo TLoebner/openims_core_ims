@@ -59,6 +59,7 @@
 
 
 typedef struct {
+	int32_t hash_table_size;
 	str origin_host;
 	str origin_realm;
 	str destination_realm;

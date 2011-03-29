@@ -66,6 +66,40 @@ do {\
 
 
 extern client_rf_cfg cfg;
+acc_record_info_list_t * acc_records;
+
+int init_acc_records(){
+
+	int i;
+
+	mem_new(acc_records, cfg.hash_table_size*sizeof(acc_record_info_list_t), shm);
+
+	for(i=0; i< cfg.hash_table_size; i++){
+		acc_records[i].lock = lock_alloc();
+		if(!acc_records[i].lock) goto out_of_memory;
+		acc_records[i].lock=lock_init(acc_records[i].lock);
+
+	}
+
+	return 1;
+out_of_memory:
+	LOG(L_ERR, "out of shm memory");
+	return 0;
+}
+
+void destroy_acc_records(){
+	
+	int i;
+	for(i=0; i< cfg.hash_table_size; i++){
+
+		lock_get(acc_records[i].lock);
+		lock_destroy(acc_records[i].lock);
+		lock_dealloc(acc_records[i].lock);
+
+		WL_FREE_ALL(acc_records+i, acc_record_info_list_t,shm);
+	}
+}
+
 
 event_type_t * new_event_type(str * sip_method,
 				str * event,
