@@ -54,16 +54,55 @@
 
 #include "../cdp/diameter_epc_code_cmd.h"
 #include "Rf_data.h"
+#include "config.h"
 #include "diameter_rf.h"
+#include "acr.h"
 
 #ifdef WHARF
 #define M_NAME "Client_Rf"
 #endif
 
+extern cdp_avp_bind_t *cavpb;
+extern client_rf_cfg cfg;
 
-int AAASendACR(AAASession *session){
+AAASession * create_rf_session(Rf_ACR_t * rf_data){
+
+	AAASession * auth = NULL;
+	
+	LOG(L_INFO,"INFO:"M_NAME":create_rf_session: creating Rf Session\n");
+        auth = cavpb->cdp->AAACreateClientAuthSession(1,NULL,(void *)rf_data);
+        if (!auth) {
+                LOG(L_ERR,"ERR:"M_NAME":create_rf_session: unable to create the Rf Session\n");
+                goto error;
+        }
+error:
+	return auth;
+}
+
+int AAASendACR(AAASession **session, Rf_ACR_t * rf_data){
+
+	AAAMessage * acr = 0;
+	AAASession * auth = NULL;
+
+	if(!session || !(*session)){
+		auth = create_rf_session(rf_data);
+		if(!auth)
+			return 0;
+	}else
+		auth = *session;
+	
+	if(!(acr = Rf_new_acr(auth, rf_data)))
+                goto error;
+
+	//cavpb->cdp->AAASessionsUnlock(auth->hash);
+        cavpb->cdp->AAASendMessageToPeer(acr, &cfg.destination_host, 0,0);
+
+	if(!session || !(*session))
+		cavpb->cdp->AAADropSession(auth);
 
 	return 1;
+error:
+	return 0;
 }
 
 /**
