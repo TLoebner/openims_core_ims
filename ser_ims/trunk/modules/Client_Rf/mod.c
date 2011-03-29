@@ -95,7 +95,11 @@ char * rf_origin_host_s = "scscf.open-ims.test";
 char * rf_origin_realm_s = "open-ims.test";
 char * rf_destination_realm_s = "open-ims.test";
 char * rf_destination_host_s = "cdf.open-ims.test";
-char * rf_service_context_id_s = "32260@3gpp.org";
+char * rf_service_context_id_root_s = "32260@3gpp.org";
+char * rf_service_context_id_ext_s = "ext";
+char * rf_service_context_id_mnc_s = "01";
+char * rf_service_context_id_mcc_s = "001";
+char * rf_service_context_id_release_s = "8";
 client_rf_cfg cfg;
 
 
@@ -118,7 +122,11 @@ static param_export_t client_rf_params[]={
 	{"origin_realm", STR_PARAM, &rf_origin_realm_s},
 	{"destination_realm", STR_PARAM, &rf_destination_realm_s},
 	{"destination_host", STR_PARAM, &rf_destination_host_s},
-	{"service_context_id", STR_PARAM, &rf_service_context_id_s},
+	{"service_context_id_root", STR_PARAM, &rf_service_context_id_root_s},
+	{"service_context_id_ext", STR_PARAM, &rf_service_context_id_ext_s},
+	{"service_context_id_mnc", STR_PARAM, &rf_service_context_id_mnc_s},
+	{"service_context_id_mcc", STR_PARAM, &rf_service_context_id_mcc_s},
+	{"service_context_id_release", STR_PARAM, &rf_service_context_id_release_s},
 	{0,0,0} 
 };
 
@@ -150,8 +158,6 @@ struct tm_binds tmb;
  */
 int fix_parameters()
 {
-	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
-	
 	cfg.origin_host.s = rf_origin_host_s;
 	cfg.origin_host.len = strlen(rf_origin_host_s);
 
@@ -170,9 +176,23 @@ int fix_parameters()
 		LOG(L_ERR, "ERR:"M_NAME":fix_parameters:not enough shm memory\n");
 		return 0;
 	}
+	cfg.service_context_id->len = strlen(rf_service_context_ext_s) + strlen(rf_service_context_mnc_s) +
+			strlen(rf_service_context_mcc_s) + strlen(rf_service_context_release_s) +
+			strlen(rf_service_context_id_root_s)+5;
+	cfg.service_context_id->s = pkg_malloc(cfg.service_context_id->len*sizeof(char));
+	if(!cfg.service_context_id->s){
+		LOG(L_ERR, "ERR:"M_NAME":fix_parameters: not enough memory!\n");
+		return 0;
+	}
+	cfg.service_context_id->len = sprintf(cfg.service_context_id->s, "%s.%s.%s.%s.%s",
+			rf_service_context_ext_s, rf_service_context_mnc_s, 
+			rf_service_context_mcc_s, rf_service_context_release_s,
+			rf_service_context_id_root_s);
+	if(cfg.service_context_id->len <0){
+		LOG(L_ERR, "ERR:"M_NAME":fix_parameters: error while creating service_context_id\n");
+		return 0;
+	}
 
-	cfg.service_context_id->s = rf_service_context_id_s;
-	cfg.service_context_id->len = strlen(rf_service_context_id_s);
 
 	return 1;
 }
