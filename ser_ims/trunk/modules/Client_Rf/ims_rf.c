@@ -296,7 +296,6 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	
 	AAASession * auth = 0;
 	Rf_ACR_t * rf_data = 0;
-	AAAMessage * acr = 0;
 	int dir =0;
 	
 	LOG(L_DBG, "trying to create and send acr\n");
@@ -323,15 +322,13 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	if(!(auth = create_rf_session(rf_data)))
 		goto error;
 
-	if(!(acr = Rf_new_acr(auth, rf_data)))
+	if(!AAASendACR(auth, rf_data))
 		goto error;
-
-	cavpb->cdp->AAASessionsUnlock(auth->hash);
-	cavpb->cdp->AAASendMessageToPeer(acr, &cfg.destination_host, 0,0);
-
+	
 	//cavpb->cdp->AAAFreeMessage(&acr);
-	Rf_free_ACR(rf_data);
 	cavpb->cdp->AAADropSession(auth);
+	
+	Rf_free_ACR(rf_data);
 
 	LOG(L_DBG, "Rf_Send_ACR:"M_NAME": request was created and sent\n");
 	return CSCF_RETURN_TRUE;
