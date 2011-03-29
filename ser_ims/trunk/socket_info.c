@@ -838,3 +838,11 @@ void print_aliases()
 			printf("             %s: %.*s:*\n", get_proto_name(a->proto), 
 					a->alias.len, a->alias.s);
 }
+
+void delete_sock_info(struct socket_info* sock,int proto)
+{
+  struct socket_info** list;
+  list=get_sock_info_list(proto);
+  sock_listrm(list, sock);
+  free_sock_info(sock);
+}

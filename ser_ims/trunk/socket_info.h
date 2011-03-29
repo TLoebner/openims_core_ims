@@ -71,6 +71,7 @@ struct socket_info* grep_sock_info(str* host, unsigned short port,
 struct socket_info* find_si(struct ip_addr* ip, unsigned short port,
 												unsigned short proto);
 
+void delete_sock_info(struct socket_info* si,int proto);
 /* helper function:
  * returns next protocol, if the last one is reached return 0
  * useful for cycling on the supported protocols */

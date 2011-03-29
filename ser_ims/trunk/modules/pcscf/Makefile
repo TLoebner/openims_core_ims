@@ -23,8 +23,10 @@ DEFS += -I/usr/include/libxml2 -I../../lib -DSER -I../..
 LIBS += -lxml2
 
 DEFS += -DCDP_FOR_SER
+DEFS += -D_REENTERANT
 DEFS += -I/usr/include/libxml2 
 LIBS += -L$(LOCALBASE)/lib -lxml2
+LIBS += -lpthread
 
 #DEFS += -DWITH_IMS_PM
 

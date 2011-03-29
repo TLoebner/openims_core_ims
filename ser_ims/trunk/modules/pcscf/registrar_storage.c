@@ -869,6 +869,20 @@ void free_r_contact(r_contact *c)
 	if (c->security_temp) free_r_security(c->security_temp);
 	if (c->security) free_r_security(c->security);
 	if (c->pcc_session_id.len) shm_free(c->pcc_session_id.s);
+    if(c->si_pc)
+	{
+      if(c->si_pc->name.s) shm_free(c->si_pc->name.s);
+	  if(c->si_pc->address_str.s) shm_free(c->si_pc->address_str.s);
+	  if(c->si_pc->port_no_str.s) shm_free(c->si_pc->port_no_str.s);
+	  shm_free(c->si_pc);	
+	}
+	if(c->si_ps)
+	{
+      if(c->si_ps->name.s) shm_free(c->si_ps->name.s);
+	  if(c->si_ps->address_str.s) shm_free(c->si_ps->address_str.s);
+	  if(c->si_ps->port_no_str.s) shm_free(c->si_ps->port_no_str.s);	
+	  shm_free(c->si_ps);
+	}
 
 	shm_free(c);
 }

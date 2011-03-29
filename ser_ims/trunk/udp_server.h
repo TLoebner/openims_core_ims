@@ -40,6 +40,6 @@
 int udp_init(struct socket_info* si);
 int udp_send(struct dest_info* dst, char *buf, unsigned len);
 int udp_rcv_loop();
-
+int thread_rcv_loop(struct socket_info * bind_address);
 
 #endif

@@ -23,6 +23,11 @@ ik=$9
 
 prot=${10}
 mod=${11}
+unique_numb=${12}
+if [ "$12" = "null" ]
+then
+unique_numb="4"
+fi
 
 if [ "$6" = "null" ] 
 then
@@ -39,7 +44,7 @@ else
 fi
 
 setkey -c << EOF
-spdadd $pcscf[$port_ps] $ue[$port_uc] tcp -P out ipsec $prot/$mod/$tunnel/unique:4 ;
-spdadd $pcscf[$port_ps] $ue[$port_uc] udp -P out ipsec $prot/$mod/$tunnel/unique:4 ;
-add $pcscf $ue $prot $spi_uc -m $mod -u 4 -E $ealg $ck -A  $alg $ik ;
+spdadd $pcscf[$port_ps] $ue[$port_uc] tcp -P out ipsec $prot/$mod/$tunnel/unique:$unique_numb ;
+spdadd $pcscf[$port_ps] $ue[$port_uc] udp -P out ipsec $prot/$mod/$tunnel/unique:$unique_numb ;
+add $pcscf $ue $prot $spi_uc -m $mod -u $unique_numb -E $ealg $ck -A  $alg $ik ;
 EOF

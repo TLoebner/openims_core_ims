@@ -70,6 +70,9 @@
 #include "e2.h"
 #include "e2_avp.h"
 
+#include "../../socket_info.h"
+#include "../../ip_addr.h"
+
 extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
 
 extern str pcscf_name_str;							/**< fixed SIP URI of this P-CSCF 					*/
@@ -174,7 +177,6 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 	struct via_body *vb;
 	unsigned long s_hash = 0;
 
-
 	LOG(L_DBG,"DBG:"M_NAME":P_is_integrity_protected: Looking if registered\n");
 //	print_r(L_INFO);
 	
@@ -189,10 +191,10 @@ int P_is_integrity_protected(struct sip_msg *msg,char *str1,char *str2)
 			return CSCF_RETURN_FALSE;
 		}
 	}
-	if (r_is_integrity_protected(vb->host,vb->port,msg->rcv.src_port,vb->proto, s_hash)) 
-		ret = CSCF_RETURN_TRUE;
-	else 
-		ret = CSCF_RETURN_FALSE;	
+	if(r_is_integrity_protected(vb->host,vb->port,msg->rcv.src_port,vb->proto, s_hash))
+	  ret = CSCF_RETURN_TRUE;
+	else
+	  ret = CSCF_RETURN_FALSE;
 	
 	return ret;
 }
@@ -743,6 +745,7 @@ int P_mobile_terminating(struct sip_msg *msg,char *str1,char *str2)
 	str route={0,0};
 	int i;
 	
+	str pcscf_term={"sip:mt@pcscf.open-ims.test:4060",31};
 	route = cscf_get_first_route(msg,0,0);
 	if (!route.len){
 		LOG(L_DBG,"DBG:"M_NAME":P_mobile_terminating: No Route header.\n");
@@ -764,8 +767,15 @@ int P_mobile_terminating(struct sip_msg *msg,char *str1,char *str2)
 		LOG(L_DBG,"DBG:"M_NAME":P_mobile_terminating: Term indication found.\n");
 		ret = CSCF_RETURN_TRUE;
 		goto done;
-	}else{
-		LOG(L_DBG,"DBG:"M_NAME":P_mobile_terminating: Term indication not found in <%.*s> as <%.*s>.\n",
+	}
+        else if( route.len == pcscf_term.len && strncasecmp(route.s,pcscf_term.s,pcscf_term.len)==0 )
+        {
+	  ret = CSCF_RETURN_TRUE;
+	  goto done;
+        }
+	else
+	{
+	  LOG(L_DBG,"DBG:"M_NAME":P_mobile_terminating: Term indication not found in <%.*s> as <%.*s>.\n",
 			route.len,route.s,pcscf_path_str.len,pcscf_path_str.s);
 	}
 	
@@ -1111,6 +1121,9 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	struct cell *t=0;
 	struct sip_msg *req = 0;
 
+        int proto_c;
+        struct socket_info * socket_pc;
+        struct socket_info * socket_ps;
 	if (!pcscf_use_ipsec && !pcscf_use_tls) return CSCF_RETURN_FALSE;
 
 	if(msg -> first_line.type == SIP_REQUEST) {
@@ -1165,13 +1178,21 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 				pkg_free(dst.s);
 			return CSCF_RETURN_FALSE;
 		}					
+        proto_c=c->transport;            
+		socket_pc=c->si_pc;
+		socket_ps=c->si_ps;
 	
 		switch (c->security->type){
 			case SEC_NONE:
 				break;
 			case SEC_IPSEC:
 				if (pcscf_use_ipsec && c->security->data.ipsec) 
+                {
+                  if(msg -> first_line.type == SIP_REPLY)
+			        dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_uc);
+                  else
 					dst.len += sprintf(dst.s + dst.len, ":%d", c->security->data.ipsec->port_us);
+  			    }
 				else dst.len += sprintf(dst.s + dst.len, ":%d", port);
 				break;
 			case SEC_TLS:
@@ -1197,6 +1218,20 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 	}
 	
 	if (msg->dst_uri.s) pkg_free(msg->dst_uri.s);
+    if (msg -> first_line.type == SIP_REQUEST)
+	{
+	  if(proto_c==PROTO_UDP)
+               if(socket_pc)	
+	        msg -> force_send_socket = socket_pc;
+	  if(proto_c==PROTO_TCP)
+	  {
+              dst.len += sprintf(dst.s + dst.len, "%s", ";transport=TCP");  
+              if(socket_pc)	
+		msg->force_send_socket = socket_pc;
+	  }
+	}
+	else if(msg -> first_line.type == SIP_REPLY && socket_ps)
+	msg -> force_send_socket = socket_ps;
 	msg -> dst_uri = dst;
 	
 	if (msg -> first_line.type == SIP_REPLY) {
@@ -1206,10 +1241,18 @@ int P_security_relay(struct sip_msg * msg, char * str1, char * str2)
 			LOG(L_INFO, "INFO:"M_NAME":P_security_relay: Can't relay non-transactional responses\n");		
 			return CSCF_RETURN_FALSE;	/* error */
 		}
+struct  via_body *vb = 0;
+		int protocol = -1;
+		vb = cscf_get_last_via( msg );
+		if(vb != 0)
+		  protocol = vb->proto;
+		else
+		  protocol = PROTO_NONE;
+		vb=cscf_get_first_via(msg,0);		
 #ifdef USE_DNS_FAILOVER
-		if (!uri2dst(0,&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+		if (!uri2dst(0,&dst_info, msg, &msg->dst_uri, protocol)) {
 #else
-		if (!uri2dst(&dst_info, msg, &msg->dst_uri, PROTO_NONE)) {
+		if (!uri2dst(&dst_info, msg, &msg->dst_uri, protocol)) {
 #endif
 			LOG(L_INFO, "INFO:"M_NAME":P_security_relay: Error setting uri as dst <%.*s>\n", msg -> dst_uri.len, msg -> dst_uri.s);		
 			return CSCF_RETURN_FALSE;	/* error */
