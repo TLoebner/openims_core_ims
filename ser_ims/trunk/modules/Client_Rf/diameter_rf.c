@@ -79,25 +79,25 @@ error:
 	return auth;
 }
 
-int AAASendACR(AAASession **session, Rf_ACR_t * rf_data){
+int AAASendACR(AAASession *session, Rf_ACR_t * rf_data){
 
 	AAAMessage * acr = 0;
 	AAASession * auth = NULL;
 
-	if(!session || !(*session)){
+	if(!session){
 		auth = create_rf_session(rf_data);
 		if(!auth)
 			return 0;
 	}else
-		auth = *session;
+		auth = session;
 	
 	if(!(acr = Rf_new_acr(auth, rf_data)))
                 goto error;
 
-	//cavpb->cdp->AAASessionsUnlock(auth->hash);
+	cavpb->cdp->AAASessionsUnlock(auth->hash);
         cavpb->cdp->AAASendMessageToPeer(acr, &cfg.destination_host, 0,0);
 
-	if(!session || !(*session))
+	if(!session)
 		cavpb->cdp->AAADropSession(auth);
 
 	return 1;

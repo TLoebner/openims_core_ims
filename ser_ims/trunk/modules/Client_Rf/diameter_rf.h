@@ -63,7 +63,7 @@
 
 AAASession * create_rf_session(Rf_ACR_t * rf_data); 
 
-int AAASendACR(AAASession ** session, Rf_ACR_t * rf_data);
+int AAASendACR(AAASession *session, Rf_ACR_t * rf_data);
 
 void RfChargingResponseHandler(AAAMessage *response,void *param);
 

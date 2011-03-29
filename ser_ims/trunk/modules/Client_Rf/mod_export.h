@@ -23,8 +23,9 @@
 #define _Client_Rf_EXPORT__H
 
 #include "../cdp/session.h"
+#include "Rf_data.h"
 
-typedef int (*AAASendAccRequest_f)(AAASession *session);
+typedef int (*AAASendAccRequest_f)(AAASession *session, Rf_ACR_t * rf_data);
 
 
 struct client_rf_binds{
