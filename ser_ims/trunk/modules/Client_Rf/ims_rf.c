@@ -307,7 +307,7 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	Rf_ACR_t * rf_data = 0;
 	int dir =0;
 	
-	LOG(L_DBG, "trying to create and send acr\n");
+	LOG(L_DBG, "trying to create and send acr, params are: %s and %s\n", str1, str2);
 	if(str1[0] == 'o' || str1[0] == 'O')
 		dir = 0;
 	else if (str1[0] == 't' || str1[0] == 'T')
