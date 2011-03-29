@@ -191,15 +191,24 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	ims_information_t * ims_info = 0;
 	time_stamps_t * time_stamps = 0;
 	time_t req_timestamp=0, reply_timestamp=0;
-	int32_t acc_record_type;
+	int32_t acct_record_type;
+	uint32_t acct_record_number;
 	subscription_id_t subscr;
 
 	LOG(L_DBG, "in dlg_create_rf_data\n");
 
-	if(!get_sip_header_info(req, reply, interim, &acc_record_type, 
+	if(!get_sip_header_info(req, reply, interim, &acct_record_type, 
 				&sip_method, &event, &expires, 
 				&callid, &from_uri, &to_uri))
 		goto error;
+
+	if(!get_subseq_acct_record_nb(callid, &acct_record_number, expires)){
+		LOG(L_ERR, "ERR:"M_NAME":dlg_create_rf_data: could not retrieve "
+			"accounting record number for session id %.*s\n", 
+			callid.len, callid.s);
+		goto error;
+	}
+
 	if(dir == 0)	user_name = from_uri;
 	else 		user_name = to_uri;
 
@@ -232,7 +241,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	subscr.id.s = from_uri.s;
 	subscr.id.len = from_uri.len;
 
-	rf_data = new_Rf_ACR(acc_record_type,
+	rf_data = new_Rf_ACR(acct_record_type, acct_record_number,
 			&user_name, ims_info, &subscr);
 	if(!rf_data) {
 		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_session: no memory left for generic\n");
