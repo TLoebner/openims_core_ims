@@ -110,7 +110,7 @@ client_rf_cfg cfg;
  *
  */
 static cmd_export_t client_rf_cmds[]={
-	{"Rf_Send_ACR",			Rf_Send_ACR, 			1, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	{"Rf_Send_ACR",			Rf_Send_ACR, 			2, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	{0, 0, 0, 0, 0}
 }; 
 
