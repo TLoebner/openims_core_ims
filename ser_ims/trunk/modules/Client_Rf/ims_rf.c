@@ -115,14 +115,15 @@ int get_sip_header_info(struct sip_msg * req,
 	sip_method->s = req->first_line.u.request.method.s;
 	sip_method->len = req->first_line.u.request.method.len;
 	
-	if(strncmp(sip_method->s, "INVITE",6) == 0)
+	if(!interim && strncmp(sip_method->s, "INVITE",6) == 0)
 		*acc_record_type = AAA_ACCT_START;
 	else if	(strncmp(sip_method->s, "BYE",3) == 0)
 		*acc_record_type = AAA_ACCT_STOP;
-	else	
-		*acc_record_type = AAA_ACCT_EVENT;
-	if(interim)
+	else if(interim && (strncmp(sip_method->s, "INVITE", 6) == 0	
+				|| strncmp(sip_method->s, "UPDATE", 6) ==0))
 		*acc_record_type = AAA_ACCT_INTERIM;
+	else
+		*acc_record_type = AAA_ACCT_EVENT;
 
 	*event = cscf_get_event(req);
 	*expires = cscf_get_expires_hdr(req, 0);
