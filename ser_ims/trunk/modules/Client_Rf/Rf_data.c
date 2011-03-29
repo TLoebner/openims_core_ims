@@ -130,6 +130,7 @@ int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires){
 	acct_record_info_list_slot_t * acct_rec = NULL;
 
 	hash_index = calc_hash(id);
+	LOG(L_DBG, "hash_index is %i\n", hash_index);
 	lock_get(acct_records[hash_index].lock);
 		WL_FOREACH(acct_records+hash_index, acct_rec){
 			if(str_equal(acct_rec->id, id)){
@@ -139,9 +140,12 @@ int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires){
 				break;
 			}
 		}
-		*value = 1;
-		if(!add_new_acct_record_safe(hash_index, id, *value, expires))
-			goto error;
+		if(!acct_rec){
+			LOG(L_DBG, "could not find the acct_record_nb entry for the id %.*s, adding one\n", id.len, id.s);
+			*value = 1;
+			if(!add_new_acct_record_safe(hash_index, id, *value, expires))
+				goto error;
+		}
 	lock_release(acct_records[hash_index].lock);
 	
 	return 1;
