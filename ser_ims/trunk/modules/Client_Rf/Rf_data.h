@@ -426,8 +426,9 @@ void Rf_free_ACR(Rf_ACR_t *x);
 typedef struct _acct_record_info_list_t_slot{
 	str id;
 	uint32_t acct_record_number;
+	int dir;
 	time_t expires;
-	struct _acct_record_info_list_t_slot * next, * previous;
+	struct _acct_record_info_list_t_slot * next, * prev;
 } acct_record_info_list_slot_t;
 
 typedef struct _acct_record_info_list_t{
@@ -446,6 +447,6 @@ do{\
 
 int init_acct_records();
 void destroy_acct_records();
-int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires);
+int get_subseq_acct_record_nb(str id, uint32_t * value, int dir, uint32_t expires);
 
 #endif /* __CDF_Rf_data_H */
