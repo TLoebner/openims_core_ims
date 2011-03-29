@@ -66,18 +66,18 @@ do {\
 
 
 extern client_rf_cfg cfg;
-acc_record_info_list_t * acc_records;
+acct_record_info_list_t * acct_records;
 
-int init_acc_records(){
+int init_acct_records(){
 
 	int i;
 
-	mem_new(acc_records, cfg.hash_table_size*sizeof(acc_record_info_list_t), shm);
+	mem_new(acct_records, cfg.hash_table_size*sizeof(acct_record_info_list_t), shm);
 
 	for(i=0; i< cfg.hash_table_size; i++){
-		acc_records[i].lock = lock_alloc();
-		if(!acc_records[i].lock) goto out_of_memory;
-		acc_records[i].lock=lock_init(acc_records[i].lock);
+		acct_records[i].lock = lock_alloc();
+		if(!acct_records[i].lock) goto out_of_memory;
+		acct_records[i].lock=lock_init(acct_records[i].lock);
 
 	}
 
@@ -87,17 +87,67 @@ out_of_memory:
 	return 0;
 }
 
-void destroy_acc_records(){
+void destroy_acct_records(){
 	
 	int i;
 	for(i=0; i< cfg.hash_table_size; i++){
 
-		lock_get(acc_records[i].lock);
-		lock_destroy(acc_records[i].lock);
-		lock_dealloc(acc_records[i].lock);
+		lock_get(acct_records[i].lock);
+		lock_destroy(acct_records[i].lock);
+		lock_dealloc(acct_records[i].lock);
 
-		WL_FREE_ALL(acc_records+i, acc_record_info_list_t,shm);
+		WL_FREE_ALL(acct_records+i, acct_record_info_list_t,shm);
 	}
+}
+
+int calc_hash(str id){
+	
+	return 0;
+}
+
+int add_new_acct_record_safe(int hash_index, str id, uint32_t acct_record_number, uint32_t expires){
+
+	acct_record_info_list_slot_t * acct_rec = NULL;
+
+	mem_new(acct_rec, sizeof(acct_record_info_list_slot_t), shm);
+	acct_rec->acct_record_number = acct_record_number;
+	acct_rec->expires = expires;
+	str_dup(acct_rec->id, id, shm);
+
+	return 1;
+
+out_of_memory:
+	LOG(L_ERR, "ERR: add_new_acct_record_safe: out of shm memory\n");
+	return 0;
+}
+
+/**
+ * search for the entry with the specific id, otherwise add it and initialize it with expires, if expires not 0 update
+ */
+int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires){
+	
+	int hash_index;
+	acct_record_info_list_slot_t * acct_rec = NULL;
+
+	hash_index = calc_hash(id);
+	lock_get(acct_records[hash_index].lock);
+		WL_FOREACH(acct_records+hash_index, acct_rec){
+			if(str_equal(acct_rec->id, id)){
+				*value = acct_rec->acct_record_number +1;
+				acct_rec->acct_record_number = *value;
+				if(expires>0) acct_rec->expires = expires;
+				break;
+			}
+		}
+		*value = 1;
+		if(!add_new_acct_record_safe(hash_index, id, *value, expires))
+			goto error;
+	lock_release(acct_records[hash_index].lock);
+	
+	return 1;
+error:
+	lock_release(acct_records[hash_index].lock);
+	return 0;
 }
 
 
@@ -250,7 +300,7 @@ out_of_memory:
 }
 
 
-Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type, 
+Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number, 
 			str * user_name, ims_information_t * ims_info,
 			subscription_id_t * subscription){
 
@@ -263,7 +313,8 @@ Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type,
 	str_dup(x->origin_host, cfg.origin_host, pkg);
 	str_dup(x->origin_realm, cfg.origin_realm, pkg);
 	str_dup(x->destination_realm, cfg.destination_realm, pkg);
-	x->acct_record_type = acc_record_type;
+	x->acct_record_type = acct_record_type;
+	x->acct_record_number = acct_record_number;
 
 	if(user_name){
 		str_dup_ptr_ptr(x->user_name, user_name, pkg);

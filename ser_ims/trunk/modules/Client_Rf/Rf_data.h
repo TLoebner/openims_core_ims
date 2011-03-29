@@ -143,7 +143,12 @@ do {\
 	(list)->tail=0;\
 } while(0)
 
+#define WL_FOREACH(list,el)                                                      \
+    for(el=(list)->head;el;el=(el)->next)
+
+
 /* List of str */
+#define str_equal(a,b) ((a).len==(b).len && memcmp((a).s,(b).s,(a).len)==0)
 
 typedef struct _str_list_t_slot {
 	str data;
@@ -413,33 +418,34 @@ void time_stamps_free(time_stamps_t *x);
 void ims_information_free(ims_information_t *x);
 void service_information_free(service_information_t *x);
 
-Rf_ACR_t * new_Rf_ACR(int32_t acc_record_type,
+Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 		str * user_name, ims_information_t * ims_info, subscription_id_t * subscription);
 void Rf_free_ACR(Rf_ACR_t *x);
 //void Rf_free_ACA(Rf_ACA_t *x);
 
-typedef struct _acc_record_info_list_t_slot{
-	str session_id;
-	int acc_record_number;
-	struct _acc_record_info_list_t_slot * next, * previous;
-} acc_record_info_list_slot_t;
+typedef struct _acct_record_info_list_t_slot{
+	str id;
+	uint32_t acct_record_number;
+	time_t expires;
+	struct _acct_record_info_list_t_slot * next, * previous;
+} acct_record_info_list_slot_t;
 
-typedef struct _acc_record_info_list_t{
+typedef struct _acct_record_info_list_t{
 	gen_lock_t * lock;
-	struct _acc_record_info_list_t_slot * head, * tail;
-} acc_record_info_list_t;
+	struct _acct_record_info_list_t_slot * head, * tail;
+} acct_record_info_list_t;
 
-#define acc_record_info_list_t_free(x,mem) \
+#define acct_record_info_list_t_free(x,mem) \
 do{\
 	if (x) {\
-		str_free((x)->session_id,mem);\
+		str_free((x)->id,mem);\
 		mem##_free(x);\
 		(x) = 0;\
 	}\
 }while(0)
 
-int init_acc_records();
-void destroy_acc_records();
-
+int init_acct_records();
+void destroy_acct_records();
+int get_subseq_acct_record_nb(str id, uint32_t * value, uint32_t expires);
 
 #endif /* __CDF_Rf_data_H */

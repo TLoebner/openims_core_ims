@@ -246,7 +246,7 @@ static int mod_init(void)
 	if (!cavpb)
 		goto error;
 
-	if (!init_acc_records()){
+	if (!init_acct_records()){
 		LOG(L_ERR, "DBG:"M_NAME":mod_init: failed to initiate local accounting records\n");			
 		goto error;
 	}
@@ -295,7 +295,7 @@ static void mod_destroy(void)
 
 	if (do_destroy){
 		/* Then nuke it all */	
-		destroy_acc_records();
+		destroy_acct_records();
 	}
 	
 }
