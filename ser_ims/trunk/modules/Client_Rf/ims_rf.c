@@ -105,6 +105,7 @@ struct sip_msg * trans_get_request_from_current_reply()
 
 int get_sip_header_info(struct sip_msg * req,
 	        struct sip_msg * reply,	
+		int interim,
 		int32_t * acc_record_type,
 		str * sip_method,
 		str * event, uint32_t * expires,
@@ -120,6 +121,8 @@ int get_sip_header_info(struct sip_msg * req,
 		*acc_record_type = AAA_ACCT_STOP;
 	else	
 		*acc_record_type = AAA_ACCT_EVENT;
+	if(interim)
+		*acc_record_type = AAA_ACCT_INTERIM;
 
 	*event = cscf_get_event(req);
 	*expires = cscf_get_expires_hdr(req, 0);
@@ -174,13 +177,11 @@ int get_timestamps(struct sip_msg * req,
  * @return: 0 - ok, -1 - error, -2 - out of memory
  */
 
-Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
+Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	       			struct sip_msg * reply,	
-				AAASession ** authp, 
-				int dir){
+				int dir, int interim){
 
 	Rf_ACR_t * rf_data=0;
-	AAASession * auth = NULL;
 	str user_name ={0,0}, sip_method = {0,0}, event = {0,0}; 
 	uint32_t expires = 0;
 	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0}, 
@@ -193,11 +194,9 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	int32_t acc_record_type;
 	subscription_id_t subscr;
 
-	*authp = 0;
+	LOG(L_DBG, "in dlg_create_rf_data\n");
 
-	LOG(L_DBG, "in dlg_create_rf_session\n");
-
-	if(!get_sip_header_info(req, reply, &acc_record_type, 
+	if(!get_sip_header_info(req, reply, interim, &acc_record_type, 
 				&sip_method, &event, &expires, 
 				&callid, &from_uri, &to_uri))
 		goto error;
@@ -241,14 +240,6 @@ Rf_ACR_t * dlg_create_rf_session(struct sip_msg * req,
 	}
 	ims_info = 0;
 
-	LOG(L_INFO,"INFO:"M_NAME":dlg_create_rf_session: creating Rf Session\n");
-	auth = cavpb->cdp->AAACreateClientAuthSession(1,NULL,(void *)rf_data);
-	if (!auth) {
-		LOG(L_ERR,"INFO:"M_NAME":dlg_create_rf_session: unable to create the Rf Session\n");
-		goto error;
-	}
-
-	*authp = auth;
 	return rf_data;
 
 out_of_memory:
@@ -260,7 +251,7 @@ error:
 	return NULL;
 }
 
-int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASession ** auth){
+int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** rf_data){
 	
 	struct sip_msg * req;
 
@@ -268,7 +259,7 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 	if(msg->first_line.type == SIP_REQUEST){
 		/*end of session*/
 		if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 ){
-			if(!(*rf_data = dlg_create_rf_session(msg, NULL, auth, dir)))
+			if(!(*rf_data = dlg_create_rf_data(msg, NULL, dir, interim)))
 				goto error;
 		}
 	}else{
@@ -284,7 +275,7 @@ int sip_create_rf_data(struct sip_msg * msg, int dir, Rf_ACR_t ** rf_data, AAASe
 		/*start of session*/
 		 if(strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
 
-			if(!(*rf_data = dlg_create_rf_session(req, msg, auth, dir)))
+			if(!(*rf_data = dlg_create_rf_data(req, msg, dir, interim)))
 				goto error;
 		}
 	}
@@ -297,8 +288,8 @@ error:
 /**
  * Send an ACR to the CDF based on the SIP message (request or reply)
  * @param msg - SIP message
- * @param str1 - not used
- * @param str2 - not used
+ * @param str1 - direction
+ * @param str2 - 0 : initial or 1: subsequent
  * @returns #CSCF_RETURN_TRUE if OK, #CSCF_RETURN_ERROR on error
  */
 int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
@@ -318,13 +309,19 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 		return CSCF_RETURN_ERROR;
 	}
 
-	if(!sip_create_rf_data(msg, dir, &rf_data, &auth))
-		goto error;
+	if( str2[0] != '0' && str2[0]!='1'){
+		LOG(L_ERR, "ERR:"M_NAME":Rf_Send_ACR: invalid type of request %s : 0 for initial and 1 for subsequent\n", str2);
+		return CSCF_RETURN_ERROR;
+	}
 
+	if(!sip_create_rf_info(msg, dir, str2[0]-'0', &rf_data))
+		goto error;
+	
 	if (!rf_data)
 		return CSCF_RETURN_TRUE;
 
-	if(!auth) goto error;
+	if(!(auth = create_rf_session(rf_data)))
+		goto error;
 
 	if(!(acr = Rf_new_acr(auth, rf_data)))
 		goto error;

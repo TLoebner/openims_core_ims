@@ -59,7 +59,11 @@
 #include "../cdp/cdp_load.h"
 #include "../cdp_avp/mod_export.h"
 
-int AAASendACR(AAASession * session);
+#include "Rf_data.h"
+
+AAASession * create_rf_session(Rf_ACR_t * rf_data); 
+
+int AAASendACR(AAASession ** session, Rf_ACR_t * rf_data);
 
 void RfChargingResponseHandler(AAAMessage *response,void *param);
 
