@@ -1324,7 +1324,8 @@ int extract_token(char *line, str *token,int max,int number)
 	q=index(p,' ');
 	r=index(p,'\n');
 	if (!r) r=index(p,'\0');
-	q=q < r? q : r;
+	if (!q||r<q) q = r;
+	if (!q) return 0;
 	while isspace(*(q-1)) q--;
 	if (q-p<max) 
 	{
