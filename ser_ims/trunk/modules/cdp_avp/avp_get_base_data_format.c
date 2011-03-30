@@ -218,7 +218,7 @@ inline int cdp_avp_get_Time(AAA_AVP *avp,time_t *data)
 		LOG(L_ERR,"Error decoding Time from data len < 4 bytes!\n");
 		return 0;
 	}
-	if (data) *data = ntohl(*((uint32_t*)avp->data.s))-EPOCH_UNIX_TO_EPOCH_NTP;
+	if (data) *data = ntohl(*((uint32_t*)avp->data.s));
 	return 1;
 }
 

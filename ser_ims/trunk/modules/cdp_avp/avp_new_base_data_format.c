@@ -204,7 +204,7 @@ inline AAA_AVP* cdp_avp_new_Time(int avp_code,int avp_flags,int avp_vendorid,tim
 {
 	char x[4];
 	str s={x,4};
-	uint32_t ntime = htonl(data+EPOCH_UNIX_TO_EPOCH_NTP);
+	uint32_t ntime = htonl(data);
 	memcpy(x,&ntime,sizeof(uint32_t));	
 	return cdp_avp_new(avp_code,avp_flags,avp_vendorid,s,AVP_DUPLICATE_DATA);
 }
