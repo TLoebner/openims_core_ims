@@ -129,6 +129,15 @@ do {                                                                            
   (list)->tail=(add);                                                        	 \
 } while (0)
 
+#define WL_DELETE(list,del)                                                    	\
+do {                                                                            \
+	if ((del)->prev) ((del)->prev)->next=(del)->next;							\
+	else ((list)->head)=(del)->next;											\
+	if ((del)->next) ((del)->next)->prev=(del)->prev;							\
+	else ((list)->tail)=(del)->prev;											\
+	(del)->next=0;(del)->prev=0;												\
+} while (0)
+
 #define WL_FREE(el,list_type,mem)												\
 	list_type##_free(el,mem)
 
@@ -447,6 +456,6 @@ do{\
 
 int init_acct_records();
 void destroy_acct_records();
-int get_subseq_acct_record_nb(str id, uint32_t * value, int dir, uint32_t expires);
+int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value, int dir, uint32_t expires);
 
 #endif /* __CDF_Rf_data_H */

@@ -100,9 +100,33 @@ void destroy_acct_records(){
 	}
 }
 
-int calc_hash(str id){
-	
-	return 0;
+/**
+ * Computes the hash for a string.
+ * @param id - input string
+ * @returns - the hash
+ */
+inline unsigned int calc_hash(str id){
+	if (id.len==0) return 0;
+#define h_inc h+=v^(v>>3)
+   char* p;
+   register unsigned v;
+   register unsigned h;
+
+   h=0;
+   for (p=id.s; p<=(id.s+id.len-4); p+=4){
+       v=(*p<<24)+(p[1]<<16)+(p[2]<<8)+p[3];
+       h_inc;
+   }
+   v=0;
+   for (;p<(id.s+id.len); p++) {
+       v<<=8;
+       v+=*p;
+   }
+   h_inc;
+
+   h=((h)+(h>>11))+((h>>13)+(h>>23));
+   return (h)%cfg.hash_table_size;
+#undef h_inc 
 }
 
 int add_new_acct_record_safe(int hash_index, str id, uint32_t acct_record_number, int dir, uint32_t expires){
@@ -126,10 +150,15 @@ out_of_memory:
 /**
  * search for the entry with the specific id, otherwise add it and initialize it with expires, if expires not 0 update
  */
-int get_subseq_acct_record_nb(str id, uint32_t * value, int dir, uint32_t expires){
+int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value, int dir, uint32_t expires){
 	
 	int hash_index;
 	acct_record_info_list_slot_t * acct_rec = NULL;
+
+	if(acct_record_type == AAA_ACCT_EVENT){
+		*value = 1;
+		return 1;
+	}
 
 	hash_index = calc_hash(id);
 	lock_get(acct_records[hash_index].lock);
@@ -141,10 +170,14 @@ int get_subseq_acct_record_nb(str id, uint32_t * value, int dir, uint32_t expire
 				break;
 			}
 		}
-		if(!acct_rec){
+		if(!acct_rec && acct_record_type != AAA_ACCT_STOP){
 			*value = 1;
 			if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
 				goto error;
+		}
+
+		if(acct_rec && acct_record_type == AAA_ACCT_STOP){
+			WL_DELETE(&(acct_records[hash_index]), acct_rec);
 		}
 	lock_release(acct_records[hash_index].lock);
 	
