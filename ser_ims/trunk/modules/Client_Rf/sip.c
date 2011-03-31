@@ -434,5 +434,50 @@ out_of_memory:
 	return 0;
 }
 
+/**
+ * Looks for the Content-Type header and extracts its content.
+ * @param msg - the sip message
+ * @returns the content-type string, or an empty string if not found
+ */
+str cscf_get_content_type(struct sip_msg *msg)
+{
+	str ct={0,0};
+	if (!msg) return ct;
+	if (parse_headers(msg, HDR_CONTENTTYPE_F, 0) != -1 && msg->content_type){
+		ct = msg->content_type->body;		
+		while(ct.s[0]==' '||ct.s[0]=='\t'){
+			ct.s++;
+			ct.len--;
+		}
+		while(ct.s[ct.len-1]==' '||ct.s[ct.len-1]=='\t')
+			ct.len--;
+	}
+	return ct;
+}
+
+/**
+ * Returns the first header structure for a given header name. 
+ * @param msg - the SIP message to look into
+ * @param header_name - the name of the header to search for
+ * @returns the hdr_field on success or NULL if not found  
+ */
+str cscf_get_body(struct sip_msg * msg)
+{		
+	str x={0,0};
+	x.s = get_body(msg);	
+	if (x.s==0) return x;
+	if (parse_headers(msg,HDR_CONTENTLENGTH_F,0)!=0) {
+		LOG(L_DBG,"DBG:"M_NAME":cscf_get_body: Error parsing until header Content-Length: \n");
+		return x;
+	}
+	if  (msg->content_length->parsed==NULL) {
+		LOG(L_ERR," body <%.*s>\n",msg->content_length->body.len,msg->content_length->body.s);
+		parse_content_length(msg->content_length->body.s,
+			msg->content_length->body.s+msg->content_length->body.len,&(x.len));
+		msg->content_length->parsed=(void*)(long)(x.len);
+	}else 
+		x.len = (long)msg->content_length->parsed;
+	return x;
+}
 
 #endif /* WHARF*/

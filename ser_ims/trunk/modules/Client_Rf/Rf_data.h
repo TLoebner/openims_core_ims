@@ -72,6 +72,34 @@ do {\
 	}\
 } while(0)
 
+/**
+ * Duplicate a str, safely.
+ * \Note This checks if:
+ *  - src was an empty string
+ *  - malloc failed
+ * \Note On any error, the dst values are reset for safety
+ * \Note A label "out_of_memory" must be defined in the calling function to handle
+ * allocation errors. 
+ * @param dst - destination str
+ * @param src - source src
+ * @param mem - type of mem to duplicate into (shm/pkg)
+ */
+#define str_dup(dst,src,mem) \
+do {\
+	if ((src).len) {\
+		(dst).s = mem##_malloc((src).len);\
+		if (!(dst).s){\
+			LOG(L_ERR,"Error allocating %d bytes in %s!\n",(src).len,#mem);\
+			(dst).len = 0;\
+			goto out_of_memory;\
+		}\
+		memcpy((dst).s,(src).s,(src).len);\
+		(dst).len = (src).len;\
+	}else{\
+		(dst).s=0;(dst).len=0;\
+	}\
+} while (0)
+
 
 #define str_dup_ptr(dst,src,mem) \
 do {\
@@ -107,6 +135,16 @@ do {\
 	}\
 } while (0)
 
+/**
+ * Frees a str content.
+ * @param x - the str to free
+ * @param mem - type of memory that the content is using (shm/pkg)
+ */
+#define str_free(x,mem) \
+do {\
+	if ((x).s) mem##_free((x).s);\
+	(x).s=0;(x).len=0;\
+} while(0)
 
 #define str_free_ptr(x,mem) \
 do {\
@@ -180,6 +218,29 @@ do{\
 
 #define str_list_t_copy(dst,src,mem) \
 	str_dup((dst)->data,(src)->data,mem)
+
+/* List of int */
+
+typedef struct _int_list_t_slot {
+	int data;
+	struct _int_list_t_slot *prev,*next;
+} int_list_slot_t;
+
+typedef struct {
+	int_list_slot_t *head,*tail;
+} int_list_t;
+
+#define int_list_t_free(x,mem) \
+do {\
+	if (x){\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+#define int_list_t_copy(dst,src,mem) \
+	dst->data = src->data
+
 
 #endif /* WHARF */
 
@@ -295,6 +356,200 @@ do {\
 	mem_dup((dst)->info.type,(src)->info.type,sizeof(uint32_t),mem);\
 } while(0)
 
+typedef struct _flow_list_t_slot {
+	uint32_t media_component_number;
+	int_list_t flow_number;	
+	int32_t *final_unit_action;
+
+	struct _flow_list_t_slot *next,*prev;
+} flow_t;
+
+typedef struct {
+	flow_t *head,*tail;
+} flow_list_t;
+
+
+#define flow_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		int_list_slot_t *i,*in;\
+		for(i=(x)->flow_number.head;i;i=in){\
+			in = i->next;\
+			mem_free(i,mem);\
+		}\
+		mem_free((x)->final_unit_action,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+/*
+#define flow_list_t_copy(dst,src,mem) \
+do {\
+	str_dup_ptr_ptr((dst)->info.data,(src)->info.data,mem);\
+	mem_dup((dst)->info.type,(src)->info.type,sizeof(uint32_t),mem);\
+} while(0)
+*/
+
+
+typedef struct {
+	str value;
+	flow_list_t flow;
+} an_charging_id_t;
+
+#define an_charging_id_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_free((x)->value,mem);\
+		flow_t *f,*fn;\
+		for(f=(x)->flow.head;f;f=fn){\
+			fn = f->next;\
+			flow_list_t_free(f,mem);\
+		}\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+
+typedef struct _sdp_media_component_list_t_slot {
+	str *sdp_media_name;
+	str_list_t sdp_media_descriptions;
+	int32_t *media_initiator_flag;
+	str	*media_initiator_party;
+	str *authorized_qos;
+	str *tgpp_charging_id;
+	an_charging_id_t *an_charging_id;
+	int32_t *sdp_type;
+	
+	struct _sdp_media_component_list_t_slot *next,*prev;
+} sdp_media_component_t;
+
+typedef struct {
+	sdp_media_component_t *head,*tail;
+} sdp_media_component_list_t;
+
+/*
+   	an_charging_id_t_free((x)->an_charging_id,mem);\
+ */
+
+#define sdp_media_component_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_list_slot_t *ls,*lsn;\
+		for(ls = (x)->sdp_media_descriptions.head;ls;ls=lsn){\
+			lsn = ls->next;\
+			str_list_t_free(ls,mem);\
+		}\
+		mem_free((x)->media_initiator_flag,mem);\
+		str_free_ptr((x)->media_initiator_party,mem);\
+		str_free_ptr((x)->authorized_qos,mem);\
+		str_free_ptr((x)->tgpp_charging_id,mem);\
+		str_free_ptr((x)->sdp_media_name,mem);\
+		mem_free((x)->sdp_type,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+/*
+#define sdp_media_component_list_t_copy(dst,src,mem) \
+do {\
+	str_dup_ptr_ptr((dst)->info.data,(src)->info.data,mem);\
+	mem_dup((dst)->info.type,(src)->info.type,sizeof(uint32_t),mem);\
+} while(0)
+*/
+	
+
+typedef struct _message_body_list_t_slot {
+	str content_type;
+	uint32_t content_length;	
+	str	*content_disposition;
+	int32_t *originator;
+	
+	struct _message_body_list_t_slot *next,*prev;
+} message_body_t;
+
+typedef struct {
+	message_body_t *head,*tail;
+} message_body_list_t;
+
+
+#define message_body_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_free((x)->content_type,mem);\
+		str_free_ptr((x)->content_disposition,mem);\
+		mem_free((x)->originator,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+/*
+#define message_body_list_t_copy(dst,src,mem) \
+do {\
+	str_dup_ptr_ptr((dst)->info.data,(src)->info.data,mem);\
+	mem_dup((dst)->info.type,(src)->info.type,sizeof(uint32_t),mem);\
+} while(0)
+*/
+
+typedef struct {
+	time_t *sdp_offer_timestamp;
+	time_t *sdp_answer_timestamp;
+} sdp_timestamps_t;
+
+#define sdp_timestamps_t_free(x,mem) \
+do{\
+	if (x) {\
+		mem_free((x)->sdp_offer_timestamp,mem);\
+		mem_free((x)->sdp_answer_timestamp,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+
+typedef struct _early_media_description_list_t_slot {
+	sdp_timestamps_t *sdp_timestamps;
+	sdp_media_component_list_t sdp_media_component;
+	str_list_t sdp_session_description;
+	
+	struct _early_media_description_list_t_slot *next,*prev;
+} early_media_description_t;
+
+typedef struct {
+	early_media_description_t *head,*tail;
+} early_media_description_list_t;
+
+
+#define early_media_description_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		sdp_timestamps_t_free((x)->sdp_timestamps,mem);\
+		sdp_media_component_t *s,*sn;\
+		for(s = (x)->sdp_media_component.head;s;s=sn){\
+			sn = s->next;\
+			sdp_media_component_list_t_free(s,mem);\
+		}\
+		str_list_slot_t *ls,*lsn;\
+		for(ls = (x)->sdp_session_description.head;ls;ls=lsn){\
+			lsn = ls->next;\
+			str_list_t_free(ls,mem);\
+		}\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+/*
+#define early_media_description_list_t_copy(dst,src,mem) \
+do {\
+	str_dup_ptr_ptr((dst)->info.data,(src)->info.data,mem);\
+	mem_dup((dst)->info.type,(src)->info.type,sizeof(uint32_t),mem);\
+} while(0)
+*/
+
 	
 typedef struct {
 	event_type_t *event_type;
@@ -316,6 +571,9 @@ typedef struct {
 	
 	ioi_list_t ioi;	
 	str *icid;
+
+	str_list_t sdp_session_description;
+	sdp_media_component_list_t sdp_media_component;
 	
 	str *service_id;
 	
@@ -362,6 +620,7 @@ do {\
 	(dst)->type = (src)->type;\
 	str_dup((dst)->id,(src)->id,mem);\
 } while(0)
+
 
 
 typedef struct {
@@ -420,6 +679,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * icid,
 					str * orig_ioi,
 					str * term_ioi,
+					sdp_media_component_list_t,
 					int node_role);
 
 void event_type_free(event_type_t *x);

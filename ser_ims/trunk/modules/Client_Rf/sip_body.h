@@ -1,7 +1,7 @@
-/*
- * $Id$
+/**
+ * $Id: sip_body.h 920 2010-03-05 19:07:50Z vingarzan $
  *  
- * Copyright (C) 2004-2006 FhG Fokus
+ * Copyright (C) 2004-2009 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -42,38 +42,38 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
-
- /**
+ 
+ 
+/**
  * \file
- *
- * Main SIP Operations 
  * 
- *  \author Dragos Vingarzan vingarzan -at- fokus dot fraunhofer dot de
+ * P/I/S-CSCF/etc Module - SIP Message Body Operations
  * 
- * Copyright (C) 2005 FhG Fokus
- * 		
- */  
-
-#ifndef WHARF
-
-#ifndef CLIENT_RF_SIP_H
-#define CLIENT_RF_SIP_H
-
-#include "../../sr_module.h"
-#include "../../parser/contact/parse_contact.h"
-#include "../../parser/parse_rr.h"
+ * 
+ *  \author Dragos Vingarzan dragos dot vingarzan -at- fokus dot fraunhofer dot de
+ * 
+ */
+#ifndef SIP_BODY_H
+#define SIP_BODY_H
 
 
-str cscf_get_call_id(struct sip_msg *msg,struct hdr_field **hr);
-int cscf_get_from_uri(struct sip_msg* msg,str *local_uri);
-int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
-int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm);
-str cscf_get_event(struct sip_msg *msg);
-str cscf_get_asserted_identity(struct sip_msg *msg);
-int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, str * term_ioi);
-str cscf_get_content_type(struct sip_msg *msg);
-str cscf_get_body(struct sip_msg * msg);
+str cscf_get_multipart_boundary(str content_type);
 
-#endif /* CLIENT_RF_SIP_H */
+str cscf_get_multipart_part(str body,str boundary,int *position);
 
-#endif /* WHARF */
+str cscf_get_multipart_body(str part);
+
+str cscf_get_multipart_content_type(str part);
+
+
+str cscf_get_body_with_type_from_body(str body,str body_content_type,str search_content_type,str *ret_part);
+
+str cscf_get_body_with_type(struct sip_msg *msg,str search_content_type,str *ret_part);
+
+/* this function calls all the other functions, 
+ * this is the one that should be used when searching for a specific content-type*/
+str cscf_get_body_with_content_type(struct sip_msg *msg,str search_content_type);
+
+int extract_sdp_body(struct sip_msg *msg, str *body );
+
+#endif /* SIP_BODY_H */
