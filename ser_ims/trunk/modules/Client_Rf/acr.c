@@ -85,6 +85,75 @@ error:
 	return 0;
 }
 
+int Rf_write_an_charging_id_avps(AAA_AVP_LIST * avp_list, 
+				an_charging_id_t * an_charging_id){
+
+	return 1;
+}
+
+/**
+ * Add the AVPs of a SDP Media Component information
+ */
+int Rf_write_sdp_media_component_avps(AAA_AVP_LIST * avp_list, 
+					sdp_media_component_t * x){
+
+	AAA_AVP_LIST aList = {0,0};
+	str_list_slot_t * str_slot=0;
+
+	if (x->sdp_media_name)	
+		if (!cavpb->epcapp.add_SDP_Media_Name(&aList, *(x->sdp_media_name), 
+					AVP_DUPLICATE_DATA)) 
+			goto error;
+	WL_FOREACH(&(x->sdp_media_descriptions), str_slot){
+		if (!cavpb->epcapp.add_SDP_Media_Description(&aList, str_slot->data, 
+					AVP_DUPLICATE_DATA)) 
+			goto error;
+	}
+
+	if (x->media_initiator_flag){
+		if (!cavpb->epcapp.add_Media_Initiator_Flag(&aList, 
+					*(x->media_initiator_flag))) 
+		goto error;
+	}
+
+	if (x->media_initiator_party){
+		if (!cavpb->epcapp.add_Media_Initiator_Party(&aList, 
+					*(x->media_initiator_party), AVP_DUPLICATE_DATA)) 
+		goto error;
+	}
+
+	if (x->authorized_qos){
+		if (!cavpb->epcapp.add_Authorized_QoS(&aList, *(x->authorized_qos), AVP_DUPLICATE_DATA)) 
+		goto error;
+	}
+
+	if (x->tgpp_charging_id){
+		if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList, 
+					*(x->tgpp_charging_id), AVP_DUPLICATE_DATA)) 
+		goto error;
+	}
+
+	if (x->an_charging_id && 
+			! Rf_write_an_charging_id_avps(&aList, x->an_charging_id))
+		goto error;
+
+	if (x->sdp_type){
+		if (!cavpb->epcapp.add_SDP_Type(&aList, *(x->sdp_type))) 
+		goto error;
+	}
+
+	if (!cavpb->epcapp.add_SDP_Media_Component(avp_list, &aList, AVP_DONT_FREE_DATA))
+		goto error;
+
+	return 1;
+error:
+	cavpb->cdp->AAAFreeAVPList(&aList);
+	LOG(L_ERR, "error while adding sdp media component avps\n");
+
+	return 0;
+}
+
+
 int Rf_write_ims_information_avps(AAA_AVP_LIST * avp_list, ims_information_t* x)
 {
 	str_list_slot_t * sl = 0;
@@ -92,6 +161,7 @@ int Rf_write_ims_information_avps(AAA_AVP_LIST * avp_list, ims_information_t* x)
 	AAA_AVP_LIST aList2 = {0,0};
 	service_specific_info_list_element_t * info = 0;
 	ioi_list_element_t * ioi_elem = 0;
+	sdp_media_component_t * med_comp = 0;
 
 	if (x->event_type)
 		if(!Rf_write_event_type_avps(&aList2, x->event_type))
@@ -150,6 +220,10 @@ int Rf_write_ims_information_avps(AAA_AVP_LIST * avp_list, ims_information_t* x)
 
 	if (x->icid)
 		if (!cavpb->epcapp.add_IMS_Charging_Identifier(&aList2,*(x->icid),0)) 
+			goto error;
+
+	WL_FOREACH(&(x->sdp_media_component), med_comp)
+		if (!Rf_write_sdp_media_component_avps(&aList2, med_comp))
 			goto error;
 
 	if (x->service_id)	

@@ -70,11 +70,6 @@
 #include "../../timer.h"
 #include "../../locking.h"
 #include "../../modules/tm/tm_load.h"
-#ifdef SER_MOD_INTERFACE
-	#include "../../modules_s/dialog/dlg_mod.h"
-#else
-	#include "../dialog/dlg_mod.h"
-#endif
 
 #include "../cdp/cdp_load.h"
 #include "../cdp_avp/mod_export.h"

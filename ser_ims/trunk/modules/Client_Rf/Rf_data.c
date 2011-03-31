@@ -258,6 +258,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * icid,
 					str * orig_ioi,
 					str * term_ioi,
+					sdp_media_component_list_t sdp_media_comps,
 					int node_role)
 {
 
@@ -304,6 +305,9 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 
 	if (icid && icid->s)
 		str_dup_ptr(x->icid,*icid,pkg);
+
+	x->sdp_media_component.head = sdp_media_comps.head;
+	x->sdp_media_component.tail = sdp_media_comps.tail;
 	
 	return x;
 
