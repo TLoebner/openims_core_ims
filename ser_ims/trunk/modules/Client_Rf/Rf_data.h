@@ -679,7 +679,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * icid,
 					str * orig_ioi,
 					str * term_ioi,
-					sdp_media_component_list_t,
+					sdp_media_component_list_t *,
 					int node_role);
 
 void event_type_free(event_type_t *x);

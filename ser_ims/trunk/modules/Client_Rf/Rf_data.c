@@ -258,7 +258,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * icid,
 					str * orig_ioi,
 					str * term_ioi,
-					sdp_media_component_list_t sdp_media_comps,
+					sdp_media_component_list_t * sdp_media_comps,
 					int node_role)
 {
 
@@ -306,8 +306,8 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	if (icid && icid->s)
 		str_dup_ptr(x->icid,*icid,pkg);
 
-	x->sdp_media_component.head = sdp_media_comps.head;
-	x->sdp_media_component.tail = sdp_media_comps.tail;
+	x->sdp_media_component.head = sdp_media_comps->head;
+	x->sdp_media_component.tail = sdp_media_comps->tail;
 	
 	return x;
 
@@ -405,6 +405,7 @@ void ims_information_free(ims_information_t *x)
 {
 	if (!x) return;
 
+	LOG(L_DBG, "freeing ims info\n");
 	event_type_free(x->event_type);
 	
 	mem_free(x->role_of_node,pkg);
@@ -423,6 +424,9 @@ void ims_information_free(ims_information_t *x)
 	WL_FREE_ALL(&(x->ioi),ioi_list_t,pkg);
 	str_free_ptr(x->icid,pkg);
 	
+	WL_FREE_ALL(&(x->sdp_media_component),sdp_media_component_list_t,pkg);
+	WL_FREE_ALL(&(x->sdp_session_description),str_list_t,pkg);
+	
 	str_free_ptr(x->service_id,pkg);
 	
 	WL_FREE_ALL(&(x->service_specific_info),service_specific_info_list_t,pkg);
@@ -430,6 +434,7 @@ void ims_information_free(ims_information_t *x)
 	mem_free(x->cause_code,pkg);
 	
 	mem_free(x,pkg);
+	LOG(L_DBG, "end of free ims info\n");
 }
 
 void service_information_free(service_information_t *x)

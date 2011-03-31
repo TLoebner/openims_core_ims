@@ -100,6 +100,8 @@ int Rf_write_sdp_media_component_avps(AAA_AVP_LIST * avp_list,
 	AAA_AVP_LIST aList = {0,0};
 	str_list_slot_t * str_slot=0;
 
+	LOG(L_DBG, "adding avps for the sdp media component\n");
+
 	if (x->sdp_media_name)	
 		if (!cavpb->epcapp.add_SDP_Media_Name(&aList, *(x->sdp_media_name), 
 					AVP_DUPLICATE_DATA)) 
