@@ -70,7 +70,7 @@ AAASession * create_rf_session(Rf_ACR_t * rf_data){
 	AAASession * auth = NULL;
 	
 	LOG(L_INFO,"INFO:"M_NAME":create_rf_session: creating Rf Session\n");
-        auth = cavpb->cdp->AAACreateSession((void *)rf_data);
+        auth = cavpb->cdp->AAACreateSession(NULL);
         if (!auth) {
                 LOG(L_ERR,"ERR:"M_NAME":create_rf_session: unable to create the Rf Session\n");
                 goto error;
