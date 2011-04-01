@@ -377,12 +377,12 @@ int extract_sdp_body(struct sip_msg *msg, str *body )
 
 	body->s = get_body(msg);
 	if (body->s==0) {
-		LOG(L_ERR, "ERROR: extract_sdp_body: failed to get the message body\n");
+		LOG(L_INFO, "INFO: extract_sdp_body: no message body\n");
 		goto error;
 	}
 	body->len = msg->len -(int)(body->s-msg->buf);
 	if (body->len==0) {
-		LOG(L_ERR, "ERROR: extract_sdp_body: message body has length zero\n");
+		LOG(L_INFO, "INFO: extract_sdp_body: message body has length zero\n");
 		goto error;
 	}
 	
@@ -395,8 +395,8 @@ int extract_sdp_body(struct sip_msg *msg, str *body )
 	body->s = sdp_body.s;
 	body->len = sdp_body.len;
 
-	LOG(L_DBG, "DBG:"M_NAME":extract_sdp_body: found sdp body: \n%.*s\n",
-			body->len, body->s);
+	//LOG(L_DBG, "DBG:"M_NAME":extract_sdp_body: found sdp body: \n%.*s\n",
+	//		body->len, body->s);
 	
 	return 1;
 error:

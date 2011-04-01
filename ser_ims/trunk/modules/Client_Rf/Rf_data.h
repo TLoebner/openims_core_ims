@@ -160,7 +160,7 @@ do {\
 
 #define WL_APPEND(list,add)                                                      \
 do {                                                                             \
-  (add)->next = NULL;															 \
+  (add)->next = NULL;								\
   (add)->prev = (list)->tail;													 \
   if ((list)->tail) ((list)->tail)->next=(add);									 \
   else (list)->head = (add);                                                     \
@@ -430,22 +430,23 @@ typedef struct {
 } sdp_media_component_list_t;
 
 /*
-   	an_charging_id_t_free((x)->an_charging_id,mem);\
+                str_list_slot_t *ls,*lsn;\
+                for(ls = (x)->sdp_media_descriptions.head;ls;ls=lsn){\
+                        lsn = ls->next;\
+                        str_list_t_free(ls,mem);\
+                }\
+
  */
 
 #define sdp_media_component_list_t_free(x,mem) \
 do{\
 	if (x) {\
-		str_list_slot_t *ls,*lsn;\
-		for(ls = (x)->sdp_media_descriptions.head;ls;ls=lsn){\
-			lsn = ls->next;\
-			str_list_t_free(ls,mem);\
-		}\
+		str_free_ptr((x)->sdp_media_name,mem);\
 		mem_free((x)->media_initiator_flag,mem);\
 		str_free_ptr((x)->media_initiator_party,mem);\
 		str_free_ptr((x)->authorized_qos,mem);\
 		str_free_ptr((x)->tgpp_charging_id,mem);\
-		str_free_ptr((x)->sdp_media_name,mem);\
+		an_charging_id_t_free((x)->an_charging_id,mem);\
 		mem_free((x)->sdp_type,mem);\
 		mem##_free(x);\
 		(x) = 0;\
@@ -679,7 +680,6 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * icid,
 					str * orig_ioi,
 					str * term_ioi,
-					sdp_media_component_list_t *,
 					int node_role);
 
 void event_type_free(event_type_t *x);

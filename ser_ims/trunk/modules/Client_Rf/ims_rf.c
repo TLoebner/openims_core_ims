@@ -172,43 +172,40 @@ int get_timestamps(struct sip_msg * req,
  * extract the media description list from the SDP of the message, if SDP body included
  */
 
-int get_media_description_list(char* start, char * end, sdp_media_component_t * sdp_media_elem){
+int get_media_description_list(char* start, char * end, 
+				str_list_t * sdp_media_descriptions){
 
 	str sdp_par = {0,0};
 	str_list_slot_t * str_slot = NULL;
-	int len = end-start;
-	LOG(L_DBG, "searching from start %.*s\n", len, start);
 
 	if((sdp_par.s = find_next_sdp_line(start, end,'a',NULL))){
 		sdp_par.len = get_line_length(sdp_par.s, end);
-		LOG(L_DBG, "a line is %.*s\n", sdp_par.len, sdp_par.s);
-		mem_new(str_slot, sizeof(str_list_t), pkg);
+		mem_new(str_slot, sizeof(str_list_slot_t), pkg);
 		str_dup(str_slot->data,sdp_par,pkg);
-//		WL_APPEND(&(sdp_media_elem->sdp_media_descriptions),str_slot);
-		//str_slot=0;
+		WL_APPEND(sdp_media_descriptions,str_slot);
+		str_slot=0;
 	}
-/*
+
 	if((sdp_par.s = find_next_sdp_line(start, end,'b',NULL))){
 		sdp_par.len = get_line_length(sdp_par.s, end);
-		LOG(L_DBG, "b line is %.*s\n", sdp_par.len, sdp_par.s);
-		mem_new(str_slot, sizeof(str_list_t), pkg);
+		mem_new(str_slot, sizeof(str_list_slot_t), pkg);
 		str_dup(str_slot->data, sdp_par, pkg);
-		WL_APPEND(&(sdp_media_elem->sdp_media_descriptions),str_slot);
-		//str_slot=0;
+		WL_APPEND(sdp_media_descriptions,str_slot);
+		str_slot=0;
 	}
 
 	if((sdp_par.s = find_next_sdp_line(start, end,'c',NULL))){
 		sdp_par.len = get_line_length(sdp_par.s, end);
-		LOG(L_DBG, "c line is %.*s\n", sdp_par.len, sdp_par.s);
-		mem_new(str_slot, sizeof(str_list_t), pkg);
-		//str_dup(str_slot->data, sdp_par, pkg);
-		//WL_APPEND(&(sdp_media_elem->sdp_media_descriptions),str_slot);
-		//str_slot=0;
+		mem_new(str_slot, sizeof(str_list_slot_t), pkg);
+		str_dup(str_slot->data, sdp_par, pkg);
+		WL_APPEND(sdp_media_descriptions,str_slot);
+		str_slot=0;
 	}
-*/
+
 	return 1;
 out_of_memory:
-	if(str_slot) mem_free(str_slot, pkg);
+	LOG(L_ERR, "ERR:"M_NAME":get_media_description_list: out of pkg memory\n");
+	if(str_slot) WL_FREE(str_slot, str_list_t,pkg);
 	return 0;
 }
 
@@ -237,32 +234,22 @@ int append_sip_sdp_comp(struct sip_msg * msg,
 	for(;mline_s.s;mline_s.s = next_mline_s.s){
 		
 		mline_s.len = get_line_length(mline_s.s, end);
-		LOG(L_DBG, "mline is %.*s, sdp body is %.*s\n", 
-			mline_s.len, mline_s.s, sdp_body.len, sdp_body.s);
-		
 		next_mline_s.s = find_next_sdp_line(mline_s.s,end,'m',NULL);
-		
+
 		mem_new(sdp_media_elem, sizeof(sdp_media_component_t), pkg);
 
 		str_dup_ptr_ptr(sdp_media_elem->sdp_media_name, &mline_s, pkg);
-		LOG(L_DBG, "mline is %.*s, sdp body is %.*s\n", 
-			mline_s.len, mline_s.s, sdp_body.len, sdp_body.s);
-		
-		media_info_end = sdp_body.s+sdp_body.len-5;
-		LOG(L_DBG, "last 5 characters from sdp_body are: %.*s\n",
-			5, media_info_end);
-		media_info_end = end-1;
-		LOG(L_DBG, "log3, media_info_end is %s\n", media_info_end);
 
-		if(!get_media_description_list(mline_s.s+mline_s.len, end, 
-					sdp_media_elem))
-			goto error;
-		LOG(L_DBG, "log4\n");
-		
+		media_info_end = end;
+
 		mem_new(sdp_media_elem->sdp_type, sizeof(int32_t), pkg);
 		*(sdp_media_elem->sdp_type) = sdp_type;
+
+		if(!get_media_description_list(mline_s.s+mline_s.len, end, 
+					&(sdp_media_elem->sdp_media_descriptions)))
+			goto error;
+		
 		WL_APPEND(sdp_media_comps, sdp_media_elem);
-		LOG(L_DBG, "log6\n");
 	}
 	str_free(sdp_body,pkg);
 	return 1;
@@ -277,14 +264,11 @@ int get_sdp_media_comp(struct sip_msg* req,
 			struct sip_msg * reply, 
 			sdp_media_component_list_t * sdp_media_comps){
 
-	LOG(L_DBG, "extracting the sdp info from the request\n");
 	if(req && !(append_sip_sdp_comp(req, 0, sdp_media_comps)))
 		goto error;
 
-	LOG(L_DBG, "extracting the sdp info from the reply\n");
 	if(reply && !(append_sip_sdp_comp(reply, 1, sdp_media_comps)))
 		goto error;
-
 	return 1;
 error:
 	WL_FREE_ALL(sdp_media_comps, sdp_media_component_list_t, pkg);
@@ -316,8 +300,6 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	subscription_id_t subscr;
 	sdp_media_component_list_t sdp_media_comps = {0,0};
 
-	LOG(L_DBG, "in dlg_create_rf_data\n");
-
 	if(!get_sip_header_info(req, reply, interim, &acct_record_type, 
 				&sip_method, &event, &expires, 
 				&callid, &from_uri, &to_uri))
@@ -344,28 +326,24 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 
 	if(!get_sdp_media_comp(req, reply, &sdp_media_comps))
 		goto error;
-	LOG(L_DBG, "successfully extracted sdp media info , head: %p and tail %p\n",
-		sdp_media_comps.head, sdp_media_comps.tail);
 
 	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
 		goto error;
-	
+
 	if(!(time_stamps = new_time_stamps(&req_timestamp, NULL,
 						&reply_timestamp, NULL)))
 		goto error;
-
 	if(!(ims_info = new_ims_information(event_type, 
 					time_stamps,
 					&callid, &callid,
 					&from_uri, &to_uri, 
-					&icid, &orig_ioi, &term_ioi, 
-					&sdp_media_comps, dir)))
+					&icid, &orig_ioi, &term_ioi,dir)))
 		goto error;
 
-	LOG(L_DBG, "created ims information\n");
-
-	//sdp_media_comps.head = sdp_media_comps.tail = NULL;
-
+	ims_info->sdp_media_component.head = sdp_media_comps.head;
+	ims_info->sdp_media_component.tail = sdp_media_comps.tail;
+	
+	sdp_media_comps.head = sdp_media_comps.tail = 0;
 	event_type = 0;
 	time_stamps = 0;
 
@@ -375,7 +353,6 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 
 	rf_data = new_Rf_ACR(acct_record_type, acct_record_number,
 			&user_name, ims_info, &subscr);
-	LOG(L_DBG, "created rf data\n");
 	if(!rf_data) {
 		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_data: no memory left for generic\n");
 		goto out_of_memory;
@@ -387,7 +364,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 out_of_memory:
 	LOG(L_ERR, "dlg_create_rf_data: out of memory\n");
 error:
-	//WL_FREE_ALL(&sdp_media_comps, sdp_media_component_list_t, pkg);
+	WL_FREE_ALL(&sdp_media_comps, sdp_media_component_list_t, pkg);
 	time_stamps_free(time_stamps);
 	event_type_free(event_type);
 	ims_information_free(ims_info);

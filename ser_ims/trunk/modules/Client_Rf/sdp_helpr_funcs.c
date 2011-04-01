@@ -480,8 +480,10 @@ int get_line_length(char * line, char * plimit){
 	int length = 0;
 	char * p = line;
 
-	while(*p!='\r' && *p!='\n' && p<plimit) {
+	while(*p!='\r' && *p!='\n') {
 		length++;
+		if(p==(plimit-1))
+			break;
 		p++;
 	}
 	return length;
