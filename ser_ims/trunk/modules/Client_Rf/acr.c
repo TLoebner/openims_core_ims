@@ -88,7 +88,42 @@ error:
 int Rf_write_an_charging_id_avps(AAA_AVP_LIST * avp_list, 
 				an_charging_id_t * an_charging_id){
 
+	AAA_AVP_LIST aList = {0,0};
+	AAA_AVP_LIST flows_list = {0,0};
+	flow_t * flow = 0;
+	int_list_slot_t * il = 0;
+
+		//str_dup(sdp_media_component->an_charging_id->value,s,pkg);          
+	///	avp3=0;
+
+	WL_FOREACH(&(an_charging_id->flow), flow){
+
+		if(!cavpb->epcapp.add_Media_Component_Number(&aList,flow->media_component_number))
+			goto error;
+
+		WL_FOREACH(&(flow->flow_number), il){
+
+			if(!cavpb->epcapp.add_Flow_Number(&aList,il->data))
+				goto error;
+                }                
+		
+		if (flow->final_unit_action && !cavpb->ccapp.add_Final_Unit_Action(&aList,*(flow->final_unit_action)))
+			goto error;
+
+		if(!cavpb->epcapp.add_Flows(&flows_list, &aList, 0))
+			goto error;
+	}
+                        
+	if (!cavpb->epcapp.add_Access_Network_Charging_Identifier_Value(&flows_list, 
+			an_charging_id->value,AVP_DUPLICATE_DATA))
+		goto error; 
+
+	if (!cavpb->epcapp.add_Access_Network_Charging_Identifier(avp_list, &flows_list,0))
+		goto error;
+
 	return 1;
+error:
+	return 0;
 }
 
 /**
