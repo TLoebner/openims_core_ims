@@ -197,12 +197,15 @@ event_type_t * new_event_type(str * sip_method,
 	mem_new(x, sizeof(event_type_t), pkg);
 	if(sip_method && sip_method->s)
 		str_dup_ptr(x->sip_method, *sip_method,pkg);
+	
 	if(event && event->s)
 		str_dup_ptr(x->event,*event,pkg);
+	
 	if(expires && *expires!=0){
 		mem_new(x->expires, sizeof(uint32_t), pkg);
 		*(x->expires) = *expires;
 	}
+	
 	return x;
 
 out_of_memory:
@@ -258,7 +261,6 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * icid,
 					str * orig_ioi,
 					str * term_ioi,
-					sdp_media_component_list_t * sdp_media_comps,
 					int node_role)
 {
 
@@ -306,9 +308,6 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 	if (icid && icid->s)
 		str_dup_ptr(x->icid,*icid,pkg);
 
-	x->sdp_media_component.head = sdp_media_comps->head;
-	x->sdp_media_component.tail = sdp_media_comps->tail;
-	
 	return x;
 
 out_of_memory:
@@ -348,7 +347,6 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 
 	Rf_ACR_t *x=0;
 	service_information_t * service_info=0;
-	
 	mem_new(x, sizeof(Rf_ACR_t), pkg);
 
 	str_dup(x->origin_host, cfg.origin_host, pkg);
@@ -405,7 +403,6 @@ void ims_information_free(ims_information_t *x)
 {
 	if (!x) return;
 
-	LOG(L_DBG, "freeing ims info\n");
 	event_type_free(x->event_type);
 	
 	mem_free(x->role_of_node,pkg);
@@ -423,7 +420,6 @@ void ims_information_free(ims_information_t *x)
 	
 	WL_FREE_ALL(&(x->ioi),ioi_list_t,pkg);
 	str_free_ptr(x->icid,pkg);
-	
 	WL_FREE_ALL(&(x->sdp_media_component),sdp_media_component_list_t,pkg);
 	WL_FREE_ALL(&(x->sdp_session_description),str_list_t,pkg);
 	
@@ -434,7 +430,6 @@ void ims_information_free(ims_information_t *x)
 	mem_free(x->cause_code,pkg);
 	
 	mem_free(x,pkg);
-	LOG(L_DBG, "end of free ims info\n");
 }
 
 void service_information_free(service_information_t *x)
