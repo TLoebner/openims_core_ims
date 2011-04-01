@@ -168,6 +168,30 @@ int get_timestamps(struct sip_msg * req,
 	return 1;
 }
 
+int get_all_media_lines(char * start, char * end, char line_name, 
+				str_list_t * sdp_media_descriptions){
+
+	
+	str sdp_par = {0,0};
+	str_list_slot_t * str_slot = NULL;
+
+       while((sdp_par.s = find_next_sdp_line(start, end,line_name,NULL))){
+                sdp_par.len = get_line_length(sdp_par.s, end);
+                mem_new(str_slot, sizeof(str_list_slot_t), pkg);
+                str_dup(str_slot->data,sdp_par,pkg);
+                WL_APPEND(sdp_media_descriptions,str_slot);
+                str_slot=0;
+		start = sdp_par.s + sdp_par.len;
+        }
+
+	return 1;
+
+out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":get_media_description_list: out of pkg memory\n");
+	if(str_slot) WL_FREE(str_slot, str_list_t,pkg);
+	return 0;
+}
+
 /**
  * extract the media description list from the SDP of the message, if SDP body included
  */
@@ -175,39 +199,57 @@ int get_timestamps(struct sip_msg * req,
 int get_media_description_list(char* start, char * end, 
 				str_list_t * sdp_media_descriptions){
 
-	str sdp_par = {0,0};
-	str_list_slot_t * str_slot = NULL;
+	if(!get_all_media_lines(start, end, 'a', sdp_media_descriptions))
+		goto error;
 
-	if((sdp_par.s = find_next_sdp_line(start, end,'a',NULL))){
-		sdp_par.len = get_line_length(sdp_par.s, end);
-		mem_new(str_slot, sizeof(str_list_slot_t), pkg);
-		str_dup(str_slot->data,sdp_par,pkg);
-		WL_APPEND(sdp_media_descriptions,str_slot);
-		str_slot=0;
-	}
+	if(!get_all_media_lines(start, end, 'b', sdp_media_descriptions))
+		goto error;
+	
+	if(!get_all_media_lines(start, end, 'c', sdp_media_descriptions))
+		goto error;
 
-	if((sdp_par.s = find_next_sdp_line(start, end,'b',NULL))){
-		sdp_par.len = get_line_length(sdp_par.s, end);
-		mem_new(str_slot, sizeof(str_list_slot_t), pkg);
-		str_dup(str_slot->data, sdp_par, pkg);
-		WL_APPEND(sdp_media_descriptions,str_slot);
-		str_slot=0;
-	}
+	if(!get_all_media_lines(start, end, 'i', sdp_media_descriptions))
+		goto error;
 
-	if((sdp_par.s = find_next_sdp_line(start, end,'c',NULL))){
-		sdp_par.len = get_line_length(sdp_par.s, end);
-		mem_new(str_slot, sizeof(str_list_slot_t), pkg);
-		str_dup(str_slot->data, sdp_par, pkg);
-		WL_APPEND(sdp_media_descriptions,str_slot);
-		str_slot=0;
-	}
+	if(!get_all_media_lines(start, end, 'k', sdp_media_descriptions))
+		goto error;
+
 
 	return 1;
-out_of_memory:
-	LOG(L_ERR, "ERR:"M_NAME":get_media_description_list: out of pkg memory\n");
-	if(str_slot) WL_FREE(str_slot, str_list_t,pkg);
+error:
 	return 0;
 }
+
+int add_charging_id(sdp_media_component_t * sdp_media_component){
+
+/*	flow_t * flow;
+	int_list_slot_t * il = 0;
+*/
+/*	mem_new(sdp_media_component->an_charging_id,sizeof(an_charging_id_t),pkg);
+        char_dup_str(sdp_media_component->an_charging_id->value,"ANChargingIdValue",pkg);
+
+        WL_NEW(flow,flow_list_t,pkg);
+        flow->media_component_number = 7;
+
+                 WL_NEW(il,int_list_t,pkg);
+                 il->data = 3;
+         
+	WL_APPEND(&(flow->flow_number),il);
+
+        	 WL_NEW(il,int_list_t,pkg);
+                 il->data = 6;
+        WL_APPEND(&(flow->flow_number),il);
+
+        mem_new(flow->final_unit_action,sizeof(int32_t),pkg);
+        *flow->final_unit_action = AVP_Final_Unit_Action_Redirect;                          
+        
+	WL_APPEND(&(sdp_media_component->an_charging_id->flow),flow);*/
+
+	return 1;
+//out_of_memory:
+//	return 0;
+}
+
 
 int append_sip_sdp_comp(struct sip_msg * msg, 
 			int sdp_type, 
@@ -248,7 +290,7 @@ int append_sip_sdp_comp(struct sip_msg * msg,
 		if(!get_media_description_list(mline_s.s+mline_s.len, end, 
 					&(sdp_media_elem->sdp_media_descriptions)))
 			goto error;
-		
+		add_charging_id(sdp_media_elem);	
 		WL_APPEND(sdp_media_comps, sdp_media_elem);
 	}
 	str_free(sdp_body,pkg);

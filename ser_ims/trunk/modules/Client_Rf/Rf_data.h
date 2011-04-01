@@ -135,6 +135,30 @@ do {\
 	}\
 } while (0)
 
+/**     
+ * Duplicate a char* safely into a str
+ * \Note This actually copies also the \0 at the end, unlike str_dup!
+ * @param dst - destination str
+ * @param src - source char*
+ * @param mem - type of memory to use for malloc (pkg/shm) 
+ */
+#define char_dup_str(dst,src,mem) \
+do {\
+        int char_dup_len = strlen((char*)src);\
+        if (!char_dup_len) {(dst).s=0;(dst).len=0;}\
+        else {\
+                (dst).s = mem##_malloc(char_dup_len+1);\
+                if (!(dst).s){\
+                        LOG(L_ERR,"Error allocating %d bytes in %s!\n",(char_dup_len)+1,#mem);\
+                        (dst).len=0;\
+                        goto out_of_memory;\
+                }\
+                memcpy((dst).s,(src),char_dup_len);\
+                (dst).s[char_dup_len]=0;\
+                (dst).len=char_dup_len;\
+        }\
+} while (0)
+
 /**
  * Frees a str content.
  * @param x - the str to free
@@ -157,6 +181,16 @@ do {\
 /**
  * list operations 
  */
+
+#define WL_NEW(el,list_type,mem)                                                                                                \
+do {                                                                                                                                                    \
+        (el) = mem##_malloc(sizeof(struct _##list_type##_slot));                                        \
+        if (!(el)) {                                                                                                                            \
+                LOG(L_ERR,"Unable to allocate %ld bytes in %s!",(long int)sizeof(struct _##list_type##_slot),#mem);\
+                goto out_of_memory;                                                                                                             \
+        }                                                                                                                                                       \
+        bzero((el),sizeof(struct _##list_type##_slot));                                                         \
+} while(0)
 
 #define WL_APPEND(list,add)                                                      \
 do {                                                                             \
