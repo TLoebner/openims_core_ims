@@ -29,6 +29,8 @@
  *
  */
 
+#ifdef OPEN_IMS_CORE
+
 #include "../../ut.h"
 #include "../../parser/msg_parser.h"
 #include "../../parser/parser_f.h"
@@ -649,3 +651,4 @@ char *find_next_sdp_line_delimiter(char* p, char* plimit, str delimiter, char* d
   return t ? t : defptr;
 }
 
+#endif /*OPEN_IMS_CORE*/

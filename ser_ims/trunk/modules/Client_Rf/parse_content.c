@@ -32,6 +32,8 @@
  * \ingroup parser
  */
 
+#ifdef OPEN_IMS_CORE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -489,3 +491,4 @@ error:
 	return -1;
 }
 
+#endif /*OPEN_IMS_CORE*/
