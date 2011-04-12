@@ -22,6 +22,7 @@ endif
 ifeq ($(CFG_NAME),Wharf)
 	DEFS += -DWHARF
 else
+	DEFS += -DCDP_FOR_SER
 	DEFS += -I/usr/include/libxml2 -I../../lib -DOPEN_IMS_CORE -DSER -I../..
 	LIBS += -L/usr/local/lib -L../../lib/cds
 endif	
