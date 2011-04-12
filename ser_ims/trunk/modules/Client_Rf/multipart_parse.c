@@ -25,6 +25,8 @@
  *
  */
 
+#ifdef OPEN_IMS_CORE
+
 #include "mod.h"
 
 #include "../../parser/parser_f.h"
@@ -238,4 +240,4 @@ static int str_trim_newline(str *s)
 }
 
 
-
+#endif /*OPEN_IMS_CORE*/

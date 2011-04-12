@@ -53,7 +53,7 @@
  * 
  */
  
-#ifdef CDP_FOR_SER
+#ifdef OPEN_IMS_CORE
 
 #include <ctype.h>
 #include <sys/types.h>
@@ -311,4 +311,4 @@ int trans_in_processing(struct sip_msg* msg, char* str1, char* str2)
 	return CSCF_RETURN_TRUE;	
 }
 
-#endif /*CDP_FOR_SER*/
+#endif /*OPEN_IMS_CORE*/

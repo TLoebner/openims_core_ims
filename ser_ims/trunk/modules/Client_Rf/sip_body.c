@@ -52,6 +52,7 @@
  * 
  */
  
+#ifdef OPEN_IMS_CORE
 
 #include "../../sr_module.h"
 #include "../../mem/mem.h"
@@ -403,3 +404,4 @@ error:
 	return -1;
 }
 
+#endif /*OPEN_IMS_CORE*/

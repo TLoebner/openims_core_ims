@@ -53,7 +53,7 @@
  * 
  */
  
-#ifdef CDP_FOR_SER
+#ifdef OPEN_IMS_CORE
 
 #include "mod.h"
 
@@ -508,4 +508,4 @@ error:
 
 
 
-#endif /*CDP_FOR_SER*/
+#endif /*OPEN_IMS_CORE*/
