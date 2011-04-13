@@ -92,7 +92,7 @@
 	#endif
 
 
-	#define EPOCH_UNIX_TO_EPOCH_NTP 220898800u // according to http://www.cis.udel.edu/~mills/y2k.html
+	#define EPOCH_UNIX_TO_EPOCH_NTP 2208988800u // according to http://www.cis.udel.edu/~mills/y2k.html
 	
 	
 	/* 
