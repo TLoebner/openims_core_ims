@@ -162,6 +162,8 @@ inline void free_dp_config(dp_config *x)
 	}
 	if (x->applications) shm_free(x->applications);
 	
+	if (x->supported_vendors) shm_free(x->supported_vendors);
+	
 	if (x->r_table) {
 		routing_realm *rr,*rrn;
 		routing_entry *re,*ren;
@@ -216,6 +218,10 @@ inline void log_dp_config(int level,dp_config *x)
 			(x->applications[i].type==DP_AUTHORIZATION)?"Auth":"Acct",
 			x->applications[i].id,
 			x->applications[i].vendor);	
+	LOG(level,"\tSupported Vendors : %d\n",x->supported_vendors_cnt);
+	for(i=0;i<x->supported_vendors_cnt;i++)
+		LOG(level,"\t\t Vendor: %d \n",			
+			x->supported_vendors[i]);	
 	if (x->r_table){
 		routing_realm *rr;
 		routing_entry *re;

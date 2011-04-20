@@ -132,7 +132,10 @@ typedef struct {
 	int acceptors_cnt;			/**< size of the list of acceptors */
 	
 	app_config *applications;	/**< list of supporter applications */
-	int applications_cnt;		/**< size of list of supporter applications*/
+	int applications_cnt;		/**< size of list of supported applications*/
+
+	int *supported_vendors;		/**< list of supported vendor ids */
+	int supported_vendors_cnt;	/**< size of list of supported vendor ids */
 	
 	routing_table *r_table;		/**< realm routing table */
 } dp_config;
