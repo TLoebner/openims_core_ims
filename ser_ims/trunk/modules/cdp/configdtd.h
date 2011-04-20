@@ -54,7 +54,7 @@
  
 #define DP_CONFIG_DTD "\
 <?xml version=\"1.0\" encoding=\"UTF-8\"?>\
-<!ELEMENT DiameterPeer (Peer*, Acceptor*, Auth*, Acct*)>\
+<!ELEMENT DiameterPeer (Peer*, Acceptor*, Auth*, Acct*, SupportedVendor*, Realm*, DefaultRoute*)>\
 <!ATTLIST DiameterPeer \
 	FQDN		CDATA				#REQUIRED\
 	Realm		CDATA				#REQUIRED\
@@ -90,6 +90,10 @@
 <!ELEMENT Acct (#PCDATA)>\
 <!ATTLIST Acct\
 	id			CDATA				#REQUIRED\
+	vendor		CDATA				#REQUIRED\
+>\
+<!ELEMENT SupportedVendor (#PCDATA)>\
+<!ATTLIST SupportedVendor\
 	vendor		CDATA				#REQUIRED\
 >\
 <!ELEMENT Realm (Route*)>\

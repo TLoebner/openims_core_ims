@@ -75,7 +75,13 @@
 	<Acct id="16777216" vendor="0" />
 	<Auth id="16777216" vendor="10415"/>
 	<Auth id="16777216" vendor="0" />
-
+	
+	<!-- 
+		Supported Vendor IDs - list of values which will be sent in the CER/CEA in the
+		Supported-Vendor-ID AVPs
+	-->
+	<SupportedVendor vendor="10415" />
+	
 	<!--
 		Realm routing definition.
 		Each Realm can have a different table of peers to route towards. In case the Destination

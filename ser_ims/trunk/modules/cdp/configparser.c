@@ -287,6 +287,10 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 			//Application
 			x->applications_cnt++;		
 		}	
+		else if (xmlStrlen(child->name)==15 && (strncasecmp((char*)child->name,"SupportedVendor",15)==0)){
+			//SupportedVendor
+			x->supported_vendors_cnt++;		
+		}	
 	}
 	x->peers = shm_malloc(x->peers_cnt*sizeof(peer_config));
 	if (!x->peers){
@@ -309,6 +313,14 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 	}
 	memset(x->applications,0,x->applications_cnt*sizeof(app_config));
 	x->applications_cnt=0;
+
+	x->supported_vendors = shm_malloc(x->supported_vendors_cnt*sizeof(int));
+	if (!x->supported_vendors){
+		LOG_NO_MEM("shm",x->supported_vendors_cnt*sizeof(int));
+		goto error;
+	}
+	memset(x->supported_vendors,0,x->supported_vendors_cnt*sizeof(int));
+	x->supported_vendors_cnt=0;
 
 	for(child = root->children; child; child = child->next)
 		if (child->type == XML_ELEMENT_NODE)
@@ -364,6 +376,15 @@ dp_config* parse_dp_config(xmlDocPtr doc)
 			else
 				x->applications[x->applications_cnt].type = DP_ACCOUNTING;										
 			x->applications_cnt++;		
+		}	
+		else if (xmlStrlen(child->name)==15 && (strncasecmp((char*)child->name,"SupportedVendor",15)==0)){
+			//SupportedVendor
+			xc = xmlGetProp(child,(xmlChar*)"vendor");
+			if (xc){
+				x->supported_vendors[x->supported_vendors_cnt] = atoi((char*)xc);						
+				xmlFree(xc);
+			}
+			x->supported_vendors_cnt++;		
 		}	
 		else if (xmlStrlen(child->name)==12 && (strncasecmp((char*)child->name,"DefaultRoute",12)==0)){
 			if (!x->r_table) {
