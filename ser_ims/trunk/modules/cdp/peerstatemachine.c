@@ -607,6 +607,9 @@ static inline void Snd_CE_add_applications(AAAMessage *msg,peer *p)
 				AVP_Vendor_Specific_Application_Id,
 				AAA_AVP_FLAG_MANDATORY,0,group.s,group.len);
 			shm_free(group.s);
+			
+			set_4bytes(x,app->vendor);
+			AAACreateAndAddAVPToMessage(msg,AVP_Supported_Vendor_Id,AAA_AVP_FLAG_MANDATORY,0,x,4);			
 		}
 	}
 }
