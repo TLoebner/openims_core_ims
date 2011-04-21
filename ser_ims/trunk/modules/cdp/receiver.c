@@ -726,6 +726,11 @@ int receive_loop(peer *original_peer)
 									sp2 = add_serviced_peer(p);
 								else
 									make_send_pipe(sp2);
+								if (!sp2) {
+									LOG(L_ERR,"Error on add_serviced_peer()\n");
+									continue;
+								}
+								
 								sp2->tcp_socket = fd;
 								if (p->state == Wait_Conn_Ack){
 									p->I_sock = fd;
@@ -735,6 +740,10 @@ int receive_loop(peer *original_peer)
 								}
 							}else{
 								sp2 = add_serviced_peer(NULL);
+								if (!sp2) {
+									LOG(L_ERR,"Error on add_serviced_peer()\n");
+									continue;
+								}
 								sp2->tcp_socket = fd;
 							}
 						}
