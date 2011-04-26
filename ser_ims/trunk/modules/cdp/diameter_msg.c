@@ -258,38 +258,44 @@ AAAMessage *AAANewMessage(
 		/**/
 		msg->endtoendId = request->endtoendId;
 		msg->hopbyhopId = request->hopbyhopId;
-		
-		//TODO: aon:move this information in the AAASession structure, do not add these fields for 
-		/* Mirror the old originhost/realm to destinationhost/realm*/
-		avp = AAAFindMatchingAVP(request,0,AVP_Origin_Host,0,0);
-		if (avp) dest_host = avp->data;
-		/* add destination host and destination realm */
-		avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
-			dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
-		if (!avp) {
-			LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
-			goto error;
-		}
-		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-			LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
-			AAAFreeAVP(&avp);
-			goto error;
-		}
 
-		avp = AAAFindMatchingAVP(request,0,AVP_Origin_Realm,0,0);
-		if (avp) dest_realm = avp->data;
+		
+		//TODO: aon:move this information in the AAASession structure, do not add these fields for
+		
+	    if (msg->commandCode==Code_CE||msg->commandCode==Code_DP||msg->commandCode==Code_DW){
+	    	// Don't add Destination Host/Realm because some stacks are way to picky and will just refuse it
+	    }else{
+
+			/* Mirror the old originhost/realm to destinationhost/realm*/
+			avp = AAAFindMatchingAVP(request,0,AVP_Origin_Host,0,0);
+			if (avp) dest_host = avp->data;
+			/* add destination host and destination realm */
+			avp = AAACreateAVP(AVP_Destination_Host,AAA_AVP_FLAG_MANDATORY,0,
+				dest_host.s,dest_host.len,AVP_DUPLICATE_DATA);
+			if (!avp) {
+				LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Host avp\n");
+				goto error;
+			}
+			if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+				LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Host avp to message\n");
+				AAAFreeAVP(&avp);
+				goto error;
+			}
 	
-		avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
-			dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
-		if (!avp) {
-			LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
-			goto error;
-		}
-		if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
-			LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
-			AAAFreeAVP(&avp);
-			goto error;
-		}		
+			avp = AAAFindMatchingAVP(request,0,AVP_Origin_Realm,0,0);
+			if (avp) dest_realm = avp->data;
+			avp = AAACreateAVP(AVP_Destination_Realm,AAA_AVP_FLAG_MANDATORY,0,
+				dest_realm.s,dest_realm.len,AVP_DUPLICATE_DATA);
+			if (!avp) {
+				LOG(L_ERR,"ERR:AAANewMessage: Failed creating Destination Realm avp\n");
+				goto error;
+			}
+			if (AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+				LOG(L_ERR,"ERR:AAANewMessage: Failed adding Destination Realm avp to message\n");
+				AAAFreeAVP(&avp);
+				goto error;
+			}
+	    }
 
 		msg->res_code=0;
 		/* mirror all the proxy-info avp in the same order */
