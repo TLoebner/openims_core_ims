@@ -449,8 +449,8 @@ int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** r
 			return CSCF_RETURN_ERROR;
 		}
 		/*start of session*/
-		 if((msg->first_line.u.request.method.len == 6) && 
-				 strncmp(req->first_line.u.request.method.s, "INVITE",6) == 0){
+		if((req->first_line.u.request.method.len == 6) && 
+			strncmp(req->first_line.u.request.method.s, "INVITE",6) == 0){
 
 			if(!(*rf_data = dlg_create_rf_data(req, msg, dir, interim)))
 				goto error;
