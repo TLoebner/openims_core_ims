@@ -111,12 +111,15 @@ int get_sip_header_info(struct sip_msg * req,
 	sip_method->s = req->first_line.u.request.method.s;
 	sip_method->len = req->first_line.u.request.method.len;
 	
-	if(!interim && strncmp(sip_method->s, "INVITE",6) == 0)
+	if(!interim && sip_method->len == 6 && strncmp(sip_method->s, "INVITE",6) == 0)
 		*acc_record_type = AAA_ACCT_START;
-	else if	(strncmp(sip_method->s, "BYE",3) == 0)
+	else if	(sip_method->len == 3 && strncmp(sip_method->s, "BYE",3) == 0)
 		*acc_record_type = AAA_ACCT_STOP;
-	else if(interim && (strncmp(sip_method->s, "INVITE", 6) == 0	
-				|| strncmp(sip_method->s, "UPDATE", 6) ==0))
+	else if (sip_method->len == 7 && strncmp(sip_method->s, "MESSAGE", 7) == 0)
+		*acc_record_type = AAA_ACCT_EVENT;
+	else if(interim && sip_method->len == 6 && 
+			(strncmp(sip_method->s, "INVITE", 6) == 0 || 
+			 strncmp(sip_method->s, "UPDATE", 6) ==0))
 		*acc_record_type = AAA_ACCT_INTERIM;
 	else
 		*acc_record_type = AAA_ACCT_EVENT;
@@ -421,10 +424,20 @@ int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** r
 	LOG(L_DBG, "creating rf data\n");
 	if(msg->first_line.type == SIP_REQUEST){
 		/*end of session*/
-		if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 ){
-			if(!(*rf_data = dlg_create_rf_data(msg, NULL, dir, interim)))
-				goto error;
-		}
+
+		switch(msg->first_line.u.request.method.len){
+			case 3: /* BYE req*/
+				if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 )
+					if(!(*rf_data = dlg_create_rf_data(msg, NULL, dir, interim)))
+						goto error;
+				break;
+			case 7:	/*MESSAGE req */
+				if(strncmp(msg->first_line.u.request.method.s, "MESSAGE", 7)==0)
+					if(!(*rf_data = dlg_create_rf_data(msg, NULL, dir, interim)))
+						goto error;
+				break;
+			default: break;
+		} 
 	}else{
 		LOG(L_DBG, "reply code is %i\n", msg->first_line.u.reply.statuscode);
 		if(msg->first_line.u.reply.statuscode != 200)
@@ -436,7 +449,8 @@ int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** r
 			return CSCF_RETURN_ERROR;
 		}
 		/*start of session*/
-		 if(strncmp(req->first_line.u.request.method.s, INVITE, 6) == 0){
+		 if((msg->first_line.u.request.method.len == 6) && 
+				 strncmp(req->first_line.u.request.method.s, "INVITE",6) == 0){
 
 			if(!(*rf_data = dlg_create_rf_data(req, msg, dir, interim)))
 				goto error;
