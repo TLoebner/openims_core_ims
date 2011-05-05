@@ -330,7 +330,9 @@ cdp_avp			(Tunnel_Header_Length,					EPC_vendor_id_3GPP,	0,							Unsigned32,		u
 cdp_avp_add_ptr	(Tunnel_Information,					EPC_vendor_id_3GPP,	0,							Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(Tunnel_Information,					EPC_vendor_id_3GPP,	0,							Grouped,		AAA_AVP_LIST)	
 
-cdp_avp			(RAT_Type,								EPC_vendor_id_3GPP,	0,							Enumerated,		int32_t)	
+cdp_avp			(RAT_Type,								EPC_vendor_id_3GPP,	0,							Enumerated,		int32_t)
+
+cdp_avp			(TGPP_RAT_Type,								EPC_vendor_id_3GPP,	0,							Enumerated,		int32_t)	
 
 cdp_avp			(Revalidation_Time,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Time,			time_t)	
 
