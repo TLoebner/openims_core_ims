@@ -83,7 +83,7 @@ enum {
 	AVP_EPC_3GPP_IPv6_DNS_Servers						= 17,
 	AVP_EPC_3GPP_SGSN_MCC_MNC							= 18,
 	AVP_EPC_3GPP_IMEISV									= 20,
-	AVP_EPC_3GPP_RAT_Type								= 21,
+	AVP_EPC_TGPP_RAT_Type								= 21,
 	AVP_EPC_3GPP_User_Location_Info						= 22,
 	AVP_EPC_3GPP_MS_TimeZone							= 23,
 	AVP_EPC_3GPP_Allocate_IP_Type						= 27,
