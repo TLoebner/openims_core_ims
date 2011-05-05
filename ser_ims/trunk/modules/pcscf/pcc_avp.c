@@ -109,6 +109,10 @@ uint16_t pcc_get_ip_port(struct sip_msg *r, struct sip_uri * parsed_aor, str *ip
 			ip->s +=1;
 			ip->len -=1;
 		}	
+		if(ip->s[ip->len-1] == ']'){
+			version  = AF_INET6;
+			ip->len -= 1;
+		}
 	}
 
 	LOG(L_DBG,"DBG:"M_NAME":pcc_get_ip_port: %.*s\n",ip->len,ip->s);
