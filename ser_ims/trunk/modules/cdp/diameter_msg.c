@@ -175,6 +175,7 @@ AAAMessage *AAANewMessage(
 	AAAMessage   *msg;
 	AAA_AVP      *avp;
 	AAA_AVP      *avp_t;
+	char app_id_ptr [4];
 	str *sessionId=0;
 #if 0
 	unsigned int code;
@@ -210,7 +211,18 @@ AAAMessage *AAANewMessage(
 	/* application ID */
 	msg->applicationId = applicationId;
 
-	/* add session ID */
+	if (applicationId){
+                set_4bytes(app_id_ptr, applicationId);
+                avp = AAACreateAVP( 258, 0, 0, app_id_ptr, 4,
+                        AVP_DUPLICATE_DATA);
+                if ( !avp || AAAAddAVPToMessage(msg,avp,0)!=AAA_ERR_SUCCESS) {
+                        LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Auth-Application-Id avp\n");
+                        if (avp) AAAFreeAVP( &avp );
+                        goto error;
+                }
+        }
+
+	/*add session ID */
 	if (sessionId){
 		avp = AAACreateAVP( 263, 0, 0, sessionId->s, sessionId->len,
 			AVP_DUPLICATE_DATA);
@@ -221,7 +233,6 @@ AAAMessage *AAANewMessage(
 		}
 		msg->sessionId = avp;
 	}
-	
 
 	/* add origin host AVP */
 	/* changed by cristian to comply with rfc3588: 
