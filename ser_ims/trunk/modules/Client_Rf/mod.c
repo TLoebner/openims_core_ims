@@ -78,6 +78,7 @@
 #include "ims_rf.h"
 #include "config.h"
 #include "Rf_data.h"
+#include "charging.h"
 
 MODULE_VERSION
 
@@ -99,6 +100,8 @@ char * rf_service_context_id_release_s = "8";
 client_rf_cfg cfg;
 
 
+#define EXP_FUNC(NAME) \
+		{#NAME, (cmd_function)NAME, NO_SCRIPT, 0, 0},
 
 /** 
  * Exported functions.
@@ -106,6 +109,7 @@ client_rf_cfg cfg;
  */
 static cmd_export_t client_rf_cmds[]={
 	{"Rf_Send_ACR",			Rf_Send_ACR, 			2, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	EXP_FUNC(Rf_add_chg_info)
 	{0, 0, 0, 0, 0}
 }; 
 

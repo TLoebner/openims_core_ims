@@ -34,6 +34,7 @@
 #include "../cdp/cdp_load.h"
 #include "diameter_rf.h"
 #include "config.h"
+#include "charging.h"
 
 cdp_avp_bind_t *cavpb=0;				/**< Structure with pointers to cdp_avp funcs*/
 client_rf_cfg cfg;
@@ -116,7 +117,8 @@ void client_rf_destroy(int rank)
 
 
 struct client_rf_binds client_rf_binding={
-	AAASendACR
+	AAASendACR,
+	Rf_add_chg_info
 };
 
 
