@@ -55,7 +55,8 @@
 #define CLIENT_RF_BIND_H
 
 #ifdef CDP_FOR_SER
-//#include "charging.h"
+
+#include "../../str.h"
 
 typedef int (*Rf_add_chg_info_f)(str sip_uri, str an_charg_id);
 struct client_rf_binds {
