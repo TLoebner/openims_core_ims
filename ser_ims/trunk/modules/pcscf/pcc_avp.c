@@ -334,23 +334,23 @@ inline int PCC_add_auth_application_id(AAAMessage *msg, unsigned int data)
 /*
  * For now i add the IMPU because i dont know where to get the IMSI from
  */
-inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
+inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag, 
+		int * subscr_type, str * subscr_value)
 {
 	AAA_AVP_LIST list;
 	AAA_AVP *type,*data;
 	str identification;
 	char x[4];
-	int revalue;
 	list.head=0;
 	list.tail=0;
 	
 	LOG(L_INFO,"ADDING SUBSCRIPTION ID\n");
-	revalue=extract_id(r,tag,&identification);
+	*subscr_type=extract_id(r,tag,subscr_value);
 	// if this returns -1 then better not to add anything
-	if (revalue==-1)
-		return 1;
+	if (*subscr_type==-1)
+		return 0;
 		
- 	set_4bytes(x,revalue);
+ 	set_4bytes(x,*subscr_type);
 	
 	/*identification is just a pointer to something reserved somewhere else and a number...*/
 	type=cdpb.AAACreateAVP(AVP_Subscription_Id_Type,
@@ -360,7 +360,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
 	
 	data=cdpb.AAACreateAVP(AVP_Subscription_Id_Data,
  											AAA_AVP_FLAG_MANDATORY,
- 											0,identification.s,identification.len,
+ 											0,subscr_value->s,subscr_value->len,
  											AVP_DUPLICATE_DATA);
  											
  	cdpb.AAAAddAVPToList(&list,type);
@@ -368,9 +368,9 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag)
  	
 	identification=cdpb.AAAGroupAVPS(list);
   	 		
-  	PCC_add_avp(msg,identification.s,identification.len,AVP_Subscription_Id,
+  	PCC_add_avp(msg,subscr_value->s,subscr_value->len,AVP_Subscription_Id,
  				AAA_AVP_FLAG_MANDATORY,0,
- 				AVP_FREE_DATA,
+ 				AVP_DUPLICATE_DATA,
  				__FUNCTION__);
  				
  	cdpb.AAAFreeAVPList(&list);
