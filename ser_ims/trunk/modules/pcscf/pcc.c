@@ -820,11 +820,16 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	if (pcscf_qos_release7!=-1)
 	{
 		if(PCC_add_subscription_ID(aar,req,pcc_side, &subscr_type, &subscr_value)){
-			((pcc_authdata_t*)auth->u.generic_data)->sip_uri.s = pkg_malloc(subscr_value.len);
-			if(((pcc_authdata_t*)auth->u.generic_data)->sip_uri.s){
-				((pcc_authdata_t*)auth->u.generic_data)->sip_uri.len = subscr_value.len;
-				memcpy(((pcc_authdata_t*)auth->u.generic_data)->sip_uri.s, subscr_value.s, 
+			LOG(L_INFO, "sip uri is %.*s\n", subscr_value.len, subscr_value.s);
+			((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.s = shm_malloc(subscr_value.len);
+			LOG(L_INFO, "bla\n");
+			if(((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.s){
+				LOG(L_INFO, "bla\n");
+				((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.len = subscr_value.len;
+				LOG(L_INFO, "bla\n");
+				memcpy(((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.s, subscr_value.s, 
 						sizeof(char)*subscr_value.len);
+				LOG(L_INFO, "bla\n");
 			}
 		}
 //		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);

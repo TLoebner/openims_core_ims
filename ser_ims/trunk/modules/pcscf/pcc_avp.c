@@ -346,6 +346,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag,
 	
 	LOG(L_INFO,"ADDING SUBSCRIPTION ID\n");
 	*subscr_type=extract_id(r,tag,subscr_value);
+	LOG(L_DBG, "extracted subscr is %.*s\n", subscr_value->len, subscr_value->s);
 	// if this returns -1 then better not to add anything
 	if (*subscr_type==-1)
 		return 0;
@@ -368,7 +369,7 @@ inline int PCC_add_subscription_ID(AAAMessage *msg,struct sip_msg *r,int tag,
  	
 	identification=cdpb.AAAGroupAVPS(list);
   	 		
-  	PCC_add_avp(msg,subscr_value->s,subscr_value->len,AVP_Subscription_Id,
+  	PCC_add_avp(msg,identification.s, identification.len,AVP_Subscription_Id,
  				AAA_AVP_FLAG_MANDATORY,0,
  				AVP_DUPLICATE_DATA,
  				__FUNCTION__);
