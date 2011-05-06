@@ -80,6 +80,7 @@
 #endif
 #include "../cdp/cdp_load.h"
 #include "../cdp_avp/mod_export.h"
+#include "../Client_Rf/client_rf_load.h"
 
 #include "registration.h"
 #include "registrar_storage.h"
@@ -244,6 +245,7 @@ char* pcc_dest_realm_s = "open-ims.test";
 str pcc_dest_realm;
 char * gg_af_ip = NULL;
 uint32_t gg_af_port = 0;
+int pcscf_use_client_rf = 0;								/**< whether to enable or disable pcc */
 
 
 /** 
@@ -587,6 +589,7 @@ struct tm_binds tmb;            		/**< Structure with pointers to tm funcs 		*/
 dlg_func_t dialogb;						/**< Structure with pointers to dialog funcs			*/
 struct cdp_binds cdpb;					/**< Structure with pointers to cdp funcs				*/
 cdp_avp_bind_t *cdp_avp=0;
+struct client_rf_binds client_rfb; 		/**< Structure with pointers to client_rf funcs				*/
 
 extern r_hash_slot *registrar;			/**< the contacts */
 
@@ -761,6 +764,7 @@ static int mod_init(void)
 	load_tm_f load_tm;
 	load_cdp_f load_cdp;
 	cdp_avp_get_bind_f load_cdp_avp;
+	load_client_rf_f load_client_rf;
 	bind_dlg_mod_f load_dlg;
 			
 	LOG(L_INFO,"INFO:"M_NAME":mod_init: Initialization of module\n");
@@ -886,20 +890,32 @@ static int mod_init(void)
 			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface as well as the PCC ones have been disabled.\n");			
 			pcscf_use_e2 = 0;
 			pcscf_use_pcc = 0;
+		}else{
+			if (load_cdp(&cdpb) == -1)
+				goto error;
 		}
-		if (load_cdp(&cdpb) == -1)
-			goto error;
 		
 		if (!(load_cdp_avp = (cdp_avp_get_bind_f)find_export("cdp_avp_get_bind",NO_SCRIPT,0))) {
 			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import cdp_avp_get_bind. This module requires cdp_avp module.\n");			
 			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the e2 interface as well as the PCC ones have been disabled.\n");			
 			pcscf_use_e2 = 0;
 			pcscf_use_pcc = 0;
+		}else{
+			cdp_avp = load_cdp_avp();
+			if (!cdp_avp)
+				goto error;
 		}
-		cdp_avp = load_cdp_avp();
-		if (!cdp_avp)
-			goto error;
-		
+
+		if (!(load_client_rf = (load_client_rf_f)find_export("load_client_rf",NO_SCRIPT,0))) {
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_client_rf. This module might require client_rf module.\n");
+			
+			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the charging info in the pcscf module will be disabled, no charging correlation possible.\n");			
+			pcscf_use_client_rf = 0;
+		}else{
+			pcscf_use_client_rf = 1;
+			if (load_client_rf(&client_rfb) == -1)
+				goto error;
+		}
 	}	
 	
 	/* init the registrar storage */

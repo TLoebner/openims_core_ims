@@ -17,8 +17,8 @@
  * 
  */
 
-#ifdef WHARF
 
+#ifdef WHARF
 #ifndef _Client_Rf_EXPORT__H
 #define _Client_Rf_EXPORT__H
 
@@ -35,5 +35,5 @@ struct client_rf_binds{
 };
 
 #endif
-
 #endif /* WHARF */
+

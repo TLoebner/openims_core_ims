@@ -1,7 +1,7 @@
 /**
  * $Id$
- *   
- * Copyright (C) 2004-2007 FhG Fokus
+ *  
+ * Copyright (C) 2004-2006 FhG Fokus
  *
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
@@ -45,53 +45,33 @@
  
 /**
  * \file
- *
- * P-CSCF Policy and Charging Control interface ops
- *  
- * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
- * \author Dragos dot Vingarzan -at- fokus dot fraunhofer dot de
+ * 
+ * Client_Rf - functional bindings for usage in other SER modules
+ * 
+ *  \author Ancuta Corici andreea dot ancuta dot corici -at- fokus dot fraunhofer dot de
  */
- 
-#ifndef __PCC_H_
-#define __PCC_H_
 
-#include "mod.h"
-#include "../cdp/cdp_load.h"
+#ifndef CLIENT_RF_BIND_H
+#define CLIENT_RF_BIND_H
 
-#include "dlg_state.h"
-#include "sip.h"
+//#include "charging.h"
 
-
-
-
-typedef struct pcc_authdata {
-	str callid;
-	str sip_uri;
-	str host;
-	int port,transport;
-	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
-
-	//for registration session
-	int subscribed_to_signaling_path_status;
-	//for Gqprima only
-	int latch;
-} pcc_authdata_t;
+typedef int (*Rf_add_chg_info_f)(str sip_uri, str an_charg_id);
+struct client_rf_binds {
+	Rf_add_chg_info_f			Rf_add_chg_info;
+};
 
 
-int create_gg_socket();
-void close_gg_socket();
-int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
-void terminate_pcc_session(str session_id);
+#ifdef CDP_FOR_SER
+
+#define NO_SCRIPT	-1
 
 
-AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor, str * pcc_session_id, int is_shm);
-AAAMessage* PCC_STR(struct sip_msg *msg, char *str1, contact_t * aor);
-AAAMessage* PCC_ASA(AAAMessage *request);
-int PCC_AAA(AAAMessage *msg, unsigned int * rc, str pcc_session_id);
-int PCC_STA(AAAMessage *aaa, unsigned int *rc);
+typedef int(*load_client_rf_f)( struct client_rf_binds *cdpb );
 
+int load_client_rf( struct client_rf_binds *cdpb);
 
-AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);
+#endif /* CDP_FOR_SER */
 
+#endif
 
-#endif /*__PCC_H_*/

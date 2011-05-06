@@ -1,8 +1,6 @@
 /**
  * $Id$
- *   
- * Copyright (C) 2004-2007 FhG Fokus
- *
+ *  
  * This file is part of Open IMS Core - an open source IMS CSCFs & HSS
  * implementation
  *
@@ -42,56 +40,41 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * 
  */
- 
 /**
  * \file
- *
- * P-CSCF Policy and Charging Control interface ops
- *  
- * \author Alberto Diez Albaladejo -at- fokus dot fraunhofer dot de
- * \author Dragos dot Vingarzan -at- fokus dot fraunhofer dot de
+ * 
+ * Client_Rf - functional bindings for usage in SER/OSIM modules
+ * 
+ *  \author Ancuta Corici, email andreea dot ancuta dot corici -at- fokus dot fraunhofer dot de
  */
  
-#ifndef __PCC_H_
-#define __PCC_H_
+#include "client_rf_load.h"
 
-#include "mod.h"
-#include "../cdp/cdp_load.h"
-
-#include "dlg_state.h"
-#include "sip.h"
+#ifdef CDP_FOR_SER
+#include "../../sr_module.h"
 
 
+#define LOAD_ERROR "ERROR: client_rf_bind: S-CSCF module function "
+
+#define FIND_EXP(NAME) \
+	if (!( client_rfb->NAME=(NAME##_f) \
+		find_export(#NAME, NO_SCRIPT, 0)) ) {\
+		LOG(L_ERR, LOAD_ERROR "'"#NAME"' not found\n");\
+		return -1;\
+	}
 
 
-typedef struct pcc_authdata {
-	str callid;
-	str sip_uri;
-	str host;
-	int port,transport;
-	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
+/**
+ * Load the Client_Rf bindings
+ * @param *client_rfb - target structure to load the bindings into
+ * @returns 1 on success, -1 on failure
+ */  
+int load_client_rf( struct client_rf_binds *client_rfb)
+{
+	FIND_EXP(Rf_add_chg_info);
+	
+	return 1;
+}
 
-	//for registration session
-	int subscribed_to_signaling_path_status;
-	//for Gqprima only
-	int latch;
-} pcc_authdata_t;
+#endif /* CDP_FOR_SER */
 
-
-int create_gg_socket();
-void close_gg_socket();
-int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
-void terminate_pcc_session(str session_id);
-
-
-AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor, str * pcc_session_id, int is_shm);
-AAAMessage* PCC_STR(struct sip_msg *msg, char *str1, contact_t * aor);
-AAAMessage* PCC_ASA(AAAMessage *request);
-int PCC_AAA(AAAMessage *msg, unsigned int * rc, str pcc_session_id);
-int PCC_STA(AAAMessage *aaa, unsigned int *rc);
-
-
-AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);
-
-
-#endif /*__PCC_H_*/

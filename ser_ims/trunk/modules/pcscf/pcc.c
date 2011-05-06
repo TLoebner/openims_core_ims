@@ -62,6 +62,7 @@
 #include "registrar_storage.h"
 #include "registrar.h"
 #include "sip_body.h"
+#include "../Client_Rf/client_rf_load.h"
 
 /**< Structure with pointers to tm funcs */
 extern struct tm_binds tmb;
@@ -69,6 +70,8 @@ extern struct tm_binds tmb;
 /**< Structure with pointers to cdp and cdp_avp funcs */
 extern struct cdp_binds cdpb;
 extern cdp_avp_bind_t *cdp_avp;
+extern int pcscf_use_client_rf;
+extern struct client_rf_binds client_rfb;
 
 /**< FQDN of PDF, defined in mod.c */
 extern str forced_qos_peer; /*its the PCRF in this case*/
@@ -677,6 +680,8 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	unsigned int auth_lifetime = 0;
 	struct sip_uri parsed_aor;
 	str service_urn = {0,0};
+	int subscr_type;
+	str subscr_value={0,0};
 
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
@@ -814,7 +819,14 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	
 	if (pcscf_qos_release7!=-1)
 	{
-		PCC_add_subscription_ID(aar,req,pcc_side);
+		if(PCC_add_subscription_ID(aar,req,pcc_side, &subscr_type, &subscr_value)){
+			((pcc_authdata_t*)auth->u.generic_data)->sip_uri.s = pkg_malloc(subscr_value.len);
+			if(((pcc_authdata_t*)auth->u.generic_data)->sip_uri.s){
+				((pcc_authdata_t*)auth->u.generic_data)->sip_uri.len = subscr_value.len;
+				memcpy(((pcc_authdata_t*)auth->u.generic_data)->sip_uri.s, subscr_value.s, 
+						sizeof(char)*subscr_value.len);
+			}
+		}
 //		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
 //		cdpb.AAAAddAVPToMessage(aar,
 //				cdpb.AAACreateAVP(
@@ -881,6 +893,9 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 {
 	AAASession * auth = NULL;
 	AAA_AVP *avp=0;
+	AAA_AVP_LIST avp_list = {0,0};
+	str an_charg_id = {0,0};
+	str sip_uri = {0,0};
 	int ret = 1;
 
 	if (pcscf_qos_release7==-1)
@@ -931,6 +946,16 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 	LOG(L_DBG,"DBG:"M_NAME":PCC_AAA: AAA contains Origin Realm %.*s\n",avp->data.len, avp->data.s);	
 	if(!auth->dest_realm.s){
 		STR_SHM_DUP(auth->dest_realm, avp->data, "PCC_AAA");
+	}
+
+	/*access network charging identifier*/
+	avp_list.head = avp_list.tail = NULL;
+	if(cdp_avp->epcapp.get_Access_Network_Charging_Identifier(aaa->avpList, &avp_list, 0)){
+		cdp_avp->epcapp.get_Access_Network_Charging_Identifier_Value(avp_list, &an_charg_id, 0);
+		if(pcscf_use_client_rf){
+			sip_uri = ((pcc_authdata_t*)auth->u.generic_data)->sip_uri;
+			client_rfb.Rf_add_chg_info(sip_uri, an_charg_id);
+		}
 	}
 
 	//cdpb.AAAFreeMessage(&aaa);
