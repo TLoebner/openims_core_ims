@@ -958,7 +958,8 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 	if(cdp_avp->epcapp.get_Access_Network_Charging_Identifier(aaa->avpList, &avp_list, 0)){
 		cdp_avp->epcapp.get_Access_Network_Charging_Identifier_Value(avp_list, &an_charg_id, 0);
 		if(pcscf_use_client_rf){
-			sip_uri = ((pcc_authdata_t*)auth->u.generic_data)->sip_uri;
+			sip_uri = ((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri;
+			LOG(L_DBG, "sip uri is %.*s\n", sip_uri.len, sip_uri.s);
 			client_rfb.Rf_add_chg_info(sip_uri, an_charg_id);
 		}
 	}
