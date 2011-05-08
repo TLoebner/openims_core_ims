@@ -20,6 +20,7 @@
 
 #include "Rf_data.h"
 #include "config.h"
+#include "charging.h"
 
 #ifndef WHARF
 
@@ -316,21 +317,33 @@ out_of_memory:
 	return NULL;
 }
 
-service_information_t * new_service_information(ims_information_t * ims_info,
+service_information_t * new_service_information(str * user_sip_uri,
+		ims_information_t * ims_info,
 		subscription_id_t * subscription)
 {
-	service_information_t * x = 0;
 	subscription_id_list_element_t * sl =0;
+	str an_charg_id = {0,0};
+	service_information_t * x = 0;
 
+	/*allocate structure*/
 	mem_new(x, sizeof(service_information_t), pkg);
-	
-	x->ims_information = ims_info;
+
+	/*copy subscription id*/
 	if(subscription){
-		mem_new(sl, sizeof(subscription_id_list_element_t), pkg);
-		subscription_id_list_t_copy(&(sl->s),subscription,pkg); 
-		WL_APPEND(&(x->subscription_id),sl);
+			mem_new(sl, sizeof(subscription_id_list_element_t), pkg);
+			subscription_id_list_t_copy(&(sl->s),subscription,pkg);
+			WL_APPEND(&(x->subscription_id),sl);
 	}
-	
+	if(user_sip_uri){
+		an_charg_id = get_charg_info(*user_sip_uri);
+		if(an_charg_id.len && an_charg_id.s){
+			mem_new(x->ps_information, sizeof(ps_information_t), pkg);
+			str_dup_ptr_ptr(x->ps_information->tgpp_charging_id, &an_charg_id, pkg);
+		}
+	}
+	/*set ims information*/
+	x->ims_information = ims_info;
+
 	return x;
 
 out_of_memory:
@@ -363,7 +376,7 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 		str_dup_ptr(x->service_context_id, *(cfg.service_context_id), pkg);
 
 	if(ims_info)	
-		if(!(service_info = new_service_information(ims_info, subscription)))
+		if(!(service_info = new_service_information(user_name, ims_info, subscription)))
 			goto error;
 	
 	x->service_information = service_info;
@@ -432,12 +445,22 @@ void ims_information_free(ims_information_t *x)
 	mem_free(x,pkg);
 }
 
+void ps_information_free(ps_information_t * x){
+
+	if(!x)
+		return;
+	str_free_ptr(x->tgpp_charging_id, pkg);
+	str_free_ptr(x->sgsn_address, pkg);
+	mem_free(x, pkg);
+}
+
 void service_information_free(service_information_t *x)
 {
 	if (!x) return;
 
 	WL_FREE_ALL(&(x->subscription_id),subscription_id_list_t,pkg);
 	ims_information_free(x->ims_information);
+	ps_information_free(x->ps_information);
 	
 	mem_free(x,pkg);
 }

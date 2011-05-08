@@ -29,6 +29,6 @@
 
 int Rf_add_chg_info(str sip_uri, str an_charg_id);
 
-int get_chg_info(str sip_uri, str * an_charg_id);
+str get_charg_info(str sip_uri);
 
 #endif

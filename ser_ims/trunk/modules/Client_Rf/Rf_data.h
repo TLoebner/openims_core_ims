@@ -656,11 +656,14 @@ do {\
 	str_dup((dst)->id,(src)->id,mem);\
 } while(0)
 
-
+typedef struct{
+	str * tgpp_charging_id;
+	str * sgsn_address;
+} ps_information_t;
 
 typedef struct {
 	subscription_id_list_t subscription_id;
-	
+	ps_information_t * ps_information;
 	ims_information_t *ims_information;
 	
 } service_information_t;

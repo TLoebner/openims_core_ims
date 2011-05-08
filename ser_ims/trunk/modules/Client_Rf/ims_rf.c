@@ -76,6 +76,7 @@
 #include "config.h"
 #include "sip_body.h"
 #include "sdp_helpr_funcs.h"
+#include "charging.h"
 
 extern struct tm_binds tmb;
 extern cdp_avp_bind_t *cavpb;
@@ -223,15 +224,21 @@ error:
 	return 0;
 }
 
-int add_charging_id(sdp_media_component_t * sdp_media_component){
+int add_an_charging_id(str sip_uri, sdp_media_component_t * sdp_media_component){
 
 /*	flow_t * flow;
 	int_list_slot_t * il = 0;
 */
-/*	mem_new(sdp_media_component->an_charging_id,sizeof(an_charging_id_t),pkg);
-        char_dup_str(sdp_media_component->an_charging_id->value,"ANChargingIdValue",pkg);
+	str an_charging_id = {0,0};
+	an_charging_id = get_charg_info(sip_uri);
+	if(!an_charging_id.s || !an_charging_id.len)
+		return 1;
 
-        WL_NEW(flow,flow_list_t,pkg);
+	mem_new(sdp_media_component->an_charging_id,sizeof(an_charging_id_t),pkg);
+
+    str_dup(sdp_media_component->an_charging_id->value,an_charging_id,pkg);
+
+    /*WL_NEW(flow,flow_list_t,pkg);
         flow->media_component_number = 7;
 
                  WL_NEW(il,int_list_t,pkg);
@@ -249,13 +256,24 @@ int add_charging_id(sdp_media_component_t * sdp_media_component){
 	WL_APPEND(&(sdp_media_component->an_charging_id->flow),flow);*/
 
 	return 1;
-//out_of_memory:
-//	return 0;
+out_of_memory:
+	if(sdp_media_component->an_charging_id) {
+		pkg_free(sdp_media_component->an_charging_id);
+		sdp_media_component->an_charging_id = 0;
+	}
+	return 0;
 }
 
-
+/**
+ * add the sdp component from a request or a reply, respectively an offer or an answer
+ * @param msg - the SIP message
+ * @param sdp_type - 0 for SDP offer and 1 for SDP answer
+ * @param sip_uri - the SIP uri of the one that sent the SDP body
+ * @param sdp_media_comps - the  built structure
+ * @returns 1 if ok, 0 if an error occured
+ */
 int append_sip_sdp_comp(struct sip_msg * msg, 
-			int sdp_type, 
+			int sdp_type, str sip_uri,
 			sdp_media_component_list_t * sdp_media_comps){
 	
 
@@ -293,7 +311,7 @@ int append_sip_sdp_comp(struct sip_msg * msg,
 		if(!get_media_description_list(mline_s.s+mline_s.len, end, 
 					&(sdp_media_elem->sdp_media_descriptions)))
 			goto error;
-		add_charging_id(sdp_media_elem);	
+		add_an_charging_id(sip_uri, sdp_media_elem);
 		WL_APPEND(sdp_media_comps, sdp_media_elem);
 	}
 	str_free(sdp_body,pkg);
@@ -305,14 +323,24 @@ error:
 	return 0;
 }
 
+/**
+ * create the sdp media component information
+ * @param req - the SIP request
+ * @param reply - the SIP reply, possibly null
+ * @param from_uri - the From URI of the request
+ * @param to_uri - the To URI of the request
+ * @param sdp_media_comps - the returned structure
+ * @returns 1 if ok, 0 if an error occurs
+ */
 int get_sdp_media_comp(struct sip_msg* req, 
 			struct sip_msg * reply, 
+			str from_uri, str to_uri,
 			sdp_media_component_list_t * sdp_media_comps){
 
-	if(req && !(append_sip_sdp_comp(req, 0, sdp_media_comps)))
+	if(req && !(append_sip_sdp_comp(req, 0, from_uri, sdp_media_comps)))
 		goto error;
 
-	if(reply && !(append_sip_sdp_comp(reply, 1, sdp_media_comps)))
+	if(reply && !(append_sip_sdp_comp(reply, 1, to_uri, sdp_media_comps)))
 		goto error;
 	return 1;
 error:
@@ -369,7 +397,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	if(!get_timestamps(req, reply, &req_timestamp, &reply_timestamp))
 		goto error;
 
-	if(!get_sdp_media_comp(req, reply, &sdp_media_comps))
+	if(!get_sdp_media_comp(req, reply, from_uri, to_uri, &sdp_media_comps))
 		goto error;
 
 	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
