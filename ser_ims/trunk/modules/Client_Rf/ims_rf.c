@@ -236,7 +236,9 @@ int add_an_charging_id(str sip_uri, sdp_media_component_t * sdp_media_component)
 
 	mem_new(sdp_media_component->an_charging_id,sizeof(an_charging_id_t),pkg);
 
-    str_dup(sdp_media_component->an_charging_id->value,an_charging_id,pkg);
+    //str_dup(sdp_media_component->an_charging_id->value,an_charging_id,pkg);
+	/*already allocated in the pkg memory*/
+	sdp_media_component->an_charging_id->value = an_charging_id;
 
     /*WL_NEW(flow,flow_list_t,pkg);
         flow->media_component_number = 7;
@@ -273,7 +275,7 @@ out_of_memory:
  * @returns 1 if ok, 0 if an error occured
  */
 int append_sip_sdp_comp(struct sip_msg * msg, 
-			int sdp_type, str sip_uri,
+			int sdp_type, str sip_uri, str user_sip_uri,
 			sdp_media_component_list_t * sdp_media_comps){
 	
 
@@ -311,7 +313,8 @@ int append_sip_sdp_comp(struct sip_msg * msg,
 		if(!get_media_description_list(mline_s.s+mline_s.len, end, 
 					&(sdp_media_elem->sdp_media_descriptions)))
 			goto error;
-		add_an_charging_id(sip_uri, sdp_media_elem);
+		if(str_equal(user_sip_uri, sip_uri))
+				add_an_charging_id(sip_uri, sdp_media_elem);
 		WL_APPEND(sdp_media_comps, sdp_media_elem);
 	}
 	str_free(sdp_body,pkg);
@@ -334,13 +337,13 @@ error:
  */
 int get_sdp_media_comp(struct sip_msg* req, 
 			struct sip_msg * reply, 
-			str from_uri, str to_uri,
+			str from_uri, str to_uri, str user_sip_uri,
 			sdp_media_component_list_t * sdp_media_comps){
 
-	if(req && !(append_sip_sdp_comp(req, 0, from_uri, sdp_media_comps)))
+	if(req && !(append_sip_sdp_comp(req, 0, from_uri, user_sip_uri, sdp_media_comps)))
 		goto error;
 
-	if(reply && !(append_sip_sdp_comp(reply, 1, to_uri, sdp_media_comps)))
+	if(reply && !(append_sip_sdp_comp(reply, 1, to_uri, user_sip_uri, sdp_media_comps)))
 		goto error;
 	return 1;
 error:
@@ -397,7 +400,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	if(!get_timestamps(req, reply, &req_timestamp, &reply_timestamp))
 		goto error;
 
-	if(!get_sdp_media_comp(req, reply, from_uri, to_uri, &sdp_media_comps))
+	if(!get_sdp_media_comp(req, reply, from_uri, to_uri, user_name, &sdp_media_comps))
 		goto error;
 
 	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
