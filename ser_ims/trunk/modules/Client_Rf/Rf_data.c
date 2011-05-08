@@ -339,6 +339,7 @@ service_information_t * new_service_information(str * user_sip_uri,
 		if(an_charg_id.len && an_charg_id.s){
 			mem_new(x->ps_information, sizeof(ps_information_t), pkg);
 			str_dup_ptr_ptr(x->ps_information->tgpp_charging_id, &an_charg_id, pkg);
+			str_free(an_charg_id, pkg);
 		}
 	}
 	/*set ims information*/
