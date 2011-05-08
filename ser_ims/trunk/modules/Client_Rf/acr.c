@@ -297,6 +297,27 @@ error:
 	return 0;
 }
 
+int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
+
+	AAA_AVP_LIST aList = {0,0};
+
+	if (x->tgpp_charging_id)
+			if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList,*(x->tgpp_charging_id), AVP_DUPLICATE_DATA))
+				goto error;
+
+	if (x->sgsn_address)
+			if (!cavpb->epcapp.add_3GPP_SGSN_Address(&aList,*(x->sgsn_address), AVP_DUPLICATE_DATA))
+				goto error;
+
+	if (!cavpb->epcapp.add_PS_Information(avp_list, &aList, AVP_DONT_FREE_DATA))
+			goto error;
+	return 1;
+error:
+	cavpb->cdp->AAAFreeAVPList(&aList);
+	LOG(L_ERR, "could not add ps information avps\n");
+	return 0;
+}
+
 int Rf_write_service_information_avps(AAA_AVP_LIST * avp_list, service_information_t* x)
 {
 	subscription_id_list_element_t * elem = 0;
@@ -308,6 +329,10 @@ int Rf_write_service_information_avps(AAA_AVP_LIST * avp_list, service_informati
 			goto error;
 	}
 	
+	if (x->ps_information)
+		if(!Rf_write_ps_information_avps(&aList, x->ps_information))
+			goto error;
+
 	if (x->ims_information)
 		if(!Rf_write_ims_information_avps(&aList, x->ims_information))
 			goto error;

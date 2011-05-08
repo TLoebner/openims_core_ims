@@ -167,6 +167,7 @@ enum {
 	AVP_EPC_Service_Specific_Data						= 863,
 	AVP_EPC_Originator									= 864,
 	AVP_EPC_Service_Information							= 873,
+	AVP_EPC_PS_Information								= 874,
 	AVP_EPC_IMS_Information								= 876,
 	AVP_EPC_Media_Initiator_Flag						= 882,
 	AVP_EPC_Expires										= 888,
