@@ -463,15 +463,6 @@ typedef struct {
 	sdp_media_component_t *head,*tail;
 } sdp_media_component_list_t;
 
-/*
-                str_list_slot_t *ls,*lsn;\
-                for(ls = (x)->sdp_media_descriptions.head;ls;ls=lsn){\
-                        lsn = ls->next;\
-                        str_list_t_free(ls,mem);\
-                }\
-
- */
-
 #define sdp_media_component_list_t_free(x,mem) \
 do{\
 	if (x) {\
@@ -482,6 +473,11 @@ do{\
 		str_free_ptr((x)->tgpp_charging_id,mem);\
 		an_charging_id_t_free((x)->an_charging_id,mem);\
 		mem_free((x)->sdp_type,mem);\
+		str_list_slot_t *ls,*lsn;\
+		for(ls = (x)->sdp_media_descriptions.head;ls;ls=lsn){\
+		     lsn = ls->next;\
+		     str_list_t_free(ls,mem);\
+		}\
 		mem##_free(x);\
 		(x) = 0;\
 	}\
