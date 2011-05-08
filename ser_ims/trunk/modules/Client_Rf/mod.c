@@ -251,6 +251,11 @@ static int mod_init(void)
 		LOG(L_ERR, "DBG:"M_NAME":mod_init: failed to initiate local accounting records\n");			
 		goto error;
 	}
+
+	if(!init_charg_info()){
+		LOG(L_ERR, "DBG:"M_NAME":mod_init: failed to initiate local user charging info\n");			
+		goto error;
+	}
 	
 	return 0;
 error:
@@ -297,6 +302,7 @@ static void mod_destroy(void)
 	if (do_destroy){
 		/* Then nuke it all */	
 		destroy_acct_records();
+		destroy_charg_info();
 	}
 	
 }
