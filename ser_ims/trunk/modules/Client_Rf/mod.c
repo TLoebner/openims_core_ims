@@ -79,6 +79,7 @@
 #include "config.h"
 #include "Rf_data.h"
 #include "charging.h"
+#include "client_rf_load.h"
 
 MODULE_VERSION
 
@@ -109,6 +110,7 @@ client_rf_cfg cfg;
  */
 static cmd_export_t client_rf_cmds[]={
 	{"Rf_Send_ACR",			Rf_Send_ACR, 			2, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
+	EXP_FUNC(load_client_rf)
 	EXP_FUNC(Rf_add_chg_info)
 	{0, 0, 0, 0, 0}
 }; 
