@@ -185,7 +185,6 @@ AAAMessage *AAANewMessage(
 	str dest_realm={"?",1};
 
 	msg = 0;
-
 	if (!session||!session->id.s) {
 		if (request){
 			/* copy old session id from AVP */
@@ -212,17 +211,6 @@ AAAMessage *AAANewMessage(
 	/* application ID */
 	msg->applicationId = applicationId;
 
-	if (applicationId){
-                set_4bytes(app_id_ptr, applicationId);
-                avp = AAACreateAVP( 258, 0, 0, app_id_ptr, 4,
-                        AVP_DUPLICATE_DATA);
-                if ( !avp || AAAAddAVPToMessage(msg,avp,0)!=AAA_ERR_SUCCESS) {
-                        LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Auth-Application-Id avp\n");
-                        if (avp) AAAFreeAVP( &avp );
-                        goto error;
-                }
-        }
-
 	/*add session ID */
 	if (sessionId){
 		avp = AAACreateAVP( 263, 0, 0, sessionId->s, sessionId->len,
@@ -234,6 +222,18 @@ AAAMessage *AAANewMessage(
 		}
 		msg->sessionId = avp;
 	}
+
+	if (applicationId){
+                set_4bytes(app_id_ptr, applicationId);
+                avp = AAACreateAVP( 258, 0, 0, app_id_ptr, 4,
+                        AVP_DUPLICATE_DATA);
+
+                if ( !avp || AAAAddAVPToMessage(msg,avp,msg->avpList.tail)!=AAA_ERR_SUCCESS) {
+                        LOG(L_ERR,"ERROR:AAANewMessage: cannot create/add Auth-Application-Id avp\n");
+                        if (avp) AAAFreeAVP( &avp );
+                        goto error;
+                }
+        }
 
 	/* add origin host AVP */
 	/* changed by cristian to comply with rfc3588: 
