@@ -391,9 +391,9 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	if(dir == 0)	user_name = from_uri;
 	else 		user_name = to_uri;
 
-/*	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
+	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
 		goto error;
-*/
+
 	LOG(L_DBG, "retrieved ims charging info icid %.*s orig_ioi %.*s term_ioi %.*s\n",
 			icid.len, icid.s, orig_ioi.len, orig_ioi.s, term_ioi.len, term_ioi.s);
 

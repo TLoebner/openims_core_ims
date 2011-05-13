@@ -333,6 +333,42 @@ static str p_charging_vector_2={";orig-ioi=\"",11};
 static str p_charging_vector_e={"\"\r\n",3};
 static char hex_chars[17]="0123456789abcdef";*/
 
+int get_param_value(str header_body, str param_name, int * start_value_index, int  * value_length){
+	
+	char * p;
+	char * end = header_body.s + header_body.len;
+	
+	*start_value_index = 0;
+	*value_length = 0;	
+
+	LOG(L_DBG, "searching int the string %.*s\n", header_body.len, header_body.s);
+	p = header_body.s;
+	while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
+		*start_value_index = *start_value_index +1;
+		p++;
+	}
+	if(p==end)
+		return 0;
+	if(strncmp(header_body.s, param_name.s, param_name.len) == 0){
+		LOG(L_DBG, "found parameter %.*s\n", param_name.len, param_name.s);
+		p+=param_name.len;
+		*start_value_index = *start_value_index+param_name.len;
+		while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
+			*start_value_index = *start_value_index +1;
+			p++;
+		}
+		if(p==end) return 0;
+		LOG(L_DBG, "found value starting at index %i\n", *start_value_index);
+		while(p<end && !((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
+			*value_length = *value_length +1;
+			p++;
+		}
+
+		return 1;
+	
+	}else return 0;
+}
+
 /**
  * Retrieves the P-Charging-Vector header information
  * P-Charging-Vector:
@@ -343,9 +379,8 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 {
 	struct hdr_field* header = 0;
 	str header_body = {0,0};
-	char * p;
-	int index;
-	str temp = {0,0};
+	int index, len;
+	str param_name;
 
 	LOG(L_DBG, "get_p_charging_vector\n");	
 	header = cscf_get_header(msg, p_charging_vector);
@@ -359,72 +394,19 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	str_dup(header_body, header->body, pkg);
 
 	LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
+
+	param_name.s = "icid-value";
+	param_name.len = 10;
+
+	get_param_value(header_body, param_name, &index, &len);
+	icid->len = len; icid->s = header->body.s + index;
+	LOG(L_DBG, "param %.*s is %.*s\n", 
+		param_name.len, param_name.s, icid->len, icid->s);
 	
-	p = strtok (header_body.s, " ;:\r\t\n\"=");
-loop:	
-	if(p> (header_body.s+header_body.len))
-		return 1;
+	//} else if (strncmp(p, "orig-ioi",8) == 0){
 
-	if(strncmp(p, "icid-value",10) == 0){
-		p = strtok(NULL, " ;:\r\t\n\"=");
-		if(p> (header_body.s+header_body.len)){
-			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
-			return 0;
-		}
-		temp.s = p;
-		temp.len = 0;
-		while(*p != '\"'){
-			temp.len = temp.len +1;
-			p++;
-		}
-		icid->len = temp.len;
-		index = temp.s - header_body.s;
-		LOG(L_DBG, "icid len %i, index %i\n", temp.len, index);
-		icid->s = header->body.s + index;
-		LOG(L_DBG, "icid is %.*s\n", icid->len, icid->s);
-		p = strtok(NULL, " ;:\r\t\n\"=");
-			goto loop;
-	} else if (strncmp(p, "orig-ioi",8) == 0){
+	//} else if (strncmp(p, "term-ioi",8) == 0){
 
-		p = strtok(NULL, " ;:\r\t\n\"=");
-		if(p> (header_body.s+header_body.len)){
-			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
-			return 0;
-		}
-		temp.s = p;
-		temp.len = 0;
-		while(*p != '\"'){
-			temp.len = temp.len +1;
-			p++;
-		}
-		orig_ioi->len = temp.len;
-		index = temp.s - header_body.s;
-		LOG(L_DBG, "orig ioi len %i, index %i\n", temp.len, index);
-		orig_ioi->s = header->body.s + index;
-		LOG(L_DBG, "orig_ioi is %.*s\n", orig_ioi->len, orig_ioi->s);
-		p = strtok(NULL, " ;:\r\t\n\"=");
-			goto loop;
-	} else if (strncmp(p, "term-ioi",8) == 0){
-
-		p = strtok(NULL, " ;:\r\t\n\"=");
-		if(p> (header_body.s+header_body.len)){
-			LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector: no value for icid\n");
-			return 0;
-		}
-		temp.s = p;
-		temp.len = 0;
-		while(*p != '\"'){
-			temp.len = temp.len +1;
-			p++;
-		}
-		term_ioi->len = temp.len;
-		term_ioi->s = header->body.s + (temp.s-header_body.s);
-		p = strtok(NULL, " ;:\r\t\n\"=");
-			goto loop;
-	} else {
-		p = strtok(NULL, " ;:\r\t\n\"=");
-			goto loop;
-	}
 
 	LOG(L_DBG, "end\n");
 	str_free(header_body, pkg);
