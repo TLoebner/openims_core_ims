@@ -333,24 +333,23 @@ static str p_charging_vector_2={";orig-ioi=\"",11};
 static str p_charging_vector_e={"\"\r\n",3};
 static char hex_chars[17]="0123456789abcdef";*/
 
-int get_param_value(str header_body, str param_name, int * start_value_index, int  * value_length){
+int get_param_value(str header_body, str param_name, int start_index, int * start_value_index, int  * value_length){
 	
 	char * p;
 	char * end = header_body.s + header_body.len;
 	
-	*start_value_index = 0;
+	*start_value_index = start_index;
 	*value_length = 0;	
 
-	LOG(L_DBG, "searching int the string %.*s\n", header_body.len, header_body.s);
-	p = header_body.s;
+	p = header_body.s+start_index;
+loop:
 	while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
 		*start_value_index = *start_value_index +1;
 		p++;
 	}
 	if(p==end)
 		return 0;
-	if(strncmp(header_body.s, param_name.s, param_name.len) == 0){
-		LOG(L_DBG, "found parameter %.*s\n", param_name.len, param_name.s);
+	if(strncmp(p, param_name.s, param_name.len) == 0){
 		p+=param_name.len;
 		*start_value_index = *start_value_index+param_name.len;
 		while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
@@ -358,7 +357,6 @@ int get_param_value(str header_body, str param_name, int * start_value_index, in
 			p++;
 		}
 		if(p==end) return 0;
-		LOG(L_DBG, "found value starting at index %i\n", *start_value_index);
 		while(p<end && !((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
 			*value_length = *value_length +1;
 			p++;
@@ -366,7 +364,16 @@ int get_param_value(str header_body, str param_name, int * start_value_index, in
 
 		return 1;
 	
-	}else return 0;
+	}else {
+		while(p<end && (*p!=';')){
+			*start_value_index = *start_value_index +1;
+			p++;
+		}
+		if(p==end)
+			return 0;
+
+		goto loop;
+	}
 }
 
 /**
@@ -398,12 +405,21 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	param_name.s = "icid-value";
 	param_name.len = 10;
 
-	get_param_value(header_body, param_name, &index, &len);
-	icid->len = len; icid->s = header->body.s + index;
-	LOG(L_DBG, "param %.*s is %.*s\n", 
-		param_name.len, param_name.s, icid->len, icid->s);
-	
-	//} else if (strncmp(p, "orig-ioi",8) == 0){
+	if(get_param_value(header_body, param_name, 0, &index, &len)){
+		icid->len = len; icid->s = header->body.s + index;
+		LOG(L_DBG, "param %.*s is %.*s\n", 
+			param_name.len, param_name.s, icid->len, icid->s);
+	}	
+
+	param_name.s = "orig-ioi";
+	param_name.len = 8;
+
+	if(get_param_value(header_body, param_name, index+len, &index, &len)){
+		orig_ioi->len = len;
+		orig_ioi->s = header->body.s + index;
+		LOG(L_DBG, "param %.*s is %.*s\n", 
+			param_name.len, param_name.s, orig_ioi->len, orig_ioi->s);
+	}
 
 	//} else if (strncmp(p, "term-ioi",8) == 0){
 
