@@ -333,15 +333,15 @@ static str p_charging_vector_2={";orig-ioi=\"",11};
 static str p_charging_vector_e={"\"\r\n",3};
 static char hex_chars[17]="0123456789abcdef";*/
 
-int get_param_value(str header_body, str param_name, int start_index, int * start_value_index, int  * value_length){
+int get_param_value(str header_body, str param_name, int * start_value_index, int  * value_length){
 	
 	char * p;
 	char * end = header_body.s + header_body.len;
 	
-	*start_value_index = start_index;
+	*start_value_index = 0;
 	*value_length = 0;	
 
-	p = header_body.s+start_index;
+	p = header_body.s;
 loop:
 	while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
 		*start_value_index = *start_value_index +1;
@@ -405,7 +405,7 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	param_name.s = "icid-value";
 	param_name.len = 10;
 
-	if(get_param_value(header_body, param_name, 0, &index, &len)){
+	if(get_param_value(header_body, param_name, &index, &len)){
 		icid->len = len; icid->s = header->body.s + index;
 		LOG(L_DBG, "param %.*s is %.*s\n", 
 			param_name.len, param_name.s, icid->len, icid->s);
@@ -414,17 +414,23 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	param_name.s = "orig-ioi";
 	param_name.len = 8;
 
-	if(get_param_value(header_body, param_name, index+len, &index, &len)){
+	if(get_param_value(header_body, param_name, &index, &len)){
 		orig_ioi->len = len;
 		orig_ioi->s = header->body.s + index;
 		LOG(L_DBG, "param %.*s is %.*s\n", 
 			param_name.len, param_name.s, orig_ioi->len, orig_ioi->s);
 	}
 
-	//} else if (strncmp(p, "term-ioi",8) == 0){
+	param_name.s = "term-ioi";
+	param_name.len = 8;
 
+	if(get_param_value(header_body, param_name, &index, &len)){
+		term_ioi->len = len;
+		term_ioi->s = header->body.s + index;
+		LOG(L_DBG, "param %.*s is %.*s\n", 
+			param_name.len, param_name.s, term_ioi->len, term_ioi->s);
+	}
 
-	LOG(L_DBG, "end\n");
 	str_free(header_body, pkg);
 	return 1;
 out_of_memory:
