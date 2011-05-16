@@ -242,13 +242,15 @@ int Rf_write_ims_information_avps(AAA_AVP_LIST * avp_list, ims_information_t* x)
 	
 	for (ioi_elem = x->ioi.head; ioi_elem; ioi_elem = ioi_elem->next){
 		
-		if (ioi_elem->info.originating_ioi)
+		if (ioi_elem->info.originating_ioi){
 			if (!cavpb->epcapp.add_Originating_IOI(&aList,*(ioi_elem->info.originating_ioi),0))
 				goto error;
+		}
 
-		if (ioi_elem->info.terminating_ioi)
+		if (ioi_elem->info.terminating_ioi){
 			if (!cavpb->epcapp.add_Terminating_IOI(&aList,*(ioi_elem->info.terminating_ioi),0))
 				goto error;
+		}
 		
 		if (!cavpb->epcapp.add_Inter_Operator_Identifier(&aList2,&aList,0))
 			goto error;
