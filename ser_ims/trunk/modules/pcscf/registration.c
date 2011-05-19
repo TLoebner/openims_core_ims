@@ -166,18 +166,18 @@ int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
 	str ims_charging_id = {0,0};
 	int ret;
 	str callid = {0,0};
-	ret = cscf_add_p_charging_vector(msg, &ims_charging_id);
-	//LOG(L_DBG, "added ims charging id %.*s\n",ims_charging_id.len, ims_charging_id.s);
-	if((msg->first_line.type != SIP_REQUEST) || (
-			strncmp(msg->first_line.u.request.method.s, "INVITE",6) &&
-			strncmp(msg->first_line.u.request.method.s, "REGISTER",8) &&
-			strncmp(msg->first_line.u.request.method.s, "MESSAGE",7)))
-		return ret;
+	if(pcscf_use_client_rf && msg->first_line.type == SIP_REQUEST && 
+			(strncmp(msg->first_line.u.request.method.s, "INVITE",6)==0 ||
+			strncmp(msg->first_line.u.request.method.s, "REGISTER",8)==0 ||
+			strncmp(msg->first_line.u.request.method.s, "MESSAGE",7)==0 )){
 
-	callid = cscf_get_call_id(msg, NULL);
-	if(pcscf_use_client_rf)
+		ret = cscf_add_p_charging_vector(msg, &ims_charging_id);
+		callid = cscf_get_call_id(msg, NULL);
 		client_rfb.Rf_add_ims_chg_info(callid, ims_charging_id);
-
+		if (ims_charging_id.s) pkg_free(ims_charging_id.s);
+	}else
+		ret = cscf_add_p_charging_vector(msg, NULL);
+	
 	return ret;
 }
 
