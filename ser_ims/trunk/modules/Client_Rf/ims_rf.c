@@ -145,17 +145,42 @@ error:
 	return 0;
 }
 
+/**
+ * retrieves the ims charging id, also named as ICID, from the request or reply
+ * if the P-Charging-Vector SIP header is not included in the request or reply, it might be stored internally
+ * the returned icid is allocated in the pkg memory, do not forget to free after use
+ * retrieves also the originating/terminating inter-operator identifier, for the moment not stored in pkg memory
+ * @param req - the SIP request
+ * @param reply - the SIP reply
+ * @param icid - the ICID
+ * @param orig_ioi - the ORIGinating IOI if contained in the P-Charging-Vector
+ * @param term_ioi - the TERMinating IOI if contained in the P-Charging-Vector
+ */
 int get_ims_charging_info(struct sip_msg *req, 
 			struct sip_msg * reply, 
 			str * icid, 
 			str * orig_ioi, 
 			str * term_ioi){
 
+	str callid = {0,0};
+
 	LOG(L_DBG, "get ims charging info\n");
 	if(req)
 		cscf_get_p_charging_vector(req, icid, orig_ioi, term_ioi);
 	if(reply)
 		cscf_get_p_charging_vector(reply, icid, orig_ioi, term_ioi);
+
+	if(!icid->len || !icid->s){
+		if(req)
+			callid = cscf_get_call_id(req, 0);
+		if((!callid.len || !callid.s) && reply)
+			callid = cscf_get_call_id(reply, 0);
+		
+		if(!callid.len || !callid.s)
+			return 1;
+		*icid = get_ims_charg_info(callid);
+	}
+
 
 	return 1;
 }
@@ -230,7 +255,7 @@ int add_an_charging_id(str sip_uri, sdp_media_component_t * sdp_media_component)
 	int_list_slot_t * il = 0;
 */
 	str an_charging_id = {0,0};
-	an_charging_id = get_charg_info(sip_uri);
+	an_charging_id = get_an_charg_info(sip_uri);
 	if(!an_charging_id.s || !an_charging_id.len)
 		return 1;
 
@@ -418,6 +443,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 
 	ims_info->sdp_media_component.head = sdp_media_comps.head;
 	ims_info->sdp_media_component.tail = sdp_media_comps.tail;
+	str_free(icid, pkg);
 	
 	sdp_media_comps.head = sdp_media_comps.tail = 0;
 	event_type = 0;
@@ -445,6 +471,7 @@ error:
 	event_type_free(event_type);
 	ims_information_free(ims_info);
 	Rf_free_ACR(rf_data);
+	str_free(icid, pkg);
 	return NULL;
 }
 

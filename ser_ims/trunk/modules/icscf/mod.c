@@ -455,5 +455,5 @@ static void icscf_mod_destroy(void)
  */
 int I_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
 {
-	return cscf_add_p_charging_vector(msg);
+	return cscf_add_p_charging_vector(msg, NULL);
 }

@@ -2948,7 +2948,7 @@ static char hex_chars[17]="0123456789abcdef";
  * @param msg - the SIP message to add to
  * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_FALSE on error
  */
-int cscf_add_p_charging_vector(struct sip_msg *msg)
+int cscf_add_p_charging_vector(struct sip_msg *msg, str * ims_charging_id)
 {
 	int r = CSCF_RETURN_FALSE;
 	str x={0,0};
@@ -3001,7 +3001,20 @@ int cscf_add_p_charging_vector(struct sip_msg *msg)
 	STR_APPEND(x,cscf_orig_ioi_str);
 	STR_APPEND(x,p_charging_vector_e);
 	
-	if (cscf_add_header(msg,&x,HDR_OTHER_T)) r = CSCF_RETURN_TRUE;
+	if (cscf_add_header(msg,&x,HDR_OTHER_T)) {
+		r = CSCF_RETURN_TRUE;
+		if(ims_charging_id){
+			i = (cscf_icid_value_prefix_str.len +
+				sizeof(time_t)*2+sizeof(unsigned int)*2)*sizeof(char);
+			ims_charging_id->s = pkg_malloc(i);
+			if(!ims_charging_id->s){
+				LOG(L_ERR, "not enough pkg memory, trying to alloc: %i bytes\n",i);
+			}else{
+				ims_charging_id->len = i;
+				memcpy(ims_charging_id->s, x.s+p_charging_vector_s.len, i);
+			}
+		}
+	}
 	else goto error;
 
 	return r;
