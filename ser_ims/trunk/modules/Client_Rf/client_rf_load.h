@@ -58,9 +58,11 @@
 
 #include "../../str.h"
 
-typedef int (*Rf_add_chg_info_f)(str sip_uri, str an_charg_id);
+typedef int (*Rf_add_an_chg_info_f)(str sip_uri, str an_charg_id);
+typedef int (*Rf_add_ims_chg_info_f)(str call_id, str ims_charg_id);
 struct client_rf_binds {
-	Rf_add_chg_info_f			Rf_add_chg_info;
+	Rf_add_an_chg_info_f			Rf_add_an_chg_info;
+	Rf_add_ims_chg_info_f			Rf_add_ims_chg_info;
 };
 
 

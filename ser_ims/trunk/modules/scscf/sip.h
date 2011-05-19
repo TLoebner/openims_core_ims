@@ -182,7 +182,7 @@ int cscf_get_terminating_contact(struct sip_msg *msg,str *host,int *port,int *tr
 int cscf_get_terminating_identity(struct sip_msg *msg,str *uri);
 int cscf_get_terminating_identity_gr(struct sip_msg *msg,str *gr);
 
-int cscf_add_p_charging_vector(struct sip_msg *msg);
+int cscf_add_p_charging_vector(struct sip_msg *msg, str * ims_charging_id);
 
 str cscf_get_last_via_sent_by(struct sip_msg *msg);
 str cscf_get_last_via_received(struct sip_msg *msg);

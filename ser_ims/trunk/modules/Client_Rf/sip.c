@@ -400,13 +400,18 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	
 	str_dup(header_body, header->body, pkg);
 
-	LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
+	//LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
 
 	param_name.s = "icid-value";
 	param_name.len = 10;
 
 	if(get_param_value(header_body, param_name, &index, &len)){
-		icid->len = len; icid->s = header->body.s + index;
+		
+		icid->s = pkg_malloc(len * sizeof(char));
+		if(!icid->s)	goto out_of_memory;
+		memcpy(icid->s, header->body.s + index, len*sizeof(char));
+		icid->len = len;
+
 		LOG(L_DBG, "param %.*s is %.*s\n", 
 			param_name.len, param_name.s, icid->len, icid->s);
 	}	

@@ -62,6 +62,7 @@
 #include "../../mem/mem.h"
 #include "../../locking.h"
 #include "../../modules/tm/tm_load.h"
+#include "../../modules/Client_Rf/client_rf_load.h"
 #include "mod.h"
 #include "sip.h"
 #include "registrar.h"
@@ -73,7 +74,9 @@
 #include "../../socket_info.h"
 #include "../../ip_addr.h"
 
-extern struct tm_binds tmb;            				/**< Structure with pointers to tm funcs 			*/
+extern struct tm_binds tmb; 	/**< Structure with pointers to tm funcs 			*/
+extern struct client_rf_binds client_rfb; /**< Structure with pointers to client_rf funcs>*/
+extern int pcscf_use_client_rf;
 
 extern str pcscf_name_str;							/**< fixed SIP URI of this P-CSCF 					*/
 extern str pcscf_path_hdr_str;						/**< fixed Path header 								*/
@@ -160,7 +163,22 @@ out_of_memory:
  */
 int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
 {
-	return cscf_add_p_charging_vector(msg);
+	str ims_charging_id = {0,0};
+	int ret;
+	str callid = {0,0};
+	ret = cscf_add_p_charging_vector(msg, &ims_charging_id);
+	//LOG(L_DBG, "added ims charging id %.*s\n",ims_charging_id.len, ims_charging_id.s);
+	if((msg->first_line.type != SIP_REQUEST) || (
+			strncmp(msg->first_line.u.request.method.s, "INVITE",6) &&
+			strncmp(msg->first_line.u.request.method.s, "REGISTER",8) &&
+			strncmp(msg->first_line.u.request.method.s, "MESSAGE",7)))
+		return ret;
+
+	callid = cscf_get_call_id(msg, NULL);
+	if(pcscf_use_client_rf)
+		client_rfb.Rf_add_ims_chg_info(callid, ims_charging_id);
+
+	return ret;
 }
 
 

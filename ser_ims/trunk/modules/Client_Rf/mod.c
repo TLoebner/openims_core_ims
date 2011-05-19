@@ -111,7 +111,8 @@ client_rf_cfg cfg;
 static cmd_export_t client_rf_cmds[]={
 	{"Rf_Send_ACR",			Rf_Send_ACR, 			2, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	EXP_FUNC(load_client_rf)
-	EXP_FUNC(Rf_add_chg_info)
+	EXP_FUNC(Rf_add_an_chg_info)
+	EXP_FUNC(Rf_add_ims_chg_info)
 	{0, 0, 0, 0, 0}
 }; 
 
@@ -252,7 +253,12 @@ static int mod_init(void)
 		goto error;
 	}
 
-	if(!init_charg_info()){
+	if(!init_an_charg_info()){
+		LOG(L_ERR, "DBG:"M_NAME":mod_init: failed to initiate local user charging info\n");			
+		goto error;
+	}
+
+	if(!init_ims_charg_info()){
 		LOG(L_ERR, "DBG:"M_NAME":mod_init: failed to initiate local user charging info\n");			
 		goto error;
 	}
@@ -302,7 +308,8 @@ static void mod_destroy(void)
 	if (do_destroy){
 		/* Then nuke it all */	
 		destroy_acct_records();
-		destroy_charg_info();
+		destroy_an_charg_info();
+		destroy_ims_charg_info();
 	}
 	
 }
