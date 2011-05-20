@@ -119,7 +119,8 @@ int Rf_add_an_chg_info(str sip_uri, str an_charg_id){
 
 	lock_get(an_charg_info[hash_index].lock);
 			WL_FOREACH(&(an_charg_info[hash_index]), info){
-				if(str_equal(info->sip_uri, sip_uri)){
+				if(str_equal(info->sip_uri, sip_uri) && 
+					!(str_equal(info->an_charg_id, an_charg_id))){
 					str_free(info->an_charg_id, shm);
 					str_dup(info->an_charg_id, an_charg_id, shm);
 					goto end;
@@ -264,7 +265,8 @@ int Rf_add_ims_chg_info(str call_id, str ims_charg_id){
 
 	lock_get(ims_charg_info[hash_index].lock);
 			WL_FOREACH(&(ims_charg_info[hash_index]), info){
-				if(str_equal(info->call_id, call_id)){
+				if(str_equal(info->call_id, call_id) &&
+					!str_equal(info->ims_charg_id, ims_charg_id)){
 					str_free(info->ims_charg_id, shm);
 					str_dup(info->ims_charg_id, ims_charg_id, shm);
 					goto end;
