@@ -905,17 +905,17 @@ static int mod_init(void)
 			if (!cdp_avp)
 				goto error;
 		}
+	}
 
-		if (!(load_client_rf = (load_client_rf_f)find_export("load_client_rf",NO_SCRIPT,0))) {
-			LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_client_rf. This module might require client_rf module.\n");
+	if (!(load_client_rf = (load_client_rf_f)find_export("load_client_rf",NO_SCRIPT,0))) {
+		LOG(L_ERR, "DBG:"M_NAME":mod_init: Can not import load_client_rf. This module might require client_rf module.\n");
 			
-			LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the charging info in the pcscf module will be disabled, no charging correlation possible.\n");			
-			pcscf_use_client_rf = 0;
-		}else{
-			pcscf_use_client_rf = 1;
-			if (load_client_rf(&client_rfb) == -1)
-				goto error;
-		}
+		LOG(L_ERR, "DBG:"M_NAME":mod_init: Usage of the charging info in the pcscf module will be disabled, no charging correlation possible.\n");			
+		pcscf_use_client_rf = 0;
+	}else{
+		pcscf_use_client_rf = 1;
+		if (load_client_rf(&client_rfb) == -1)
+			goto error;
 	}	
 	
 	/* init the registrar storage */
