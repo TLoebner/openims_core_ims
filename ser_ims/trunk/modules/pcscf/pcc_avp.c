@@ -934,6 +934,7 @@ inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str s
  * 
  * TODO - fix this ... or just delete it and do it again! It adds 2x Flow-Description for example, as a bug!
  * I don't think that more than 1 can be in one Media Subcomponent.
+ * adapted to support also RFC 4145 (http://tools.ietf.org/html/rfc4145) special port number 9 -- the peer will initiate the connection
  * 
  * @param number - the flow number
  * @param proto - the protocol of the IPFilterRule
@@ -976,9 +977,11 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
  		char x[4];
 		int portAlen=0, portBlen=0;
 		
-		if(pcc_use_ports){	
-			int2str(intportA, &portAlen);
-			int2str(intportB, &portBlen);
+		if(pcc_use_ports){
+			if(intportA == 9)	portAlen = 0;
+			else	int2str(intportA, &portAlen);
+			if(intportB == 9)	portBlen = 0;
+			else	int2str(intportB, &portBlen);
 			len = (permit_out.len + from_s.len + to_s.len+ipB.len+ipA.len+4+
 				strlen(proto)+portAlen + portBlen+ strlen(options))*sizeof(char);
 		}else{
@@ -1014,9 +1017,21 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
 			if(pcc_use_ports){
-				flow_data.len=snprintf(flow_data.s, len, permit_out_with_ports,proto,
-					ipB.len, ipB.s, intportB,
-					ipA.len, ipA.s, intportA, options); 
+				if(intportA ==9){
+					flow_data.len=snprintf(flow_data.s, len, "permit out %s from %.*s %u to %.*s %s",
+										proto,
+										ipB.len, ipB.s, intportB,
+										ipA.len, ipA.s, options);
+				}else if(intportB ==9 ){
+					flow_data.len=snprintf(flow_data.s, len, "permit out %s from %.*s to %.*s %u %s",
+														proto,
+														ipB.len, ipB.s,
+														ipA.len, ipA.s, intportA, options);
+				}else{
+					flow_data.len=snprintf(flow_data.s, len, permit_out_with_ports,proto,
+							ipB.len, ipB.s, intportB,
+							ipA.len, ipA.s, intportA, options);
+				}
 			}else{
 				flow_data.len=snprintf(flow_data.s, len, permit_out_without_ports,proto,
 					ipB.len, ipB.s, ipA.len, ipA.s, options); 
@@ -1034,9 +1049,22 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		{
 	 		/*second flow is the send flow*/									
 			if(pcc_use_ports){
-	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
-					ipA.len, ipA.s, intportA,
-					ipB.len, ipB.s, intportB, options);
+				if(intportB ==9){
+					flow_data.len=snprintf(flow_data.s, len, "permit in %s from %.*s %u to %.*s %s",
+												proto,
+												ipA.len, ipA.s, intportA,
+												ipB.len, ipB.s, options);
+				}else if(intportA ==9 ){
+					flow_data.len=snprintf(flow_data.s, len, "permit in %s from %.*s to %.*s %u %s",
+												proto,
+												ipA.len, ipA.s,
+												ipB.len, ipB.s, intportB, options);
+				}else{
+
+					flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
+							ipA.len, ipA.s, intportA,
+							ipB.len, ipB.s, intportB, options);
+				}
 			}else{
 	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_without_ports,proto,
 					ipA.len, ipA.s, ipB.len, ipB.s, options);
