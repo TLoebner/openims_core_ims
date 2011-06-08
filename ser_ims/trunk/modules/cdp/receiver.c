@@ -402,8 +402,10 @@ again:
 		}
 		*fd=*((int*) CMSG_DATA(cmsg));
 	}else{
-		
-		LOG(L_ERR, "ERROR: receive_fd: no descriptor passed, cmsg=%p,"
+		if(!cmsg)
+			LOG(L_ERR, "ERROR: receive_fd: no descriptor passed, empty control message");
+		else
+			LOG(L_ERR, "ERROR: receive_fd: no descriptor passed, cmsg=%p,"
 				"len=%d\n", cmsg, (unsigned)cmsg->cmsg_len); 
 		*fd=-1;
 		*p=0;
