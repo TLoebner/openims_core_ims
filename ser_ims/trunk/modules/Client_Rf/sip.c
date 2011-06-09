@@ -401,39 +401,44 @@ int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, 
 	str_dup(header_body, header->body, pkg);
 
 	//LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
+	if(icid){
+		param_name.s = "icid-value";
+		param_name.len = 10;
 
-	param_name.s = "icid-value";
-	param_name.len = 10;
-
-	if(get_param_value(header_body, param_name, &index, &len)){
+		if(get_param_value(header_body, param_name, &index, &len)){
 		
-		icid->s = pkg_malloc(len * sizeof(char));
-		if(!icid->s)	goto out_of_memory;
-		memcpy(icid->s, header->body.s + index, len*sizeof(char));
-		icid->len = len;
+			icid->s = pkg_malloc(len * sizeof(char));
+			if(!icid->s)	goto out_of_memory;
+			memcpy(icid->s, header->body.s + index, len*sizeof(char));
+			icid->len = len;
 
-		LOG(L_DBG, "param %.*s is %.*s\n", 
-			param_name.len, param_name.s, icid->len, icid->s);
+			LOG(L_DBG, "param %.*s is %.*s\n",
+					param_name.len, param_name.s, icid->len, icid->s);
+		}
 	}	
 
-	param_name.s = "orig-ioi";
-	param_name.len = 8;
+	if(orig_ioi){
+		param_name.s = "orig-ioi";
+		param_name.len = 8;
 
-	if(get_param_value(header_body, param_name, &index, &len)){
-		orig_ioi->len = len;
-		orig_ioi->s = header->body.s + index;
-		LOG(L_DBG, "param %.*s is %.*s\n", 
-			param_name.len, param_name.s, orig_ioi->len, orig_ioi->s);
+		if(get_param_value(header_body, param_name, &index, &len)){
+			orig_ioi->len = len;
+			orig_ioi->s = header->body.s + index;
+			LOG(L_DBG, "param %.*s is %.*s\n",
+					param_name.len, param_name.s, orig_ioi->len, orig_ioi->s);
+		}
 	}
 
-	param_name.s = "term-ioi";
-	param_name.len = 8;
+	if(term_ioi){
+		param_name.s = "term-ioi";
+		param_name.len = 8;
 
-	if(get_param_value(header_body, param_name, &index, &len)){
-		term_ioi->len = len;
-		term_ioi->s = header->body.s + index;
-		LOG(L_DBG, "param %.*s is %.*s\n", 
-			param_name.len, param_name.s, term_ioi->len, term_ioi->s);
+		if(get_param_value(header_body, param_name, &index, &len)){
+			term_ioi->len = len;
+			term_ioi->s = header->body.s + index;
+			LOG(L_DBG, "param %.*s is %.*s\n",
+					param_name.len, param_name.s, term_ioi->len, term_ioi->s);
+		}
 	}
 
 	str_free(header_body, pkg);

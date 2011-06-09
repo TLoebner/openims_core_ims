@@ -103,6 +103,8 @@ extern int pcscf_tls_port;						/**< PORT for TLS server 						*/
 
 extern struct cdp_binds cdpb;		/**< Structure with pointers to cdp funcs 		*/
 extern int pcscf_use_e2;
+extern int pcscf_use_pcc;
+extern int pcc_use_icid;			/**< weather to send the IMS charging id on the Rx interface >**/
 
 /**
  * Inserts the Path header.
@@ -152,6 +154,11 @@ out_of_memory:
 	return CSCF_RETURN_ERROR;	
 }
 
+int store_reg_icid(struct sip_msg * msg, str callid, str ims_charging_id){
+
+
+	return 1;
+}
 
 /**
  * Inserts the P-Charging-Vector header
@@ -166,18 +173,32 @@ int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
 	str ims_charging_id = {0,0};
 	int ret;
 	str callid = {0,0};
-	if(pcscf_use_client_rf && msg->first_line.type == SIP_REQUEST && 
+
+	/*store the icid (IMS charging id) in the dialog or the registration,
+	 * so that it can be used on Rx interface.
+	 * Store directly in the client_rf module for the Rf interface */
+
+	if((pcscf_use_client_rf || (pcscf_use_pcc && pcc_use_icid)) &&
+			msg->first_line.type == SIP_REQUEST &&
 			(strncmp(msg->first_line.u.request.method.s, "INVITE",6)==0 ||
 			strncmp(msg->first_line.u.request.method.s, "REGISTER",8)==0 ||
 			strncmp(msg->first_line.u.request.method.s, "MESSAGE",7)==0 )){
 
 		ret = cscf_add_p_charging_vector(msg, &ims_charging_id);
 		callid = cscf_get_call_id(msg, NULL);
-		client_rfb.Rf_add_ims_chg_info(callid, ims_charging_id);
+
+		if(pcscf_use_client_rf)
+			client_rfb.Rf_add_ims_chg_info(callid, ims_charging_id);
+		if(pcscf_use_pcc && pcc_use_icid){
+			if(strncmp(msg->first_line.u.request.method.s, "INVITE",6)==0)
+				store_dlg_icid(msg, callid, ims_charging_id);
+			else if (strncmp(msg->first_line.u.request.method.s, "REGISTER",8)==0)
+				store_reg_icid(msg, callid, ims_charging_id);
+		}
 		if (ims_charging_id.s) pkg_free(ims_charging_id.s);
 	}else
 		ret = cscf_add_p_charging_vector(msg, NULL);
-	
+
 	return ret;
 }
 

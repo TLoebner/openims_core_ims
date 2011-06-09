@@ -590,6 +590,7 @@ void free_p_dialog(p_dialog *d)
 	if (d->pcc_session_id.s) {
 		shm_free(d->pcc_session_id.s);
 	}
+	if (d->icid.s)	shm_free(d->icid.s);
 	shm_free(d);
 	p_dialog_count_decrement(); 
 }
@@ -698,6 +699,34 @@ int P_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 	}
 	else 
 		return CSCF_RETURN_FALSE;
+}
+
+int store_dlg_icid(struct sip_msg * msg, str callid, str ims_charging_id){
+
+	str host;
+	int port,transport;
+	enum p_dialog_direction dir = DLG_MOBILE_ORIGINATING;
+	p_dialog * dlg = NULL;
+
+	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
+			LOG(L_ERR,"ERR:"M_NAME":store_dlg_icid(orig): Error retrieving orig contact\n");
+			return 0;
+	}
+	dlg = get_p_dialog(callid, host, port, transport, &dir);
+	if(!dlg)
+			goto error;
+	dlg->icid.s = shm_malloc(ims_charging_id.len * sizeof(char));
+	if(!dlg->icid.s)
+		goto error;
+	memcpy(dlg->icid.s, ims_charging_id.s, ims_charging_id.len*sizeof(char));
+	dlg->icid.len = ims_charging_id.len;
+
+	d_unlock(dlg->hash);
+	return 1;
+
+error:
+	if(dlg) d_unlock(dlg->hash);
+	return 0;
 }
 
 str s_OTHER={"<OTHER>",7};
@@ -914,6 +943,7 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 	enum p_dialog_direction dir;
 	int em_dialog;
 	str service_urn = {0,0};
+	str icid;
 	
 	dir = get_dialog_direction(str1);
 
@@ -988,7 +1018,8 @@ int P_save_dialog(struct sip_msg* msg, char* str1, char* str2)
 					&d->dialog_c);
 					
 	tmb.new_dlg_uas(msg,99,&d->dialog_s);
-		
+	if(cscf_get_p_charging_vector(msg, &icid, 0, 0))
+		STR_SHM_DUP(d->icid,icid,"shm");
 	d_unlock(d->hash);
 	print_p_dialogs(L_INFO);
 	

@@ -3196,3 +3196,119 @@ end:
     return ret;
 }
 
+int get_param_value(str header_body, str param_name, int * start_value_index, int  * value_length){
+
+	char * p;
+	char * end = header_body.s + header_body.len;
+
+	*start_value_index = 0;
+	*value_length = 0;
+
+	p = header_body.s;
+loop:
+	while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
+		*start_value_index = *start_value_index +1;
+		p++;
+	}
+	if(p==end)
+		return 0;
+	if(strncmp(p, param_name.s, param_name.len) == 0){
+		p+=param_name.len;
+		*start_value_index = *start_value_index+param_name.len;
+		while(p<end && ((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
+			*start_value_index = *start_value_index +1;
+			p++;
+		}
+		if(p==end) return 0;
+		while(p<end && !((*p==' ')||(*p==';')||(*p==':')||(*p=='=')||(*p=='"')||(*p=='\r')||(*p=='\t')||(*p=='\n'))){
+			*value_length = *value_length +1;
+			p++;
+		}
+
+		return 1;
+
+	}else {
+		while(p<end && (*p!=';')){
+			*start_value_index = *start_value_index +1;
+			p++;
+		}
+		if(p==end)
+			return 0;
+
+		goto loop;
+	}
+}
+
+static str p_charging_vector={"P-Charging-Vector",17};
+/**
+ * Retrieves the P-Charging-Vector header information
+ * P-Charging-Vector:
+ * @param msg - the SIP message to retrieve from
+ * @returns #CSCF_RETURN_TRUE if ok or #CSCF_RETURN_FALSE on error
+ */
+int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, str * term_ioi)
+{
+	struct hdr_field* header = 0;
+	str header_body = {0,0};
+	int index, len;
+	str param_name;
+
+	LOG(L_DBG, "get_p_charging_vector\n");
+	header = cscf_get_header(msg, p_charging_vector);
+	if(!header){
+		LOG(L_DBG, "no header %.*s was found\n", p_charging_vector.len, p_charging_vector.s);
+		return 0;
+	}
+	if(!header->body.s || !header->body.len)
+		return 0;
+
+	STR_PKG_DUP(header_body, header->body, "p charging vector body in shm");
+
+	//LOG(L_DBG, "p_charging_vector body is %.*s\n", header_body.len, header_body.s);
+	if(icid){
+		param_name.s = "icid-value";
+		param_name.len = 10;
+
+		if(get_param_value(header_body, param_name, &index, &len)){
+
+			icid->s = pkg_malloc(len * sizeof(char));
+			if(!icid->s)	goto out_of_memory;
+			memcpy(icid->s, header->body.s + index, len*sizeof(char));
+			icid->len = len;
+
+			LOG(L_DBG, "param %.*s is %.*s\n",
+					param_name.len, param_name.s, icid->len, icid->s);
+		}
+	}
+
+	if(orig_ioi){
+		param_name.s = "orig-ioi";
+		param_name.len = 8;
+
+		if(get_param_value(header_body, param_name, &index, &len)){
+			orig_ioi->len = len;
+			orig_ioi->s = header->body.s + index;
+			LOG(L_DBG, "param %.*s is %.*s\n",
+					param_name.len, param_name.s, orig_ioi->len, orig_ioi->s);
+		}
+	}
+
+	if(term_ioi){
+		param_name.s = "term-ioi";
+		param_name.len = 8;
+
+		if(get_param_value(header_body, param_name, &index, &len)){
+			term_ioi->len = len;
+			term_ioi->s = header->body.s + index;
+			LOG(L_DBG, "param %.*s is %.*s\n",
+					param_name.len, param_name.s, term_ioi->len, term_ioi->s);
+		}
+	}
+
+	if(header_body.s) pkg_free(header_body.s);
+	return 1;
+out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":cscf_get_p_charging_vector:out of pkg memory\n");
+	return 0;
+}
+
