@@ -88,6 +88,7 @@ extern int pcscf_qos_release7;
 extern int pcscf_qos_side;
 extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
+extern int pcc_use_icid;				/**< weather to send the IMS charging id on the Rx interface >**/
 str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
 
 
@@ -100,7 +101,9 @@ void free_pcc_authdata(pcc_authdata_t *x)
 {
 	if (!x) return;
 	if (x->callid.s) shm_free(x->callid.s);
+	if (x->sip_uri.s)	 shm_free(x->sip_uri.s);
 	if (x->host.s) shm_free(x->host.s);
+	if (x->icid.s)		shm_free(x->icid.s);
 	shm_free(x);
 }
 
@@ -547,6 +550,7 @@ int pcc_auth_init_dlg(p_dialog **dlgp, AAASession ** authp, int * relatch, int p
 		}		 
 		STR_SHM_DUP(dlg->pcc_session_id,auth->id,"pcc_auth_init_dlg") ;
 		auth->u.auth.lifetime = dlg->expires;
+		STR_SHM_DUP(pcc_authdata->icid,dlg->icid,"pcc_auth_init_dlg");
 		
 	} else {
 		auth = cdpb.AAAGetAuthSession(dlg->pcc_session_id);
@@ -596,7 +600,10 @@ static str IMS_Em_Serv_AVP_val = {"Emergency IMS Call", 18};
 static str IMS_Reg_AVP_val = {"IMS Registration", 16};
 
 /* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
-int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struct sip_msg * res, int registr, int sos){
+int pcc_rx_req_add_mandat_avps(AAAMessage* msg,
+		unsigned int dia_req_code, struct sip_msg * res,
+		int registr, int sos,
+		str * icid){
 
 	char x[4];
 	AAA_AVP * avp;
@@ -642,6 +649,9 @@ int pcc_rx_req_add_mandat_avps(AAAMessage* msg, unsigned int dia_req_code, struc
 					AAA_AVP_FLAG_MANDATORY, IMS_vendor_id_3GPP,
 					AVP_DUPLICATE_DATA,__FUNCTION__)) goto error;
 	}
+	/*AF-Charging-Identifier*/
+	if(icid && icid->s && icid->len)
+		if(!cdp_avp->epcapp.add_AF_Charging_Identifier(&msg->avpList,*icid,0)) goto error;
 
 	return 1;
 error:
@@ -682,6 +692,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	str service_urn = {0,0};
 	int subscr_type;
 	str subscr_value={0,0};
+	str icid = {0,0};
 
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
@@ -744,7 +755,9 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	}
 	
 	/*---------- 1. Add mandatory AVPs ----------*/
-	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res, is_register, service_urn.len>0))
+	icid = ((pcc_authdata_t*)auth->u.auth.generic_data)->icid;
+	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res, is_register, service_urn.len>0,
+			&icid))
 		goto error;
 
 	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: auth_lifetime %u\n", auth_lifetime);
@@ -1023,7 +1036,7 @@ AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth, int is_register
 	
 	if (!dia_str) goto error;
 	
-	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register, 0))	goto error;
+	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register, 0, 0))	goto error;
 
 	//Termination-Cause
 	set_4bytes(x,1);

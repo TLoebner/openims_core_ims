@@ -232,6 +232,7 @@ char* pcscf_forced_qos_peer = "";					/**< FQDN of Policy Decision Function (PDF
 str forced_qos_peer; 
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
 int pcc_use_ports = 1; 						/**< weather to use ports in the IPFilterRule >**/
+int pcc_use_icid = 1;						/**< weather to send the IMS charging id on the Rx interface >**/
 
 char* ipv4_for_signaling_char="127.0.0.1";
 str ipv4_for_signaling;
