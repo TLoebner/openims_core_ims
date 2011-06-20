@@ -434,12 +434,19 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	if(!(time_stamps = new_time_stamps(&req_timestamp, NULL,
 						&reply_timestamp, NULL)))
 		goto error;
-	if(!(ims_info = new_ims_information(event_type, 
-					time_stamps,
-					&callid, &callid,
-					&from_uri, &to_uri, 
-					&icid, &orig_ioi, &term_ioi,dir)))
-		goto error;
+
+	if(dir == 0){
+		if(!(ims_info = new_ims_information(event_type,
+						time_stamps, &callid, &callid,
+						&from_uri, &to_uri,
+						&icid, &orig_ioi, &term_ioi,dir)))
+			goto error;
+	}else
+		if(!(ims_info = new_ims_information(event_type,
+								time_stamps, &callid, &callid,
+								&to_uri, &from_uri,
+								&icid, &orig_ioi, &term_ioi,dir)))
+					goto error;
 
 	ims_info->sdp_media_component.head = sdp_media_comps.head;
 	ims_info->sdp_media_component.tail = sdp_media_comps.tail;
