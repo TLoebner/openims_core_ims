@@ -51,7 +51,10 @@ do{\
 
 typedef struct _ims_charg_info_list_t_slot{
 	str call_id;
+	int dir;
 	str ims_charg_id;
+	//str af_app_id;
+	uint32_t rating_group;
 	//time_t expires;
 	struct _ims_charg_info_list_t_slot * next, * prev;
 } ims_charg_info_list_slot_t;
@@ -79,7 +82,8 @@ str get_an_charg_info(str sip_uri);
 
 int init_ims_charg_info();
 void destroy_ims_charg_info();
-int Rf_add_ims_chg_info(str sip_uri, str an_charg_id);
-str get_ims_charg_info(str call_id);
+int Rf_add_ims_chg_info_icid(str call_id, int dir, str ims_charg_id);
+int Rf_add_ims_chg_ps_info(str call_id, int dir, uint32_t rating_group);
+int get_ims_charg_info(str call_id, int dir, str * icid, uint32_t *rating_group);
 
 #endif

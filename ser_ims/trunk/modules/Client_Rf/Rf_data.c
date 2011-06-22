@@ -321,8 +321,25 @@ out_of_memory:
 	return NULL;
 }
 
+ps_information_t * new_ps_ims_information(service_data_container_t * serv_data_container)
+{
+
+	ps_information_t * x = NULL;
+
+	mem_new(x, sizeof(ps_information_t), pkg);
+	x->service_data_container = serv_data_container;
+
+	return x;
+
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");
+	ps_information_free(x);
+	return NULL;
+}
+
 service_information_t * new_service_information(str * user_sip_uri,
 		ims_information_t * ims_info,
+		ps_information_t * ps_info,
 		subscription_id_t * subscription)
 {
 	subscription_id_list_element_t * sl =0;
@@ -348,6 +365,7 @@ service_information_t * new_service_information(str * user_sip_uri,
 	}
 	/*set ims information*/
 	x->ims_information = ims_info;
+	x->ps_information = ps_info;
 
 	return x;
 
@@ -360,6 +378,7 @@ out_of_memory:
 
 Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number, 
 			str * user_name, ims_information_t * ims_info,
+			ps_information_t * ps_info,
 			subscription_id_t * subscription){
 
 
@@ -381,7 +400,8 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 		str_dup_ptr(x->service_context_id, *(cfg.service_context_id), pkg);
 
 	if(ims_info)	
-		if(!(service_info = new_service_information(user_name, ims_info, subscription)))
+		if(!(service_info = new_service_information(user_name,
+							ims_info, ps_info, subscription)))
 			goto error;
 	
 	x->service_information = service_info;
@@ -449,11 +469,17 @@ void ims_information_free(ims_information_t *x)
 	
 	mem_free(x,pkg);
 }
+void service_data_container_free(service_data_container_t * x){
+	if(!x)
+		return;
 
+	mem_free(x,pkg);
+}
 void ps_information_free(ps_information_t * x){
 
 	if(!x)
 		return;
+	service_data_container_free(x->service_data_container);
 	str_free_ptr(x->tgpp_charging_id, pkg);
 	str_free_ptr(x->sgsn_address, pkg);
 	mem_free(x, pkg);

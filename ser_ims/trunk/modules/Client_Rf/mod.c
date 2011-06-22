@@ -112,7 +112,8 @@ static cmd_export_t client_rf_cmds[]={
 	{"Rf_Send_ACR",			Rf_Send_ACR, 			2, 0, REQUEST_ROUTE|ONREPLY_ROUTE|FAILURE_ROUTE},
 	EXP_FUNC(load_client_rf)
 	EXP_FUNC(Rf_add_an_chg_info)
-	EXP_FUNC(Rf_add_ims_chg_info)
+	EXP_FUNC(Rf_add_ims_chg_info_icid)
+	EXP_FUNC(Rf_add_ims_chg_ps_info)
 	{0, 0, 0, 0, 0}
 }; 
 

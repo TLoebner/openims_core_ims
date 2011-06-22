@@ -701,11 +701,10 @@ int P_is_in_dialog(struct sip_msg* msg, char* str1, char* str2)
 		return CSCF_RETURN_FALSE;
 }
 
-int store_dlg_icid(struct sip_msg * msg, str callid, str ims_charging_id){
+int store_dlg_icid(struct sip_msg * msg,  str callid, enum p_dialog_direction dir, str ims_charging_id){
 
 	str host;
 	int port,transport;
-	enum p_dialog_direction dir = DLG_MOBILE_ORIGINATING;
 	p_dialog * dlg = NULL;
 
 	if (!find_dialog_contact(msg,dir,&host,&port,&transport)){
