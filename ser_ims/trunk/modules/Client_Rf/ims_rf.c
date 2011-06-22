@@ -157,10 +157,12 @@ error:
  * @param term_ioi - the TERMinating IOI if contained in the P-Charging-Vector
  */
 int get_ims_charging_info(struct sip_msg *req, 
-			struct sip_msg * reply, 
+			struct sip_msg * reply,
+			int dir,
 			str * icid, 
 			str * orig_ioi, 
-			str * term_ioi){
+			str * term_ioi,
+			uint32_t * rating_group){
 
 	str callid = {0,0};
 
@@ -178,7 +180,8 @@ int get_ims_charging_info(struct sip_msg *req,
 		
 		if(!callid.len || !callid.s)
 			return 1;
-		*icid = get_ims_charg_info(callid);
+		if(!get_ims_charg_info(callid, dir, icid, rating_group))
+			return 0;
 	}
 
 
@@ -391,6 +394,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	uint32_t expires = 0;
 	str callid = {0,0}, to_uri = {0,0}, from_uri ={0,0}, 
 	    icid= {0,0}, orig_ioi = {0,0}, term_ioi = {0,0};
+	uint32_t rating_group = 0;
 
 	event_type_t * event_type = 0;
 	ims_information_t * ims_info = 0;
@@ -400,6 +404,8 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	uint32_t acct_record_number;
 	subscription_id_t subscr;
 	sdp_media_component_list_t sdp_media_comps = {0,0};
+	service_data_container_t * serv_data_container = NULL;
+	ps_information_t * ps_info = NULL;
 
 	if(!get_sip_header_info(req, reply, interim, &acct_record_type, 
 				&sip_method, &event, &expires, 
@@ -416,7 +422,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	if(dir == 0)	user_name = from_uri;
 	else 		user_name = to_uri;
 
-	if(!get_ims_charging_info(req, reply, &icid, &orig_ioi, &term_ioi))
+	if(!get_ims_charging_info(req, reply, dir, &icid, &orig_ioi, &term_ioi, &rating_group))
 		goto error;
 
 	LOG(L_DBG, "retrieved ims charging info icid %.*s orig_ioi %.*s term_ioi %.*s\n",
@@ -441,6 +447,15 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 			&icid, &orig_ioi, &term_ioi,dir)))
 		goto error;
 
+	if(rating_group){
+		if(!(serv_data_container = new_service_data_container(rating_group)))
+				goto out_of_memory;
+	}
+
+	if(serv_data_container)
+		if(!(ps_info = new_ps_information(serv_data_container)))
+				goto out_of_memory;
+
 	ims_info->sdp_media_component.head = sdp_media_comps.head;
 	ims_info->sdp_media_component.tail = sdp_media_comps.tail;
 	str_free(icid, pkg);
@@ -454,7 +469,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	subscr.id.len = from_uri.len;
 
 	rf_data = new_Rf_ACR(acct_record_type, acct_record_number,
-			&user_name, ims_info, &subscr);
+			&user_name, ims_info, ps_info, &subscr);
 	if(!rf_data) {
 		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_data: no memory left for generic\n");
 		goto out_of_memory;
@@ -470,6 +485,8 @@ error:
 	time_stamps_free(time_stamps);
 	event_type_free(event_type);
 	ims_information_free(ims_info);
+	service_data_container_free(serv_data_container);
+	ps_information_free(ps_info);
 	Rf_free_ACR(rf_data);
 	str_free(icid, pkg);
 	return NULL;

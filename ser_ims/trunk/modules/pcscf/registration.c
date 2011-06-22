@@ -70,6 +70,7 @@
 #include "ims_pm_pcscf.h"
 #include "e2.h"
 #include "e2_avp.h"
+#include "dlg_state.h"
 
 #include "../../socket_info.h"
 #include "../../ip_addr.h"
@@ -188,10 +189,10 @@ int P_add_p_charging_vector(struct sip_msg *msg,char *str1,char*str2)
 		callid = cscf_get_call_id(msg, NULL);
 
 		if(pcscf_use_client_rf)
-			client_rfb.Rf_add_ims_chg_info(callid, ims_charging_id);
+			client_rfb.Rf_add_ims_chg_info_icid(callid, DLG_MOBILE_ORIGINATING, ims_charging_id);
 		if(pcscf_use_pcc && pcc_use_icid){
 			if(strncmp(msg->first_line.u.request.method.s, "INVITE",6)==0)
-				store_dlg_icid(msg, callid, ims_charging_id);
+				store_dlg_icid(msg, callid, DLG_MOBILE_ORIGINATING, ims_charging_id);
 			else if (strncmp(msg->first_line.u.request.method.s, "REGISTER",8)==0)
 				store_reg_icid(msg, callid, ims_charging_id);
 		}

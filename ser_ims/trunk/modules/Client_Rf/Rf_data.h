@@ -653,8 +653,13 @@ do {\
 } while(0)
 
 typedef struct{
+	uint32_t rating_group;
+} service_data_container_t;
+
+typedef struct{
 	str * tgpp_charging_id;
 	str * sgsn_address;
+	service_data_container_t * service_data_container;
 } ps_information_t;
 
 typedef struct {
@@ -715,13 +720,21 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					str * term_ioi,
 					int node_role);
 
+service_data_container_t * new_service_data_container(uint32_t rating_group);
+ps_information_t * new_ps_information(service_data_container_t * serv_data_container);
+
 void event_type_free(event_type_t *x);
 void time_stamps_free(time_stamps_t *x);
 void ims_information_free(ims_information_t *x);
+void service_data_container_free(service_data_container_t *x);
+void ps_information_free(ps_information_t *x);
 void service_information_free(service_information_t *x);
 
+
+
 Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
-		str * user_name, ims_information_t * ims_info, subscription_id_t * subscription);
+		str * user_name, ims_information_t * ims_info,
+		ps_information_t * ps_info, subscription_id_t * subscription);
 void Rf_free_ACR(Rf_ACR_t *x);
 //void Rf_free_ACA(Rf_ACA_t *x);
 

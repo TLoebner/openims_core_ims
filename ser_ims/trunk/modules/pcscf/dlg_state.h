@@ -148,13 +148,13 @@ int find_dialog_contact(struct sip_msg *msg,enum p_dialog_direction dir,str *hos
 int fixup_save_dialog(void ** param, int param_no);
 p_dialog* new_p_dialog(str call_id,str host,int port, int transport);
 p_dialog* add_p_dialog(str call_id,str host,int port, int transport);
-int store_dlg_icid(struct sip_msg * msg, str callid, str ims_charging_id);
 int is_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);
 int is_p_dialog_dir(str call_id,enum p_dialog_direction dir);
 p_dialog* get_p_dialog(str call_id,str host,int port, int transport,enum p_dialog_direction *dir);
 p_dialog* get_p_dialog_dir(str call_id,enum p_dialog_direction dir);
 p_dialog* get_p_dialog_dir_nolock(str call_id,enum p_dialog_direction dir);
 enum p_dialog_direction get_dialog_direction(char *direction);
+int store_dlg_icid(struct sip_msg * msg,  str callid, enum p_dialog_direction dir, str ims_charging_id);
 int terminate_p_dialog(p_dialog *d);
 void del_p_dialog(p_dialog *d);
 void free_p_dialog(p_dialog *d);

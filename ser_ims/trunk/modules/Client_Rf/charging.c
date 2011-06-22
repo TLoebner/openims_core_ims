@@ -232,12 +232,14 @@ inline unsigned int ims_charg_info_calc_hash(str id){
 #undef h_inc
 }
 
-int add_new_ims_charg_info_safe(int hash_index, str call_id, str ims_charg_id/*, uint32_t expires*/){
+int add_new_ims_charg_info_icid_safe(int hash_index, str call_id, int dir,
+										str ims_charg_id/*, uint32_t expires*/){
 
 	ims_charg_info_list_slot_t * info = NULL;
 
 	mem_new(info, sizeof(ims_charg_info_list_slot_t), shm);
 	str_dup(info->call_id, call_id, shm);
+	info->dir = dir;
 	str_dup(info->ims_charg_id, ims_charg_id, shm);
 	WL_APPEND(ims_charg_info+hash_index, info);
 
@@ -248,7 +250,7 @@ out_of_memory:
 	return 0;
 }
 
-int Rf_add_ims_chg_info(str call_id, str ims_charg_id){
+int Rf_add_ims_chg_info_icid(str call_id, int dir, str ims_charg_id){
 
 	int hash_index;
 	ims_charg_info_list_slot_t * info = NULL;
@@ -265,14 +267,14 @@ int Rf_add_ims_chg_info(str call_id, str ims_charg_id){
 
 	lock_get(ims_charg_info[hash_index].lock);
 			WL_FOREACH(&(ims_charg_info[hash_index]), info){
-				if(str_equal(info->call_id, call_id) &&
+				if(str_equal(info->call_id, call_id) && info->dir == dir &&
 					!str_equal(info->ims_charg_id, ims_charg_id)){
 					str_free(info->ims_charg_id, shm);
 					str_dup(info->ims_charg_id, ims_charg_id, shm);
 					goto end;
 				}
 			}
-			if(!add_new_ims_charg_info_safe(hash_index, call_id, ims_charg_id))
+			if(!add_new_ims_charg_info_icid_safe(hash_index, call_id, dir, ims_charg_id))
 				goto error;
 
 end:
@@ -286,12 +288,66 @@ error:
 	return 0;
 }
 
+int add_new_ims_charg_ps_info_safe(int hash_index, str call_id, int dir,
+										uint32_t rating_group/*, uint32_t expires*/){
+
+	ims_charg_info_list_slot_t * info = NULL;
+
+	mem_new(info, sizeof(ims_charg_info_list_slot_t), shm);
+	str_dup(info->call_id, call_id, shm);
+	info->dir = dir;
+	info->rating_group = rating_group;
+	WL_APPEND(ims_charg_info+hash_index, info);
+
+	return 1;
+
+out_of_memory:
+	LOG(L_ERR, "ERR: add_new_ims_charg_info_safe: out of shm memory\n");
+	return 0;
+}
+
+int Rf_add_ims_chg_ps_info(str call_id, int dir, uint32_t rating_group){
+
+	int hash_index;
+	ims_charg_info_list_slot_t * info = NULL;
+
+	//LOG(L_DBG, "adding new ims chg info for callid %.*s and ims charg id %.*s\n",
+	//	call_id.len, call_id.s, ims_charg_id.len, ims_charg_id.s);
+
+	if(!call_id.len || !call_id.s || !rating_group){
+		LOG(L_WARN, "WARN: Client_Rf: Rf_add_ims_chg_info: empty argument\n");
+		return 1;
+	}
+
+	hash_index = ims_charg_info_calc_hash(call_id);
+
+	lock_get(ims_charg_info[hash_index].lock);
+			WL_FOREACH(&(ims_charg_info[hash_index]), info){
+				if(str_equal(info->call_id, call_id) && info->dir == dir &&
+					info->rating_group!=rating_group){
+					info->rating_group = rating_group;
+					goto end;
+				}
+			}
+			if(!add_new_ims_charg_ps_info_safe(hash_index, call_id, dir, rating_group))
+				goto error;
+
+end:
+	lock_release(ims_charg_info[hash_index].lock);
+
+	return 1;
+
+error:
+	lock_release(ims_charg_info[hash_index].lock);
+	return 0;
+}
+
 /**
  * Retrieve the charging id in pkg, stored at registration time
  * @param call_id - the SIP call_id
  * @returns ims_charging_id assoctiated with the call id
  */
-str get_ims_charg_info(str call_id){
+int get_ims_charg_info(str call_id, int dir, str* icid, uint32_t * rating_group){
 
 	str res = {0,0};
 
@@ -302,17 +358,25 @@ str get_ims_charg_info(str call_id){
 
 	lock_get(ims_charg_info[hash_index].lock);
 			WL_FOREACH(&(ims_charg_info[hash_index]), info){
-				if(str_equal(info->call_id, call_id)){
-					str_dup(res, info->ims_charg_id, pkg);
+				if(str_equal(info->call_id, call_id) && info->dir ==dir){
+					if(icid){
+						str_dup(res, info->ims_charg_id, pkg);
+						icid->s = res.s;
+						icid->len = res.len;
+					}
+					if(rating_group)
+						*rating_group = info->rating_group;
 					goto end;
 				}
 			}
 end:
 	lock_release(ims_charg_info[hash_index].lock);
-	return res;
+	return 1;
 out_of_memory:
 	LOG(L_ERR, "out of pkg memory while trying to retrieve the ims charg id\n");
 	lock_release(ims_charg_info[hash_index].lock);
-	return res;
+	return 0;
 }
+
+
 
