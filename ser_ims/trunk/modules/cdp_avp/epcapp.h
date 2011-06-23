@@ -701,6 +701,9 @@ cdp_avp_get		(IMS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	
 cdp_avp_add_ptr	(PS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(PS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
 
+cdp_avp_add_ptr (Service_Data_Container,                                                EPC_vendor_id_3GPP,     AAA_AVP_FLAG_MANDATORY,         Grouped,                AAA_AVP_LIST*)
+cdp_avp_get             (Service_Data_Container,                                                EPC_vendor_id_3GPP,     AAA_AVP_FLAG_MANDATORY,         Grouped,                AAA_AVP_LIST)
+
 cdp_avp_add_ptr	(Inter_Operator_Identifier,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(Inter_Operator_Identifier,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
 

@@ -299,6 +299,24 @@ error:
 	return 0;
 }
 
+
+int Rf_write_service_data_container_avps(AAA_AVP_LIST * avp_list, service_data_container_t * x){
+
+	AAA_AVP_LIST aList = {0,0};
+
+	if (x->rating_group)
+		if (!cavpb->ccapp.add_Rating_Group(&aList,x->rating_group))
+			goto error;
+	LOG(L_DBG, "x->rating is %u\n", x->rating_group);
+	if (!cavpb->epcapp.add_Service_Data_Container(avp_list, &aList, AVP_DONT_FREE_DATA))
+		goto error;
+	return 1;
+error:
+	cavpb->cdp->AAAFreeAVPList(&aList);	
+	LOG(L_ERR, "could not add service_data_container avps\n");
+	return 0;
+}
+
 int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 
 	AAA_AVP_LIST aList = {0,0};
@@ -309,6 +327,9 @@ int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 
 	if (x->sgsn_address)
 			if (!cavpb->epcapp.add_3GPP_SGSN_Address(&aList,*(x->sgsn_address), AVP_DUPLICATE_DATA))
+				goto error;
+	if (x->service_data_container)
+			if (!Rf_write_service_data_container_avps(&aList, x->service_data_container))
 				goto error;
 
 	if (!cavpb->epcapp.add_PS_Information(avp_list, &aList, AVP_DONT_FREE_DATA))
