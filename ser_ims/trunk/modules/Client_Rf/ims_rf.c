@@ -182,7 +182,9 @@ int get_ims_charging_info(struct sip_msg *req,
 			return 1;
 		if(!get_ims_charg_info(callid, dir, icid, rating_group))
 			return 0;
-	}
+	}else
+		if(!get_ims_charg_info(callid, dir, NULL, rating_group))
+					return 0;
 
 
 	return 1;
@@ -385,7 +387,7 @@ error:
  * @return: 0 - ok, -1 - error, -2 - out of memory
  */
 
-Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
+Rf_ACR_t * create_rf_data(struct sip_msg * req,
 	       			struct sip_msg * reply,	
 				int dir, int interim){
 
@@ -413,7 +415,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 		goto error;
 
 	if(!get_subseq_acct_record_nb(callid, acct_record_type, &acct_record_number, dir, expires)){
-		LOG(L_ERR, "ERR:"M_NAME":dlg_create_rf_data: could not retrieve "
+		LOG(L_ERR, "ERR:"M_NAME":create_rf_data: could not retrieve "
 			"accounting record number for session id %.*s\n", 
 			callid.len, callid.s);
 		goto error;
@@ -471,7 +473,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	rf_data = new_Rf_ACR(acct_record_type, acct_record_number,
 			&user_name, ims_info, ps_info, &subscr);
 	if(!rf_data) {
-		LOG(L_ERR,"ERR:"M_NAME":dlg_create_rf_data: no memory left for generic\n");
+		LOG(L_ERR,"ERR:"M_NAME":create_rf_data: no memory left for generic\n");
 		goto out_of_memory;
 	}
 	ims_info = 0;
@@ -479,7 +481,7 @@ Rf_ACR_t * dlg_create_rf_data(struct sip_msg * req,
 	return rf_data;
 
 out_of_memory:
-	LOG(L_ERR, "dlg_create_rf_data: out of memory\n");
+	LOG(L_ERR, "create_rf_data: out of memory\n");
 error:
 	WL_FREE_ALL(&sdp_media_comps, sdp_media_component_list_t, pkg);
 	time_stamps_free(time_stamps);
@@ -503,19 +505,19 @@ int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** r
 		switch(msg->first_line.u.request.method.len){
 			case 3: /* BYE req*/
 				if(strncmp(msg->first_line.u.request.method.s, "BYE",3)==0 )
-					if(!(*rf_data = dlg_create_rf_data(msg, NULL, dir, interim)))
+					if(!(*rf_data = create_rf_data(msg, NULL, dir, interim)))
 						goto error;
 				break;
 			case 7:	/*MESSAGE req */
 				if(strncmp(msg->first_line.u.request.method.s, "MESSAGE", 7)==0)
-					if(!(*rf_data = dlg_create_rf_data(msg, NULL, dir, interim)))
+					if(!(*rf_data = create_rf_data(msg, NULL, dir, interim)))
 						goto error;
 				break;
 			default: break;
 		} 
 	}else{
 		LOG(L_DBG, "reply code is %i\n", msg->first_line.u.reply.statuscode);
-		if(msg->first_line.u.reply.statuscode != 200)
+		if(msg->first_line.u.reply.statuscode < 200 || msg->first_line.u.reply.statuscode>=300)
 		       return 1;
 
 		req = trans_get_request_from_current_reply();
@@ -527,8 +529,13 @@ int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** r
 		if((req->first_line.u.request.method.len == 6) && 
 			strncmp(req->first_line.u.request.method.s, "INVITE",6) == 0){
 
-			if(!(*rf_data = dlg_create_rf_data(req, msg, dir, interim)))
+			if(!(*rf_data = create_rf_data(req, msg, dir, interim)))
 				goto error;
+		}else if ((req->first_line.u.request.method.len == 8) &&
+				strncmp(req->first_line.u.request.method.s, "REGISTER",8) == 0){
+
+				if(!(*rf_data = create_rf_data(req, msg, dir, interim)))
+					goto error;
 		}
 	}
 
