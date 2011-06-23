@@ -422,7 +422,8 @@ AAASession * pcc_auth_clean_register(r_contact * cnt, contact_t* aor, int from_r
  * @param aor: the aor to be handled
  * @return: 0 - ok, 1 - goto end, -1 - error, -2 - out of memory
  */
-int pcc_auth_init_register(contact_t * aor, unsigned int * expireReg, AAASession ** authp, struct sip_uri * parsed_aor){
+int pcc_auth_init_register(contact_t * aor, str callid,
+		unsigned int * expireReg, AAASession ** authp, struct sip_uri * parsed_aor){
 
 	// REGISTRATION
 	
@@ -454,6 +455,13 @@ int pcc_auth_init_register(contact_t * aor, unsigned int * expireReg, AAASession
 			ret = -1;
 			goto end;
 		}
+		pcc_authdata = (pcc_authdata_t*)auth->u.auth.generic_data;
+		if(pcc_authdata &&
+				(pcc_authdata->callid.len != callid.len ||strncmp(pcc_authdata->callid.s, callid.s, callid.len))){
+
+			shm_free(pcc_authdata->callid.s);
+			STR_SHM_DUP(pcc_authdata->callid, callid,"pcc_auth_init_register");
+		}
 		*expireReg = contact->expires-time(0);
 	} else {
 		LOG(L_DBG,"DBG:"M_NAME":pcc_auth_init_register: new registration sending AAR to PCRF for AF signaling path status subscription\n");
@@ -465,6 +473,7 @@ int pcc_auth_init_register(contact_t * aor, unsigned int * expireReg, AAASession
 		}				
 		pcc_authdata->subscribed_to_signaling_path_status=1;
 		STR_SHM_DUP(pcc_authdata->host, contact->host,"pcc_auth_init_register");
+		STR_SHM_DUP(pcc_authdata->callid, callid,"pcc_auth_init_register");
 		pcc_authdata->port=contact->port;
 		pcc_authdata->transport=contact->transport;
 		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_register: creating PCC Session for registration\n");
@@ -478,7 +487,7 @@ int pcc_auth_init_register(contact_t * aor, unsigned int * expireReg, AAASession
 		}
 		
 		STR_SHM_DUP(contact->pcc_session_id,auth->id,"pcc_auth_init_register") ;
-		
+
 		if (contact->reg_state==REGISTERED) duration = contact->expires;
 		else duration = time(0);
 		auth->u.auth.lifetime = duration;
@@ -696,9 +705,12 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
+	call_id = cscf_get_call_id(req, 0);
+	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
+
 	if (is_register){
 		//REGISTRATION
-		int ret = pcc_auth_init_register(aor, &auth_lifetime, &auth, &parsed_aor);
+		int ret = pcc_auth_init_register(aor, call_id, &auth_lifetime, &auth, &parsed_aor);
 		switch(ret){
 			case 0: break;
 			case 1: goto end;
@@ -723,8 +735,6 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 		/* if not, create an authorization session */
 		/* first check on the response */
 		find_dialog_contact(res,dir,&host,&port,&transport);
-		call_id = cscf_get_call_id(req, 0);
-		LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		dlg = get_p_dialog(call_id,host,port,transport,0);	
 	
 		if (!dlg) {
