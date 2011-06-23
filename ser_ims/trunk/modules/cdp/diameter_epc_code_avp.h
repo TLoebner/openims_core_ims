@@ -377,6 +377,7 @@ enum {
 	AVP_EPC_SDP_Type									= 2036,
 	AVP_EPC_Change_Condition							= 2037,
 	AVP_EPC_Change_Time									= 2038,
+	AVP_EPC_Service_Data_Container								= 2040,
 	AVP_EPC_Accumulated_Cost							= 2052,
 	AVP_EPC_AoC_Cost_Information						= 2053,
 	AVP_EPC_AoC_Information								= 2054,

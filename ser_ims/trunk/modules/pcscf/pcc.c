@@ -989,8 +989,9 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 		if(pcscf_use_client_rf){
 			callid = ((pcc_authdata_t*)auth->u.auth.generic_data)->callid;
 			direction = ((pcc_authdata_t*)auth->u.auth.generic_data)->direction;
-			LOG(L_DBG, "callid is %.*s and direction %s\n",
-					callid.len, callid.s, (direction==DLG_MOBILE_ORIGINATING)?"originating":"terminating");
+			//LOG(L_DBG, "callid is %.*s and direction %s with rating group %u\n",
+			//		callid.len, callid.s, (direction==DLG_MOBILE_ORIGINATING)?"originating":"terminating",
+			//		rating_group);
 			client_rfb.Rf_add_ims_chg_ps_info(callid, direction, rating_group);
 		}
 	}

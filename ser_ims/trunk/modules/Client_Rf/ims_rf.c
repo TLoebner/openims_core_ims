@@ -172,19 +172,19 @@ int get_ims_charging_info(struct sip_msg *req,
 	if(reply)
 		cscf_get_p_charging_vector(reply, icid, orig_ioi, term_ioi);
 
-	if(!icid->len || !icid->s){
-		if(req)
-			callid = cscf_get_call_id(req, 0);
-		if((!callid.len || !callid.s) && reply)
-			callid = cscf_get_call_id(reply, 0);
+	if(req)
+		callid = cscf_get_call_id(req, 0);
+	if((!callid.len || !callid.s) && reply)
+		callid = cscf_get_call_id(reply, 0);
 		
-		if(!callid.len || !callid.s)
-			return 1;
+	if(!callid.len || !callid.s)
+		return 1;
+	if(!icid->len || !icid->s){
 		if(!get_ims_charg_info(callid, dir, icid, rating_group))
 			return 0;
 	}else
 		if(!get_ims_charg_info(callid, dir, NULL, rating_group))
-					return 0;
+			return 0;
 
 
 	return 1;

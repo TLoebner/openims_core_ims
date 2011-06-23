@@ -311,8 +311,8 @@ int Rf_add_ims_chg_ps_info(str call_id, int dir, uint32_t rating_group){
 	int hash_index;
 	ims_charg_info_list_slot_t * info = NULL;
 
-	//LOG(L_DBG, "adding new ims chg info for callid %.*s and ims charg id %.*s\n",
-	//	call_id.len, call_id.s, ims_charg_id.len, ims_charg_id.s);
+	//LOG(L_DBG, "adding/setting new ims chg info for callid %.*s and rating id %u\n",
+	//	call_id.len, call_id.s, rating_group);
 
 	if(!call_id.len || !call_id.s || !rating_group){
 		LOG(L_WARN, "WARN: Client_Rf: Rf_add_ims_chg_info: empty argument\n");
