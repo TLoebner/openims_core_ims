@@ -908,7 +908,9 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 	AAA_AVP *avp=0;
 	AAA_AVP_LIST avp_list = {0,0};
 	str an_charg_id = {0,0};
-	str sip_uri = {0,0};
+	str sip_uri = {0,0}, callid={0,0};
+	uint32_t rating_group=0;
+	enum p_dialog_direction direction;
 	int ret = 1;
 
 	if (pcscf_qos_release7==-1)
@@ -969,6 +971,17 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 			sip_uri = ((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri;
 			LOG(L_DBG, "sip uri is %.*s\n", sip_uri.len, sip_uri.s);
 			client_rfb.Rf_add_an_chg_info(sip_uri, an_charg_id);
+		}
+	}
+
+	/*rating group of the service, not in the Rx specification (yet), enhancement needed in some cases*/
+	if(cdp_avp->ccapp.get_Rating_Group(aaa->avpList, &rating_group, 0)){
+		if(pcscf_use_client_rf){
+			callid = ((pcc_authdata_t*)auth->u.auth.generic_data)->callid;
+			direction = ((pcc_authdata_t*)auth->u.auth.generic_data)->direction;
+			LOG(L_DBG, "callid is %.*s and direction %s\n",
+					callid.len, callid.s, (direction==DLG_MOBILE_ORIGINATING)?"originating":"terminating");
+			client_rfb.Rf_add_ims_chg_ps_info(callid, direction, rating_group);
 		}
 	}
 
