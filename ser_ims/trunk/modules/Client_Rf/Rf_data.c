@@ -321,7 +321,21 @@ out_of_memory:
 	return NULL;
 }
 
-ps_information_t * new_ps_ims_information(service_data_container_t * serv_data_container)
+service_data_container_t * new_service_data_container(uint32_t rating_group){
+
+	service_data_container_t * x = NULL;
+
+	mem_new(x, sizeof(service_data_container_t),pkg);
+	x->rating_group = rating_group;
+	
+	return x;
+out_of_memory:
+	LOG(L_ERR, "out of pkg memory\n");	
+	service_data_container_free(x);
+	return NULL;
+}
+
+ps_information_t * new_ps_information(service_data_container_t * serv_data_container)
 {
 
 	ps_information_t * x = NULL;
