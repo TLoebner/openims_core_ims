@@ -454,8 +454,8 @@ Rf_ACR_t * create_rf_data(struct sip_msg * req,
 				goto out_of_memory;
 	}
 
-	if(serv_data_container)
-		if(!(ps_info = new_ps_information(serv_data_container)))
+	if(serv_data_container || user_name.len)
+		if(!(ps_info = new_ps_information(user_name, serv_data_container)))
 				goto out_of_memory;
 
 	ims_info->sdp_media_component.head = sdp_media_comps.head;

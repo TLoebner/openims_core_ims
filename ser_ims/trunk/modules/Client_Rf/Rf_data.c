@@ -335,12 +335,18 @@ out_of_memory:
 	return NULL;
 }
 
-ps_information_t * new_ps_information(service_data_container_t * serv_data_container)
+ps_information_t * new_ps_information(str user_sip_uri, service_data_container_t * serv_data_container)
 {
 
 	ps_information_t * x = NULL;
-
+	str an_charg_id = {0,0};
 	mem_new(x, sizeof(ps_information_t), pkg);
+
+	an_charg_id = get_an_charg_info(user_sip_uri);
+	if(an_charg_id.len && an_charg_id.s){
+		str_dup_ptr(x->tgpp_charging_id, an_charg_id, pkg);
+		str_free(an_charg_id, pkg);
+        }
 	x->service_data_container = serv_data_container;
 
 	return x;
@@ -351,13 +357,11 @@ out_of_memory:
 	return NULL;
 }
 
-service_information_t * new_service_information(str * user_sip_uri,
-		ims_information_t * ims_info,
-		ps_information_t * ps_info,
-		subscription_id_t * subscription)
+service_information_t * new_service_information(ims_information_t * ims_info,
+						ps_information_t * ps_info,
+						subscription_id_t * subscription)
 {
 	subscription_id_list_element_t * sl =0;
-	str an_charg_id = {0,0};
 	service_information_t * x = 0;
 
 	/*allocate structure*/
@@ -369,14 +373,7 @@ service_information_t * new_service_information(str * user_sip_uri,
 			subscription_id_list_t_copy(&(sl->s),subscription,pkg);
 			WL_APPEND(&(x->subscription_id),sl);
 	}
-	if(user_sip_uri){
-		an_charg_id = get_an_charg_info(*user_sip_uri);
-		if(an_charg_id.len && an_charg_id.s){
-			mem_new(x->ps_information, sizeof(ps_information_t), pkg);
-			str_dup_ptr(x->ps_information->tgpp_charging_id, an_charg_id, pkg);
-			str_free(an_charg_id, pkg);
-		}
-	}
+	
 	/*set ims information*/
 	x->ims_information = ims_info;
 	x->ps_information = ps_info;
@@ -414,8 +411,7 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 		str_dup_ptr(x->service_context_id, *(cfg.service_context_id), pkg);
 
 	if(ims_info)	
-		if(!(service_info = new_service_information(user_name,
-							ims_info, ps_info, subscription)))
+		if(!(service_info = new_service_information(ims_info, ps_info, subscription)))
 			goto error;
 	
 	x->service_information = service_info;
