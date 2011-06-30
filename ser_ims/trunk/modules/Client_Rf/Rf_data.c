@@ -335,17 +335,14 @@ out_of_memory:
 	return NULL;
 }
 
-ps_information_t * new_ps_information(str user_sip_uri, service_data_container_t * serv_data_container)
+ps_information_t * new_ps_information(str an_charg_id, service_data_container_t * serv_data_container)
 {
 
 	ps_information_t * x = NULL;
-	str an_charg_id = {0,0};
 	mem_new(x, sizeof(ps_information_t), pkg);
 
-	an_charg_id = get_an_charg_info(user_sip_uri);
 	if(an_charg_id.len && an_charg_id.s){
 		str_dup_ptr(x->tgpp_charging_id, an_charg_id, pkg);
-		str_free(an_charg_id, pkg);
         }
 	x->service_data_container = serv_data_container;
 

@@ -721,7 +721,7 @@ ims_information_t * new_ims_information(event_type_t * event_type,
 					int node_role);
 
 service_data_container_t * new_service_data_container(uint32_t rating_group);
-ps_information_t * new_ps_information(str user_name, service_data_container_t * serv_data_container);
+ps_information_t * new_ps_information(str an_charg_id, service_data_container_t * serv_data_container);
 
 void event_type_free(event_type_t *x);
 void time_stamps_free(time_stamps_t *x);
