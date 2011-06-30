@@ -69,6 +69,7 @@ typedef struct pcc_authdata {
 	str sip_uri;
 	str host;
 	str icid;
+	str icsi;
 	int port,transport;
 	enum p_dialog_direction direction; // 0 ORIGINATING  1 TERMINATING
 
