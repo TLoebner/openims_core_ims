@@ -194,5 +194,6 @@ int cscf_get_to_uri(struct sip_msg* msg,str *local_uri);
 
 int cscf_get_sos_uri_param(str uri);
 int cscf_get_p_charging_vector(struct sip_msg *msg, str * icid, str * orig_ioi, str * term_ioi);
+str cscf_get_icsi(struct sip_msg *req, struct sip_msg *res);
 
 #endif /* PIS_CSCF_SIP_H */

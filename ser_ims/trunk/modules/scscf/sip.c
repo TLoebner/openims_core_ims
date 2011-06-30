@@ -3312,3 +3312,41 @@ out_of_memory:
 	return 0;
 }
 
+static str p_preferred_service={"P-Preferred-Service",19};
+static str p_asserted_service= {"P-Asserted-Service",18};
+/*
+ * retrieve the IMS Communication Service ID (ICSI), see 3GPP specification TS 24.299 and RFC RFC 6050
+ * ICSI is extracted from the P-Preferred-Service from the request msg or from the P-Asserted-Service from the reply
+ * @param req - the SIP request
+ * @param res - the SIP response
+ * @returns the ICSI
+ */
+str cscf_get_icsi(struct sip_msg *req, struct sip_msg *res){
+
+	struct hdr_field* header = 0;
+	str header_body = {0,0};
+
+	if(res){
+		header = cscf_get_header(res, p_asserted_service);
+		if(!header){
+			LOG(L_DBG, "no header %.*s was found in the reply\n",
+					p_asserted_service.len, p_asserted_service.s);
+			goto end;
+		}
+		header_body = header->body;
+	}
+
+	if (!header_body.len && req){
+
+		header = cscf_get_header(res, p_preferred_service);
+		if(!header){
+			LOG(L_DBG, "no header %.*s was found in the request\n",
+					p_preferred_service.len, p_preferred_service.s);
+			goto end;
+		}
+		header = cscf_get_header(res, p_preferred_service);
+	}
+end:
+	return header_body;
+}
+
