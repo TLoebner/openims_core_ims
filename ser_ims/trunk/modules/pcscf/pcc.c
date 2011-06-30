@@ -62,6 +62,7 @@
 #include "registrar_storage.h"
 #include "registrar.h"
 #include "sip_body.h"
+#include "sip.h"
 #include "../Client_Rf/client_rf_load.h"
 
 /**< Structure with pointers to tm funcs */
@@ -104,6 +105,7 @@ void free_pcc_authdata(pcc_authdata_t *x)
 	if (x->sip_uri.s)	 shm_free(x->sip_uri.s);
 	if (x->host.s) shm_free(x->host.s);
 	if (x->icid.s)		shm_free(x->icid.s);
+	if (x->icsi.s)		shm_free(x->icsi.s);
 	shm_free(x);
 }
 
@@ -612,7 +614,7 @@ static str IMS_Reg_AVP_val = {"IMS Registration", 16};
 int pcc_rx_req_add_mandat_avps(AAAMessage* msg,
 		unsigned int dia_req_code, struct sip_msg * res,
 		int registr, int sos,
-		str * icid){
+		str * icid, str * ims_comm_service_id){
 
 	char x[4];
 	AAA_AVP * avp;
@@ -638,12 +640,19 @@ int pcc_rx_req_add_mandat_avps(AAAMessage* msg,
 	}
 	
 	/* Add AF-Application-Identifier AVP */
-	if(!registr){
-		if(sos)
-			af_id = IMS_Em_Serv_AVP_val;
-		else af_id = IMS_Serv_AVP_val;
+	if(ims_comm_service_id && ims_comm_service_id->len && ims_comm_service_id->s){
+		af_id = *(ims_comm_service_id);
+
+	}else {
+		if(!registr){
+
+			if(sos)
+				af_id = IMS_Em_Serv_AVP_val;
+			else af_id = IMS_Serv_AVP_val;
+
+		}else	af_id = IMS_Reg_AVP_val;
+		if(ims_comm_service_id)	*(ims_comm_service_id) = af_id;
 	}
-	else	af_id = IMS_Reg_AVP_val;
 
 	if(!PCC_add_avp(msg, af_id.s,af_id.len,
 			AVP_IMS_AF_Application_Identifier, 
@@ -702,6 +711,8 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	int subscr_type;
 	str subscr_value={0,0};
 	str icid = {0,0};
+	str ims_comm_service_id = {0,0};
+	pcc_authdata_t* pcc_auth = 0;
 
 	int is_register=(str1 && (str1[0]=='r' || str1[0]=='R'));
 	
@@ -744,6 +755,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 			LOG(L_INFO,"INF:"M_NAME":PCC_AAR: getting dialog with %.*s %.*s %i %i\n",call_id.len,call_id.s,host.len,host.s,port,transport);
 		}
 		if (!dlg) goto error;
+		ims_comm_service_id = cscf_get_icsi(req, res);
 		int ret = pcc_auth_init_dlg(&dlg, &auth, &relatch, pcc_side, &auth_lifetime, &service_urn);
 		switch(ret){
 			case 0: break;
@@ -751,6 +763,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 			case -2: goto out_of_memory;	
 		}
 	}
+	pcc_auth = (pcc_authdata_t *)auth->u.auth.generic_data;
 	
 	/* Create an AAR prototype */
 	if (pcscf_qos_release7==1)
@@ -767,8 +780,11 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	/*---------- 1. Add mandatory AVPs ----------*/
 	icid = ((pcc_authdata_t*)auth->u.auth.generic_data)->icid;
 	if(!pcc_rx_req_add_mandat_avps(aar, IMS_AAR, res, is_register, service_urn.len>0,
-			&icid))
+			&icid, &ims_comm_service_id))
 		goto error;
+	if(ims_comm_service_id.len && ims_comm_service_id.s){
+		STR_SHM_DUP(pcc_auth->icsi, ims_comm_service_id, "PCC_AAR");
+	}
 
 	LOG(L_INFO,"INF:"M_NAME":PCC_AAR: auth_lifetime %u\n", auth_lifetime);
 	//auth_lifetime: add an Authorization_Lifetime AVP to update  the lifetime of the cdp session as well
@@ -843,12 +859,7 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 	if (pcscf_qos_release7!=-1)
 	{
 		if(PCC_add_subscription_ID(aar,req,pcc_side, &subscr_type, &subscr_value)){
-			((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.s = shm_malloc(subscr_value.len);
-			if(((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.s){
-				((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.len = subscr_value.len;
-				memcpy(((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri.s, subscr_value.s, 
-						sizeof(char)*subscr_value.len);
-			}
+			STR_SHM_DUP(pcc_auth->sip_uri, subscr_value, "PCC_AAR");
 		}
 //		set_4bytes(x,AVP_IMS_Specific_Action_Indication_Of_Release_Of_Bearer);
 //		cdpb.AAAAddAVPToMessage(aar,
@@ -1040,6 +1051,7 @@ AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth, int is_register
 
 	AAAMessage* dia_str = NULL;
 	char x[4];
+	str ims_comm_service_id = {0,0};
 
 	LOG(L_INFO, "INFO:"M_NAME":PCC_STR_auth_session_safe : called\n");
 	if (!auth){
@@ -1059,8 +1071,9 @@ AAAMessage * PCC_create_STR_auth_session_safe(AAASession * auth, int is_register
 		dia_str = cdpb.AAACreateRequest(IMS_Gq, IMS_STR, Flag_Proxyable, auth);
 	
 	if (!dia_str) goto error;
+	ims_comm_service_id = ((pcc_authdata_t*)auth->u.auth.generic_data)->icsi;
 	
-	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register, 0, 0))	goto error;
+	if(!pcc_rx_req_add_mandat_avps(dia_str, IMS_STR, NULL, is_register, 0, 0, &ims_comm_service_id))	goto error;
 
 	//Termination-Cause
 	set_4bytes(x,1);
