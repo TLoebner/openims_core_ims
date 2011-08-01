@@ -171,10 +171,13 @@ int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value
 				break;
 			}
 		}
+
 		if(!acct_rec && acct_record_type != AAA_ACCT_STOP){
 			*value = 1;
-			if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
-				goto error;
+			if(acct_record_type != AAA_ACCT_EVENT){
+				if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
+					goto error;
+			}
 		}
 
 		if(acct_rec && acct_record_type == AAA_ACCT_STOP){
