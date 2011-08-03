@@ -174,14 +174,18 @@ int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value
 
 		if(!acct_rec && acct_record_type != AAA_ACCT_STOP){
 			*value = 1;
-			if(acct_record_type != AAA_ACCT_EVENT){
-				if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
-					goto error;
-			}
+			if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
+				goto error;
+		}
+
+		if(!acct_rec && acct_record_type == AAA_ACCT_STOP){
+			LOG(L_ERR, "could not find the record, returning error\n");
+			goto error;
 		}
 
 		if(acct_rec && acct_record_type == AAA_ACCT_STOP){
 			WL_DELETE(&(acct_records[hash_index]), acct_rec);
+			acct_record_info_list_t_free(acct_rec,shm);
 		}
 	lock_release(acct_records[hash_index].lock);
 	
