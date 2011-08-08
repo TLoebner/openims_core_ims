@@ -90,6 +90,8 @@ extern int pcscf_qos_side;
 extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
 extern int pcc_use_icid;				/**< weather to send the IMS charging id on the Rx interface >**/
+extern str pcc_serv_id_register;			/**< the Service Identifier to be used when sending an AAR to PCRF for registrations>**/
+extern str pcc_serv_id_call;				/**< the Service Identifier to be used when sending an AAR to PCRF for calls >**/
 str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
 
 
@@ -606,9 +608,7 @@ error:
 }
 
 //AF Service is IMS Services although it should be the IMS Communication Services
-static str IMS_Serv_AVP_val = {"IMS Services", 12};
 static str IMS_Em_Serv_AVP_val = {"Emergency IMS Call", 18};
-static str IMS_Reg_AVP_val = {"IMS Registration", 16};
 
 /* Session-Id, Origin-Host, Origin-Realm AVP are added by the stack. */
 int pcc_rx_req_add_mandat_avps(AAAMessage* msg,
@@ -648,9 +648,9 @@ int pcc_rx_req_add_mandat_avps(AAAMessage* msg,
 
 			if(sos)
 				af_id = IMS_Em_Serv_AVP_val;
-			else af_id = IMS_Serv_AVP_val;
+			else af_id = pcc_serv_id_call;
 
-		}else	af_id = IMS_Reg_AVP_val;
+		}else	af_id = pcc_serv_id_register;
 		if(ims_comm_service_id)	*(ims_comm_service_id) = af_id;
 	}
 

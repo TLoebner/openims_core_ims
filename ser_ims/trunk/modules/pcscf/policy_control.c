@@ -125,7 +125,7 @@ int P_AAR_register(struct sip_msg *req, struct sip_msg * rpl){
 		return CSCF_RETURN_FALSE;
 	}	
 		
-	aor_list = cscf_parse_contacts(rpl);
+	aor_list = cscf_parse_contacts(req);
 	if (!aor_list || (!aor_list->contacts && !aor_list->star)) {
 		LOG(L_ERR,"ERR:"M_NAME":P_Rx_register: no contacts found in the Contact header\n");
 		return CSCF_RETURN_FALSE;
