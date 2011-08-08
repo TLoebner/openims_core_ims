@@ -233,6 +233,7 @@ str forced_qos_peer;
 int pcscf_qos_release7 = 0; 						/**< weather to use Gq or Rx >**/
 int pcc_use_ports = 1; 						/**< weather to use ports in the IPFilterRule >**/
 int pcc_use_icid = 1;						/**< weather to send the IMS charging id on the Rx interface >**/
+int pcc_use_protocol = 1;					/**< weather to include the protocol (tcp, udp) int the Flow Description, or use only ip as generic protocol >**/
 
 char* ipv4_for_signaling_char="127.0.0.1";
 str ipv4_for_signaling;
@@ -242,8 +243,15 @@ str ipv6_for_signaling;
 
 unsigned short port_for_signaling = 4060;
 
+char* pcc_serv_id_register_s = "IMS Registration";
+str pcc_serv_id_register;
+
+char* pcc_serv_id_call_s = "IMS Services";
+str pcc_serv_id_call;
+
 char* pcc_dest_realm_s = "open-ims.test";
 str pcc_dest_realm;
+
 char * gg_af_ip = NULL;
 uint32_t gg_af_port = 0;
 int pcscf_use_client_rf = 0;								/**< whether to enable or disable pcc */
@@ -550,12 +558,15 @@ static param_export_t pcscf_params[]={
     {"forced_qos_peer",					STR_PARAM,		&pcscf_forced_qos_peer},
 	{"qos_release7",					INT_PARAM,		&pcscf_qos_release7},
 	{"use_pcc",							INT_PARAM,		&pcscf_use_pcc},
-	{"ipv4_for_signaling",				STR_PARAM,		&ipv4_for_signaling_char},
-	{"ipv6_for_signaling",				STR_PARAM,		&ipv6_for_signaling_char},
-	{"port_for_signaling",				INT_PARAM,		&port_for_signaling},
+	{"pcc_ipv4_for_signaling",				STR_PARAM,		&ipv4_for_signaling_char},
+	{"pcc_ipv6_for_signaling",				STR_PARAM,		&ipv6_for_signaling_char},
+	{"pcc_port_for_signaling",				INT_PARAM,		&port_for_signaling},
 	
 	{"pcc_dest_realm",					STR_PARAM,		&pcc_dest_realm_s},
 	{"pcc_use_ports",					INT_PARAM,		&pcc_use_ports},
+	{"pcc_use_protocol",					INT_PARAM,		&pcc_use_protocol},
+	{"pcc_serv_id_register",				STR_PARAM,		&pcc_serv_id_register_s},
+	{"pcc_serv_id_call",				STR_PARAM,		&pcc_serv_id_call_s},
 	{"gg_ip",					STR_PARAM,		&gg_af_ip},
 	{"gg_port",					INT_PARAM,		&gg_af_port},
 
@@ -739,6 +750,12 @@ int fix_parameters()
 	
 	pcc_dest_realm.s = pcc_dest_realm_s;
 	pcc_dest_realm.len = strlen(pcc_dest_realm_s);
+	
+	pcc_serv_id_register.s = pcc_serv_id_register_s;
+	pcc_serv_id_register.len = strlen(pcc_serv_id_register_s);
+
+	pcc_serv_id_call.s = pcc_serv_id_call_s;
+	pcc_serv_id_call.len = strlen(pcc_serv_id_call_s);
 
 	if(gg_af_ip && pcscf_use_pcc){
 

@@ -65,6 +65,7 @@ extern int pcc_use_ports;
 static char* ip_s = "ip";
 static char* udp_s = "udp";
 static char* tcp_s = "tcp";
+extern int pcc_use_protocol;                            /**< weather to include int the Flow Description AVP the protocol (udp, tcp) or use only ip>**/
 
 /**< Structure with pointers to cdp funcs, global variable defined in mod.c  */
 extern struct cdp_binds cdpb;
@@ -827,10 +828,23 @@ inline int pcc_get_ip_port_dialog(str sdpA,str sdpB, int number, int tag,
  	if(!extract_token(clineA,ipA,PCC_MAX_Char,3)){
 		goto end;
 	}
+	if(ipA->s[0]=='['){
+		ipA->s = ipA->s+1;
+		ipA->len = ipA->len-1;
+	}
+	if(ipA->s[ipA->len-1] == ']'){
+		ipA->len = ipA->len-1;
+	}
 
 	if(sdpB.len && !extract_token(clineB,ipB,PCC_MAX_Char,3)){
-
- 		goto end;
+		goto end;
+	}
+	if(ipB->s[0]=='['){
+		ipB->s = ipB->s+1;
+		ipB->len = ipB->len-1;
+	}
+	if(ipB->s[ipB->len-1] == ']'){
+		ipB->len = ipB->len-1;
 	}
  		
   	/* i is the flow number */
@@ -869,20 +883,23 @@ inline int PCC_create_add_media_subcomp_dialog(AAA_AVP_LIST *list,str sdpA,str s
  	int atributes=0; /* a= lines present?*/
  	int ports=1; /*how many ports does this m line define?*/
 	int ret;
-	char* proto = ip_s;	
+	char* proto;	
 
  	LOG(L_DBG,"DBG"M_NAME":PCC_create_add_media_subcomp_dialog : starting\n");
 	
 	ret = pcc_get_ip_port_dialog(sdpA, sdpB, number, tag, &mlineA, &atributes, &ports,
 					&ipA, &intportA, &ipB, &intportB);
 	if(ret!=1) return ret;
-	rtp=strstr(mlineA,"RTP");
-	newline=index(mlineA,'\n');
-	if (newline==NULL) newline=index(mlineA,'\0');
-	if(rtp!=NULL && rtp<newline) proto = udp_s;
-	else if((tcp = strstr(mlineA, "TCP"))!= NULL && tcp<newline)
-		proto = tcp_s;
-
+	
+	proto=ip_s;
+	if(pcc_use_protocol){
+		rtp=strstr(mlineA,"RTP");
+		newline=index(mlineA,'\n');
+		if (newline==NULL) newline=index(mlineA,'\0');
+		if(rtp!=NULL && rtp<newline) proto = udp_s;
+		else if((tcp = strstr(mlineA, "TCP"))!= NULL && tcp<newline)
+			proto = tcp_s;
+	}
 	
 	while(flows<ports && i+2<PCC_Media_Sub_Components){
  		i++;
@@ -1014,6 +1031,39 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
 		cdpb.AAAAddAVPToList(&list,flow_number);
 		/*first flow is the recieve flow*/
 		//snprintf: The trailing nul character is counted towards the size limit, so you must allocate at least size characters for str.	
+
+		if (atributes==0 || atributes==1 || atributes==3 || atributes==4)
+                {
+                        /*second flow is the send flow*/
+                        if(pcc_use_ports){
+                                if(intportB ==9){
+                                        flow_data.len=snprintf(flow_data.s, len, "permit in %s from %.*s %u to %.*s %s",
+                                                                                                proto,
+                                                                                                ipA.len, ipA.s, intportA,
+                                                                                                ipB.len, ipB.s, options);
+                                }else if(intportA ==9 ){
+                                        flow_data.len=snprintf(flow_data.s, len, "permit in %s from %.*s to %.*s %u %s",
+                                                                                                proto,
+                                                                                                ipA.len, ipA.s,
+                                                                                                ipB.len, ipB.s, intportB, options);
+                                }else{
+
+                                        flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
+                                                        ipA.len, ipA.s, intportA,
+                                                        ipB.len, ipB.s, intportB, options);
+                                }
+                        }else{
+                                flow_data2.len=snprintf(flow_data2.s, len2, permit_in_without_ports,proto,
+                                        ipA.len, ipA.s, ipB.len, ipB.s, options);
+                        }
+                        flow_data2.len = strlen(flow_data2.s);
+                        LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: second flow is %.*s\n", flow_data2.len, flow_data2.s);
+                        flow_description2=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
+                                                                                        AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
+                                                                                        IMS_vendor_id_3GPP, flow_data2.s, flow_data2.len,
+                                                                                        AVP_DUPLICATE_DATA);
+                        cdpb.AAAAddAVPToList(&list,flow_description2);
+                }
 		if (atributes==0 || atributes==2 || atributes==3 || atributes==4)
 		{
 			if(pcc_use_ports){
@@ -1045,42 +1095,6 @@ static char * permit_in_without_ports = "permit in %s from %.*s to %.*s %s";
  			cdpb.AAAAddAVPToList(&list,flow_description1);
 		} 
 		
-		if (atributes==0 || atributes==1 || atributes==3 || atributes==4)
-		{
-	 		/*second flow is the send flow*/									
-			if(pcc_use_ports){
-				if(intportB ==9){
-					flow_data.len=snprintf(flow_data.s, len, "permit in %s from %.*s %u to %.*s %s",
-												proto,
-												ipA.len, ipA.s, intportA,
-												ipB.len, ipB.s, options);
-				}else if(intportA ==9 ){
-					flow_data.len=snprintf(flow_data.s, len, "permit in %s from %.*s to %.*s %u %s",
-												proto,
-												ipA.len, ipA.s,
-												ipB.len, ipB.s, intportB, options);
-				}else{
-
-					flow_data2.len=snprintf(flow_data2.s, len2, permit_in_with_ports,proto,
-							ipA.len, ipA.s, intportA,
-							ipB.len, ipB.s, intportB, options);
-				}
-			}else{
-	 			flow_data2.len=snprintf(flow_data2.s, len2, permit_in_without_ports,proto,
-					ipA.len, ipA.s, ipB.len, ipB.s, options);
-			}
-			flow_data2.len = strlen(flow_data2.s);
-			LOG(L_DBG, "DBG:"M_NAME":PCC_create_media_component: second flow is %.*s\n", flow_data2.len, flow_data2.s);
- 			flow_description2=cdpb.AAACreateAVP(AVP_IMS_Flow_Description,
- 											AAA_AVP_FLAG_MANDATORY|AAA_AVP_FLAG_VENDOR_SPECIFIC,
- 											IMS_vendor_id_3GPP, flow_data2.s, flow_data2.len,
- 											AVP_DUPLICATE_DATA);
-			cdpb.AAAAddAVPToList(&list,flow_description2);
-		}
-		
-		
- 		
- 		
  		if (atributes==3)
 		{
 			set_4bytes(x,AVP_EPC_Flow_Usage_Rtcp);
