@@ -639,7 +639,6 @@ int create_stop_acr_rf_info(str callid, str from_uri, str to_uri, int dir, Rf_AC
 
 	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
 		goto error;
-
 	if(!(time_stamps = new_time_stamps(&req_timestamp, NULL,
 						&reply_timestamp, NULL)))
 		goto error;
@@ -667,6 +666,7 @@ int create_stop_acr_rf_info(str callid, str from_uri, str to_uri, int dir, Rf_AC
 
 	*rf_data = gen_rf_data;
 
+	return 1;
 out_of_memory:
 	LOG(L_ERR, "create_stop_acr_rf_info: out of memory\n");
 error:
@@ -691,7 +691,9 @@ int Rf_send_stop_record(str call_id, int dir, str from_uri, str to_uri){
 	AAASession * auth = 0;
 	Rf_ACR_t * rf_data = 0;
 	
-	LOG(L_DBG, "trying to create and send stop record acr for callid %.*s and dir %i\n", call_id.len, call_id.s, dir);
+	//LOG(L_DBG, "trying to create and send stop record acr for callid %.*s and dir %i, "
+	//		" from uri %.*s and to uri %.*s\n", call_id.len, call_id.s, dir,
+	//		from_uri.len, from_uri.s, to_uri.len, to_uri.s);
 
 	if(!create_stop_acr_rf_info(call_id, from_uri, to_uri, dir, &rf_data))
 		goto error;
