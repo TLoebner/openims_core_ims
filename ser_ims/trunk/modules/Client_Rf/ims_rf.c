@@ -607,6 +607,120 @@ error:
 	return CSCF_RETURN_ERROR;
 }
 
+static str BYE_method={"BYE",3};
+int create_stop_acr_rf_info(str callid, str from_uri, str to_uri, int dir, Rf_ACR_t ** rf_data){
+
+	Rf_ACR_t * gen_rf_data=0;
+	str user_name ={0,0}, sip_method = {0,0}, event = {0,0}; 
+	uint32_t expires = 0;
+	
+	event_type_t * event_type = 0;
+	ims_information_t * ims_info = 0;
+	time_stamps_t * time_stamps = 0;
+	time_t req_timestamp=0, reply_timestamp=0;
+	int32_t acct_record_type;
+	uint32_t acct_record_number;
+	subscription_id_t subscr;
+	
+	acct_record_type = AAA_ACCT_STOP;
+	sip_method = BYE_method;
+	expires =0;
+
+	if(!get_subseq_acct_record_nb(callid, acct_record_type, &acct_record_number, dir, expires)){
+		LOG(L_ERR, "ERR:"M_NAME":create_stop_acr_rf_info: could not retrieve "
+			"accounting record number for session id %.*s, maybe already ended and this is a retransmission\n", 
+			callid.len, callid.s);
+		goto error;
+	}
+
+	user_name = from_uri;
+	
+	req_timestamp = reply_timestamp = time(NULL);
+
+	if(!(event_type = new_event_type(&sip_method, &event, &expires)))
+		goto error;
+
+	if(!(time_stamps = new_time_stamps(&req_timestamp, NULL,
+						&reply_timestamp, NULL)))
+		goto error;
+
+	if(!(ims_info = new_ims_information(event_type,
+			time_stamps, &callid, &callid,
+			&from_uri, &to_uri,
+			NULL, NULL, NULL,dir)))
+		goto error;
+
+	event_type = 0;
+	time_stamps = 0;
+
+	subscr.type = Subscription_Type_IMPU;
+	subscr.id.s = from_uri.s;
+	subscr.id.len = from_uri.len;
+
+	gen_rf_data = new_Rf_ACR(acct_record_type, acct_record_number,
+			&user_name, ims_info, NULL, &subscr);
+	if(!gen_rf_data) {
+		LOG(L_ERR,"ERR:"M_NAME":create_stop_acr_rf_info: no memory left for generic\n");
+		goto out_of_memory;
+	}
+	ims_info = 0;
+
+	*rf_data = gen_rf_data;
+
+out_of_memory:
+	LOG(L_ERR, "create_stop_acr_rf_info: out of memory\n");
+error:
+	time_stamps_free(time_stamps);
+	event_type_free(event_type);
+	ims_information_free(ims_info);
+	Rf_free_ACR(gen_rf_data);
+	return 0;
+}
+
+
+
+/**
+ * Send an ACR to the CDF based on the SIP message (request or reply)
+ * @param msg - SIP message
+ * @param str1 - direction
+ * @param str2 - 0 : initial or 1: subsequent
+ * @returns #CSCF_RETURN_TRUE if OK, #CSCF_RETURN_ERROR on error
+ */
+int Rf_send_stop_record(str call_id, int dir, str from_uri, str to_uri){
+	
+	AAASession * auth = 0;
+	Rf_ACR_t * rf_data = 0;
+	
+	LOG(L_DBG, "trying to create and send stop record acr for callid %.*s and dir %i\n", call_id.len, call_id.s, dir);
+
+	if(!create_stop_acr_rf_info(call_id, from_uri, to_uri, dir, &rf_data))
+		goto error;
+	
+	if (!rf_data)
+		return CSCF_RETURN_TRUE;
+
+	if(!(auth = create_rf_session(rf_data)))
+		goto error;
+
+	if(!AAASendACR(auth, rf_data))
+		goto error;
+	
+	//cavpb->cdp->AAAFreeMessage(&acr);
+	cavpb->cdp->AAADropSession(auth);
+	
+	LOG(L_DBG, "Rf_Send_ACR:"M_NAME": request was created and sent\n");
+	Rf_free_ACR(rf_data);
+
+	return CSCF_RETURN_TRUE;
+error:
+	Rf_free_ACR(rf_data);
+	if(auth){
+		cavpb->cdp->AAASessionsUnlock(auth->hash);
+		cavpb->cdp->AAADropSession(auth);
+	}
+
+	return CSCF_RETURN_ERROR;
+}
 
 
 #endif /*OPEN_IMS_CORE*/

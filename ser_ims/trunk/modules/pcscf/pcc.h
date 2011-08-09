@@ -84,6 +84,7 @@ int create_gg_socket();
 void close_gg_socket();
 int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
 void terminate_pcc_session(str session_id);
+void pcc_auth_clean_dlg_safe(p_dialog *dlg);
 
 
 AAAMessage* PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contact_t *aor, str * pcc_session_id, int is_shm);
@@ -94,6 +95,7 @@ int PCC_STA(AAAMessage *aaa, unsigned int *rc);
 
 
 AAAMessage* PCCRequestHandler(AAAMessage *request,void *param);
+
 
 
 #endif /*__PCC_H_*/

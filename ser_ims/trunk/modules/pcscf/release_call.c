@@ -100,6 +100,9 @@ int release_call_confirmed(p_dialog *d, int reason_code, str reason_text)
 	str hdrs={0,0};	
 	char buf[256];
 	
+	if(!d)
+		return 0;
+
 	LOG(L_INFO,"DBG:"M_NAME":release_call_confirmed(): Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
 	
@@ -266,9 +269,12 @@ int release_call_previous(p_dialog *d,enum release_call_situation situation,int 
 	str firstcseq;	
 	char buf[256];
 	
+	if(!d)
+		return 0;
+
 	LOG(L_INFO,"DBG:"M_NAME":release_call_previous(): Releasing call <%.*s> DIR[%d].\n",
 		d->call_id.len,d->call_id.s,d->direction);
-	
+
 	r.len = snprintf(buf,256,"%.*s%d%.*s%.*s%.*s",
 		reason_hdr_s.len,reason_hdr_s.s,
 		reason_code,

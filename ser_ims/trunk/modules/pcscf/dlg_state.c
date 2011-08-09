@@ -58,6 +58,7 @@
 
 #include "../../mem/shm_mem.h"
 #include "../sl/sl_funcs.h"
+#include "../Client_Rf/client_rf_load.h"
 
 #ifdef SER_MOD_INTERFACE
 	#include "../../modules_s/sl/sl_funcs.h"
@@ -70,6 +71,8 @@
 #include "ims_pm.h"
 #include "pcc.h"
 #include "em_numbers.h"
+#include "pcc.h"
+
 
 int p_dialogs_hash_size;					/**< size of the dialogs hash table 	*/
 p_dialog_hash_slot *p_dialogs=0;			/**< the dialogs hash table				*/
@@ -84,7 +87,8 @@ extern str pcscf_record_route_mt;			/**< Record-route for terminating case 	*/
 extern str pcscf_record_route_mt_uri;		/**< URI for Record-route terminating	*/
 
 extern str pcscf_name_str;					/**< fixed SIP URI of this P-CSCF 		*/
-
+extern int pcscf_use_client_rf;
+extern struct client_rf_binds client_rfb; 
 extern struct tm_binds tmb;
 extern int pcscf_min_se;
 
@@ -531,13 +535,26 @@ str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
  */
 int terminate_p_dialog(p_dialog *d)
 {
+
 	LOG(L_DBG,"terminate_p_dialog(): called for dialog %.*s and direction %u\n",d->call_id.len,d->call_id.s,d->direction);
 	if (!pcscf_dialogs_enable_release) return 0;
 	switch (d->method){
 		case DLG_METHOD_INVITE:
-			if (release_call_p(d,503,reason_terminate_p_dialog_s)==-1){				
+			
+			if (d->pcc_session_id.s){
+				terminate_pcc_session(d->pcc_session_id);
+				pcc_auth_clean_dlg_safe(d);
+			}
+
+			if(pcscf_use_client_rf && d->dialog_s){
+				client_rfb.Rf_send_stop_record(d->call_id, d->direction, 
+						d->dialog_s->loc_uri, d->dialog_s->rem_uri);
+			}
+
+			if (release_call_p(d,503,reason_terminate_p_dialog_s)==0){				
 				del_p_dialog(d);
 			}
+
 			return 1;
 			break;
 		case DLG_METHOD_SUBSCRIBE:

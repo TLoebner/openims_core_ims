@@ -114,6 +114,7 @@ static cmd_export_t client_rf_cmds[]={
 	EXP_FUNC(Rf_add_an_chg_info)
 	EXP_FUNC(Rf_add_ims_chg_info_icid)
 	EXP_FUNC(Rf_add_ims_chg_ps_info)
+	EXP_FUNC(Rf_send_stop_record)
 	{0, 0, 0, 0, 0}
 }; 
 
