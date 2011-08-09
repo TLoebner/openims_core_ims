@@ -57,5 +57,6 @@
 #define CLIENT_RF_IMS_RF_H
 
 int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2);
+int Rf_send_stop_record(str call_id, int dir, str from_uri, str to_uri);
 
 #endif /* CLIENT_RF_IMS_RF_H */
