@@ -535,20 +535,34 @@ str reason_terminate_p_dialog_s={"Session terminated in the P-CSCF",32};
  */
 int terminate_p_dialog(p_dialog *d)
 {
-
+	str from_uri, to_uri;
+	str pcc_session_id = {0,0};
 	LOG(L_DBG,"terminate_p_dialog(): called for dialog %.*s and direction %u\n",d->call_id.len,d->call_id.s,d->direction);
 	if (!pcscf_dialogs_enable_release) return 0;
 	switch (d->method){
 		case DLG_METHOD_INVITE:
 			
 			if (d->pcc_session_id.s){
-				terminate_pcc_session(d->pcc_session_id);
-				pcc_auth_clean_dlg_safe(d);
-			}
 
+				STR_PKG_DUP(pcc_session_id, d->pcc_session_id, "pkg");
+				pcc_auth_clean_dlg_safe(d);
+				terminate_pcc_session(pcc_session_id,0);
+				pkg_free(pcc_session_id.s); 
+				pcc_session_id.s =0;
+				pcc_session_id.len =0;
+			}
+			
 			if(pcscf_use_client_rf && d->dialog_s){
+				from_uri=d->dialog_c->loc_uri;
+				to_uri=d->dialog_c->rem_uri;
+				if(from_uri.s[from_uri.len-1] == '<')	from_uri.len = from_uri.len-1;
+				if(from_uri.s[0] == '<')	{from_uri.s = from_uri.s+1; from_uri.len = from_uri.len-1;}
+				
+				if(to_uri.s[to_uri.len-1] == '<')	to_uri.len = to_uri.len-1;
+				if(to_uri.s[0] == '<')	{to_uri.s = to_uri.s+1; to_uri.len = to_uri.len-1;}
+
 				client_rfb.Rf_send_stop_record(d->call_id, d->direction, 
-						d->dialog_s->loc_uri, d->dialog_s->rem_uri);
+						from_uri, to_uri);
 			}
 
 			if (release_call_p(d,503,reason_terminate_p_dialog_s)==0){				
@@ -565,6 +579,9 @@ int terminate_p_dialog(p_dialog *d)
 			LOG(L_ERR,"ERR:"M_NAME":terminate_p_dialog(): Not implemented yet for method[%d]!\n",d->method);
 			return 0;
 	}
+out_of_memory:
+	LOG(L_ERR, "ERR:"M_NAME":terminate_p_dialog(): not enough pkg memory\n");
+	return 0;
 }
 
 /**
@@ -1490,7 +1507,7 @@ int P_drop_dialog(struct sip_msg* msg, char* str1, char* str2)
 	d_unlock(hash);
 
 	if (pcc_session_id.s){
-		terminate_pcc_session(pcc_session_id);
+		terminate_pcc_session(pcc_session_id, 0);
 		shm_free(pcc_session_id.s);
 	}
 	

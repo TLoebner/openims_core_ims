@@ -83,7 +83,7 @@ typedef struct pcc_authdata {
 int create_gg_socket();
 void close_gg_socket();
 int cscf_get_mobile_side(struct sip_msg *msg, int is_shm);
-void terminate_pcc_session(str session_id);
+void terminate_pcc_session(str session_id, int is_register);
 void pcc_auth_clean_dlg_safe(p_dialog *dlg);
 
 
