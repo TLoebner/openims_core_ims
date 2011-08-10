@@ -566,7 +566,7 @@ int terminate_p_dialog(p_dialog *d)
 			}
 
 			if (release_call_p(d,503,reason_terminate_p_dialog_s)==0){				
-				del_p_dialog(d);
+				//del_p_dialog(d);
 			}
 
 			return 1;
