@@ -121,7 +121,7 @@ pcc_authdata_t* new_pcc_authdata()
 	
 	x = shm_malloc(sizeof(pcc_authdata_t));
 	if (!x){
-		LOG(L_ERR,"ERR:"M_NAME":pcc_authdata_t(): Unable to alloc %d bytes\n",
+		LOG(L_ERR,"ERR:"M_NAME":pcc_authdata_t(): Unable to alloc %lu bytes\n",
 			sizeof(pcc_authdata_t));
 		goto error;
 	}	
@@ -274,11 +274,8 @@ void callback_for_pccsession(int event,void *session)
 						// if its not set, someone has handled this before us so...
 						{
 							// the session is going to be deleted
-							shm_free(dlg->pcc_session_id.s);
-							dlg->pcc_session_id.s=0; 
-							dlg->pcc_session_id.len=0; 
-							if (dlg->state>DLG_STATE_CONFIRMED)
-								release_call_p(dlg,503,reason_terminate_dialog_s);
+							pcc_auth_clean_dlg_safe(dlg);
+							terminate_p_dialog(dlg);
 						}
 						d_unlock(dlg->hash);
 					}
@@ -1088,6 +1085,23 @@ error:
 	return NULL;
 }
 
+int send_STR(AAASession * auth, int is_register){
+
+	AAAMessage *dia_str = NULL;
+	dia_str = PCC_create_STR_auth_session_safe(auth, is_register);
+	if(dia_str){
+		cdpb.AAASessionsUnlock(auth->hash);
+		if (forced_qos_peer.len)
+			cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
+		else 
+			cdpb.AAASendMessage(dia_str,NULL,NULL);
+	
+		LOG(L_INFO, "INFO:"M_NAME":send_STR : STR sent\n");
+		return 1;
+	}
+	return 0;
+}
+
 /**
  * Sends and Session Termination Request
  * @param msg - SIP request  
@@ -1098,7 +1112,6 @@ error:
 AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 {
 	AAASession *auth=0;
-	AAAMessage *dia_str = NULL;
 	p_dialog *dlg=0;
 	str host;
 	int port,transport;
@@ -1136,26 +1149,13 @@ AAAMessage* PCC_STR(struct sip_msg* msg, char *str1, contact_t * aor)
 		} else {	
 			auth=cdpb.AAAGetAuthSession(dlg->pcc_session_id);
 			// done here , so that the callback doesnt call release_call
-			if (dlg->pcc_session_id.s) shm_free(dlg->pcc_session_id.s);		
-			dlg->pcc_session_id.len=0; 
-			dlg->pcc_session_id.s=0; 
+			pcc_auth_clean_dlg_safe(dlg);
 			d_unlock(dlg->hash);	
 		}
 	}
 
-	dia_str = PCC_create_STR_auth_session_safe(auth, is_register);
-	if(dia_str){
+	if(auth && !send_STR(auth,is_register))
 		cdpb.AAASessionsUnlock(auth->hash);
-		auth = 0;
-		if (forced_qos_peer.len)
-			cdpb.AAASendMessageToPeer(dia_str,&forced_qos_peer,NULL,NULL);
-		else 
-			cdpb.AAASendMessage(dia_str,NULL,NULL);
-	
-		LOG(L_INFO, "INFO:"M_NAME":PCC_STR : STR sent\n");
-	}
-	
-	if (auth) cdpb.AAASessionsUnlock(auth->hash);
 
 end:
 	return NULL;
@@ -1228,7 +1228,7 @@ void pcc_data_release_safe(AAASession* session, int * is_register){
 
 		p_dialog * dlg=get_p_dialog(adata->callid,adata->host,adata->port,adata->transport,&adata->direction);
 		pcc_auth_clean_dlg_safe(dlg);
-		release_call_p(dlg,503,reason_terminate_dialog_s);
+		terminate_p_dialog(dlg);
 		d_unlock(dlg->hash);
 	}
 }
@@ -1655,14 +1655,17 @@ AAAMessage* PCCRequestHandler(AAAMessage *request,void *param)
 	return 0;		
 }
 
-void terminate_pcc_session(str session_id)
+void terminate_pcc_session(str session_id, int is_register)
 {
 	AAASession *s=0;
 	s = cdpb.AAAGetAuthSession(session_id);
 	if (s)
 	{
-		LOG(L_DBG,"terminate_pcc_session calling AAATerminateAuthSession\n");
-		cdpb.AAATerminateAuthSession(s);
+		if(!send_STR(s, is_register))
+			cdpb.AAASessionsUnlock(s->hash);
+			
+		//LOG(L_DBG,"terminate_pcc_session calling AAATerminateAuthSession\n");
+		//cdpb.AAATerminateAuthSession(s);
 	}
 }
 
