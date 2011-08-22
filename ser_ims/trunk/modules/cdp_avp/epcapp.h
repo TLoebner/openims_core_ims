@@ -781,8 +781,6 @@ cdp_avp_ptr		(User_Session_Id,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,	
  *	http://tools.ietf.org/html/rfc5778#section-6.2
  */
 
-cdp_avp_ptr		(Service_Selection,										 0,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
-
 cdp_avp_ptr		(QoS_Profile_Name,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 /*
@@ -800,6 +798,30 @@ cdp_avp 		(UE_Locator,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Addres
 cdp_avp_add_ptr	(UE_Locator_Id_Group,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 
 cdp_avp_get 	(UE_Locator_Id_Group,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+/*
+ * 3GPP TS 29.273 EPS AAA
+ *  http://www.3gpp.org/ftp/Specs/html-info/29273.htm
+ */
+
+cdp_avp_add_ptr	(Non_3GPP_User_Data,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Non_3GPP_User_Data,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
+
+cdp_avp			(Non_3GPP_IP_Access,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)	
+
+cdp_avp			(Non_3GPP_IP_Access_APN,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Enumerated,		int32_t)
+
+cdp_avp_ptr		(ANID,									EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
+cdp_avp_add_ptr	(Trace_Info,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
+cdp_avp_get		(Trace_Info,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
+
+/*
+ * 3GPP TS 29.234 
+ *  http://www.3gpp.org/ftp/Specs/html-info/29234.htm
+ */
+
+cdp_avp_ptr		(3GPP_AAA_Server_Name,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		DiameterIdentity,		str)	
 
 
 /*
