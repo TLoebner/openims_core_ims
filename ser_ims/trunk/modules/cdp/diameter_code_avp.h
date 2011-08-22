@@ -142,6 +142,9 @@ typedef enum {
 #define AVP_Login_IPv6_Host				  98	
 	AVP_Framed_IPv6_Pool			  =  100, //RFC4005
 	
+	AVP_MIP6_Feature_Vector			  =  124, //RFC5447
+	AVP_MIP6_Home_Link_Prefix		  =  125, //RFC5447
+	
 	AVP_Host_IP_Address               =  257,
 	AVP_Auth_Application_Id           =  258,
 	AVP_Acct_Application_Id           =  259,	
@@ -182,6 +185,7 @@ typedef enum {
 	AVP_Inband_Security_Id			  =  299,
 	
 	AVP_E2E_Sequence				  =  300,
+	AVP_3GPP_AAA_Server_Name		  =  318, //TS29.234
 	AVP_Accounting_Input_Octets		  =  363, //RFC4005
 	AVP_Accounting_Output_Octets	  =  364, //RFC4005
 	AVP_Accounting_Input_Packets	  =  365, //RFC4005
@@ -273,6 +277,8 @@ typedef enum {
 	AVP_Accounting_Realtime_Required  =  483,
 	AVP_Accounting_Record_Number      =  485,
 	AVP_MIP6_Agent_Info				  =  486, //RFC5447
+	
+	AVP_Service_Selection			  =  493, //RFC5778  
 	
 }AAA_AVPCodeNr;
 

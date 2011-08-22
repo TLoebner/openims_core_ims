@@ -63,7 +63,7 @@
 //this applications are specific to the PCC
 #define EPC_Rx 	16777236
 #define EPC_Gx 	16777238
-#define EPC_Sta 16777250
+#define EPC_STa 16777250
 #define EPC_S6a 16777251
 #define EPC_S6d 16777251
 #define EPC_S13 16777252

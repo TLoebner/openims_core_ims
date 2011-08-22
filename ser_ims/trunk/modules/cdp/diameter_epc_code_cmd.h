@@ -104,6 +104,25 @@
 #define Diameter_NOR		323
 #define Diameter_NOA		323
 
+/* The 3GPP EPS AAA Interfaces */
+/* SWa - non-3GPP untrusted AN <-> AAA Server/Proxy */
+/* SWm - non-3GPP untrusted ePDG <-> AAA Server/Proxy */
+/* STa - non-3GPP trusted AN <-> AAA Server/Proxy */
+/* S6b/H2 - PGW/HA <-> AAA Server/Proxy */
+/* SWd - AAA Server <-> AAA Proxy */
+#define Diameter_DER		268
+#define Diameter_DEA		268
+/* SWx - HSS <-> AAA Server/Proxy */
+#define Diameter_SAR		301
+#define Diameter_SAA		301
+#define Diameter_MAR		303
+#define Diameter_MAA		303
+#define Diameter_RTR		304
+#define Diameter_RTA		304
+#define Diameter_PPR		305
+#define Diameter_PPA		305
+
+
 /* The S13 Interface */
 #define Diameter_ECR		324
 #define Diameter_ECA		324

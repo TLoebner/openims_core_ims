@@ -369,6 +369,14 @@ enum {
 	AVP_EPC_Homogenous_Support_of_IMS_Over_PS_Sessions	= 1493,
 	AVP_EPC_Last_UE_Activity_Time						= 1494,
 
+/** TS 29.273  */	
+	
+	AVP_EPC_Non_3GPP_User_Data							= 1500,
+	AVP_EPC_Non_3GPP_IP_Access							= 1501,
+	AVP_EPC_Non_3GPP_IP_Access_APN						= 1502,
+	AVP_EPC_ANID										= 1504,
+	AVP_EPC_Trace_Info									= 1505,
+	
 /** TS 32.299  */
 	
 	AVP_EPC_Client_Address								= 2018,
