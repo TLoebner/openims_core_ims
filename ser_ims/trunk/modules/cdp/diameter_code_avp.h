@@ -185,7 +185,6 @@ typedef enum {
 	AVP_Inband_Security_Id			  =  299,
 	
 	AVP_E2E_Sequence				  =  300,
-	AVP_3GPP_AAA_Server_Name		  =  318, //TS29.234
 	AVP_Accounting_Input_Octets		  =  363, //RFC4005
 	AVP_Accounting_Output_Octets	  =  364, //RFC4005
 	AVP_Accounting_Input_Packets	  =  365, //RFC4005
