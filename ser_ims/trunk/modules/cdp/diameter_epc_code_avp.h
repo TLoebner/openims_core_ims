@@ -92,11 +92,10 @@ enum {
 
 
 /** 300 to 399 reserved for TS29.234											*/
+	AVP_EPC_3GPP_AAA_Server_Name	  					= 318, //TS29.234
 	
 /** 400 to 499 reserved for TS29.109 */
-	
-	AVP_EPC_Service_Selection							= 493, /**< http://tools.ietf.org/html/rfc5778 */
-	
+		
 /** 500 to 599 reserved for TS29.209											*/
 	AVP_EPC_Abort_Cause									= 500,
 	AVP_EPC_Access_Network_Charging_Address				= 501,
@@ -922,4 +921,15 @@ enum {
 	AVP_EPC_SDP_Type_SDP_Offer				= 0,
 	AVP_EPC_SDP_Type_SDP_Answer				= 1,
 };
+
+enum {
+	AVP_EPC_3GPP_IP_Access_Non_3GPP_Subscription_Allowed	= 0,
+	AVP_EPC_3GPP_IP_Access_Non_3GPP_Subscription_Barred		= 1,
+};
+
+enum {
+	AVP_EPC_3GPP_IP_Access_APN_Non_3GPS_APNS_Enable			= 0,
+	AVP_EPC_3GPP_IP_Access_APN_Non_3GPS_APNS_Disable		= 1,
+};
+
 #endif /*DIAMETER_EPC_H_*/
