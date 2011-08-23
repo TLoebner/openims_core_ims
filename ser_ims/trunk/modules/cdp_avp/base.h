@@ -289,6 +289,13 @@ cdp_avp			(Accounting_Realtime_Required,	0,	AAA_AVP_FLAG_MANDATORY,	Enumerated,	
 cdp_avp_add_ptr	(MIP6_Agent_Info,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
 cdp_avp_get		(MIP6_Agent_Info,				0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
 
+cdp_avp			(MIP_Home_Agent_Address,		0,	AAA_AVP_FLAG_MANDATORY,	Address,			ip_address)
+
+cdp_avp_add_ptr	(MIP_Home_Agent_Host,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST*)
+cdp_avp_get		(MIP_Home_Agent_Host,			0,	AAA_AVP_FLAG_MANDATORY,	Grouped,			AAA_AVP_LIST)
+
+cdp_avp_ptr		(MIP6_Home_Link_Prefix,			0,	AAA_AVP_FLAG_MANDATORY,	OctetString,		str)
+
 cdp_avp			(MIP6_Feature_Vector,			0,	AAA_AVP_FLAG_MANDATORY,	Unsigned64,			uint64_t)
 
 cdp_avp_ptr		(Service_Selection,				0,	AAA_AVP_FLAG_MANDATORY,	UTF8String,			str)
