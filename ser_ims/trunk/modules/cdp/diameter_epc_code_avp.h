@@ -923,13 +923,13 @@ enum {
 };
 
 enum {
-	AVP_EPC_3GPP_IP_Access_Non_3GPP_Subscription_Allowed	= 0,
-	AVP_EPC_3GPP_IP_Access_Non_3GPP_Subscription_Barred		= 1,
+	AVP_EPC_Non_3GPP_IP_Access_Non_3GPP_Subscription_Allowed	= 0,
+	AVP_EPC_Non_3GPP_IP_Access_Non_3GPP_Subscription_Barred		= 1,
 };
 
 enum {
-	AVP_EPC_3GPP_IP_Access_APN_Non_3GPS_APNS_Enable			= 0,
-	AVP_EPC_3GPP_IP_Access_APN_Non_3GPS_APNS_Disable		= 1,
+	AVP_EPC_Non_3GPP_IP_Access_APN_Non_3GPS_APNS_Enable			= 0,
+	AVP_EPC_Non_3GPP_IP_Access_APN_Non_3GPS_APNS_Disable		= 1,
 };
 
 #endif /*DIAMETER_EPC_H_*/
