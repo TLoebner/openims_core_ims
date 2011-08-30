@@ -158,7 +158,7 @@ inline AAA_AVP *cdp_avp_new_Grouped(int avp_code,int avp_flags,int avp_vendorid,
 	}
 	grp = cdp->AAAGroupAVPS(*list);
 	if (!grp.len){
-		LOG(L_ERR,"The AAA_AVP_LIST provided was empty!\n");
+		LOG(L_ERR,"The AAA_AVP_LIST provided was empty! (AVP Code %d VendorId %d)\n",avp_code,avp_vendorid);
 		return 0;
 	}
 	if (list_do==AVP_FREE_DATA)
