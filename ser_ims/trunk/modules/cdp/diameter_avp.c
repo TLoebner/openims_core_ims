@@ -147,7 +147,7 @@ AAA_AVP*  AAACreateAVP(
 	/* first check the params */
 	if( data==0 || length==0) {
 		LOG(L_ERR,"ERROR:AAACreateAVP: NULL value received for"
-			" param data/length !!\n");
+			" param data/length (AVP Code %d, VendorId %d)!!\n",code,vendorId);
 		return 0;
 	}
 
