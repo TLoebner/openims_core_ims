@@ -194,7 +194,7 @@ inline AAA_AVP* cdp_avp_new_Address(int avp_code,int avp_flags,int avp_vendorid,
 			memcpy(x+2,data.ip.v6.s6_addr,16);
 			break;
 		default:
-			LOG(L_ERR,"Unimplemented for ai_family %d!\n",data.ai_family);
+			LOG(L_ERR,"Unimplemented for ai_family %d! (AVP Code %d Vendor-Id %d)\n",data.ai_family,avp_code,avp_vendorid);
 			return 0;
 	}
 	return cdp_avp_new(avp_code,avp_flags,avp_vendorid,s,AVP_DUPLICATE_DATA);
