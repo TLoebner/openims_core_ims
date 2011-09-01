@@ -614,6 +614,8 @@ typedef struct {
 	
 } ims_information_t;
 
+#ifndef PCC_STRUCTS_H_
+
 typedef enum {
 	Subscription_Type_MSISDN	= AVP_EPC_Subscription_Id_Type_End_User_E164,
 	Subscription_Type_IMSI		= AVP_EPC_Subscription_Id_Type_End_User_IMSI,
@@ -651,6 +653,8 @@ do {\
 	(dst)->type = (src)->type;\
 	str_dup((dst)->id,(src)->id,mem);\
 } while(0)
+
+#endif
 
 typedef struct{
 	uint32_t rating_group;

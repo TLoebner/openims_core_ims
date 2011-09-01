@@ -116,11 +116,14 @@ void client_rf_destroy(int rank)
 
 
 
-struct client_rf_binds client_rf_binding={
+struct client_rf_bind_t client_rf_binding={
 	AAASendACR,
 	Rf_add_an_chg_info,
 	Rf_add_ims_chg_info_icid,
 	Rf_add_ims_chg_ps_info,
+	get_Rf_AAA_Session,
+	delete_Rf_AAA_Session,
+	create_Rf_data
 };
 
 
