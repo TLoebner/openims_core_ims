@@ -79,6 +79,24 @@ error:
 	return auth;
 }
 
+str get_Rf_AAA_Session(str id){
+
+	str sessionid = {0,0};
+
+	return sessionid;
+}
+
+void delete_Rf_AAA_Session(str sessionid){
+
+}
+
+Rf_ACR_t * create_Rf_data(str sessionid, int32_t acct_record_type){
+
+	Rf_ACR_t * res = 0;
+	return res;
+}
+
+
 int AAASendACR(AAASession *session, Rf_ACR_t * rf_data){
 
 	AAAMessage * acr = 0;

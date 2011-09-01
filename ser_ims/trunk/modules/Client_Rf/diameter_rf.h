@@ -67,4 +67,9 @@ int AAASendACR(AAASession *session, Rf_ACR_t * rf_data);
 
 void RfChargingResponseHandler(AAAMessage *response,void *param);
 
+str get_Rf_AAA_Session (str id);
+void delete_Rf_AAA_Session (str sessionid);
+Rf_ACR_t* create_Rf_data (str sessionid, int32_t acct_record_type);
+
+
 #endif /* __CLIENT_RF_DIAMETER_RF_H */

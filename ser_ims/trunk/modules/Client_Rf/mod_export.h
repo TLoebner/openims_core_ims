@@ -29,13 +29,19 @@ typedef int (*AAASendAccRequest_f)(AAASession *session, Rf_ACR_t * rf_data);
 typedef int (*Rf_add_an_chg_info_f)(str sip_uri, str an_charg_id);
 typedef int (*Rf_add_ims_chg_info_icid_f)(str callid, int dir, str ims_charg_id);
 typedef int (*Rf_add_ims_chg_ps_info_f) (str call_id, int dir, uint32_t rating_group);
+typedef str (*Rf_get_Rf_AAA_Session_f) (str id);
+typedef void (*Rf_delete_Rf_AAA_Session_f) (str sessionid);
+typedef Rf_ACR_t* (*Rf_create_Rf_data_f) (str sessionid, int32_t acct_record_type);
 
 
-struct client_rf_binds{
+struct client_rf_bind_t{
 	AAASendAccRequest_f	AAASendACR;
 	Rf_add_an_chg_info_f	Rf_add_an_chg_info;
 	Rf_add_ims_chg_info_icid_f	Rf_add_ims_chg_info_icid;
 	Rf_add_ims_chg_ps_info_f	Rf_add_ims_chg_ps_info;
+	Rf_get_Rf_AAA_Session_f		get_Rf_AAA_Session;
+	Rf_delete_Rf_AAA_Session_f	delete_Rf_AAA_Session;
+	Rf_create_Rf_data_f		create_Rf_data;
 };
 
 #endif
