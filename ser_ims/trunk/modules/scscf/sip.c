@@ -3331,7 +3331,12 @@ str cscf_get_icsi(struct sip_msg *req, struct sip_msg *res){
 		if(!header){
 			LOG(L_DBG, "no header %.*s was found in the reply\n",
 					p_asserted_service.len, p_asserted_service.s);
-			
+			header = cscf_get_header(res, p_preferred_service);
+			if(!header){
+				LOG(L_DBG, "no header %.*s was found in the reply\n",
+					p_preferred_service.len, p_preferred_service.s);
+			}else 
+				header_body = header->body;
 		}else
 			header_body = header->body;
 	}
@@ -3342,11 +3347,16 @@ str cscf_get_icsi(struct sip_msg *req, struct sip_msg *res){
 		if(!header){
 			LOG(L_DBG, "no header %.*s was found in the request\n",
 					p_preferred_service.len, p_preferred_service.s);
-			goto end;
-		}
-		header_body = header->body;
+			header = cscf_get_header(req, p_asserted_service);
+			if(!header){
+				LOG(L_DBG, "no header %.*s was found in the request\n",
+					p_asserted_service.len, p_asserted_service.s);
+			}else
+				header_body = header->body;
+		}else
+			header_body = header->body;
 	}
-end:
+
 	return header_body;
 }
 
