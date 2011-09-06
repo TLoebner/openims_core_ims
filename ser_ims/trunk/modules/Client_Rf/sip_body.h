@@ -1,5 +1,5 @@
 /**
- * $Id: sip_body.h 920 2010-03-05 19:07:50Z vingarzan $
+ * $Id$
  *  
  * Copyright (C) 2004-2009 FhG Fokus
  *
