@@ -559,7 +559,6 @@ error:
  */
 int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	
-	AAASession * auth = 0;
 	Rf_ACR_t * rf_data = 0;
 	int dir =0;
 	
@@ -678,7 +677,6 @@ error:
  */
 int Rf_send_stop_record(str call_id, int dir, str from_uri, str to_uri){
 	
-	AAASession * auth = 0;
 	Rf_ACR_t * rf_data = 0;
 	
 	//LOG(L_DBG, "trying to create and send stop record acr for callid %.*s and dir %i, "
@@ -691,14 +689,8 @@ int Rf_send_stop_record(str call_id, int dir, str from_uri, str to_uri){
 	if (!rf_data)
 		return CSCF_RETURN_TRUE;
 
-	if(!(auth = create_rf_session(rf_data)))
+	if(!AAASendACR(NULL, rf_data))
 		goto error;
-
-	if(!AAASendACR(auth, rf_data))
-		goto error;
-	
-	//cavpb->cdp->AAAFreeMessage(&acr);
-	cavpb->cdp->AAADropSession(auth);
 	
 	LOG(L_DBG, "Rf_Send_ACR:"M_NAME": request was created and sent\n");
 	Rf_free_ACR(rf_data);
@@ -706,10 +698,6 @@ int Rf_send_stop_record(str call_id, int dir, str from_uri, str to_uri){
 	return CSCF_RETURN_TRUE;
 error:
 	Rf_free_ACR(rf_data);
-	if(auth){
-		cavpb->cdp->AAASessionsUnlock(auth->hash);
-		cavpb->cdp->AAADropSession(auth);
-	}
 
 	return CSCF_RETURN_ERROR;
 }
