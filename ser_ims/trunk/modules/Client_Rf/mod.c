@@ -175,25 +175,20 @@ int fix_parameters()
 	cfg.destination_host.s = rf_destination_host_s;
 	cfg.destination_host.len = strlen(rf_destination_host_s);
 
-
-	cfg.service_context_id = shm_malloc(sizeof(str));
-	if(!cfg.service_context_id){
-		LOG(L_ERR, "ERR:"M_NAME":fix_parameters:not enough shm memory\n");
-		return 0;
-	}
-	cfg.service_context_id->len = strlen(rf_service_context_id_ext_s) + strlen(rf_service_context_id_mnc_s) +
+	cfg.service_context_id.len = strlen(rf_service_context_id_ext_s) + strlen(rf_service_context_id_mnc_s) +
 			strlen(rf_service_context_id_mcc_s) + strlen(rf_service_context_id_release_s) +
 			strlen(rf_service_context_id_root_s)+5;
-	cfg.service_context_id->s = pkg_malloc(cfg.service_context_id->len*sizeof(char));
-	if(!cfg.service_context_id->s){
+	cfg.service_context_id.s = pkg_malloc(cfg.service_context_id.len*sizeof(char));
+	if(!cfg.service_context_id.s){
+		cfg.service_context_id.len = 0;
 		LOG(L_ERR, "ERR:"M_NAME":fix_parameters: not enough memory!\n");
 		return 0;
 	}
-	cfg.service_context_id->len = sprintf(cfg.service_context_id->s, "%s.%s.%s.%s.%s",
+	cfg.service_context_id.len = sprintf(cfg.service_context_id.s, "%s.%s.%s.%s.%s",
 			rf_service_context_id_ext_s, rf_service_context_id_mnc_s, 
 			rf_service_context_id_mcc_s, rf_service_context_id_release_s,
 			rf_service_context_id_root_s);
-	if(cfg.service_context_id->len <0){
+	if(cfg.service_context_id.len <0){
 		LOG(L_ERR, "ERR:"M_NAME":fix_parameters: error while creating service_context_id\n");
 		return 0;
 	}
