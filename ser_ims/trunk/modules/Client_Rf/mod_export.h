@@ -25,7 +25,7 @@
 #include "../cdp/session.h"
 #include "Rf_data.h"
 
-typedef int (*AAASendAccRequest_f)(AAASession *session, Rf_ACR_t * rf_data);
+typedef int (*AAASendAccRequest_f)(str *session_id, Rf_ACR_t * rf_data);
 typedef int (*Rf_add_an_chg_info_f)(str sip_uri, str an_charg_id);
 typedef int (*Rf_add_ims_chg_info_icid_f)(str callid, int dir, str ims_charg_id);
 typedef int (*Rf_add_ims_chg_ps_info_f) (str call_id, int dir, uint32_t rating_group);

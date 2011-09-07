@@ -584,14 +584,8 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	if (!rf_data)
 		return CSCF_RETURN_TRUE;
 
-	if(!(auth = create_rf_session(rf_data)))
+	if(!AAASendACR(NULL, rf_data))
 		goto error;
-
-	if(!AAASendACR(auth, rf_data))
-		goto error;
-	
-	//cavpb->cdp->AAAFreeMessage(&acr);
-	cavpb->cdp->AAADropSession(auth);
 	
 	LOG(L_DBG, "Rf_Send_ACR:"M_NAME": request was created and sent\n");
 	Rf_free_ACR(rf_data);
@@ -599,10 +593,6 @@ int Rf_Send_ACR(struct sip_msg *msg,char *str1, char *str2){
 	return CSCF_RETURN_TRUE;
 error:
 	Rf_free_ACR(rf_data);
-	if(auth){
-		cavpb->cdp->AAASessionsUnlock(auth->hash);
-		cavpb->cdp->AAADropSession(auth);
-	}
 
 	return CSCF_RETURN_ERROR;
 }

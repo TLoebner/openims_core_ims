@@ -97,17 +97,25 @@ Rf_ACR_t * create_Rf_data(str sessionid, int32_t acct_record_type){
 }
 
 
-int AAASendACR(AAASession *session, Rf_ACR_t * rf_data){
+int AAASendACR(str * session_id, Rf_ACR_t * rf_data){
 
 	AAAMessage * acr = 0;
 	AAASession * auth = NULL;
 
-	if(!session){
+	if(!session_id){
 		auth = create_rf_session(rf_data);
 		if(!auth)
 			return 0;
-	}else
-		auth = session;
+	}else{
+	
+		if(!session_id->s && !session_id->len){
+			auth = cavpb->cdp->AAAGetAuthSession(*session_id);
+			if (!auth) {
+				LOG(L_ERR,"ERR:"M_NAME":no auth session found\n");
+				return 0;
+			}
+		}else return 0;
+	}
 	
 	if(!(acr = Rf_new_acr(auth, rf_data)))
                 goto error;
@@ -115,7 +123,7 @@ int AAASendACR(AAASession *session, Rf_ACR_t * rf_data){
 	cavpb->cdp->AAASessionsUnlock(auth->hash);
         cavpb->cdp->AAASendMessageToPeer(acr, &cfg.destination_host, 0,0);
 
-	if(!session)
+	if(!session_id)
 		cavpb->cdp->AAADropSession(auth);
 
 	return 1;
