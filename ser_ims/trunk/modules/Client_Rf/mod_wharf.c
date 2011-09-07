@@ -112,6 +112,9 @@ int client_rf_child_init(int rank)
 void client_rf_destroy(int rank)
 {
 	LOG(L_INFO," ... Client_Rf destroy\n");
+	if (rank==WHARF_PROCESS_ATTENDANT){
+		client_rf_free_config();
+	}
 }
 
 

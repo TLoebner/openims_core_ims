@@ -411,8 +411,8 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 		str_dup_ptr_ptr(x->user_name, user_name, pkg);
 	}
 	
-	if(cfg.service_context_id && cfg.service_context_id->s)
-		str_dup_ptr(x->service_context_id, *(cfg.service_context_id), pkg);
+	if(cfg.service_context_id.len && cfg.service_context_id.s)
+		str_dup_ptr(x->service_context_id, cfg.service_context_id, pkg);
 
 	if(ims_info)	
 		if(!(service_info = new_service_information(ims_info, ps_info, subscription)))

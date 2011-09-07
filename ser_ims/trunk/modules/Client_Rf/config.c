@@ -76,11 +76,38 @@ int client_rf_parse_config(str config)
 			/* Rf */
 			if (strcasecmp((char*)i->name,"Rf")==0){
 				
-				if (!xml_get_prop_as_int(i,"node_role",&l)||l<0 || l>10){
+				if (!xml_get_prop_as_int(i,"node_func",&l)||l<0 || l>10){
 					LOG(L_ERR,"node_role value between 0 and 10\n");
 					goto error;
 				}else
 					cfg.node_func = (int)l;				
+			
+
+				xc = xmlGetProp(i,(xmlChar*)"origin_host");
+				if (xc){	
+					char_dup_str(cfg.origin_host,xc,shm);
+					xmlFree(xc);
+				}
+				xc = xmlGetProp(i,(xmlChar*)"origin_realm");
+				if (xc){	
+					char_dup_str(cfg.origin_realm,xc,shm);
+					xmlFree(xc);
+				}			
+				xc = xmlGetProp(i,(xmlChar*)"destination_host");
+				if (xc){	
+					char_dup_str(cfg.destination_host,xc,shm);
+					xmlFree(xc);
+				}	
+				xc = xmlGetProp(i,(xmlChar*)"destination_realm");
+				if (xc){	
+					char_dup_str(cfg.origin_host,xc,shm);
+					xmlFree(xc);
+				}
+				xc = xmlGetProp(i,(xmlChar*)"service_context_id");
+				if (xc){	
+					char_dup_str(cfg.service_context_id,xc,shm);
+					xmlFree(xc);
+				}		
 			}
 		}
 	
@@ -88,11 +115,20 @@ int client_rf_parse_config(str config)
 	if (dtd) xml_free_dtd(dtd);
 	return 1;
 error:
+out_of_memory:
 	if (xc) xmlFree(xc);
 	if (doc) xml_free(doc);
 	if (dtd) xml_free_dtd(dtd);
 	return 0;
 	
+}
+
+void client_rf_free_config(){
+
+	str_free(cfg.origin_host, shm);
+	str_free(cfg.origin_realm, shm);
+	str_free(cfg.destination_host, shm);
+	str_free(cfg.destination_realm, shm);
 }
 
 #endif /* WHARF */

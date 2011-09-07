@@ -64,7 +64,7 @@ typedef struct {
 	str origin_realm;
 	str destination_realm;
 	str destination_host;
-	str * service_context_id;
+	str service_context_id;
 	/* Node functionality:
 	 *  S-CSCF: 0, P-CSCF: 1, I-CSCF: 2, MRFC: 3, MGCF: 4, BGCF: 5, 
 	 *  AS: 6, IBCF: 7, S-GW: 8, P-GW: 9, HSGW: 10 */
@@ -80,11 +80,17 @@ typedef struct {
 <!ELEMENT Rf (#PCDATA)>\
 <!ATTLIST Rf\
 	node_func			CDATA	#REQUIRED\
+	origin_host			CDATA	#REQUIRED\
+	origin_realm			CDATA	#REQUIRED\
+	destination_host		CDATA	#REQUIRED\
+	destination_realm		CDATA	#REQUIRED\
+	service_context_id		CDATA	#REQUIRED\
 >\
 \
 ";
 
 int client_rf_parse_config(str config);
+void client_rf_free_config();
 
 #endif /* WHARF*/
 
