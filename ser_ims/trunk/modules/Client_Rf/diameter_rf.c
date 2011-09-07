@@ -79,14 +79,14 @@ error:
 	return auth;
 }
 
-str get_Rf_AAA_Session(str id){
+str get_AAA_Session(str id){
 
 	str sessionid = {0,0};
 
 	return sessionid;
 }
 
-void delete_Rf_AAA_Session(str sessionid){
+void decr_ref_cnt_AAA_Session(str sessionid){
 
 }
 
