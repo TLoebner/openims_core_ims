@@ -70,6 +70,6 @@ void RfChargingResponseHandler(AAAMessage *response,void *param);
 str get_AAA_Session (str id);
 void decr_ref_cnt_AAA_Session (str sessionid);
 Rf_ACR_t* create_Rf_data (str sessionid, int32_t acct_record_type);
-
+void free_Rf_data(Rf_ACR_t * x);
 
 #endif /* __CLIENT_RF_DIAMETER_RF_H */
