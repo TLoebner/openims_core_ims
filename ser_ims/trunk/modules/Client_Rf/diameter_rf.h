@@ -61,14 +61,10 @@
 
 #include "Rf_data.h"
 
-AAASession * create_rf_session(Rf_ACR_t * rf_data); 
-
 int AAASendACR(str *session_id, Rf_ACR_t * rf_data);
 
 void RfChargingResponseHandler(AAAMessage *response,void *param);
 
-str get_AAA_Session (str id);
-void decr_ref_cnt_AAA_Session (str sessionid);
 Rf_ACR_t* create_Rf_data (str sessionid, int32_t acct_record_type);
 void free_Rf_data(Rf_ACR_t * x);
 

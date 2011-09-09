@@ -35,6 +35,7 @@
 #include "diameter_rf.h"
 #include "config.h"
 #include "charging.h"
+#include "rf_session.h"
 
 cdp_avp_bind_t *cavpb=0;				/**< Structure with pointers to cdp_avp funcs*/
 client_rf_cfg cfg;
@@ -82,6 +83,10 @@ int client_rf_init(str config_data)
 		return 0;
 	}
 
+	if(!init_rf_session_hash()){
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -114,6 +119,7 @@ void client_rf_destroy(int rank)
 	LOG(L_INFO," ... Client_Rf destroy\n");
 	if (rank==WHARF_PROCESS_ATTENDANT){
 		client_rf_free_config();
+		destroy_rf_session_hash();
 	}
 }
 

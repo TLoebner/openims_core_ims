@@ -57,6 +57,7 @@
 #include "config.h"
 #include "diameter_rf.h"
 #include "acr.h"
+#include "rf_session.h"
 
 #ifdef WHARF
 #define M_NAME "Client_Rf"
@@ -64,31 +65,6 @@
 
 extern cdp_avp_bind_t *cavpb;
 extern client_rf_cfg cfg;
-
-AAASession * create_rf_session(Rf_ACR_t * rf_data){
-
-	AAASession * auth = NULL;
-	
-	LOG(L_INFO,"INFO:"M_NAME":create_rf_session: creating Rf Session\n");
-        auth = cavpb->cdp->AAACreateSession(NULL);
-        if (!auth) {
-                LOG(L_ERR,"ERR:"M_NAME":create_rf_session: unable to create the Rf Session\n");
-                goto error;
-        }
-error:
-	return auth;
-}
-
-str get_AAA_Session(str id){
-
-	str sessionid = {0,0};
-
-	return sessionid;
-}
-
-void decr_ref_cnt_AAA_Session(str sessionid){
-
-}
 
 Rf_ACR_t * create_Rf_data(str sessionid, int32_t acct_record_type){
 
@@ -107,7 +83,7 @@ int AAASendACR(str * session_id, Rf_ACR_t * rf_data){
 	AAASession * auth = NULL;
 
 	if(!session_id){
-		auth = create_rf_session(rf_data);
+		auth = create_rf_session();
 		if(!auth)
 			return 0;
 	}else{
