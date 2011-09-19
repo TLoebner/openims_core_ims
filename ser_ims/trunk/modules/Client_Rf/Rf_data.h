@@ -278,6 +278,50 @@ do {\
 
 #endif /* WHARF */
 
+#ifdef WHARF
+#include "../PCC_common/subscription_id.h"
+#else
+
+typedef enum {
+	Subscription_Type_MSISDN	= AVP_EPC_Subscription_Id_Type_End_User_E164,
+	Subscription_Type_IMSI		= AVP_EPC_Subscription_Id_Type_End_User_IMSI,
+	Subscription_Type_IMPU		= AVP_EPC_Subscription_Id_Type_End_User_SIP_URI,
+	Subscription_Type_NAI		= AVP_EPC_Subscription_Id_Type_End_User_NAI,
+	Subscription_Type_IMPI 		= AVP_EPC_Subscription_Id_Type_End_User_Private,
+} subscription_id_type_e;
+
+typedef struct _subscription_id_t {
+	int32_t type;
+	str id;
+} subscription_id_t;
+
+typedef struct _subscription_id_list_t_slot {
+	subscription_id_t s;
+	struct _subscription_id_list_t_slot *next,*prev;
+} subscription_id_list_element_t;
+
+typedef struct {
+	subscription_id_list_element_t *head,*tail;
+} subscription_id_list_t;
+
+
+#define subscription_id_list_t_free(x,mem) \
+do{\
+	if (x) {\
+		str_free((x)->s.id,mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+#define subscription_id_list_t_copy(dst,src,mem) \
+do {\
+	(dst)->type = (src)->type;\
+	str_dup((dst)->id,(src)->id,mem);\
+} while(0)
+
+#endif
+
 typedef struct {
 	str *sip_method;
 	str *event;
@@ -614,47 +658,7 @@ typedef struct {
 	
 } ims_information_t;
 
-#ifndef PCC_STRUCTS_H_
 
-typedef enum {
-	Subscription_Type_MSISDN	= AVP_EPC_Subscription_Id_Type_End_User_E164,
-	Subscription_Type_IMSI		= AVP_EPC_Subscription_Id_Type_End_User_IMSI,
-	Subscription_Type_IMPU		= AVP_EPC_Subscription_Id_Type_End_User_SIP_URI,
-	Subscription_Type_NAI		= AVP_EPC_Subscription_Id_Type_End_User_NAI,	
-	Subscription_Type_IMPI 		= AVP_EPC_Subscription_Id_Type_End_User_Private,	
-} subscription_id_type_e;
-
-typedef struct _subscription_id_t {
-	int32_t type;
-	str id;
-} subscription_id_t;
-
-typedef struct _subscription_id_list_t_slot {
-	subscription_id_t s;
-	struct _subscription_id_list_t_slot *next,*prev;
-} subscription_id_list_element_t;
-
-typedef struct {
-	subscription_id_list_element_t *head,*tail;
-} subscription_id_list_t;
-
-
-#define subscription_id_list_t_free(x,mem) \
-do{\
-	if (x) {\
-		str_free((x)->s.id,mem);\
-		mem##_free(x);\
-		(x) = 0;\
-	}\
-}while(0)
-
-#define subscription_id_list_t_copy(dst,src,mem) \
-do {\
-	(dst)->type = (src)->type;\
-	str_dup((dst)->id,(src)->id,mem);\
-} while(0)
-
-#endif
 
 typedef struct{
 	uint32_t rating_group;
