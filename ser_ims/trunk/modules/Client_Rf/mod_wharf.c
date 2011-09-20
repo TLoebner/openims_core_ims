@@ -132,6 +132,7 @@ struct client_rf_bind_t client_rf_binding={
 	Rf_add_ims_chg_ps_info,
 	get_AAA_Session,
 	decr_ref_cnt_AAA_Session,
+	incr_ref_cnt_AAA_Session,
 	create_Rf_data,
 	free_Rf_data
 };

@@ -41,10 +41,15 @@ void destroy_rf_session_hash();
 AAASession * create_rf_session();
 
 str get_AAA_Session (str id);
-void decr_ref_cnt_AAA_Session (str sessionid);
+void decr_ref_cnt_AAA_Session (str id);
+void incr_ref_cnt_AAA_Session(str id);
 
-str get_rf_session(str id);
+str get_rf_session_id(str id);
+rf_session_list_slot_t * get_rf_session_with_lock(str id, int * hash_index);
 int add_rf_session(str id, str session_id);
 void del_rf_session(str id);
+
+void terminate_rf_session_safe(rf_session_list_slot_t * session);
+void del_rf_session_safe(rf_session_list_slot_t * session, int hash_index);
 
 #endif /* RF_SESSION_H_ */
