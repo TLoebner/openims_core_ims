@@ -37,7 +37,7 @@ str get_AAA_Session(str id){
 	str sessionid = {0,0};
 	AAASession * auth = NULL;
 
-	sessionid= get_rf_session(id);
+	sessionid= get_rf_session_id(id);
 	if(!sessionid.len || !sessionid.s){
 		sessionid.len =0; sessionid.s=0;
 		auth = create_rf_session();
@@ -59,8 +59,36 @@ out_of_memory:
 	return sessionid;
 }
 
-void decr_ref_cnt_AAA_Session(str sessionid){
+void decr_ref_cnt_AAA_Session(str id){
 
+	rf_session_list_slot_t * rf_session = 0;
+	int hash_index = 0;
+
+	rf_session = get_rf_session_with_lock(id, &hash_index);
+	if(!rf_session)
+		return;
+	if(rf_session->ref_count==1){
+		/*terminate the session*/
+		terminate_rf_session_safe(rf_session);
+		del_rf_session_safe(rf_session, hash_index);
+	}else
+		rf_session->ref_count = rf_session->ref_count-1;
+
+	lock_release(rf_session_hash[hash_index].lock);
+}
+
+void incr_ref_cnt_AAA_Session(str id){
+
+	rf_session_list_slot_t * rf_session = 0;
+	int hash_index = 0;
+
+	rf_session = get_rf_session_with_lock(id, &hash_index);
+	if(!rf_session)
+		return;
+
+	rf_session->ref_count = rf_session->ref_count+1;
+
+	lock_release(rf_session_hash[hash_index].lock);
 }
 
 int init_rf_session_hash(){
@@ -188,12 +216,37 @@ void del_rf_session(str id){
 	lock_release(rf_session_hash[hash_index].lock);
 }
 
+void terminate_rf_session_safe(rf_session_list_slot_t * session){
+
+	AAASession * auth = NULL;
+
+	if(!session ||!session->session_id.s || !session->session_id.len){
+		return;
+	}
+
+	auth = cavpb->cdp->AAAGetAuthSession(session->session_id);
+	if (!auth) {
+		LOG(L_ERR,"ERR:no auth session found\n");
+		return;
+	}
+	cavpb->cdp->AAASessionsUnlock(auth->hash);
+	cavpb->cdp->AAADropSession(auth);
+}
+
+void del_rf_session_safe(rf_session_list_slot_t * session, int hash_index){
+
+	rf_session_list_slot_t * info = NULL;
+
+	WL_DELETE(rf_session_hash+hash_index, session);
+	WL_FREE(info,rf_session_list_t,shm);
+}
+
 /**
  * Retrieve the session id in pkg, stored at registration time
  * @param id - the hash id of the entry to be searched for
  * @returns session_id associated with the id
  */
-str get_rf_session(str id){
+str get_rf_session_id(str id){
 
 	str res = {0,0};
 
@@ -216,4 +269,26 @@ out_of_memory:
 	LOG(L_ERR, "out of pkg memory while trying to retrieve the an charg id\n");
 	lock_release(rf_session_hash[hash_index].lock);
 	return res;
+}
+
+/**
+ * Retrieve the session
+ * @param id - the hashing id of the entry to be searched for
+ * @returns session_id associated with the id
+ */
+rf_session_list_slot_t * get_rf_session_with_lock(str id, int * hash_index){
+
+	rf_session_list_slot_t * info = NULL;
+
+	*hash_index = rf_session_calc_hash(id);
+
+	lock_get(rf_session_hash[*hash_index].lock);
+			WL_FOREACH(&(rf_session_hash[*hash_index]), info){
+				if(str_equal(info->hash_id, id)){
+					return info;
+				}
+			}
+
+	lock_release(rf_session_hash[*hash_index].lock);
+	return NULL;
 }
