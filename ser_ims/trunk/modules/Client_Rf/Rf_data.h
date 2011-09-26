@@ -280,6 +280,7 @@ do {\
 
 #ifdef WHARF
 #include "../PCC_common/subscription_id.h"
+#include "../PCC_common/reporting_level.h"
 #else
 
 typedef enum {
@@ -319,6 +320,13 @@ do {\
 	(dst)->type = (src)->type;\
 	str_dup((dst)->id,(src)->id,mem);\
 } while(0)
+
+typedef enum {
+	Rep_Level_Service_Identifier		=0,
+	Rep_Level_Rating_Group			=1,
+	Rep_Level_Sponsored_Conectivity		=2,
+
+} reporting_level_e;
 
 #endif
 
@@ -739,13 +747,6 @@ void ps_information_free(ps_information_t *x);
 void service_information_free(service_information_t *x);
 
 
-
-Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
-		str * user_name, ims_information_t * ims_info,
-		ps_information_t * ps_info, subscription_id_t * subscription);
-void Rf_free_ACR(Rf_ACR_t *x);
-//void Rf_free_ACA(Rf_ACA_t *x);
-
 typedef struct _acct_record_info_list_t_slot{
 	str id;
 	uint32_t acct_record_number;
@@ -768,8 +769,66 @@ do{\
 	}\
 }while(0)
 
+typedef struct _ps_report_charging_data_t{
+	subscription_id_t subs;
+	str apn;
+	str session_id;
+	uint32_t acct_record_number;
+
+	reporting_level_e reporting_level;
+	int32_t rating_group;
+	int32_t service_identifier;
+	str af_correlation_info;
+
+	time_t first_usage;
+	time_t last_usage;
+	time_t last_report;
+
+	/*the next information should be reset after sending the charging information*/
+	int32_t upload_octets;		/// Amount of traffic matching this rule that passed through the routing module
+	int32_t download_octets;
+	int32_t upload_packets;		/// Amount of nb of packets matching this rule that passed through the routing module
+	int32_t download_packets;
+} ps_report_charging_data_t;
+
+#define ps_report_charging_data_free(x, mem)\
+	do{\
+		if(x){\
+			str_free((x)->subs.id, mem);\
+			str_free((x)->apn, mem);\
+			str_free((x)->session_id, mem);\
+			str_free((x)->af_correlation_info, mem);\
+		}\
+	}while(0);
+
+#define ps_report_charging_data_copy(dst,src,mem) \
+do {\
+	(dst)->subs.type = (src)->subs.type;\
+	str_dup((dst)->subs.id, (src)->subs.id, mem);\
+	str_dup((dst)->apn, (src)->apn, mem);\
+	str_dup((dst)->session_id, (src)->session_id, mem);\
+	(dst)->acct_record_number = (src)->acct_record_number;\
+	(dst)->reporting_level = (src)->reporting_level;\
+	(dst)->rating_group = (src)->rating_group;\
+	(dst)->service_identifier = (src)->service_identifier;\
+	str_dup((dst)->af_correlation_info, (src)->af_correlation_info, mem);\
+	(dst)->first_usage = (src)->first_usage;\
+	(dst)->last_usage = (src)->last_usage;\
+	(dst)->upload_octets = (src)->upload_octets;\
+	(dst)->download_octets = (src)->download_octets;\
+	(dst)->upload_packets = (src)->upload_packets;\
+	(dst)->download_packets = (src)->download_packets;\
+} while(0)
+
 int init_acct_records();
 void destroy_acct_records();
 int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value, int dir, uint32_t expires);
+
+
+Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
+		str * user_name, ims_information_t * ims_info,
+		ps_information_t * ps_info, subscription_id_t * subscription);
+void Rf_free_ACR(Rf_ACR_t *x);
+//void Rf_free_ACA(Rf_ACA_t *x);
 
 #endif /* __CDF_Rf_data_H */
