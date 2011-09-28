@@ -66,17 +66,6 @@
 extern cdp_avp_bind_t *cavpb;
 extern client_rf_cfg cfg;
 
-Rf_ACR_t * create_Rf_data(str sessionid, int32_t acct_record_type, ps_report_charging_data_t * charging_data){
-
-	Rf_ACR_t * res = 0;
-	return res;
-}
-
-void free_Rf_data(Rf_ACR_t * x){
-
-	Rf_free_ACR(x);
-}
-
 int AAASendACR(str * session_id, Rf_ACR_t * rf_data){
 
 	AAAMessage * acr = 0;

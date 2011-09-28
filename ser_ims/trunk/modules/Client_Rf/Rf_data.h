@@ -227,6 +227,21 @@ do {\
 #define WL_FOREACH(list,el)                                                      \
     for(el=(list)->head;el;el=(el)->next)
 
+#define WL_DUP(dst,src,list_type,mem) \
+do {\
+	WL_NEW(dst,list_type,mem);\
+	list_type##_copy(dst,src,mem);\
+}while(0)
+
+#define WL_DUP_ALL(dst,src,list_type,mem)\
+do {\
+	struct _##list_type##_slot *el1,*el2;\
+	for(el1=(src)->head;el1;el1=(el1)->next){\
+		WL_DUP(el2,el1,list_type,mem);\
+		if (el2) WL_APPEND(dst,el2);\
+	}\
+} while(0)
+
 
 /* List of str */
 #define str_equal(a,b) ((a).len==(b).len && memcmp((a).s,(b).s,(a).len)==0)
@@ -666,16 +681,80 @@ typedef struct {
 	
 } ims_information_t;
 
+typedef struct {
+	uint32_t v;		/**< Retention Policy Value */
+	uint8_t pre_cap;/**< this value is reversed as the AVP_EPC_PreEmption_Capability_Enabled/Disabled which are 0/1. 0 Means enabled. */
+	uint8_t pre_vul;/**< this value is reversed as the AVP_EPC_PreEmption_Vulnerability_Enabled/Disabled which are 0/1. 0 Means enabled. */
+} arp_t;
 
+
+typedef struct {
+	int32_t QCI; 									/**< QoS Class Identifier - 1 to 9 as in the AVP */
+	str bearer_id;									/**< Bearer Identifier */
+	uint32_t max_upload,max_download;				/**< Max Bandwidth */
+	uint32_t guaranteed_upload,guaranteed_download;	/**< Guaranteed Bitrate */
+	uint32_t apn_upload,apn_download; 				/**< APN Aggregate Max Bitrate - all non-GBR bearers for that APN */
+	arp_t arp;
+} qos_info_t;
+
+#define qos_info_t_free(x,mem) \
+do {\
+	str_free((x)->bearer_id,mem);\
+} while(0)
+
+#define qos_info_t_copy(dst,src,mem) \
+do {\
+	(dst)->QCI = (src)->QCI;\
+	str_dup((dst)->bearer_id,(src)->bearer_id,mem);\
+	(dst)->max_upload = (src)->max_upload;\
+	(dst)->max_download = (src)->max_download;\
+	(dst)->guaranteed_upload = (src)->guaranteed_upload;\
+	(dst)->guaranteed_download = (src)->guaranteed_download;\
+	(dst)->apn_upload = (src)->apn_upload;\
+	(dst)->apn_download = (src)->apn_download;\
+	(dst)->arp = (src)->arp;\
+} while(0)
+
+/*TS 32.299 for offline charging*/
+typedef struct _service_data_container_list_t_slot{
+	str af_correlation_info;
+	str charging_rule_base_name;
+	qos_info_t qos;
+
+	time_t first_usage;
+	time_t last_usage;
+
+	int32_t upload_octets;		/// Amount of traffic matching this rule
+	int32_t download_octets;
+	int32_t upload_packets;		/// Amount of nb of packets matching this rule
+	int32_t download_packets;
+
+	int32_t service_identifier;
+
+	uint32_t rating_group;
+	uint32_t local_sequence_number;
+	struct _service_data_container_list_t_slot * next, *prev;
+} service_data_container_t;
 
 typedef struct{
-	uint32_t rating_group;
-} service_data_container_t;
+	service_data_container_t * head, *tail;
+} service_data_container_list_t;
+
+#define service_data_container_list_t_free(x,mem) \
+	do{\
+		if(x){\
+			str_free((x)->af_correlation_info, mem);\
+			str_free((x)->charging_rule_base_name, mem);\
+			qos_info_t_free(&((x)->qos),mem);\
+		}\
+	}while(0);
 
 typedef struct{
 	str * tgpp_charging_id;
 	str * sgsn_address;
-	service_data_container_t * service_data_container;
+	str called_station_id;
+	int32_t * node_type;
+	service_data_container_list_t service_data_container;
 } ps_information_t;
 
 typedef struct {
@@ -820,6 +899,8 @@ do {\
 	(dst)->download_packets = (src)->download_packets;\
 } while(0)
 
+
+
 int init_acct_records();
 void destroy_acct_records();
 int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value, int dir, uint32_t expires);
@@ -829,6 +910,11 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 		str * user_name, ims_information_t * ims_info,
 		ps_information_t * ps_info, subscription_id_t * subscription);
 void Rf_free_ACR(Rf_ACR_t *x);
+
+Rf_ACR_t* create_Rf_data (str sessionid, int32_t acct_record_type,
+		ps_report_charging_data_t * charging_data, qos_info_t *qos);
+void free_Rf_data(Rf_ACR_t * x);
+
 //void Rf_free_ACA(Rf_ACA_t *x);
 
 #endif /* __CDF_Rf_data_H */
