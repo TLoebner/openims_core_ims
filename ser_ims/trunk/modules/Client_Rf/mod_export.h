@@ -33,7 +33,7 @@ typedef str (*Rf_get_AAA_Session_f) (str id);
 typedef void (*Rf_decr_ref_cnt_AAA_Session_f) (str id);
 typedef void (*Rf_incr_ref_cnt_AAA_Session_f) (str id);
 typedef Rf_ACR_t* (*Rf_create_Rf_data_f) (str sessionid, int32_t acct_record_type,
-											ps_report_charging_data_t * charging_data, qos_info_t *qos);
+											ps_report_charging_data_t * charging_data/*, qos_info_t *qos*/);
 typedef void (*Rf_free_Rf_data_f) (Rf_ACR_t *);
 
 

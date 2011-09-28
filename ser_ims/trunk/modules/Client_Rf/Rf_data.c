@@ -545,7 +545,8 @@ void Rf_free_ACA(Rf_ACA_t *x)
 }
 */
 
-service_data_container_t * create_service_data_container(str id, ps_report_charging_data_t * charging_data, qos_info_t * qos){
+service_data_container_t * create_service_data_container(str id,
+		ps_report_charging_data_t * charging_data/*,qos_info_t * qos*/){
 
 	service_data_container_t * service_data_container = 0;
 
@@ -573,8 +574,8 @@ out_of_memory:
 }
 
 Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
-							ps_report_charging_data_t * charging_data,
-							qos_info_t *qos){
+							ps_report_charging_data_t * charging_data/*,
+							qos_info_t *qos*/){
 
 	Rf_ACR_t * res = 0;
 	subscription_id_list_element_t * subscr_el=0;
@@ -617,7 +618,7 @@ Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
 	*ps_info->node_type = cfg.node_func;
 	str_dup(ps_info->called_station_id, charging_data->apn, pkg);
 
-	service_data_container = create_service_data_container(id, charging_data, qos);
+	service_data_container = create_service_data_container(id, charging_data/*, qos*/);
 	if(!service_data_container)
 		goto error;
 	WL_APPEND(&(ps_info->service_data_container), service_data_container);
