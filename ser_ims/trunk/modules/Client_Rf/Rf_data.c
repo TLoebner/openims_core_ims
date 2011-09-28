@@ -351,7 +351,7 @@ ps_information_t * new_ps_information(str an_charg_id, service_data_container_t 
 	if(an_charg_id.len && an_charg_id.s){
 		str_dup_ptr(x->tgpp_charging_id, an_charg_id, pkg);
         }
-	x->service_data_container = serv_data_container;
+	WL_APPEND(&(x->service_data_container),serv_data_container);
 
 	return x;
 
@@ -493,7 +493,7 @@ void ps_information_free(ps_information_t * x){
 
 	if(!x)
 		return;
-	service_data_container_free(x->service_data_container);
+	WL_FREE_ALL(&(x->service_data_container), service_data_container_list_t, pkg);
 	str_free_ptr(x->tgpp_charging_id, pkg);
 	str_free_ptr(x->sgsn_address, pkg);
 	mem_free(x, pkg);
@@ -544,5 +544,97 @@ void Rf_free_ACA(Rf_ACA_t *x)
 	mem_free(x,pkg);
 }
 */
+
+service_data_container_t * create_service_data_container(str id, ps_report_charging_data_t * charging_data, qos_info_t * qos){
+
+	service_data_container_t * service_data_container = 0;
+
+	WL_NEW(service_data_container, service_data_container_list_t, pkg);
+
+	service_data_container->rating_group = charging_data->rating_group;
+	str_dup(service_data_container->af_correlation_info, charging_data->af_correlation_info, pkg);
+	str_dup(service_data_container->charging_rule_base_name, id, pkg);
+
+	service_data_container->first_usage=charging_data->first_usage;
+	service_data_container->last_usage=charging_data->last_usage;
+
+	service_data_container->upload_octets=charging_data->upload_octets;
+	service_data_container->download_octets=charging_data->download_octets;
+	service_data_container->upload_packets=charging_data->upload_packets;
+	service_data_container->download_packets=charging_data->download_packets;
+
+	service_data_container->service_identifier=charging_data->service_identifier;
+
+	return service_data_container;
+out_of_memory:
+	LOG(L_ERR, "could not build a new service data container\n");
+	WL_FREE(service_data_container, service_data_container_list_t, pkg);
+	return NULL;
+}
+
+Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
+							ps_report_charging_data_t * charging_data,
+							qos_info_t *qos){
+
+	Rf_ACR_t * res = 0;
+	subscription_id_list_element_t * subscr_el=0;
+	ps_information_t * ps_info=0;
+	service_data_container_t * service_data_container = 0;
+	uint32_t local_seq_nb = 1;
+
+	if(!charging_data){
+		LOG(L_ERR, "null charging data parameter\n");
+		return NULL;
+	}
+
+	mem_new(res, sizeof(Rf_ACR_t), pkg);
+	str_dup(res->destination_realm, cfg.destination_realm, pkg);
+	str_dup(res->origin_host, cfg.origin_host, pkg);
+	str_dup(res->origin_realm, cfg.origin_realm, pkg);
+	if(cfg.service_context_id.len && cfg.service_context_id.s){
+		mem_new(res->service_context_id, sizeof(str), pkg);
+		str_dup(*(res->service_context_id), cfg.service_context_id, pkg);
+	}
+
+	res->acct_record_type = acct_record_type;
+	res->acct_record_number = charging_data->acct_record_number;
+	mem_new(res->user_name, sizeof(str), pkg);
+	str_dup(*(res->user_name), charging_data->subs.id, pkg);
+
+	mem_new(res->service_information, sizeof(service_information_t), pkg);
+
+	WL_NEW(subscr_el, subscription_id_list_t, pkg);
+	subscription_id_list_t_copy(&(subscr_el->s),&(charging_data->subs),pkg);
+	WL_APPEND(&(res->service_information->subscription_id), subscr_el);
+	subscr_el=0;
+
+	mem_new(res->service_information->ps_information, sizeof(ps_information_t), pkg);
+	ps_info = res->service_information->ps_information;
+	/*str * tgpp_charging_id;
+	 *str * sgsn_address;
+	 */
+	mem_new(ps_info->node_type, sizeof(int32_t), pkg);
+	*ps_info->node_type = cfg.node_func;
+	str_dup(ps_info->called_station_id, charging_data->apn, pkg);
+
+	service_data_container = create_service_data_container(id, charging_data, qos);
+	if(!service_data_container)
+		goto error;
+	WL_APPEND(&(ps_info->service_data_container), service_data_container);
+	service_data_container->local_sequence_number = local_seq_nb;
+
+	return res;
+out_of_memory:
+	LOG(L_ERR, "out of memory, could not build the Rf_ACR_t\n");
+error:
+	if(subscr_el) WL_FREE(subscr_el, subscription_id_list_t, pkg);
+	Rf_free_ACR(res);
+	return NULL;
+}
+
+void free_Rf_data(Rf_ACR_t * x){
+
+	Rf_free_ACR(x);
+}
 
 

@@ -320,6 +320,7 @@ error:
 int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 
 	AAA_AVP_LIST aList = {0,0};
+	service_data_container_t * container = 0;
 
 	if (x->tgpp_charging_id)
 			if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList,*(x->tgpp_charging_id), AVP_DUPLICATE_DATA))
@@ -328,9 +329,10 @@ int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 	if (x->sgsn_address)
 			if (!cavpb->epcapp.add_3GPP_SGSN_Address(&aList,*(x->sgsn_address), AVP_DUPLICATE_DATA))
 				goto error;
-	if (x->service_data_container)
-			if (!Rf_write_service_data_container_avps(&aList, x->service_data_container))
+	WL_FOREACH(&(x->service_data_container), container){
+			if (!Rf_write_service_data_container_avps(&aList, container))
 				goto error;
+	}
 
 	if (!cavpb->epcapp.add_PS_Information(avp_list, &aList, AVP_DONT_FREE_DATA))
 			goto error;
