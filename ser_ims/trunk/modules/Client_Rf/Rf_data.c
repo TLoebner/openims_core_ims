@@ -472,29 +472,26 @@ void ims_information_free(ims_information_t *x)
 	
 	WL_FREE_ALL(&(x->ioi),ioi_list_t,pkg);
 	str_free_ptr(x->icid,pkg);
+	WL_FREE_ALL(&(x->message_body), message_body_list_t, pkg);
+	WL_FREE_ALL(&(x->service_specific_info), service_specific_info_list_t, pkg);
 	WL_FREE_ALL(&(x->sdp_media_component),sdp_media_component_list_t,pkg);
 	WL_FREE_ALL(&(x->sdp_session_description),str_list_t,pkg);
+	WL_FREE_ALL(&(x->early_media_description), early_media_description_list_t, pkg);
 	
 	str_free_ptr(x->service_id,pkg);
-	
-	WL_FREE_ALL(&(x->service_specific_info),service_specific_info_list_t,pkg);
 	
 	mem_free(x->cause_code,pkg);
 	
 	mem_free(x,pkg);
 }
-void service_data_container_free(service_data_container_t * x){
-	if(!x)
-		return;
 
-	mem_free(x,pkg);
-}
 void ps_information_free(ps_information_t * x){
 
 	if(!x)
 		return;
 	WL_FREE_ALL(&(x->service_data_container), service_data_container_list_t, pkg);
 	str_free_ptr(x->tgpp_charging_id, pkg);
+	WL_FREE_ALL(&x->service_data_container, service_data_container_list_t, pkg);
 	mem_free(x, pkg);
 }
 
@@ -518,6 +515,8 @@ void Rf_free_ACR(Rf_ACR_t *x)
 	str_free(x->origin_realm,pkg);
 	str_free(x->destination_realm,pkg);
 	
+	str_free(x->session_id, pkg);
+
 	str_free_ptr(x->user_name,pkg);
 	mem_free(x->acct_interim_interval,pkg);
 	mem_free(x->origin_state_id,pkg);
@@ -598,6 +597,8 @@ Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
 		mem_new(res->service_context_id, sizeof(str), pkg);
 		str_dup(*(res->service_context_id), cfg.service_context_id, pkg);
 	}
+
+	str_dup(res->session_id, id, pkg);
 
 	res->acct_record_type = acct_record_type;
 	res->acct_record_number = charging_data->acct_record_number;

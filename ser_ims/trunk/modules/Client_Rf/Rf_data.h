@@ -17,8 +17,8 @@
  * 
  */ 
 
-#ifndef __CDF_Rf_data_H
-#define __CDF_Rf_data_H
+#ifndef __CLIENT_RF_Rf_data_H
+#define __CLIENT_RF_Rf_data_H
 
 #include "../cdp/diameter.h"
 #include "../cdp/diameter_epc.h"
@@ -755,6 +755,9 @@ typedef struct {
 	
 	str *service_id;
 	
+	message_body_list_t message_body;
+	early_media_description_list_t early_media_description;
+
 	service_specific_info_list_t service_specific_info;
 	
 	int32_t *cause_code;
@@ -818,6 +821,8 @@ typedef struct {
 	str origin_realm;
 	str destination_realm;
 	
+	str session_id;
+
 	int32_t acct_record_type;
 	uint32_t acct_record_number;
 	
@@ -964,6 +969,4 @@ Rf_ACR_t* create_Rf_data (str sessionid, int32_t acct_record_type,
 		ps_report_charging_data_t * charging_data, qos_info_t *qos);
 void free_Rf_data(Rf_ACR_t * x);
 
-//void Rf_free_ACA(Rf_ACA_t *x);
-
-#endif /* __CDF_Rf_data_H */
+#endif /* __CLIENT_RF_Rf_data_H */
