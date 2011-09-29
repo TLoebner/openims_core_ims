@@ -495,7 +495,6 @@ void ps_information_free(ps_information_t * x){
 		return;
 	WL_FREE_ALL(&(x->service_data_container), service_data_container_list_t, pkg);
 	str_free_ptr(x->tgpp_charging_id, pkg);
-	str_free_ptr(x->sgsn_address, pkg);
 	mem_free(x, pkg);
 }
 
@@ -546,7 +545,7 @@ void Rf_free_ACA(Rf_ACA_t *x)
 */
 
 service_data_container_t * create_service_data_container(str id,
-		ps_report_charging_data_t * charging_data/*,qos_info_t * qos*/){
+		ps_report_charging_data_t * charging_data,qos_info_t * qos){
 
 	service_data_container_t * service_data_container = 0;
 
@@ -566,6 +565,9 @@ service_data_container_t * create_service_data_container(str id,
 
 	service_data_container->service_identifier=charging_data->service_identifier;
 
+	if(qos)
+		qos_info_t_copy(&(service_data_container->qos),qos,pkg);
+
 	return service_data_container;
 out_of_memory:
 	LOG(L_ERR, "could not build a new service data container\n");
@@ -574,8 +576,8 @@ out_of_memory:
 }
 
 Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
-							ps_report_charging_data_t * charging_data/*,
-							qos_info_t *qos*/){
+							ps_report_charging_data_t * charging_data,
+							qos_info_t *qos){
 
 	Rf_ACR_t * res = 0;
 	subscription_id_list_element_t * subscr_el=0;
@@ -618,7 +620,7 @@ Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
 	*ps_info->node_type = cfg.node_func;
 	str_dup(ps_info->called_station_id, charging_data->apn, pkg);
 
-	service_data_container = create_service_data_container(id, charging_data/*, qos*/);
+	service_data_container = create_service_data_container(id, charging_data, qos);
 	if(!service_data_container)
 		goto error;
 	WL_APPEND(&(ps_info->service_data_container), service_data_container);
