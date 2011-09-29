@@ -473,6 +473,9 @@ AAAMessage * Rf_write_ACR_avps(AAAMessage * acr, Rf_ACR_t* x)
 	if (!cavpb->base.add_Accounting_Record_Type(&(acr->avpList),x->acct_record_type)) goto error;
 	if (!cavpb->base.add_Accounting_Record_Number(&(acr->avpList),x->acct_record_number)) goto error;
 	
+	if (x->session_id.len && x->session_id.s)
+		if (!cavpb->base.add_Session_Id(&(acr->avpList), x->session_id, AVP_DUPLICATE_DATA)) goto error;
+
 	if (x->user_name)
 		if (!cavpb->base.add_User_Name(&(acr->avpList),*(x->user_name),AVP_DUPLICATE_DATA)) goto error;
 	
