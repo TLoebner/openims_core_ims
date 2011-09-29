@@ -299,15 +299,99 @@ error:
 	return 0;
 }
 
+int Rf_write_af_correlation_info_avps(AAA_AVP_LIST * avp_list, str * x){
+
+	AAA_AVP_LIST aList = {0,0};
+
+	if (x->s && x->len)
+			if (!cavpb->epcapp.add_AF_Charging_Identifier(&aList,*x, 0))
+				goto error;
+
+	if(!cavpb->epcapp.add_AF_Correlation_Information(avp_list, &aList, AVP_DONT_FREE_DATA))
+		goto error;
+	return 1;
+error:
+	cavpb->cdp->AAAFreeAVPList(&aList);
+	LOG(L_ERR, "could not add af correlation information avps\n");
+	return 0;
+}
+
+int Rf_write_qos_information(AAA_AVP_LIST * avp_list, qos_info_t * x){
+
+	AAA_AVP_LIST aList = {0,0};
+
+	if (x->QCI)
+		if (!cavpb->epcapp.add_QoS_Class_Identifier(&aList,x->QCI))
+			goto error;
+
+	if (x->max_upload)
+		if (!cavpb->epcapp.add_Max_Requested_Bandwidth_UL(&aList,x->max_upload)) goto error;
+	if (x->max_download)
+		if (!cavpb->epcapp.add_Max_Requested_Bandwidth_DL(&aList,x->max_download)) goto error;
+	if (x->guaranteed_upload)
+		if (!cavpb->epcapp.add_Guaranteed_Bitrate_UL(&aList,x->guaranteed_upload)) goto error;
+	if (x->guaranteed_download)
+		if (!cavpb->epcapp.add_Guaranteed_Bitrate_DL(&aList,x->guaranteed_download)) goto error;
+
+	if (!aList.head)
+		return 1;
+
+	if(!cavpb->epcapp.add_QoS_Information(avp_list, &aList, AVP_DONT_FREE_DATA))
+		goto error;
+	return 1;
+error:
+	cavpb->cdp->AAAFreeAVPList(&aList);
+	LOG(L_ERR, "could not add af correlation information avps\n");
+	return 0;
+}
 
 int Rf_write_service_data_container_avps(AAA_AVP_LIST * avp_list, service_data_container_t * x){
 
 	AAA_AVP_LIST aList = {0,0};
 
+	if (x->af_correlation_info.len && x->af_correlation_info.s)
+		if(!Rf_write_af_correlation_info_avps(&aList, &x->af_correlation_info))
+			goto error;
+
+
+	if (x->charging_rule_base_name.len && x->charging_rule_base_name.s)
+		if (!cavpb->epcapp.add_Charging_Rule_Base_Name(&aList,x->charging_rule_base_name, AVP_DONT_FREE_DATA))
+			goto error;
+
+	if (!cavpb->nasapp.add_Accounting_Input_Octets(&aList,x->upload_octets))
+		goto error;
+
+	if (!cavpb->nasapp.add_Accounting_Output_Octets(&aList,x->download_octets))
+		goto error;
+
+	if (!cavpb->nasapp.add_Accounting_Input_Packets(&aList,x->upload_packets))
+		goto error;
+
+	if (!cavpb->nasapp.add_Accounting_Output_Packets(&aList,x->download_packets))
+		goto error;
+
+	if(!cavpb->epcapp.add_Local_Sequence_Number(&aList, x->local_sequence_number))
+		goto error;
+
+	if (!Rf_write_qos_information(&aList, &x->qos))
+		goto error;
+
 	if (x->rating_group)
 		if (!cavpb->ccapp.add_Rating_Group(&aList,x->rating_group))
 			goto error;
-	LOG(L_DBG, "x->rating is %u\n", x->rating_group);
+
+	if(!cavpb->ccapp.add_Service_Identifier(&aList, x->service_identifier))
+		goto error;
+
+	if(!cavpb->epcapp.add_Time_First_Usage(&aList, x->first_usage))
+		goto error;
+
+	if(!cavpb->epcapp.add_Time_Last_Usage(&aList, x->last_usage))
+		goto error;
+
+	if(!cavpb->epcapp.add_Time_Usage(&aList, x->last_usage-x->first_usage))
+		goto error;
+
 	if (!cavpb->epcapp.add_Service_Data_Container(avp_list, &aList, AVP_DONT_FREE_DATA))
 		goto error;
 	return 1;
@@ -323,17 +407,22 @@ int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 	service_data_container_t * container = 0;
 
 	if (x->tgpp_charging_id)
-			if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList,*(x->tgpp_charging_id), AVP_DUPLICATE_DATA))
-				goto error;
+		if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList,*(x->tgpp_charging_id), AVP_DUPLICATE_DATA))
+			goto error;
 
-	if (x->sgsn_address)
-			if (!cavpb->epcapp.add_3GPP_SGSN_Address(&aList,*(x->sgsn_address), AVP_DUPLICATE_DATA))
-				goto error;
+	if (!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_address))
+			goto error;
+
+	if (!cavpb->epcapp.add_GGSN_Address(&aList,x->ggsn_address))
+			goto error;
+
+	if(!cavpb->epcapp.add_3GPP_PDP_Type(&aList, x->pdp_type))
+		goto error;
+
 	WL_FOREACH(&(x->service_data_container), container){
 			if (!Rf_write_service_data_container_avps(&aList, container))
 				goto error;
 	}
-
 	if (!cavpb->epcapp.add_PS_Information(avp_list, &aList, AVP_DONT_FREE_DATA))
 			goto error;
 	return 1;

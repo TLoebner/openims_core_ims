@@ -293,6 +293,86 @@ do {\
 
 #endif /* WHARF */
 
+#ifndef STRUCT_QOS_INFO_T
+#define STRUCT_QOS_INFO_T
+
+enum preempt_cap_e_{
+	PREEMPT_CAP_ENABLED=0,
+	PREEMPT_CAP_DISABLED
+} preempt_cap_e;
+
+enum preempt_vul_e_{
+	PREEMPT_VUL_ENABLED=0,
+	PREEMPT_VUL_DISABLED
+} preempt_vul_e;
+
+typedef struct {
+	uint32_t v;		/**< Retention Policy Value */
+	uint8_t pre_cap;/**< this value is reversed as the AVP_EPC_PreEmption_Capability_Enabled/Disabled which are 0/1. 0 Means enabled. */
+	uint8_t pre_vul;/**< this value is reversed as the AVP_EPC_PreEmption_Vulnerability_Enabled/Disabled which are 0/1. 0 Means enabled. */
+} arp_t;
+
+
+typedef struct {
+	int32_t QCI; 									/**< QoS Class Identifier - 1 to 9 as in the AVP */
+	str bearer_id;									/**< Bearer Identifier */
+	uint32_t max_upload,max_download;				/**< Max Bandwidth */
+	uint32_t guaranteed_upload,guaranteed_download;	/**< Guaranteed Bitrate */
+	uint32_t apn_upload,apn_download; 				/**< APN Aggregate Max Bitrate - all non-GBR bearers for that APN */
+	arp_t arp;
+} qos_info_t;
+
+#define qos_info_t_free(x,mem) \
+do {\
+	str_free((x)->bearer_id,mem);\
+} while(0)
+
+#define qos_info_t_copy(dst,src,mem) \
+do {\
+	(dst)->QCI = (src)->QCI;\
+	str_dup((dst)->bearer_id,(src)->bearer_id,mem);\
+	(dst)->max_upload = (src)->max_upload;\
+	(dst)->max_download = (src)->max_download;\
+	(dst)->guaranteed_upload = (src)->guaranteed_upload;\
+	(dst)->guaranteed_download = (src)->guaranteed_download;\
+	(dst)->apn_upload = (src)->apn_upload;\
+	(dst)->apn_download = (src)->apn_download;\
+	(dst)->arp = (src)->arp;\
+} while(0)
+
+/**
+ * List of QoS-Info is needed in QoS-Info per QCI
+ */
+typedef struct _qos_info_list_t_slot {
+	int db_id;
+	qos_info_t q;
+	struct _qos_info_list_t_slot *next,*prev;
+} qos_info_list_slot_t;
+
+/**
+ * a List of QoS-Info slots
+ */
+typedef struct {
+	qos_info_list_slot_t *head,*tail;
+} qos_info_list_t;
+
+
+#define qos_info_list_t_free(x,mem) \
+do{\
+	if (x){\
+		qos_info_t_free(&((x)->q),mem);\
+		mem##_free(x);\
+		(x) = 0;\
+	}\
+}while(0)
+
+#define qos_info_list_t_copy(dst,src,mem) \
+do{\
+	qos_info_t_copy(&((dst)->q),&((src)->q),mem);\
+}while(0)
+
+#endif
+
 #ifdef WHARF
 #include "../PCC_common/subscription_id.h"
 #include "../PCC_common/reporting_level.h"
@@ -685,7 +765,7 @@ typedef struct {
 typedef struct _service_data_container_list_t_slot{
 	str af_correlation_info;
 	str charging_rule_base_name;
-	//qos_info_t qos;
+	qos_info_t qos;
 
 	time_t first_usage;
 	time_t last_usage;
@@ -706,18 +786,21 @@ typedef struct{
 	service_data_container_t * head, *tail;
 } service_data_container_list_t;
 
-//qos_info_t_free(&((x)->qos),mem);
+
 #define service_data_container_list_t_free(x,mem) \
 	do{\
 		if(x){\
 			str_free((x)->af_correlation_info, mem);\
 			str_free((x)->charging_rule_base_name, mem);\
+			qos_info_t_free(&((x)->qos),mem);\
 		}\
 	}while(0);
 
 typedef struct{
 	str * tgpp_charging_id;
-	str * sgsn_address;
+	ip_address sgsn_address;
+	ip_address ggsn_address;
+	int32_t pdp_type;
 	str called_station_id;
 	int32_t * node_type;
 	service_data_container_list_t service_data_container;
@@ -878,7 +961,7 @@ Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
 void Rf_free_ACR(Rf_ACR_t *x);
 
 Rf_ACR_t* create_Rf_data (str sessionid, int32_t acct_record_type,
-		ps_report_charging_data_t * charging_data/*, qos_info_t *qos*/);
+		ps_report_charging_data_t * charging_data, qos_info_t *qos);
 void free_Rf_data(Rf_ACR_t * x);
 
 //void Rf_free_ACA(Rf_ACA_t *x);
