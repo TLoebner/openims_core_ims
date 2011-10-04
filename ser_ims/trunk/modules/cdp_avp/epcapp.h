@@ -77,6 +77,9 @@
  * TS 29.272  
  * http://www.3gpp.org/ftp/Specs/html-info/29272.htm
  *
+ * TS 29.299
+ * http://www.3gpp.org/ftp/Specs/html-info/29299.htm
+ *
  */
 
 #include "macros.h"
@@ -358,7 +361,9 @@ cdp_avp_ptr		(3GPP_User_Location_Info,				EPC_vendor_id_3GPP,	0,							OctetStri
 
 cdp_avp_ptr		(RAI,									EPC_vendor_id_3GPP,	0,							UTF8String,		str)	
 
-cdp_avp_ptr		(3GPP_MS_TimeZone,						EPC_vendor_id_3GPP,	0,							OctetString,	str)	
+cdp_avp_ptr		(3GPP_MS_TimeZone,						EPC_vendor_id_3GPP,	0,							OctetString,	str)
+
+cdp_avp			(3GPP_PDP_Type,							EPC_vendor_id_3GPP,	0,							Enumerated,		int32_t)
 
 /*
  * TS 29.214 Rx
@@ -658,6 +663,9 @@ cdp_avp			(GMLC_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Addr
  * http://www.3gpp.org/ftp/Specs/html-info/32299.htm
  */
 
+cdp_avp_add_ptr	(AF_Correlation_Information,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)
+cdp_avp_get		(AF_Correlation_Information,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
 cdp_avp_ptr		(Application_Provided_Called_Party_Address,EPC_vendor_id_3GPP,AAA_AVP_FLAG_MANDATORY,	UTF8String,		str)	
 
 cdp_avp_ptr		(Application_Server,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
@@ -693,10 +701,14 @@ cdp_avp_get		(Event_Type,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Gro
 
 cdp_avp			(Expires,								EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
 
+cdp_avp			(GGSN_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)
+
 cdp_avp_ptr		(IMS_Charging_Identifier,				EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 cdp_avp_add_ptr	(IMS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
-cdp_avp_get		(IMS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
+cdp_avp_get		(IMS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
+
+cdp_avp			(Local_Sequence_Number,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
 
 cdp_avp_add_ptr	(PS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(PS_Information,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)
@@ -758,6 +770,8 @@ cdp_avp_get		(Service_Specific_Info,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDAT
 
 cdp_avp			(Service_Specific_Type,					EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
 
+cdp_avp			(SGSN_Address,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Address,		ip_address)
+
 cdp_avp_ptr		(SIP_Method,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
 
 cdp_avp			(SIP_Request_Timestamp_Fraction,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Unsigned32,		uint32_t)
@@ -769,6 +783,10 @@ cdp_avp			(SIP_Response_Timestamp_Fraction,		EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MA
 cdp_avp			(SIP_Response_Timestamp,				EPC_vendor_id_3GPP,	0,							Time,			time_t)
 
 cdp_avp_ptr		(Terminating_IOI,						EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		UTF8String,		str)	
+
+cdp_avp			(Time_First_Usage,						EPC_vendor_id_3GPP,	0,							Time,			time_t)
+cdp_avp			(Time_Last_Usage,						EPC_vendor_id_3GPP,	0,							Time,			time_t)
+cdp_avp			(Time_Usage,						EPC_vendor_id_3GPP,	0,							Time,			time_t)
 
 cdp_avp_add_ptr	(Time_Stamps,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST*)	
 cdp_avp_get		(Time_Stamps,							EPC_vendor_id_3GPP,	AAA_AVP_FLAG_MANDATORY,		Grouped,		AAA_AVP_LIST)	
