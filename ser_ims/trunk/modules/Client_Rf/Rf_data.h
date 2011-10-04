@@ -22,6 +22,7 @@
 
 #include "../cdp/diameter.h"
 #include "../cdp/diameter_epc.h"
+#include "../cdp_avp/mod_export.h"
 
 #ifndef WHARF
 /**
@@ -798,6 +799,8 @@ typedef struct{
 			qos_info_t_free(&((x)->qos),mem);\
 		}\
 	}while(0);
+
+
 
 typedef struct{
 	str * tgpp_charging_id;
