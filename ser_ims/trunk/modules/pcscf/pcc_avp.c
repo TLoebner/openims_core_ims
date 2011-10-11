@@ -436,6 +436,8 @@ int PCC_add_media_component_description_for_register(AAAMessage *msg, str ip_fro
 					ip_to, port_for_signaling,  "", 4);
 	if(!avp) goto error;
 	cdpb.AAAAddAVPToList(&list,avp);
+	if(!cdp_avp->epcapp.add_Media_Component_Number(&list, 0))
+		goto error;
 	
 	data=cdpb.AAAGroupAVPS(list);
 	if(!data.s) goto error;
