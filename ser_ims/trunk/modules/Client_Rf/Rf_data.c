@@ -485,6 +485,10 @@ void ims_information_free(ims_information_t *x)
 	mem_free(x,pkg);
 }
 
+void service_data_container_free(service_data_container_t *x){
+	service_data_container_list_t_free(x,pkg);
+}
+
 void ps_information_free(ps_information_t * x){
 
 	if(!x)
