@@ -57,6 +57,11 @@
 #ifndef __CLIENT_RF_CONFIG_H
 #define __CLIENT_RF_CONFIG_H
 
+#ifndef WHARF
+#include "str_int_list.h"
+#else
+#include "../../utils/utils.h"
+#endif
 
 typedef struct {
 	int32_t hash_table_size;
@@ -75,8 +80,12 @@ typedef struct {
 
 #define CLIENT_RF_CONFIG_DTD "\
 <?xml version=\"1.0\" encoding=\"UTF-8\"?>\
-<!ELEMENT Client_Rf ( Rf )>\
+<!ELEMENT Client_Rf ( Hash, Rf )>\
 \
+<!ELEMENT Hash (#PCDATA)>\
+<!ATTLIST Hash\
+	hash_size			CDATA	#REQUIRED\
+>\
 <!ELEMENT Rf (#PCDATA)>\
 <!ATTLIST Rf\
 	node_func			CDATA	#REQUIRED\

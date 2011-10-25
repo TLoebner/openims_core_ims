@@ -383,6 +383,9 @@ int Rf_write_service_data_container_avps(AAA_AVP_LIST * avp_list, service_data_c
 	if(!cavpb->ccapp.add_Service_Identifier(&aList, x->service_identifier))
 		goto error;
 
+	if(!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_addr))
+		goto error;
+
 	if(!cavpb->epcapp.add_Time_First_Usage(&aList, x->first_usage))
 		goto error;
 
@@ -405,23 +408,33 @@ int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 
 	AAA_AVP_LIST aList = {0,0};
 	service_data_container_t * container = 0;
+	char c;
+	str data = {&c, 1};
+	str charging_id={0, 4};
+	uint32_t chg_id_network_order = 0;
 
-	if (x->tgpp_charging_id)
-		if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList,*(x->tgpp_charging_id), AVP_DUPLICATE_DATA))
+	if (x->tgpp_charging_id){
+		chg_id_network_order = htonl(*x->tgpp_charging_id);
+		charging_id.s = (char*)&chg_id_network_order;
+		if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList, charging_id, AVP_DUPLICATE_DATA))
 			goto error;
+	}
 
 	if(x->sgsn_addr.ai_family == AF_INET ||
-						x->sgsn_addr.ai_family == AF_INET6)
-		if (!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_address))
+					x->sgsn_addr.ai_family == AF_INET6)
+		if (!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_addr))
 			goto error;
-
 	if(x->ggsn_addr.ai_family == AF_INET ||
 				x->ggsn_addr.ai_family == AF_INET6)
-		if (!cavpb->epcapp.add_GGSN_Address(&aList,x->ggsn_address))
+		if (!cavpb->epcapp.add_GGSN_Address(&aList,x->ggsn_addr))
 			goto error;
 
 	if(!cavpb->epcapp.add_3GPP_PDP_Type(&aList, x->pdp_type))
 		goto error;
+
+	c= x->rat;
+	if(!cavpb->epcapp.add_TGPP_RAT_Type(&aList,data,0))
+			goto error;
 
 	WL_FOREACH(&(x->service_data_container), container){
 			if (!Rf_write_service_data_container_avps(&aList, container))
