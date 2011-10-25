@@ -410,10 +410,14 @@ int Rf_write_ps_information_avps(AAA_AVP_LIST * avp_list, ps_information_t* x){
 		if (!cavpb->epcapp.add_3GPP_Charging_Id(&aList,*(x->tgpp_charging_id), AVP_DUPLICATE_DATA))
 			goto error;
 
-	if (!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_address))
+	if(x->sgsn_addr.ai_family == AF_INET ||
+						x->sgsn_addr.ai_family == AF_INET6)
+		if (!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_address))
 			goto error;
 
-	if (!cavpb->epcapp.add_GGSN_Address(&aList,x->ggsn_address))
+	if(x->ggsn_addr.ai_family == AF_INET ||
+				x->ggsn_addr.ai_family == AF_INET6)
+		if (!cavpb->epcapp.add_GGSN_Address(&aList,x->ggsn_address))
 			goto error;
 
 	if(!cavpb->epcapp.add_3GPP_PDP_Type(&aList, x->pdp_type))
