@@ -57,7 +57,6 @@
 #include "config.h"
 #include "diameter_rf.h"
 #include "acr.h"
-#include "rf_session.h"
 
 #ifdef WHARF
 #define M_NAME "Client_Rf"
@@ -72,18 +71,23 @@ int AAASendACR(str * session_id, Rf_ACR_t * rf_data){
 	AAASession * auth = NULL;
 
 	if(!session_id){
-		auth = create_rf_session();
-		if(!auth)
+		auth = cavpb->cdp->AAACreateSession(NULL);
+		if(!auth){
+			LOG(L_ERR,"ERR:"M_NAME":could not create a new Diameter session\n");
 			return 0;
+		}
 	}else{
 	
-		if(!session_id->s && !session_id->len){
+		if(session_id->s && session_id->len){
 			auth = cavpb->cdp->AAAGetAuthSession(*session_id);
 			if (!auth) {
-				LOG(L_ERR,"ERR:"M_NAME":no auth session found\n");
+				LOG(L_ERR,"ERR:"M_NAME":no Diameter session found\n");
 				return 0;
 			}
-		}else return 0;
+		}else {
+			LOG(L_ERR, "empty session id\n");
+			return 0;
+		}
 	}
 	
 	if(!(acr = Rf_new_acr(auth, rf_data)))

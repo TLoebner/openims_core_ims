@@ -22,50 +22,6 @@
 #include "config.h"
 #include "charging.h"
 
-#ifndef WHARF
-
-/**
- * Duplicate a str, safely.
- * \Note This checks if:
- *  - src was an empty string
- *  - malloc failed
- * \Note On any error, the dst values are reset for safety
- * \Note A label "out_of_memory" must be defined in the calling function to handle
- * allocation errors. 
- * @param dst - destination str
- * @param src - source src
- * @param mem - type of mem to duplicate into (shm/pkg)
- */
-#define str_dup(dst,src,mem) \
-do {\
-	if ((src).len) {\
-		(dst).s = mem##_malloc((src).len);\
-		if (!(dst).s){\
-			LOG(L_ERR,"Error allocating %d bytes in %s!\n",(src).len,#mem);\
-			(dst).len = 0;\
-			goto out_of_memory;\
-		}\
-		memcpy((dst).s,(src).s,(src).len);\
-		(dst).len = (src).len;\
-	}else{\
-		(dst).s=0;(dst).len=0;\
-	}\
-} while (0)
-
-/**
- * Frees a str content.
- * @param x - the str to free
- * @param mem - type of memory that the content is using (shm/pkg)
- */
-#define str_free(x,mem) \
-do {\
-	if ((x).s) mem##_free((x).s);\
-	(x).s=0;(x).len=0;\
-} while(0)
-
-#endif /* WHARF */
-
-
 extern client_rf_cfg cfg;
 acct_record_info_list_t * acct_records;
 
@@ -346,10 +302,14 @@ ps_information_t * new_ps_information(str an_charg_id, service_data_container_t 
 {
 
 	ps_information_t * x = NULL;
+	uint32_t charging_id;
+
 	mem_new(x, sizeof(ps_information_t), pkg);
 
 	if(an_charg_id.len && an_charg_id.s){
-		str_dup_ptr(x->tgpp_charging_id, an_charg_id, pkg);
+		charging_id = str_to_long_int(an_charg_id, 10);
+		mem_new(x->tgpp_charging_id, sizeof(uint32_t), pkg);
+		*x->tgpp_charging_id = charging_id;
         }
 	WL_APPEND(&(x->service_data_container),serv_data_container);
 
@@ -494,7 +454,7 @@ void ps_information_free(ps_information_t * x){
 	if(!x)
 		return;
 	WL_FREE_ALL(&(x->service_data_container), service_data_container_list_t, pkg);
-	str_free_ptr(x->tgpp_charging_id, pkg);
+	if(x->tgpp_charging_id)	mem_free(x->tgpp_charging_id, pkg);
 	WL_FREE_ALL(&x->service_data_container, service_data_container_list_t, pkg);
 	mem_free(x, pkg);
 }
@@ -556,6 +516,10 @@ service_data_container_t * create_service_data_container(str id,
 
 	service_data_container->rating_group = charging_data->rating_group;
 	str_dup(service_data_container->af_correlation_info, charging_data->af_correlation_info, pkg);
+
+	if(charging_data->angw_addr.ai_family == AF_INET || charging_data->angw_addr.ai_family == AF_INET6)
+		memcpy(&(service_data_container->sgsn_addr), &(charging_data->angw_addr), sizeof(ip_address));
+
 	str_dup(service_data_container->charging_rule_base_name, id, pkg);
 
 	service_data_container->first_usage=charging_data->first_usage;
@@ -597,6 +561,7 @@ Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
 	str_dup(res->destination_realm, cfg.destination_realm, pkg);
 	str_dup(res->origin_host, cfg.origin_host, pkg);
 	str_dup(res->origin_realm, cfg.origin_realm, pkg);
+
 	if(cfg.service_context_id.len && cfg.service_context_id.s){
 		mem_new(res->service_context_id, sizeof(str), pkg);
 		str_dup(*(res->service_context_id), cfg.service_context_id, pkg);
@@ -616,11 +581,22 @@ Rf_ACR_t * create_Rf_data(str id, int32_t acct_record_type,
 	WL_APPEND(&(res->service_information->subscription_id), subscr_el);
 	subscr_el=0;
 
+	mem_new(res->service_information->ims_information, sizeof(ims_information_t), pkg);
+	res->service_information->ims_information->node_functionality = cfg.node_func;
+	str_dup_ptr(res->service_information->ims_information->user_session_id, charging_data->session_id, pkg);
+
 	mem_new(res->service_information->ps_information, sizeof(ps_information_t), pkg);
 	ps_info = res->service_information->ps_information;
-	/*str * tgpp_charging_id;
-	 *str * sgsn_address;
-	 */
+	if(charging_data->angw_addr.ai_family == AF_INET || charging_data->angw_addr.ai_family == AF_INET6)
+		memcpy(&(ps_info->sgsn_addr), &(charging_data->angw_addr), sizeof(ip_address));
+	if(charging_data->lma_addr.ai_family == AF_INET || charging_data->lma_addr.ai_family == AF_INET6)
+		memcpy(&(ps_info->ggsn_addr), &(charging_data->lma_addr), sizeof(ip_address));
+	if(charging_data->an_chg_id){
+		mem_new(ps_info->tgpp_charging_id, sizeof(uint32_t), pkg);
+		*ps_info->tgpp_charging_id = charging_data->an_chg_id;
+	}
+	ps_info->rat = charging_data->rat;
+
 	mem_new(ps_info->node_type, sizeof(int32_t), pkg);
 	*ps_info->node_type = cfg.node_func;
 	str_dup(ps_info->called_station_id, charging_data->apn, pkg);

@@ -1,5 +1,5 @@
 /*
- * $Id: sdp_helpr_funcs.h 4807 2008-09-02 15:00:48Z osas $
+ * $Id: sdp_helpr_funcs.h 4007 2011-10-04 09:10:23Z aru $
  *
  * SDP parser helpers
  *

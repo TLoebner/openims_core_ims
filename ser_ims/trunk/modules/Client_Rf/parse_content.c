@@ -1,5 +1,5 @@
 /*
- * $Id: parse_content.c 4720 2008-08-23 10:56:15Z henningw $
+ * $Id: parse_content.c 4007 2011-10-04 09:10:23Z aru $
  *
  * Copyright (C) 2001-2003 FhG Fokus
  *

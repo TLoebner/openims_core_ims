@@ -35,7 +35,7 @@
 #include "diameter_rf.h"
 #include "config.h"
 #include "charging.h"
-#include "rf_session.h"
+#include "charging_id_generator.h"
 
 cdp_avp_bind_t *cavpb=0;				/**< Structure with pointers to cdp_avp funcs*/
 client_rf_cfg cfg;
@@ -83,9 +83,8 @@ int client_rf_init(str config_data)
 		return 0;
 	}
 
-	if(!init_rf_session_hash()){
+	if(!init_gen_charg_id_info())
 		return 0;
-	}
 
 	return 1;
 }
@@ -119,7 +118,7 @@ void client_rf_destroy(int rank)
 	LOG(L_INFO," ... Client_Rf destroy\n");
 	if (rank==WHARF_PROCESS_ATTENDANT){
 		client_rf_free_config();
-		destroy_rf_session_hash();
+		destroy_gen_charg_id_info();
 	}
 }
 
@@ -130,11 +129,10 @@ struct client_rf_bind_t client_rf_binding={
 	Rf_add_an_chg_info,
 	Rf_add_ims_chg_info_icid,
 	Rf_add_ims_chg_ps_info,
-	get_AAA_Session,
-	decr_ref_cnt_AAA_Session,
-	incr_ref_cnt_AAA_Session,
 	create_Rf_data,
-	free_Rf_data
+	free_Rf_data,
+	gen_new_charg_id,
+	release_charg_id
 };
 
 

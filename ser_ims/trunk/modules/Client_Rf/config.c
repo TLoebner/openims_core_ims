@@ -100,7 +100,7 @@ int client_rf_parse_config(str config)
 				}	
 				xc = xmlGetProp(i,(xmlChar*)"destination_realm");
 				if (xc){	
-					char_dup_str(cfg.origin_host,xc,shm);
+					char_dup_str(cfg.destination_realm,xc,shm);
 					xmlFree(xc);
 				}
 				xc = xmlGetProp(i,(xmlChar*)"service_context_id");
@@ -108,6 +108,12 @@ int client_rf_parse_config(str config)
 					char_dup_str(cfg.service_context_id,xc,shm);
 					xmlFree(xc);
 				}		
+			} else if (strcasecmp((char*)i->name,"Hash")==0){
+				if (!xml_get_prop_as_int(i,"hash_size",&l)||l<0){
+					LOG(L_ERR,"invalid hash size, value >0 are accepted\n");
+				goto error;
+			}else
+				cfg.hash_table_size = (int)l;			
 			}
 		}
 	
