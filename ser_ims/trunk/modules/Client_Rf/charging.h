@@ -29,7 +29,7 @@
 
 typedef struct _an_charg_info_list_t_slot{
 	str sip_uri;
-	str an_charg_id;
+	uint32_t an_charg_id;
 	//time_t expires;
 	struct _an_charg_info_list_t_slot * next, * prev;
 } an_charg_info_list_slot_t;
@@ -43,7 +43,6 @@ typedef struct _an_charg_info_list_t{
 do{\
 	if (x) {\
 		str_free((x)->sip_uri,mem);\
-		str_free((x)->an_charg_id,mem);\
 		mem##_free(x);\
 		(x) = 0;\
 	}\
@@ -76,8 +75,8 @@ do{\
 
 int init_an_charg_info();
 void destroy_an_charg_info();
-int Rf_add_an_chg_info(str sip_uri, str an_charg_id);
-str get_an_charg_info(str sip_uri);
+int Rf_add_an_chg_info(str sip_uri, uint32_t an_charg_id);
+uint32_t get_an_charg_info(str sip_uri);
 
 
 int init_ims_charg_info();

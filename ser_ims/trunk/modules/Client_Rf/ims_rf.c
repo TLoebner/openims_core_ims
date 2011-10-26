@@ -259,16 +259,16 @@ int add_an_charging_id(str sip_uri, sdp_media_component_t * sdp_media_component)
 /*	flow_t * flow;
 	int_list_slot_t * il = 0;
 */
-	str an_charging_id = {0,0};
-	an_charging_id = get_an_charg_info(sip_uri);
-	if(!an_charging_id.s || !an_charging_id.len)
-		return 1;
+//	uint32_t an_charging_id =0;
+//	an_charging_id = get_an_charg_info(sip_uri);
+//	if(!an_charging_id)
+//		return 1;
 
-	mem_new(sdp_media_component->an_charging_id,sizeof(an_charging_id_t),pkg);
+	//mem_new(sdp_media_component->an_charging_id,sizeof(an_charging_id_t),pkg);
 
     //str_dup(sdp_media_component->an_charging_id->value,an_charging_id,pkg);
 	/*already allocated in the pkg memory*/
-	sdp_media_component->an_charging_id->value = an_charging_id;
+	//sdp_media_component->an_charging_id->value = an_charging_id;
 
     /*WL_NEW(flow,flow_list_t,pkg);
         flow->media_component_number = 7;
@@ -288,12 +288,13 @@ int add_an_charging_id(str sip_uri, sdp_media_component_t * sdp_media_component)
 	WL_APPEND(&(sdp_media_component->an_charging_id->flow),flow);*/
 
 	return 1;
-out_of_memory:
+/*out_of_memory:
 	if(sdp_media_component->an_charging_id) {
 		pkg_free(sdp_media_component->an_charging_id);
 		sdp_media_component->an_charging_id = 0;
 	}
 	return 0;
+*/
 }
 
 /**
@@ -343,8 +344,8 @@ int append_sip_sdp_comp(struct sip_msg * msg,
 		if(!get_media_description_list(mline_s.s+mline_s.len, end, 
 					&(sdp_media_elem->sdp_media_descriptions)))
 			goto error;
-		if(str_equal(user_sip_uri, sip_uri))
-				add_an_charging_id(sip_uri, sdp_media_elem);
+		/*if(str_equal(user_sip_uri, sip_uri))
+				add_an_charging_id(sip_uri, sdp_media_elem);*/
 		WL_APPEND(sdp_media_comps, sdp_media_elem);
 	}
 	str_free(sdp_body,pkg);
@@ -408,7 +409,7 @@ Rf_ACR_t * create_rf_data(struct sip_msg * req,
 	sdp_media_component_list_t sdp_media_comps = {0,0};
 	service_data_container_t * serv_data_container = NULL;
 	ps_information_t * ps_info = NULL;
-	str an_charg_id={0,0};
+	uint32_t an_charg_id;
 
 	if(!get_sip_header_info(req, reply, interim, &acct_record_type, 
 				&sip_method, &event, &expires, 
@@ -457,14 +458,13 @@ Rf_ACR_t * create_rf_data(struct sip_msg * req,
 
 	an_charg_id = get_an_charg_info(user_name);
 	
-	if(serv_data_container || an_charg_id.len)
+	if(serv_data_container || an_charg_id)
 		if(!(ps_info = new_ps_information(an_charg_id, serv_data_container)))
 				goto out_of_memory;
 
 	ims_info->sdp_media_component.head = sdp_media_comps.head;
 	ims_info->sdp_media_component.tail = sdp_media_comps.tail;
 	str_free(icid, pkg);
-	str_free(an_charg_id, pkg);
 	
 	sdp_media_comps.head = sdp_media_comps.tail = 0;
 	event_type = 0;
@@ -495,7 +495,6 @@ error:
 	ps_information_free(ps_info);
 	Rf_free_ACR(rf_data);
 	str_free(icid, pkg);
-	str_free(an_charg_id, pkg);
 	return NULL;
 }
 

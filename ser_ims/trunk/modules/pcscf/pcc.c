@@ -925,7 +925,8 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 	AAASession * auth = NULL;
 	AAA_AVP *avp=0;
 	AAA_AVP_LIST avp_list = {0,0};
-	str an_charg_id = {0,0};
+	str an_charg_id_str = {0,0};
+	uint32_t an_charg_id = 0;
 	str sip_uri = {0,0}, callid={0,0};
 	uint32_t rating_group=0;
 	enum p_dialog_direction direction;
@@ -984,11 +985,16 @@ int PCC_AAA(AAAMessage *aaa, unsigned int * rc, str pcc_session_id)
 	/*access network charging identifier*/
 	avp_list.head = avp_list.tail = NULL;
 	if(cdp_avp->epcapp.get_Access_Network_Charging_Identifier(aaa->avpList, &avp_list, 0)){
-		cdp_avp->epcapp.get_Access_Network_Charging_Identifier_Value(avp_list, &an_charg_id, 0);
+		cdp_avp->epcapp.get_Access_Network_Charging_Identifier_Value(avp_list, &an_charg_id_str, 0);
 		if(pcscf_use_client_rf){
-			sip_uri = ((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri;
-			LOG(L_DBG, "sip uri is %.*s\n", sip_uri.len, sip_uri.s);
-			client_rfb.Rf_add_an_chg_info(sip_uri, an_charg_id);
+			if(an_charg_id_str.len!=4){
+				LOG(L_ERR, "ERR:"M_NAME":PCC_AAA: AN charging ID invalid length %i\n", an_charg_id_str.len*8);
+			}else{
+				an_charg_id = ntohl(*(uint32_t*)an_charg_id_str.s);
+				sip_uri = ((pcc_authdata_t*)auth->u.auth.generic_data)->sip_uri;
+				//LOG(L_DBG, "sip uri is %.*s\n", sip_uri.len, sip_uri.s);
+				client_rfb.Rf_add_an_chg_info(sip_uri, an_charg_id);
+			}
 		}
 	}
 
