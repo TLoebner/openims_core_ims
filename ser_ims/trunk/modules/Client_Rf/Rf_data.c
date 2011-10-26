@@ -298,18 +298,16 @@ out_of_memory:
 	return NULL;
 }
 
-ps_information_t * new_ps_information(str an_charg_id, service_data_container_t * serv_data_container)
+ps_information_t * new_ps_information(uint32_t an_charg_id, service_data_container_t * serv_data_container)
 {
 
 	ps_information_t * x = NULL;
-	uint32_t charging_id;
 
 	mem_new(x, sizeof(ps_information_t), pkg);
 
-	if(an_charg_id.len && an_charg_id.s){
-		charging_id = str_to_long_int(an_charg_id, 10);
+	if(an_charg_id){
 		mem_new(x->tgpp_charging_id, sizeof(uint32_t), pkg);
-		*x->tgpp_charging_id = charging_id;
+		*x->tgpp_charging_id = an_charg_id;
         }
 	WL_APPEND(&(x->service_data_container),serv_data_container);
 

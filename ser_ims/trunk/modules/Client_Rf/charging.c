@@ -16,15 +16,14 @@
  *  \author Andreea Ancuta Corici andreea dot ancuta dot corici -at- fokus dot fraunhofer dot de
  * 
  */
+#ifndef M_NAME
+#define M_NAME "Client_Rf"
+#endif
 
 #include "Rf_data.h"
 #include "config.h"
 #include "diameter_rf.h"
 #include "acr.h"
-
-#ifdef WHARF
-#define M_NAME "Client_Rf"
-#endif
 
 #include "config.h"
 #include "charging.h"
@@ -94,13 +93,13 @@ inline unsigned int an_charg_info_calc_hash(str id){
 #undef h_inc
 }
 
-int add_new_an_charg_info_safe(int hash_index, str sip_uri, str an_charg_id/*, uint32_t expires*/){
+int add_new_an_charg_info_safe(int hash_index, str sip_uri, uint32_t an_charg_id/*, uint32_t expires*/){
 
 	an_charg_info_list_slot_t * info = NULL;
 
 	mem_new(info, sizeof(an_charg_info_list_slot_t), shm);
 	str_dup(info->sip_uri, sip_uri, shm);
-	str_dup(info->an_charg_id, an_charg_id, shm);
+	info->an_charg_id = an_charg_id;
 	WL_APPEND(an_charg_info+hash_index, info);
 
 	return 1;
@@ -110,7 +109,7 @@ out_of_memory:
 	return 0;
 }
 
-int Rf_add_an_chg_info(str sip_uri, str an_charg_id){
+int Rf_add_an_chg_info(str sip_uri, uint32_t an_charg_id){
 
 	int hash_index;
 	an_charg_info_list_slot_t * info = NULL;
@@ -120,9 +119,8 @@ int Rf_add_an_chg_info(str sip_uri, str an_charg_id){
 	lock_get(an_charg_info[hash_index].lock);
 			WL_FOREACH(&(an_charg_info[hash_index]), info){
 				if(str_equal(info->sip_uri, sip_uri) && 
-					!(str_equal(info->an_charg_id, an_charg_id))){
-					str_free(info->an_charg_id, shm);
-					str_dup(info->an_charg_id, an_charg_id, shm);
+					info->an_charg_id!=an_charg_id){
+					info->an_charg_id= an_charg_id;
 					goto end;
 				}
 			}
@@ -133,9 +131,8 @@ end:
 	lock_release(an_charg_info[hash_index].lock);
 
 	return 1;
-out_of_memory:
-	LOG(L_ERR, "out of memory");
 error:
+	LOG(L_ERR, "ERR:"M_NAME":Rf_add_an_chg_info:an error has occured\n");
 	lock_release(an_charg_info[hash_index].lock);
 	return 0;
 }
@@ -145,9 +142,9 @@ error:
  * @param sip_uri - the SIP URI of the user
  * @returns an_charging_id assoctiated with the user SIP URI
  */
-str get_an_charg_info(str sip_uri){
+uint32_t get_an_charg_info(str sip_uri){
 
-	str res = {0,0};
+	uint32_t res=0;
 
 	int hash_index;
 	an_charg_info_list_slot_t * info = NULL;
@@ -157,15 +154,11 @@ str get_an_charg_info(str sip_uri){
 	lock_get(an_charg_info[hash_index].lock);
 			WL_FOREACH(&(an_charg_info[hash_index]), info){
 				if(str_equal(info->sip_uri, sip_uri)){
-					str_dup(res, info->an_charg_id, pkg);
+					res= info->an_charg_id;
 					goto end;
 				}
 			}
 end:
-	lock_release(an_charg_info[hash_index].lock);
-	return res;
-out_of_memory:
-	LOG(L_ERR, "out of pkg memory while trying to retrieve the an charg id\n");
 	lock_release(an_charg_info[hash_index].lock);
 	return res;
 }
@@ -373,7 +366,7 @@ end:
 	lock_release(ims_charg_info[hash_index].lock);
 	return 1;
 out_of_memory:
-	LOG(L_ERR, "out of pkg memory while trying to retrieve the ims charg id\n");
+	LOG(L_ERR, "ERR:"M_NAME":out of pkg memory while trying to retrieve the ims charg id\n");
 	lock_release(ims_charg_info[hash_index].lock);
 	return 0;
 }

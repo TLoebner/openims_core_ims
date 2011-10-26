@@ -383,8 +383,10 @@ int Rf_write_service_data_container_avps(AAA_AVP_LIST * avp_list, service_data_c
 	if(!cavpb->ccapp.add_Service_Identifier(&aList, x->service_identifier))
 		goto error;
 
-	if(!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_addr))
-		goto error;
+	if(x->sgsn_addr.ai_family == AF_INET ||
+					x->sgsn_addr.ai_family == AF_INET6)
+		if(!cavpb->epcapp.add_SGSN_Address(&aList,x->sgsn_addr))
+			goto error;
 
 	if(!cavpb->epcapp.add_Time_First_Usage(&aList, x->first_usage))
 		goto error;
