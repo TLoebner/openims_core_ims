@@ -281,6 +281,39 @@ error:
 	return 0;
 }
 
+int Rf_get_ims_chg_info_icid(str call_id, int dir, str  * ims_charg_id){
+
+	int hash_index;
+	ims_charg_info_list_slot_t * info = NULL;
+
+	//LOG(L_DBG, "retrieving ims chg info for callid %.*s\n",
+	//	call_id.len, call_id.s);
+
+	if(!call_id.len || !call_id.s || !ims_charg_id){
+		LOG(L_WARN, "WARN: Client_Rf: Rf_add_ims_chg_info: empty or NULL arguments\n");
+		return 1;
+	}
+
+	hash_index = ims_charg_info_calc_hash(call_id);
+
+	lock_get(ims_charg_info[hash_index].lock);
+			WL_FOREACH(&(ims_charg_info[hash_index]), info){
+				if(str_equal(info->call_id, call_id) && info->dir == dir){
+					str_dup(*ims_charg_id, info->ims_charg_id, pkg);
+					goto end;
+				}
+			}
+
+end:
+	lock_release(ims_charg_info[hash_index].lock);
+
+	return 1;
+out_of_memory:
+	LOG(L_ERR, "out of memory");
+	lock_release(ims_charg_info[hash_index].lock);
+	return 0;
+}
+
 int add_new_ims_charg_ps_info_safe(int hash_index, str call_id, int dir,
 										uint32_t rating_group/*, uint32_t expires*/){
 

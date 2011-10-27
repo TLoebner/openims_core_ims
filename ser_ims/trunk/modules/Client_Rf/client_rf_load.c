@@ -73,6 +73,7 @@ int load_client_rf( struct client_rf_binds *client_rfb)
 {
 	FIND_EXP(Rf_add_an_chg_info);
 	FIND_EXP(Rf_add_ims_chg_info_icid);
+	FIND_EXP(Rf_get_ims_chg_info_icid);
 	FIND_EXP(Rf_add_ims_chg_ps_info);
 	FIND_EXP(Rf_send_stop_record);
 	return 1;
