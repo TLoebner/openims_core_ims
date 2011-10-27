@@ -121,7 +121,7 @@ pcc_authdata_t* new_pcc_authdata()
 	
 	x = shm_malloc(sizeof(pcc_authdata_t));
 	if (!x){
-		LOG(L_ERR,"ERR:"M_NAME":pcc_authdata_t(): Unable to alloc %lu bytes\n",
+		LOG(L_ERR,"ERR:"M_NAME":pcc_authdata_t(): Unable to alloc %u bytes\n",
 			sizeof(pcc_authdata_t));
 		goto error;
 	}	
@@ -431,6 +431,7 @@ int pcc_auth_init_register(contact_t * aor, str callid,
 	uint32_t duration=-1; //forever - this should be overwritten anyway
 	pcc_authdata_t *pcc_authdata=0;
 	AAASession * auth = *authp;
+	str icid = {0,0};
 	
 	r_contact *contact = NULL;
 	int ret = 1;
@@ -475,8 +476,16 @@ int pcc_auth_init_register(contact_t * aor, str callid,
 		pcc_authdata->subscribed_to_signaling_path_status=1;
 		STR_SHM_DUP(pcc_authdata->host, contact->host,"pcc_auth_init_register");
 		STR_SHM_DUP(pcc_authdata->callid, callid,"pcc_auth_init_register");
+		if(pcc_use_icid){
+			if(client_rfb.Rf_get_ims_chg_info_icid(callid, DLG_MOBILE_ORIGINATING, &icid) && icid.s){
+
+				STR_SHM_DUP(pcc_authdata->icid, icid, "pcc_auth_init_register");
+				pkg_free(icid.s);
+			}
+		}
 		pcc_authdata->port=contact->port;
 		pcc_authdata->transport=contact->transport;
+
 		LOG(L_INFO,"INFO:"M_NAME":pcc_auth_init_register: creating PCC Session for registration\n");
 		auth = cdpb.AAACreateClientAuthSession(1,callback_for_pccsession,(void *)pcc_authdata);
 		if (!auth) {
