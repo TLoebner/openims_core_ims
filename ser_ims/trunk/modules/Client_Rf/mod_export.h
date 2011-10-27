@@ -29,6 +29,7 @@ typedef int (*AAASendAccRequest_f)(str *session_id, Rf_ACR_t * rf_data);
 
 typedef int (*Rf_add_an_chg_info_f)(str sip_uri, uint32_t an_charg_id);
 typedef int (*Rf_add_ims_chg_info_icid_f)(str callid, int dir, str ims_charg_id);
+typedef int (*Rf_get_ims_chg_info_icid_f)(str callid, int dir, str  * ims_charg_id);
 typedef int (*Rf_add_ims_chg_ps_info_f) (str call_id, int dir, uint32_t rating_group);
 
 typedef Rf_ACR_t* (*Rf_create_Rf_data_f) (str sessionid, int32_t acct_record_type,
@@ -43,6 +44,7 @@ struct client_rf_bind_t{
 	AAASendAccRequest_f	AAASendACR;
 	Rf_add_an_chg_info_f	Rf_add_an_chg_info;
 	Rf_add_ims_chg_info_icid_f	Rf_add_ims_chg_info_icid;
+	Rf_get_ims_chg_info_icid_f	Rf_get_ims_chg_info_icid;
 	Rf_add_ims_chg_ps_info_f	Rf_add_ims_chg_ps_info;
 	Rf_create_Rf_data_f		create_Rf_data;
 	Rf_free_Rf_data_f		free_Rf_data;

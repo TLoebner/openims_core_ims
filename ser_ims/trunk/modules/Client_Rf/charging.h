@@ -82,6 +82,7 @@ uint32_t get_an_charg_info(str sip_uri);
 int init_ims_charg_info();
 void destroy_ims_charg_info();
 int Rf_add_ims_chg_info_icid(str call_id, int dir, str ims_charg_id);
+int Rf_get_ims_chg_info_icid(str call_id, int dir, str  * ims_charg_id);
 int Rf_add_ims_chg_ps_info(str call_id, int dir, uint32_t rating_group);
 int get_ims_charg_info(str call_id, int dir, str * icid, uint32_t *rating_group);
 
