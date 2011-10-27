@@ -128,6 +128,7 @@ struct client_rf_bind_t client_rf_binding={
 	AAASendACR,
 	Rf_add_an_chg_info,
 	Rf_add_ims_chg_info_icid,
+	Rf_get_ims_chg_info_icid,
 	Rf_add_ims_chg_ps_info,
 	create_Rf_data,
 	free_Rf_data,
