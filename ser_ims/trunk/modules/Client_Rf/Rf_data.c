@@ -307,9 +307,10 @@ ps_information_t * new_ps_information(uint32_t an_charg_id, service_data_contain
 
 	if(an_charg_id){
 		mem_new(x->tgpp_charging_id, sizeof(uint32_t), pkg);
-		*x->tgpp_charging_id = an_charg_id;
+		*(x->tgpp_charging_id) = an_charg_id;
         }
-	WL_APPEND(&(x->service_data_container),serv_data_container);
+        if (serv_data_container)
+		WL_APPEND(&(x->service_data_container),serv_data_container);
 
 	return x;
 
