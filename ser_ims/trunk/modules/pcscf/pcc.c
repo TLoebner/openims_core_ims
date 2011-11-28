@@ -90,6 +90,7 @@ extern int pcscf_qos_side;
 extern str pcscf_record_route_mo_uri;
 extern str pcscf_record_route_mt_uri;
 extern int pcc_use_icid;				/**< weather to send the IMS charging id on the Rx interface >**/
+extern int pcscf_use_client_rf;
 extern str pcc_serv_id_register;			/**< the Service Identifier to be used when sending an AAR to PCRF for registrations>**/
 extern str pcc_serv_id_call;				/**< the Service Identifier to be used when sending an AAR to PCRF for calls >**/
 str reason_terminate_dialog_s={"Session terminated ordered by the PCRF",38};
@@ -476,7 +477,7 @@ int pcc_auth_init_register(contact_t * aor, str callid,
 		pcc_authdata->subscribed_to_signaling_path_status=1;
 		STR_SHM_DUP(pcc_authdata->host, contact->host,"pcc_auth_init_register");
 		STR_SHM_DUP(pcc_authdata->callid, callid,"pcc_auth_init_register");
-		if(pcc_use_icid){
+		if(pcscf_use_client_rf && pcc_use_icid){
 			if(client_rfb.Rf_get_ims_chg_info_icid(callid, DLG_MOBILE_ORIGINATING, &icid) && icid.s){
 
 				STR_SHM_DUP(pcc_authdata->icid, icid, "pcc_auth_init_register");
