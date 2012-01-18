@@ -517,6 +517,12 @@ int sip_create_rf_info(struct sip_msg * msg, int dir, int interim, Rf_ACR_t ** r
 					if(!(*rf_data = create_rf_data(msg, NULL, dir, interim)))
 						goto error;
 				break;
+			case 6:	/*INVITE or UPDATE req */
+				if(strncmp(msg->first_line.u.request.method.s, "INVITE", 6)==0 || 
+					strncmp(msg->first_line.u.request.method.s, "UPDATE", 6)==0)
+					if(!(*rf_data = create_rf_data(msg, NULL, dir, interim)))
+						goto error;
+				break;
 			default: break;
 		} 
 	}else{
