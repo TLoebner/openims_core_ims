@@ -86,7 +86,7 @@ inline unsigned int calc_hash(str id){
 #undef h_inc 
 }
 
-int add_new_acct_record_safe(int hash_index, str id, uint32_t acct_record_number, int dir, uint32_t expires){
+int add_new_acct_record_safe(int hash_index, str id, str uri, uint32_t acct_record_number, int dir, uint32_t expires){
 
 	acct_record_info_list_slot_t * acct_rec = NULL;
 
@@ -95,6 +95,7 @@ int add_new_acct_record_safe(int hash_index, str id, uint32_t acct_record_number
 	acct_rec->expires = expires;
 	acct_rec->dir = dir;
 	str_dup(acct_rec->id, id, shm);
+	str_dup(acct_rec->uri, uri, shm);
 	WL_APPEND(acct_records+hash_index, acct_rec);
 
 	return 1;
@@ -107,7 +108,7 @@ out_of_memory:
 /**
  * search for the entry with the specific id, otherwise add it and initialize it with expires, if expires not 0 update
  */
-int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value, int dir, uint32_t expires){
+int get_subseq_acct_record_nb(str id, str uri, int32_t acct_record_type, uint32_t * value, int * dir, uint32_t expires){
 	
 	int hash_index;
 	acct_record_info_list_slot_t * acct_rec = NULL;
@@ -120,17 +121,18 @@ int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value
 	hash_index = calc_hash(id);
 	lock_get(acct_records[hash_index].lock);
 		WL_FOREACH(&(acct_records[hash_index]), acct_rec){
-			if(acct_rec->dir ==dir && str_equal(acct_rec->id, id)){
+			if(str_equal(acct_rec->id, id) && str_equal(acct_rec->uri, uri)){
 				*value = acct_rec->acct_record_number +1;
 				acct_rec->acct_record_number = *value;
 				if(expires>0) acct_rec->expires = expires;
+				*dir = acct_rec->dir;
 				break;
 			}
 		}
 
 		if(!acct_rec && acct_record_type != AAA_ACCT_STOP){
 			*value = 1;
-			if(!add_new_acct_record_safe(hash_index, id, *value, dir, expires))
+			if(!add_new_acct_record_safe(hash_index, id, uri, *value, *dir, expires))
 				goto error;
 		}
 

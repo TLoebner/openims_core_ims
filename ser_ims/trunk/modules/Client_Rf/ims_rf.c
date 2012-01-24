@@ -416,15 +416,17 @@ Rf_ACR_t * create_rf_data(struct sip_msg * req,
 				&callid, &from_uri, &to_uri))
 		goto error;
 
-	if(!get_subseq_acct_record_nb(callid, acct_record_type, &acct_record_number, dir, expires)){
+	if(dir == 0)	user_name = from_uri;
+	else		user_name = to_uri;
+	
+	if(!get_subseq_acct_record_nb(callid, user_name, acct_record_type, &acct_record_number, &dir, expires)){
+
 		LOG(L_ERR, "ERR:"M_NAME":create_rf_data: could not retrieve "
 			"accounting record number for session id %.*s, maybe already ended and this is a retransmission\n", 
 			callid.len, callid.s);
 		goto error;
 	}
 
-	if(dir == 0)	user_name = from_uri;
-	else 		user_name = to_uri;
 
 	if(!get_ims_charging_info(req, reply, dir, &icid, &orig_ioi, &term_ioi, &rating_group))
 		goto error;
@@ -620,14 +622,18 @@ int create_stop_acr_rf_info(str callid, str from_uri, str to_uri, int dir, Rf_AC
 	sip_method = BYE_method;
 	expires =0;
 
-	if(!get_subseq_acct_record_nb(callid, acct_record_type, &acct_record_number, dir, expires)){
+	if(dir == 0)	user_name = from_uri;
+	else		user_name = to_uri;
+
+
+	if(!get_subseq_acct_record_nb(callid, user_name, acct_record_type, &acct_record_number, &dir, expires)){
 		LOG(L_ERR, "ERR:"M_NAME":create_stop_acr_rf_info: could not retrieve "
 			"accounting record number for session id %.*s, maybe already ended and this is a retransmission\n", 
 			callid.len, callid.s);
 		goto error;
 	}
 
-	user_name = from_uri;
+//	user_name = from_uri;
 	
 	req_timestamp = reply_timestamp = time(NULL);
 
