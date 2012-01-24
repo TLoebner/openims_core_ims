@@ -626,6 +626,7 @@ void service_information_free(service_information_t *x);
 
 typedef struct _acct_record_info_list_t_slot{
 	str id;
+	str uri;
 	uint32_t acct_record_number;
 	int dir;
 	time_t expires;
@@ -641,6 +642,7 @@ typedef struct _acct_record_info_list_t{
 do{\
 	if (x) {\
 		str_free((x)->id,mem);\
+		str_free((x)->uri,mem);\
 		mem##_free(x);\
 		(x) = 0;\
 	}\
@@ -700,7 +702,7 @@ do {\
 
 int init_acct_records();
 void destroy_acct_records();
-int get_subseq_acct_record_nb(str id, int32_t acct_record_type, uint32_t * value, int dir, uint32_t expires);
+int get_subseq_acct_record_nb(str id, str uri, int32_t acct_record_type, uint32_t * value, int * dir, uint32_t expires);
 
 
 Rf_ACR_t * new_Rf_ACR(int32_t acct_record_type, uint32_t acct_record_number,
