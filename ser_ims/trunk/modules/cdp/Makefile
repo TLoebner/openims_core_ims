@@ -20,7 +20,7 @@ else
 endif	
 
 DEFS += -I/usr/include/libxml2 
-LIBS += -L$(LOCALBASE)/lib -lxml2 -lrt
+LIBS += -L$(LOCALBASE)/lib -lxml2 -lrt -pthread
 
 include ../../Makefile.modules
 
