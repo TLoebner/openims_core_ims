@@ -63,7 +63,8 @@
 #define IMS_Ph	16777217	/**< Sh interface between PresenceServer and HSS*/
 #define IMS_Rx  16777236	/**< Rx interface between P-CSCF and PCRF 		*/
 #define IMS_Gx	16777224	/**< Gx interface between PCRF and PCEF 		*/
-#define IMS_Rf  16777223    /**< Rf interface between P/I/S-CSCF and CDF, 
-								according to TS32.299 R7    */ 
+#define IMS_Rf  3			/**< Rf interface between P/I/S-CSCF and CDF, 
+								according to TS32.299 R7 it should be 16777223.
+								But R10/11 indicates 3, from RFC 3588 Diameter Base Accounting    */ 
 
 #endif /* __DIAMETER_IMS_CODE_APP_H */
