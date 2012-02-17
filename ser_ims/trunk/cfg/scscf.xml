@@ -25,7 +25,7 @@
         <Auth id="16777216" vendor="13019"/><!-- ETSI/TISPAN Cx -->
         <Auth id="16777216" vendor="0"/><!-- ETSI/TISPAN Cx -->
 	<!-- uncomment for Rf interface
-	<Auth id="3" vendor="10415"/>
+	<Auth id="3" vendor="0"/>
 	-->
                 
 	<DefaultRoute FQDN="hss.open-ims.test" metric="10"/>
