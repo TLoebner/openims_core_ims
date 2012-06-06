@@ -54,7 +54,7 @@
 
 #define SER	1
 #include <curl/curl.h>
-#include <curl/types.h>
+//#include <curl/types.h>
 #include <curl/easy.h>
 
 //#include <libxml/tree.h>
