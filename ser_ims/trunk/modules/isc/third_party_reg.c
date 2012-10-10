@@ -148,6 +148,8 @@ static str event_hdr={"Event: registration\r\n",21};
 static str max_fwds_hdr={"Max-Forwards: 10\r\n",18};
 static str expires_s={"Expires: ",9};
 static str expires_e={"\r\n",2};
+static str gruu_s={"GRUU: ",6};
+static str gruu_e={"\r\n",2};
 static str contact_s={"Contact: <",10};
 static str contact_e={">\r\n",3};
 
@@ -187,6 +189,9 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
         h.len = event_hdr.len+max_fwds_hdr.len;
         h.len += expires_s.len + 12 + expires_e.len;
 
+        if (r->gruu.len) h.len += gruu_s.len +
+                r->gruu.len + gruu_e.len;
+        
         h.len += contact_s.len + isc_my_uri_sip.len + contact_e.len;
 
         if (r->pvni.len) h.len += p_visited_network_id_s.len +
@@ -214,6 +219,12 @@ int r_send_third_party_reg(r_third_party_registration *r,int expires)
         sprintf(h.s+h.len,"%d",expires);
         h.len += strlen(h.s+h.len);
         STR_APPEND(h,expires_e);
+
+        if (r->gruu.len) {
+                STR_APPEND(h,gruu_s);
+                STR_APPEND(h,r->gruu);
+                STR_APPEND(h,gruu_e);
+        }
 
         STR_APPEND(h,contact_s);
         STR_APPEND(h,isc_my_uri_sip);

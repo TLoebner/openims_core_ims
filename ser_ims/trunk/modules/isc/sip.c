@@ -392,6 +392,20 @@ struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply)
 	return t->uas.request;
 }
 
+str cscf_get_contact_hdr(struct sip_msg *msg)
+{
+	str s={0,0};
+	if (!msg) return s;
+	
+	if (parse_headers(msg, HDR_EOH_F, 0)<0){
+		LOG(L_ERR,"ERR:"M_NAME":cscf_parse_contacts: Error parsing headers \n");
+		return s;
+	}
+	if (msg->contact) 
+		s = msg->contact->body;
+	
+	return s;
+}
 /**
  * Returns the expires value from the Expires header in the message.
  * It searches into the Expires header and if not found returns -1

@@ -86,6 +86,8 @@ int cscf_get_transaction(struct sip_msg *msg, unsigned int *hash,unsigned int *l
 
 struct sip_msg* cscf_get_request_from_reply(struct sip_msg *reply);
 
+str cscf_get_contact_hdr(struct sip_msg *msg);
+
 // from scscf
 int cscf_get_expires_hdr(struct sip_msg *msg, int is_shm);
 int cscf_get_max_expires(struct sip_msg *msg, int is_shm);
