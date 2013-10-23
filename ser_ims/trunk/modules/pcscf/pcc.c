@@ -847,6 +847,11 @@ AAAMessage *PCC_AAR(struct sip_msg *req, struct sip_msg *res, char *str1, contac
 			
 			mline=find_next_sdp_line(mline,(sdpbodyinvite.s+sdpbodyinvite.len),'m',NULL);
 		}
+
+		LOG(L_DBG,"DEBUG:"M_NAME":PCC_AAR: host ip is  %.*s\n",pcc_auth->host.len, pcc_auth->host.s);
+
+		if(!PCC_add_framed_ip_avp(&aar->avpList, pcc_auth->host, AF_INET) &&
+			!PCC_add_framed_ip_avp(&aar->avpList, pcc_auth->host, AF_INET6) ) goto error;
 		
 		//add Service URN for emergency sessions
 		if(service_urn.s && service_urn.len){
